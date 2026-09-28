@@ -1,0 +1,415 @@
+{
+  "note": "Labelled question+table→parse set for breadth step 4's table-scoped parser (Task 4). Every table is one of Task 1's eligible fixture tables under tests/fixtures/tableparse/schemas/<tableId>.json (schema+codeLists capture, metadata-only, R1). 'expect.measureCode' is a measure code copied verbatim from the table's own measure list, or 'geen' when no measure in the table answers the question. 'expect.breakdowns' has exactly one entry per offered breakdown dimension (classifyDimension === 'breakdown' — time/geo/geo_like/margins never appear here), each a member code copied verbatim from that dimension's fixture code list, 'niet_genoemd' (the question says nothing at all about that dimension — step 3's resolver then either falls to CBS's own grand total or asks, depending on whether one exists), or 'anders' (the question says something about that dimension that is not exactly one offered member: a real member the deterministic pre-filter cut, SEVERAL fitting members, or a question ACROSS the members). 'expect.periodKind' is the periodSpecSchema discriminant only. 'expect.regions' is the plain list of every place name the question names verbatim — on a table with regions, and ALSO on a table without them: when a breakdown dimension lists the place as a member, that dimension's expectation is the matching member (exactly one fits) or 'anders' (several fit, e.g. Groningen PV/ES/ET). 'expect.regionScope' (optional, absent = null) is the region class the question asks about. Two expectation forms score an expected refusal instead of a parse: measureCode 'ambiguous' with 'expect.ambiguousMeasures' (the offered measures the model cannot tell apart — same title, unit and description; the validator must throw TableParseAmbiguousMeasureError), and 'expect.outcome': 'region_unavailable' (a named place the table cannot serve; the validator must throw TableParseRegionUnavailableError). Every case's expectation is also run through the real validator by the integrity test, so a label that contradicts the validator's own rules fails CI. Every code was checked against the real fixture (measure lists, dimension code lists) and, for truncated dimensions (>MEMBER_PROMPT_CAP members), against buildTableParseSchema's ACTUAL offered list for that exact question text — not guessed. Grand-total resolvability per dimension (used to write honest 'falls to total' vs 'no total' cases) was checked with src/query/breakdowns.ts's own findGrandTotal, not assumed from the title alone. Category minimums (brief): geen ≥4, niet_genoemd-falls-to-total ≥4 (id prefix 'total-'; several more appear incidentally in other cases), anders ≥3, two-totals/no-total dimension ≥3 (id prefix 'nototal-'; a couple more appear incidentally), region ≥2 (a couple more appear incidentally via explicit 'Nederland' mentions), period-grain-unavailable ≥2 (id prefix 'grain-') — every one of these minimums, and the exact per-category counts, is enforced by tests/answer/table-parse/labelled-set.test.ts, not restated here as a number that could drift out of sync with the case list below. The remaining cases (id prefix 'general-') are happy-path breadth across the remaining tables/dimensions/period kinds. Controller-ruling correction: the brief guessed 'probably 03759ned' as the one fixture table with regions — buildTableParseSchema (run against every eligible fixture) shows BOTH 03759ned and 84521NED have hasRegions=true (both have a GeoDimension-kind RegioS). The 2 designated region cases use 03759ned; 84521NED's regions are not exercised in this set (left for a later step). Final-review fix wave (2026-09-29): region names on region-coded breakdown dimensions (85004NED RegioS, 82291NED CaribischNederland), the widened 'anders', the ambiguous-measure form and one region-unavailable case were added; see the individual case notes.",
+  "cases": [
+    {
+      "id": "geen-population-income",
+      "table": "03759ned",
+      "question": "Wat was het gemiddelde inkomen per hoofd van de bevolking in 2019?",
+      "note": "Table only has population-count measures (M000352/M000365) — no income measure exists. geen.",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "geen-klimaat-werkgelegenheid",
+      "table": "85669NED",
+      "question": "Hoeveel mensen werkten er in 2018 in de klimaatsector?",
+      "note": "Table's only measure is a greenhouse-gas emission quantity — an employment count is a different kind of number entirely. geen.",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "geen-ziekenhuis-ligduur",
+      "table": "84521NED",
+      "question": "Wat was de gemiddelde ligduur bij een ziekenhuisopname in 2018?",
+      "note": "Both measures are admission COUNTS (M006162_1/_2) — length-of-stay is not measured here. geen.",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "Diagnose": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "geen-voertuigen-verkoop",
+      "table": "85245NED",
+      "question": "Hoeveel nieuwe personenauto's werden er verkocht in 2021?",
+      "note": "Every measure in this table counts SLOOP (scrapped) vehicles — new-car sales is a different statistic the table cannot answer. geen.",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "VoertuigType": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "geen-water-afval",
+      "table": "82883NED",
+      "question": "Hoeveel afval produceerden huishoudens in 2017?",
+      "note": "Table measures water USE, not waste production — a different statistic. geen.",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "Watergebruikers": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "geen-caribisch-inwoners",
+      "table": "82291NED",
+      "question": "Hoeveel inwoners heeft Caribisch Nederland?",
+      "note": "Every measure in this table is a health/disease PERCENTAGE — a population count is a different kind of number, and none exists here. geen. The named place still goes in regions and, since exactly one CaribischNederland member matches it (CN01), that dimension's answer is CN01 (the region rule is the same whatever the measure; a geen parse skips the region checks in code). Also exercises 'none' periodKind (no period signal in the question at all).",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": { "CaribischNederland": "CN01", "Persoonskenmerken": "niet_genoemd" },
+        "periodKind": "none",
+        "regions": ["Caribisch Nederland"]
+      }
+    },
+    {
+      "id": "total-emissies-elektriciteit",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas kwam vrij door elektriciteit in 2015?",
+      "note": "EmissiesNaarLucht is not named — falls to its real unique grand total (T001372, findGrandTotal-confirmed). Klimaatsectoren's 'Elektriciteit' (A050124) is named directly and IS in the pre-filter's offered list for this exact question (verified against buildTableParseSchema).",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "A050124" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "total-ziekenhuis-generiek",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er in 2019?",
+      "note": "Nothing named on any of the 4 dimensions. Diagnose (T001387), Geslacht (T001038) and SoortOpname (T001389) each have a real unique grand total (findGrandTotal-confirmed) — the designated 'falls to total' dimensions for this case. Leeftijd has NO resolvable total here (findGrandTotal returns null — two Totaal-titled candidates, '10000'/'Totaal leeftijd' and 'T001249'/'Totaal, gestandaardiseerd'); its niet_genoemd is honest but not a 'falls to total' claim.",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "total-caribisch-bloeddruk",
+      "table": "82291NED",
+      "question": "Wat is het percentage personen met hoge bloeddruk in Caribisch Nederland in 2021?",
+      "note": "'Caribisch Nederland' is a place, so it goes in regions even though this table's hasRegions is false; it matches exactly ONE CaribischNederland member (CN01 'Caribisch Nederland'; the other members are Bonaire, Sint-Eustatius and Saba), so that dimension's answer is CN01. Persoonskenmerken is not named and falls to its real unique grand total (T009002, findGrandTotal-confirmed). Final-review fix wave: the question said 'volwassenen' before — under the widened 'anders' rule that word says something about Persoonskenmerken's age bands without being exactly one member, which would make this a muddled 'total-' case; reworded to the neutral 'personen' (the measure's own wording).",
+      "expect": {
+        "measureCode": "D005402",
+        "breakdowns": { "CaribischNederland": "CN01", "Persoonskenmerken": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Caribisch Nederland"]
+      }
+    },
+    {
+      "id": "total-arbeidsdeelname-generiek",
+      "table": "80590ned",
+      "question": "Wat was het arbeidsdeelnamepercentage (seizoengecorrigeerd) in 2020?",
+      "note": "M006335's own description ('aandeel van de seizoengecorrigeerde (werkzame en werkloze) beroepsbevolking in de potentiële beroepsbevolking') is exactly labour-force participation, matching 'arbeidsdeelname' — chosen over the near-identical M005036 (employed-only share, see the 'werkzame beroepsbevolking' cases below). Geslacht not named — falls to its real unique total (T001038, findGrandTotal-confirmed) — the designated case. Leeftijd has NO total here (findGrandTotal null, no Totaal-titled/T00-coded member at all); its niet_genoemd is honest, not a 'falls to total' claim. Caveat for step 5: M006335's own description says the seasonally adjusted measures have NO yearly figures ('Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar'), while the table as a whole does publish JJ codes — so table-level grain presence (periodGrains contains JJ, periodGrainUnavailable false) does not guarantee this measure's 2020 yearly cell exists. That per-cell check belongs to step 5, not the parser; the parse label here is still correct.",
+      "expect": {
+        "measureCode": "M006335",
+        "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "anders-klimaat-cokesovens",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas kwam vrij door cokesovens in 2015?",
+      "note": "'Cokesovens' names the real member E007211 'Cokesfabrieken' by a different word (no shared ≥4-letter token with 'cokesfabrieken'), so the pre-filter's word-match cuts it from the offered list (verified: offered=[T001616] only, the grand total). Correct answer is 'anders', never the total and never a guessed neighbour.",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "anders" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "anders-diagnose-huidkanker",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er voor huidkanker in 2019?",
+      "note": "'Huidkanker' (one compound word) names the real member A044522 '2.3 Kwaadaardige nieuwv. huid' but shares no ≥4-letter token with any Diagnose title (verified: offered=[T001387] only, the grand total). Correct answer is 'anders'. Geslacht/SoortOpname fall to their real totals; Leeftijd has no total (same as the total-ziekenhuis-generiek case) so stays niet_genoemd honestly.",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "anders", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "anders-water-meubelmakers",
+      "table": "82883NED",
+      "question": "Hoeveel industriewater gebruikten meubelmakers in 2018?",
+      "note": "'Meubelmakers' names the real member 341600 'Meubelindustrie' by a different word (no shared token). Verified offered=[] (Watergebruikers has no resolvable grand total at all — first member 'B000579'/'Nederlandse economie totaal' does not itself start with 'Totaal' or carry a T00 code, the same first-member-must-qualify rule breadth step 3 uses). Correct answer is 'anders', not niet_genoemd and not a guessed neighbour.",
+      "expect": {
+        "measureCode": "M001599",
+        "breakdowns": { "Watergebruikers": "anders" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "nototal-ziekenhuis-leeftijd",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er in 2020 voor dagopnamen?",
+      "note": "Designated no-total case: Leeftijd's niet_genoemd has NO resolvable grand total (findGrandTotal null — two ambiguous Totaal-titled candidates, '10000' and 'T001249'). SoortOpname's 'Dagopnamen' (A044921) is named directly (≤40 members, fully offered). Diagnose/Geslacht fall to their real totals.",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd", "SoortOpname": "A044921" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "nototal-hernieuwbaar-regio",
+      "table": "85004NED",
+      "question": "Hoeveel megawatt aan zonnestroom (groot vermogen) stond er opgesteld in 2021?",
+      "note": "Designated no-total case: RegioS's niet_genoemd has NO resolvable grand total (findGrandTotal null — 86 members, first member 'NL01'/'Nederland' does not itself start with 'Totaal' or carry a T00 code; this is the exact dimension the Task 2 input-builder comments call out as classified 'breakdown', not geo). BronEnTechniek's 'Zonnestroom, groot vermogen' (A050177) is named directly (≤40 members, fully offered).",
+      "expect": {
+        "measureCode": "M002199",
+        "breakdowns": { "BronEnTechniek": "A050177", "RegioS": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "nototal-caribisch-migraine",
+      "table": "82291NED",
+      "question": "Wat is het percentage inwoners met migraine of ernstige hoofdpijn in 2021?",
+      "note": "Designated no-total case: CaribischNederland's niet_genoemd has NO resolvable grand total (findGrandTotal null — first member 'CN01'/'Caribisch Nederland' does not itself start with 'Totaal' or carry a T00 code). The question is naturally place-agnostic here since this whole table is Caribbean-Netherlands-only. Persoonskenmerken falls to its real total.",
+      "expect": {
+        "measureCode": "D005435",
+        "breakdowns": { "CaribischNederland": "niet_genoemd", "Persoonskenmerken": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "region-amsterdam-bevolking",
+      "table": "03759ned",
+      "question": "Hoeveel inwoners had Amsterdam op 1 januari 2022?",
+      "note": "Designated region case 1 of 2. RegioS is a GeoDimension (hasRegions=true) — 'Amsterdam' is a place name, reported via the regions field, never a breakdown choice. All 3 offered breakdown dimensions fall to their real unique totals (each findGrandTotal-confirmed).",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Amsterdam"]
+      }
+    },
+    {
+      "id": "region-zeeland-gemiddeld",
+      "table": "03759ned",
+      "question": "Wat was de gemiddelde bevolking van Zeeland in 2021?",
+      "note": "Designated region case 2 of 2, a different measure (M000365, 'Gemiddelde bevolking') and a province-level place name. All 3 offered breakdown dimensions fall to their real unique totals.",
+      "expect": {
+        "measureCode": "M000365",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Zeeland"]
+      }
+    },
+    {
+      "id": "grain-voertuigen-kwartaal",
+      "table": "85245NED",
+      "question": "Hoeveel voertuigen werden er in het derde kwartaal van 2022 gesloopt?",
+      "note": "Designated period-grain-unavailable case 1 of 2: this table's periodGrains is ['JJ'] only (buildTableParseSchema-confirmed from its Perioden code list, all yearly codes) — a quarter has no grain to serve. VoertuigType has no resolvable total (findGrandTotal null — 'A018928'/'Totaal motorvoertuigen' AND 'A018930'/'Totaal bedrijfsmotorvoertuigen' both qualify as Totaal-titled candidates, so the first is not uniquely the total), and is not named here, so niet_genoemd (honest, not a 'falls to total' claim).",
+      "expect": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "niet_genoemd" },
+        "periodKind": "quarter",
+        "regions": []
+      }
+    },
+    {
+      "id": "grain-water-maand",
+      "table": "82883NED",
+      "question": "Hoeveel leidingwater gebruikte de landbouw in maart 2015?",
+      "note": "Designated period-grain-unavailable case 2 of 2: this table's periodGrains is ['JJ'] only — a month has no grain to serve. 'De landbouw' names the real member '301000'/'A Landbouw, bosbouw en visserij' and IS in the pre-filter's offered list for this exact question (verified against buildTableParseSchema, offered=[301000]).",
+      "expect": {
+        "measureCode": "M005248_2",
+        "breakdowns": { "Watergebruikers": "301000" },
+        "periodKind": "month",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-bevolking-gescheiden-mannen",
+      "table": "03759ned",
+      "question": "Hoeveel gescheiden mannen waren er in Nederland in 2020?",
+      "note": "Straightforward named-member happy path (BurgerlijkeStaat ≤40 members, always fully offered): 'gescheiden' → '1080', 'mannen' → '3000'. 'Nederland' is an explicit land-level region mention (incidental region coverage beyond the 2 designated cases).",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "1080", "Geslacht": "3000", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Nederland"]
+      }
+    },
+    {
+      "id": "general-bevolking-verweduwd",
+      "table": "03759ned",
+      "question": "Hoeveel weduwen en weduwnaars (verweduwd) waren er in Nederland in 2021?",
+      "note": "Another BurgerlijkeStaat member pick ('verweduwd' → '1050', exact title match), Geslacht/Leeftijd unnamed and fall to their real totals. Incidental region coverage ('Nederland').",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "1050", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Nederland"]
+      }
+    },
+    {
+      "id": "general-ziekenhuis-kanker-vrouwen",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er voor kwaadaardige nieuwvormingen (kanker) bij vrouwen in 2019?",
+      "note": "'Kwaadaardige nieuwvormingen' shares the token 'nieuwvormingen' with 'A044519'/'2 Totaal nieuwvormingen', but that member is ALL neoplasms — it includes carcinoma in situ (A044529) and the benign members (A044530 'Niet-kwaad. nieuwv. darm, rectum...', A044531 'Leiomyoom van uterus', A044532 'Ov. niet-kwaadige nieuwvormingen'), so it is a different, larger population than 'kwaadaardige' (malignant). 84521NED has no single all-malignant member (only the separate 2.1–2.9 malignant sites), so the question names something that is not exactly one member → 'anders' (step 5 asks), never the benign-inclusive total. 'Vrouwen' → Geslacht '4000'. SoortOpname unnamed, falls to its real total; Leeftijd has no total (same dimension as the two Diagnose cases above).",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "anders", "Geslacht": "4000", "Leeftijd": "niet_genoemd", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-voertuigen-personenauto",
+      "table": "85245NED",
+      "question": "Hoeveel personenauto's werden er in 2019 gesloopt?",
+      "note": "Measure is the general scrapped-vehicle count (A047215, not one of the fuel-specific measures) since no fuel type is named. 'Personenauto's' → VoertuigType 'A018943' (≤40 members, fully offered).",
+      "expect": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "A018943" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-voertuigen-diesel",
+      "table": "85245NED",
+      "question": "Hoeveel dieselvoertuigen werden er in 2020 gesloopt?",
+      "note": "Fuel type is a MEASURE in this table's odd layout, not a VoertuigType member — 'diesel' picks measure A019275 directly. No vehicle type named, so VoertuigType stays niet_genoemd (no total exists for it, same as the grain-voertuigen-kwartaal case — honest, not a 'falls to total' claim).",
+      "expect": {
+        "measureCode": "A019275",
+        "breakdowns": { "VoertuigType": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-hernieuwbaar-windenergie",
+      "table": "85004NED",
+      "question": "Hoeveel megawatt aan windenergie op land stond er opgesteld in 2021?",
+      "note": "BronEnTechniek's 'Windenergie op land' (E006637) is named directly, exact title match (≤40 members, fully offered). RegioS unnamed, no total (same dimension as nototal-hernieuwbaar-regio).",
+      "expect": {
+        "measureCode": "M002199",
+        "breakdowns": { "BronEnTechniek": "E006637", "RegioS": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-hernieuwbaar-groningen",
+      "table": "85004NED",
+      "question": "Hoeveel megawatt aan opgesteld vermogen was er in Groningen in 2021?",
+      "note": "'Groningen' is a place, so it goes in regions even though this table's hasRegions is false. RegioS is an ordinary breakdown dimension here and THREE offered members fit the name (verified: offered=[PV20 'Groningen (PV)', ES01 'Groningen (ES)', ET0101 'Groningen (ET)'] — province, energy region and energy sub-region). Several members fit → 'anders' (step 5 asks which Groningen), never a silent pick of the province. BronEnTechniek unnamed, no total (same dimension as the F1 first-member trap documented in src/query/breakdowns.ts).",
+      "expect": {
+        "measureCode": "M002199",
+        "breakdowns": { "BronEnTechniek": "niet_genoemd", "RegioS": "anders" },
+        "periodKind": "year",
+        "regions": ["Groningen"]
+      }
+    },
+    {
+      "id": "general-water-drinkwater-huishoudens",
+      "table": "82883NED",
+      "question": "Hoeveel drinkwater gebruikten particuliere huishoudens in 2019?",
+      "note": "Both the measure ('drinkwater' → M000687, exact title match) and the breakdown member ('particuliere huishoudens' → '1050010', exact title match, verified IN the pre-filter's offered list) are named directly — the easy accept anchor for this table.",
+      "expect": {
+        "measureCode": "M000687",
+        "breakdowns": { "Watergebruikers": "1050010" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-caribisch-bloeddruk-opleiding",
+      "table": "82291NED",
+      "question": "Wat was het percentage mensen met een hoge bloeddruk met een hoog opleidingsniveau in 2021?",
+      "note": "Persoonskenmerken's 'Onderwijsniveau: Hoog' (2018790) shares the token 'hoog' with the question (≤40 members, fully offered regardless). CaribischNederland unnamed, no total (same dimension as nototal-caribisch-migraine).",
+      "expect": {
+        "measureCode": "D005402",
+        "breakdowns": { "CaribischNederland": "niet_genoemd", "Persoonskenmerken": "2018790" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-arbeidsdeelname-vrouwen-kwartaal",
+      "table": "80590ned",
+      "question": "Wat was het aandeel werkzame beroepsbevolking (seizoengecorrigeerd) bij vrouwen in het tweede kwartaal van 2021?",
+      "note": "M005036's own description ('aandeel van de seizoengecorrigeerde werkzame beroepsbevolking') is specifically the EMPLOYED-only share, distinct from M006335 used above. 'Vrouwen' → Geslacht '4000'. A HAPPY quarter case, contrasting the grain-voertuigen-kwartaal refusal case — this table's periodGrains is ['JJ','KW','MM'] (buildTableParseSchema-confirmed), so KW is actually available. Leeftijd unnamed, no total.",
+      "expect": {
+        "measureCode": "M005036",
+        "breakdowns": { "Geslacht": "4000", "Leeftijd": "niet_genoemd" },
+        "periodKind": "quarter",
+        "regions": []
+      }
+    },
+    {
+      "id": "general-arbeidsdeelname-jongeren-maand",
+      "table": "80590ned",
+      "question": "Wat was het aandeel werkzame beroepsbevolking in de leeftijd 15 tot 25 jaar in januari 2022 (seizoengecorrigeerd)?",
+      "note": "'15 tot 25 jaar' names the real Leeftijd member '53050' verbatim (≤40 members, fully offered — verified IN the pre-filter's offered list, though trivial at this size). A HAPPY month case (MM is available on this table, same periodGrains as the quarter case above). Geslacht unnamed, falls to its real total.",
+      "expect": {
+        "measureCode": "M005036",
+        "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "53050" },
+        "periodKind": "month",
+        "regions": []
+      }
+    },
+    {
+      "id": "anders-ziekenhuis-leeftijdsgroep-meeste",
+      "table": "84521NED",
+      "question": "In welke leeftijdsgroep waren er in 2019 de meeste ziekenhuisopnamen?",
+      "note": "Final-review F3: the question asks ACROSS Leeftijd's members (which age band has the most), so Leeftijd is 'anders' — not niet_genoemd (the question is clearly about age) and not any single member. Leeftijd has 8 members, fully offered. Diagnose/Geslacht/SoortOpname are not mentioned.",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "anders", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "ambiguous-arbeid-werklozen",
+      "table": "80590ned",
+      "question": "Hoeveel werklozen waren er in 2021 (niet seizoengecorrigeerd)?",
+      "note": "Final-review F4: a count (x 1000) that is not seasonally adjusted can only be one of the four measures titled 'Niet-seizoengecorrigeerd' with unit 'x 1000' and an EMPTY description (3000790_2, 3000795_2, 3000800_2, 3000810_2) — the metadata the model sees gives no way to tell which one counts the unemployed. Whatever it picks among them, the validator must throw TableParseAmbiguousMeasureError (step 5 refuses/asks), never serve a coin-flip measure. Geslacht/Leeftijd not mentioned.",
+      "expect": {
+        "measureCode": "ambiguous",
+        "ambiguousMeasures": ["3000790_2", "3000795_2", "3000800_2", "3000810_2"],
+        "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "regionunavailable-klimaat-utrecht",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas stootte de provincie Utrecht uit in 2019?",
+      "note": "Final-review F1/F7: the table has no region dimension and no breakdown member named 'Utrecht' (EmissiesNaarLucht lists gases, Klimaatsectoren lists sectors), so the named place cannot be served. The model must still report it (regions ['Utrecht']) and the validator must throw TableParseRegionUnavailableError — a national emission figure for a question about one province would be a wrong answer. Both dimensions are not mentioned.",
+      "expect": {
+        "measureCode": "D003040",
+        "outcome": "region_unavailable",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Utrecht"]
+      }
+    }
+  ]
+}

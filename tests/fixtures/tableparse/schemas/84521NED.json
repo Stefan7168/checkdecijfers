@@ -1,0 +1,5475 @@
+{
+ "fetchedAt": "2026-09-28T16:24:02.652Z",
+ "schema": {
+  "tableId": "84521NED",
+  "title": "Ziekenhuisopnamen; diagnose-indeling ISHMT, regio",
+  "dimensions": [
+   {
+    "name": "Diagnose",
+    "kind": "Dimension",
+    "title": "Diagnose"
+   },
+   {
+    "name": "Geslacht",
+    "kind": "Dimension",
+    "title": "Geslacht"
+   },
+   {
+    "name": "Leeftijd",
+    "kind": "Dimension",
+    "title": "Leeftijd"
+   },
+   {
+    "name": "SoortOpname",
+    "kind": "Dimension",
+    "title": "Soort opname"
+   },
+   {
+    "name": "RegioS",
+    "kind": "GeoDimension",
+    "title": "Regio's"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "M006162_1",
+    "title": "Opnamen",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Opnamen",
+    "dataType": "Double"
+   },
+   {
+    "code": "M006162_2",
+    "title": "Opnamen per 10 000 inwoners",
+    "unit": "per 10 000 inwoners",
+    "decimals": 1,
+    "description": "Opnamen per 10 000 inwoners",
+    "dataType": "Double"
+   }
+  ],
+  "modified": "2026-07-31T00:00:00+02:00"
+ },
+ "codeLists": {
+  "Diagnose": [
+   {
+    "code": "T001387",
+    "title": "Totaal alle diagnosen",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 1,
+    "description": "ICD10-code: A00-U49, Z00-Z99 \r\n Externe oorzaken van letsels en vergiftigingen (ICD10-codes V01-Y98) maken geen deel uit van de ISHMT diagnose-indeling."
+   },
+   {
+    "code": "A044512",
+    "title": "1 Totaal infectieuze en parasitaire zkt.",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 2,
+    "description": "Totaal infectieuze en parasitaire ziekten\r\nICD10-code: A00-B99, U06.9 en (t/m 2019) U04.9"
+   },
+   {
+    "code": "A044513",
+    "title": "1.1 Infectieziekten van maagdarmkanaal..",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 3,
+    "description": "Infectieziekten van het maagdarmkanaal uitgezonderd diarrree \r\nICD10-code: A00-A08"
+   },
+   {
+    "code": "A044514",
+    "title": "1.2 Diarree en infect. gastro-enteritis",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 4,
+    "description": "Diarree en gastro-enteritis van verondersteld infectieuze oorsprong \r\nICD10-code: A09"
+   },
+   {
+    "code": "A044515",
+    "title": "1.3 Tuberculose",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 5,
+    "description": "ICD10-code: A15-A19, B90"
+   },
+   {
+    "code": "A044516",
+    "title": "1.4 Sepsis",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 6,
+    "description": "ICD10-code: A40-A41"
+   },
+   {
+    "code": "A044517",
+    "title": "1.5 HIV-Humaan Immunodeficiëntievirus",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 7,
+    "description": "Ziekten door Humaan Immunodeficiëntievirus [HIV] \r\nICD10-code: B20-B24"
+   },
+   {
+    "code": "A044518",
+    "title": "1.6 Ov. infectieuze en paras. ziekten...",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 8,
+    "description": "Overige infectieuze en parasitaire ziekten, inclusief Zika-virus ziekte (ICD10-code U06.9, welke vanaf 2021 is ondergebracht in ICD10-code A92.5)\r\nICD10-code: A10-A14, A20-A39, A42-A99, B00-B19, B25-B89, B91-B99, U06.9 en (t/m 2019) U04.9 (SARS; vanaf 2020 is U04.9 ingedeeld in een nieuwe ISHMT diagnosegroep '21.5 overige nieuwe ziekten')"
+   },
+   {
+    "code": "A044519",
+    "title": "2 Totaal nieuwvormingen",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 9,
+    "description": "ICD10-code: C00-D48"
+   },
+   {
+    "code": "A044520",
+    "title": "2.1 Kwaadaardige nieuwv. dikke darm...",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 10,
+    "description": "Kwaadaardige nieuwvormingen van dikke darm (colon), rectum en anus (kanker aan dikke darm, rectum en anus) \r\nICD10-code: C18-C21"
+   },
+   {
+    "code": "A044521",
+    "title": "2.2 Kwaadaardige nieuwv. trachea...",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 11,
+    "description": "Kwaadaardige nieuwvormingen van trachea, bronchus en long (trachea-, bronchus- en longkanker) \r\nICD10-code: C33-C34"
+   },
+   {
+    "code": "A044522",
+    "title": "2.3 Kwaadaardige nieuwv. huid",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 12,
+    "description": "Kwaadaardige nieuwvormingen van huid (huidkanker) \r\nICD10-code: C43-C44"
+   },
+   {
+    "code": "A044523",
+    "title": "2.4 Kwaadaardige nieuwv. borst",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 13,
+    "description": "Kwaadaardige nieuwvormingen van borst (borstkanker) \r\nICD10-code: C50"
+   },
+   {
+    "code": "A044524",
+    "title": "2.5 Kwaadaardige nieuwv. uterus",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 14,
+    "description": "Kwaadaardige nieuwvormingen van uterus (baarmoederkanker) \r\nICD10-code: C53-C55"
+   },
+   {
+    "code": "A044525",
+    "title": "2.6 Kwaadaardige nieuwv. eierstok",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 15,
+    "description": "Kwaadaardige nieuwvormingen van eierstok (eierstokkanker) \r\nICD10-code: C56"
+   },
+   {
+    "code": "A044526",
+    "title": "2.7 Kwaadaardige nieuwv. prostaat",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 16,
+    "description": "Kwaadaardige nieuwvormingen van prostaat (prostaatkanker) \r\nICD10-code: C61"
+   },
+   {
+    "code": "A044527",
+    "title": "2.8 Kwaadaardige nieuwv. urineblaas",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 17,
+    "description": "Kwaadaardige nieuwvormingen van urineblaas (urineblaaskanker) \r\nICD10-code: C67"
+   },
+   {
+    "code": "A044528",
+    "title": "2.9 Overige kwaadaardige nieuwvormingen",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 18,
+    "description": "ICD10-code: C00-C17, C22-C32, C35-C42, C45-C49, C51-C52, C57-C60, C62-C66, C68-C97"
+   },
+   {
+    "code": "A044529",
+    "title": "2.10 Carcinoom in situ",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 19,
+    "description": "Carcinoom in situ (niet-kwaadaardige nieuwvorming; gezwel bestaande uit epitheelcellen (opperste celweefsel van organen)) \r\nICD10-code: D00-D09"
+   },
+   {
+    "code": "A044530",
+    "title": "2.11 Niet-kwaad. nieuwv. darm, rectum...",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 20,
+    "description": "Niet-kwaadaardige nieuwvormingen van darm, rectum, anus en anaal kanaal \r\nICD10-code: D12"
+   },
+   {
+    "code": "A044531",
+    "title": "2.12 Leiomyoom van uterus",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 21,
+    "description": "Leiomyoom van uterus (niet-kwaardaardige nieuwvorming van de baarmoeder) \r\nICD10-code: D25"
+   },
+   {
+    "code": "A044532",
+    "title": "2.13 Ov. niet-kwaadige nieuwvormingen",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 22,
+    "description": "Overige niet-kwaadaardige nieuwvormingen \r\nICD10-code: D10-D11, D13-D24, D26-D48"
+   },
+   {
+    "code": "A044533",
+    "title": "3 Totaal zkt. bloed / bloedber. organen",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 23,
+    "description": "Totaal ziekten van bloed en bloedbereidende organen en bepaalde immuniteitsstoornissen \r\nICD10-code: D50-D89"
+   },
+   {
+    "code": "A044534",
+    "title": "3.1 Anemie",
+    "dimensionGroup": "8",
+    "status": null,
+    "index": 24,
+    "description": "Anemie (bloedarmoede)\r\nICD10-code: D50-D64"
+   },
+   {
+    "code": "A044535",
+    "title": "3.2 Ov. zkt. bloed en bloedber. org...",
+    "dimensionGroup": "8",
+    "status": null,
+    "index": 25,
+    "description": "Overige ziekten van bloed en bloedbereidende organen en bepaalde immuniteitsstoornissen \r\nICD10-code: D65-D89"
+   },
+   {
+    "code": "A044536",
+    "title": "4 Totaal endocr.-, voeding-, stofw.zkt.",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 26,
+    "description": "Totaal endocriene-, voedings,- en stofwisselingsziekten (omvat o.a. ziekten die worden veroorzaakt door afwijkende of ontbrekende klierwerking) \r\nICD10-code: E00-E90"
+   },
+   {
+    "code": "A044537",
+    "title": "4.1 Diabetes",
+    "dimensionGroup": "9",
+    "status": null,
+    "index": 27,
+    "description": "Diabetes (suikerziekte) \r\nICD10-code: E10-E14"
+   },
+   {
+    "code": "A044538",
+    "title": "4.2 Ov. endocr.-, voedings,- stofw.zkt..",
+    "dimensionGroup": "9",
+    "status": null,
+    "index": 28,
+    "description": "Overige endocriene-, voedings,- en stofwisselingsziekten \r\nICD10-code: E00-E09, E15-E90"
+   },
+   {
+    "code": "A044539",
+    "title": "5 Totaal psychische stoornissen",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 29,
+    "description": "ICD10-code: F00-F99"
+   },
+   {
+    "code": "A044540",
+    "title": "5.1 Dementie",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 30,
+    "description": "ICD10-code: F00-F03"
+   },
+   {
+    "code": "A044541",
+    "title": "5.2 Psych. stoornis. t.g.v. alcohol",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 31,
+    "description": "Psychische stoornissen en gedragsstoornissen door gebruik van alcohol \r\nICD10-code: F10"
+   },
+   {
+    "code": "A044542",
+    "title": "5.3 Psych. stoornis. t.g.v. psycho-act..",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 32,
+    "description": "Psychische stoornissen en gedragsstoornissen door gebruik van andere psycho-actieve middelen dan alcohol \r\nICD10-code: F11-F19"
+   },
+   {
+    "code": "A044543",
+    "title": "5.4 Schizofrenie, paranoide toestanden..",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 33,
+    "description": "Schizofrenie, paranoide toestanden en overige niet-organische psychosen \r\nICD10-code: F20-F29"
+   },
+   {
+    "code": "A044544",
+    "title": "5.5 Stemmingsstoornissen...",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 34,
+    "description": "Stemmingsstoornissen (inclusief affectieve stoornissen) \r\nICD10-code: F30-F39"
+   },
+   {
+    "code": "A044545",
+    "title": "5.6 Overige psychische stoornissen",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 35,
+    "description": "ICD10-code: F04-F09, F40-F99"
+   },
+   {
+    "code": "A044546",
+    "title": "6 Totaal zkt. zenuwstelsel en zintuigen",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 36,
+    "description": "Totaal ziekten van zenuwstelsel en zintuigen \r\nICD10-code: G00-G99"
+   },
+   {
+    "code": "A044547",
+    "title": "6.1 Ziekte van Alzheimer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 37,
+    "description": "ICD10-code: G30"
+   },
+   {
+    "code": "A044548",
+    "title": "6.2 Multipele sclerose",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 38,
+    "description": "ICD10-code: G35"
+   },
+   {
+    "code": "A044549",
+    "title": "6.3 Epilepsie",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 39,
+    "description": "ICD10-code: G40-G41"
+   },
+   {
+    "code": "A044550",
+    "title": "6.4 TIA, pass. cerebr. ischemie...",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 40,
+    "description": "TIA, passagère cerebrale ischemie en verwante syndromen \r\nICD10-code: G45"
+   },
+   {
+    "code": "A044551",
+    "title": "6.5 Ov. ziekten zenuwstelsel, zintuigen",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 41,
+    "description": "Overige ziekten van zenuwstelsel en zintuigen \r\nICD10-code: G00-G29, G31-G34, G36-G39, G42-G44, G46-G99"
+   },
+   {
+    "code": "A044552",
+    "title": "7 Totaal ziekten van oog en adnexen",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 42,
+    "description": "Totaal ziekten van oog en adnexen; adnex = aanhangsel (omvat aangrenzende en bijbehorende structuren zoals oogkas, oogleden, traanapparaat en oogzenuw) \r\nICD10-code: H00-H59"
+   },
+   {
+    "code": "A044553",
+    "title": "7.1 Cataract",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 43,
+    "description": "Cataract (grijze staar, ooglenstroebeling) \r\nICD10-code: H25-H26, H28"
+   },
+   {
+    "code": "A044554",
+    "title": "7.2 Overige ziekten van oog en adnexen",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 44,
+    "description": "ICD10-code: H00-H24, H27, H29-H59"
+   },
+   {
+    "code": "A044555",
+    "title": "8 Totaal zkt. oor, processus mastoideus",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 45,
+    "description": "Totaal ziekten van oor en processus mastoideus; processus mastoideus = tepelvormig uitsteeksel van het slaapbeen, vlak achter de oorschelp \r\nICD10-code: H60-H95"
+   },
+   {
+    "code": "A044556",
+    "title": "9 Totaal zkt. van hart- en vaatstelsel",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 46,
+    "description": "Totaal ziekten van hart- en vaatstelsel \r\nICD10-code: I00-I99"
+   },
+   {
+    "code": "A044557",
+    "title": "9.1 Hypertensieve ziekten",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 47,
+    "description": "Hypertensieve ziekten (hypertensie = verhoogde bloeddruk) \r\nICD10-code: I10-I15"
+   },
+   {
+    "code": "A044558",
+    "title": "9.2 Angina pectoris",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 48,
+    "description": "ICD10-code: I20"
+   },
+   {
+    "code": "A044559",
+    "title": "9.3 Acuut myocard infarct",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 49,
+    "description": "ICD10-code: I21-I22"
+   },
+   {
+    "code": "A044560",
+    "title": "9.4 Overige ischemische hartziekten",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 50,
+    "description": "ICD10-code: I23-I25"
+   },
+   {
+    "code": "A044561",
+    "title": "9.5 Pulmonale hartzkt. en zkt. longv...",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 51,
+    "description": "Pulmonale hartziekten en ziekten van longvaten (pulmonaal = de longen betreffend) \r\nICD10-code: I26-I28"
+   },
+   {
+    "code": "A044562",
+    "title": "9.6 Geleidings- en hartritmestoornissen",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 52,
+    "description": "ICD10-code: I44-I49"
+   },
+   {
+    "code": "A044563",
+    "title": "9.7 Hartfalen",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 53,
+    "description": "ICD10-code: I50"
+   },
+   {
+    "code": "A044564",
+    "title": "9.8 Cerebrovasculaire ziekten",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 54,
+    "description": "ICD10-code: I60-I69"
+   },
+   {
+    "code": "A044565",
+    "title": "9.9 Atherosclerose",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 55,
+    "description": "Atherosclerose (aderverkalking) \r\nICD10-code: I70"
+   },
+   {
+    "code": "A044566",
+    "title": "9.10 Varices van onderste extremiteiten",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 56,
+    "description": "ICD10-code: I83"
+   },
+   {
+    "code": "A044567",
+    "title": "9.11 Ov. ziekten hart- en vaatstelsel",
+    "dimensionGroup": "13",
+    "status": null,
+    "index": 57,
+    "description": "Overige ziekten van hart- en vaatstelsel \r\nICD10-code: I00-I09, I16-I19, I29-I43, I51-I59, I71-I82, I84-I99"
+   },
+   {
+    "code": "A044568",
+    "title": "10 Totaal zkt. van ademhalingsstelsel",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 58,
+    "description": "Totaal ziekten van ademhalingsstelsel \r\nICD10-code: J00-J99"
+   },
+   {
+    "code": "A044569",
+    "title": "10.1 Acute infect. luchtwegen, influenza",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 59,
+    "description": "Acute infecties van bovenste luchtwegen en influenza \r\nICD10-code: J00-J11"
+   },
+   {
+    "code": "A044570",
+    "title": "10.2 Pneumonie",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 60,
+    "description": "Pneumonie (longontsteking)\r\nICD10-code: J12-J18"
+   },
+   {
+    "code": "A044571",
+    "title": "10.3 Overige acute infecties luchtwegen",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 61,
+    "description": "Overige acute infecties van onderste luchtwegen \r\nICD10-code: J20-J22"
+   },
+   {
+    "code": "A044572",
+    "title": "10.4 Chron. aand. tonsillen en adenoïd",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 62,
+    "description": "Chronische aandoeningen van tonsillen en adenoïd \r\nICD10-code: J35"
+   },
+   {
+    "code": "A044573",
+    "title": "10.5 Andere aand. neus en neusbijholten",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 63,
+    "description": "Andere aandoeningen van neus en neusbijholten \r\nICD10-code: J30-J34, J36-J39"
+   },
+   {
+    "code": "A044574",
+    "title": "10.6 Chron. longaand. en bronchiëctasie",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 64,
+    "description": "Chronische obstructieve longaandoeningen en bronchiëctasie \r\nICD10-code: J40-J44, J47"
+   },
+   {
+    "code": "A044575",
+    "title": "10.7 Astma",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 65,
+    "description": "ICD10-code: J45-J46"
+   },
+   {
+    "code": "A044576",
+    "title": "10.8 Ov. ziekten ademhalingsstelsel",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 66,
+    "description": "Overige ziekten van ademhalingsstelsel \r\nICD10-code: J60-J99"
+   },
+   {
+    "code": "A044577",
+    "title": "11 Totaal zkt. spijsverteringsstelsel",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 67,
+    "description": "Totaal ziekten van spijsverteringsstelsel \r\nICD10-code: K00-K93"
+   },
+   {
+    "code": "A044578",
+    "title": "11.1 Aand. van gebit en steunweefsels",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 68,
+    "description": "Aandoeningen van gebit en steunweefsels \r\nICD10-code: K00-K08"
+   },
+   {
+    "code": "A044579",
+    "title": "11.2 Ov. zkt. mondholte, speekselklieren",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 69,
+    "description": "Overige ziekten van mondholte, speekselklieren en kaken \r\nICD10-code: K09-K14"
+   },
+   {
+    "code": "A044580",
+    "title": "11.3 Aandoeningen van slokdarm",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 70,
+    "description": "ICD10-code: K20-K23"
+   },
+   {
+    "code": "A044581",
+    "title": "11.4 Peptische ulcus",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 71,
+    "description": "Peptische ulcus (zweer in maag, twaalfvingerige darm of nuchtere darm) \r\nICD10-code: K25-K28"
+   },
+   {
+    "code": "A044582",
+    "title": "11.5 Dyspepsie en ov. zkt. maag en duo..",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 72,
+    "description": "Dyspepsie en overige ziekten van maag en duodenum \r\nICD10-code: K29-K31"
+   },
+   {
+    "code": "A044583",
+    "title": "11.6 Ziekten van de appendix",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 73,
+    "description": "ICD10-code: K35-K38"
+   },
+   {
+    "code": "A044584",
+    "title": "11.7 Hernia inguinalis",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 74,
+    "description": "Hernia inguinalis (liesbreuk) \r\nICD10-code: K40"
+   },
+   {
+    "code": "A044585",
+    "title": "11.8 Overige buikbreuken",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 75,
+    "description": "ICD10-code: K41-K46"
+   },
+   {
+    "code": "A044586",
+    "title": "11.9 Zkt. van Crohn en colitis ulcerosa",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 76,
+    "description": "Ziekte van Crohn en colitis ulcerosa \r\nICD10-code: K50-K51"
+   },
+   {
+    "code": "A044587",
+    "title": "11.10 Ov. niet-infect. gastro-enteriti..",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 77,
+    "description": "Overige niet-infectieuze gastro-enteritis en colitis \r\nICD10-code: K52"
+   },
+   {
+    "code": "A044588",
+    "title": "11.11 Paralytische ileus en darmobstru..",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 78,
+    "description": "Paralytische ileus en darmobstructie zonder hernia (paralytische ileus = stoppen van darmpassage door verlamming darm) \r\nICD10-code: K56"
+   },
+   {
+    "code": "A044589",
+    "title": "11.12 Divertikelziekte",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 79,
+    "description": "ICD10-code: K57"
+   },
+   {
+    "code": "A044590",
+    "title": "11.13 Ziekten van anus en rectum",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 80,
+    "description": "ICD10-code: K60-K62"
+   },
+   {
+    "code": "A044591",
+    "title": "11.14 Overige darmziekten",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 81,
+    "description": "ICD10-code: K55, K58-K59, K63"
+   },
+   {
+    "code": "A044592",
+    "title": "11.15 Alcoholische leverziekte",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 82,
+    "description": "ICD10-code: K70"
+   },
+   {
+    "code": "A044593",
+    "title": "11.16 Overige leverziekten",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 83,
+    "description": "ICD10-code: K71-K77"
+   },
+   {
+    "code": "A044594",
+    "title": "11.17 Cholelithiasis",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 84,
+    "description": "Cholelithiasis (galstenen) \r\nICD10-code: K80"
+   },
+   {
+    "code": "A044595",
+    "title": "11.18 Ov. ziekten galblaas en galwegen",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 85,
+    "description": "Overige ziekten van galblaas en galwegen \r\nICD10-code: K81-K83"
+   },
+   {
+    "code": "A044596",
+    "title": "11.19 Ziekten van pancreas",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 86,
+    "description": "ICD10-code: K85-K87"
+   },
+   {
+    "code": "A044597",
+    "title": "11.20 Ov. ziekten spijsverteringsstelsel",
+    "dimensionGroup": "15",
+    "status": null,
+    "index": 87,
+    "description": "Overige ziekten van spijsverteringsstelsel \r\nICD10-code: K15-K19, K24, K32-K34, K39, K47-K49, K53-K54, K64-K69, K78-K79, K84, K88-K93"
+   },
+   {
+    "code": "A044598",
+    "title": "12 Totaal zkt. huid, onderhuids bindw.",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 88,
+    "description": "Totaal ziekten van huid en onderhuids bindweefsel \r\nICD10-code: L00-L99"
+   },
+   {
+    "code": "A044599",
+    "title": "12.1 Infect. huid en onderhuids bindw.",
+    "dimensionGroup": "16",
+    "status": null,
+    "index": 89,
+    "description": "Infecties van huid en onderhuids bindweefsel \r\nICD10-code: L00-L08"
+   },
+   {
+    "code": "A044600",
+    "title": "12.2 Dermatitis, eczeem en papulosquam..",
+    "dimensionGroup": "16",
+    "status": null,
+    "index": 90,
+    "description": "Dermatitis, eczeem en papulosquameuze dermatosen \r\nICD10-code: L20-L45"
+   },
+   {
+    "code": "A044601",
+    "title": "12.3 Ov. zkt. huid en onderhuids bindw.",
+    "dimensionGroup": "16",
+    "status": null,
+    "index": 91,
+    "description": "Overige ziekten van huid en onderhuids bindweefsel \r\nICD10-code: L09-L19, L46-L99"
+   },
+   {
+    "code": "A044602",
+    "title": "13 Totaal zkt. botspierstelsel en bindw.",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 92,
+    "description": "Totaal ziekten van botspierstelsel en bindweefsel \r\nICD10-code: M00-M99"
+   },
+   {
+    "code": "A044603",
+    "title": "13.1 Coxartrose",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 93,
+    "description": "Coxartrose (artrose van het heupgewricht) \r\nICD10-code: M16"
+   },
+   {
+    "code": "A044604",
+    "title": "13.2 Gonartrose",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 94,
+    "description": "Gonartrose (artrose van het kniegewricht) \r\nICD10-code: M17"
+   },
+   {
+    "code": "A044605",
+    "title": "13.3 Dérangement interne van knie",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 95,
+    "description": "ICD10-code: M23"
+   },
+   {
+    "code": "A044606",
+    "title": "13.4 Andere artropathieën",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 96,
+    "description": "Andere artropathieën (artropathieën = gewrichtsziekten) \r\nICD10-code: M00-M15, M18-M22, M24-M25"
+   },
+   {
+    "code": "A044607",
+    "title": "13.5 Systeemziekten van bindweefsel",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 97,
+    "description": "ICD10-code: M30-M36"
+   },
+   {
+    "code": "A044608",
+    "title": "13.6 Deform. dorsopathieën en spondylo..",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 98,
+    "description": "Deformerende dorsopathieën (aandoeningen aan de rug) en spondylopathieën (wervelaandoeningen) \r\nICD10-code: M40-M49"
+   },
+   {
+    "code": "A044609",
+    "title": "13.7 Aand. van tussenwervelschijven",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 99,
+    "description": "Aandoeningen van tussenwervelschijven\r\nICD10-code: M50-M51"
+   },
+   {
+    "code": "A044610",
+    "title": "13.8 Nek- en rugklachten",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 100,
+    "description": "ICD10-code: M54"
+   },
+   {
+    "code": "A044611",
+    "title": "13.9 Aandoeningen van weke delen",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 101,
+    "description": "ICD10-code: M60-M79"
+   },
+   {
+    "code": "A044612",
+    "title": "13.10 Ov. zkt. botspierstelsel en bind..",
+    "dimensionGroup": "17",
+    "status": null,
+    "index": 102,
+    "description": "Overige ziekten van botspierstelsel en bindweefsel \r\nICD10-code: M53, M80-M99"
+   },
+   {
+    "code": "A044613",
+    "title": "14 Totaal zkt. van urogenitaal stelsel",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 103,
+    "description": "Totaal ziekten van urogenitaal stelsel (ziekten van urinewegen en geslachtsorganen) \r\nICD10-code: N00-N99"
+   },
+   {
+    "code": "A044614",
+    "title": "14.1 Glomerulaire aand. en tubulo-inte..",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 104,
+    "description": "Glomerulaire aandoeningen en tubulo-interstitiële nierziekten \r\nICD10-code: N00-N16"
+   },
+   {
+    "code": "A044615",
+    "title": "14.2 Nierinsufficiëntie",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 105,
+    "description": "ICD10-code: N17-N19"
+   },
+   {
+    "code": "A044616",
+    "title": "14.3 Urolithiasis",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 106,
+    "description": "ICD10-code: N20-N23"
+   },
+   {
+    "code": "A044617",
+    "title": "14.4 Ov. aandoeningen nier en urinewegen",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 107,
+    "description": "Overige aandoeningen van nier en urinewegen \r\nICD10-code: N25-N39"
+   },
+   {
+    "code": "A044618",
+    "title": "14.5 Prostaathyperplasie",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 108,
+    "description": "ICD10-code: N40"
+   },
+   {
+    "code": "A044619",
+    "title": "14.6 Ov. zkt. mannelijke gesl.organen...",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 109,
+    "description": "Overige ziekten van de mannelijke geslachtsorganen \r\nICD10-code: N41-N51"
+   },
+   {
+    "code": "A044620",
+    "title": "14.7 Aandoeningen van de borst",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 110,
+    "description": "ICD10-code: N60-N64"
+   },
+   {
+    "code": "A044621",
+    "title": "14.8 Ontstekingsproc. vrouwelijke org...",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 111,
+    "description": "Ontstekingsprocessen van vrouwelijke organen in bekken \r\nICD10-code: N70-N77"
+   },
+   {
+    "code": "A044622",
+    "title": "14.9 Menstruele, menopausale aand...",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 112,
+    "description": "Menstruele, menopauzale en overige aandoeningen aan vrouwelijke geslachtsorganen \r\nICD10-code: N91-N95"
+   },
+   {
+    "code": "A044623",
+    "title": "14.10 Ov. aand. urogenitaal stelsel",
+    "dimensionGroup": "18",
+    "status": null,
+    "index": 113,
+    "description": "Overige aandoeningen van urogenitaal stelsel \r\nICD10-code: N24,N52-N59,N65-N69, N78-N90, N96-N99"
+   },
+   {
+    "code": "A044624",
+    "title": "15 Totaal zw.schap, bevalling, kraamb.",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 114,
+    "description": "Totaal zwangerschap, bevalling en kraambed \r\nICD10-code: O00-O99"
+   },
+   {
+    "code": "A044625",
+    "title": "15.1 Medische abortus",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 115,
+    "description": "ICD10-code: O04"
+   },
+   {
+    "code": "A044626",
+    "title": "15.2 Ov. zwangerschap eind. misgeboorte",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 116,
+    "description": "Overige zwangerschap eindigend in misgeboorte \r\nICD10-code: O00-O03, O05-O08"
+   },
+   {
+    "code": "A044627",
+    "title": "15.3 Compl. zwangerschap antenatale pe..",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 117,
+    "description": "Complicaties zwangerschap voornamelijk in de antenatale periode \r\nICD10-code: O10-O48"
+   },
+   {
+    "code": "A044628",
+    "title": "15.4 Complicaties van bevalling",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 118,
+    "description": "ICD10-code: O60-O75"
+   },
+   {
+    "code": "A044629",
+    "title": "15.5 Spontane enkelvoudige bevalling",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 119,
+    "description": "ICD10-code: O80"
+   },
+   {
+    "code": "A044630",
+    "title": "15.6 Overige bevalling",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 120,
+    "description": "ICD10-code: O81-O84"
+   },
+   {
+    "code": "A044631",
+    "title": "15.7 Complicaties kraambed",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 121,
+    "description": "Complicaties hoofdzakelijk verband houdend met het kraambed \r\nICD10-code: O85-O92"
+   },
+   {
+    "code": "A044632",
+    "title": "15.8 Overige obstetrische aandoeningen",
+    "dimensionGroup": "19",
+    "status": null,
+    "index": 122,
+    "description": "Overige obstetrische (verloskundige) aandoeningen \r\nICD10-code: O94, O95-O99"
+   },
+   {
+    "code": "A044633",
+    "title": "16 Totaal bep. aand. perinatale periode",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 123,
+    "description": "Totaal bepaalde aandoeningen met oorsprong in de perinatale periode (periode rondom geboorte) \r\nICD10-code: P00-P96"
+   },
+   {
+    "code": "A044634",
+    "title": "16.1 Korte zw.schapsduur, laag geb.gew..",
+    "dimensionGroup": "20",
+    "status": null,
+    "index": 124,
+    "description": "Stoornissen gerelateerd aan korte zwangerschapsduur en laag geboortegewicht \r\nICD10-code: P07"
+   },
+   {
+    "code": "A044635",
+    "title": "16.2 Ov. aandoeningen perinatale periode",
+    "dimensionGroup": "20",
+    "status": null,
+    "index": 125,
+    "description": "Overige aandoeningen ontstaan in de perinatale periode \r\nICD10-code: P00-P06, P08-P96"
+   },
+   {
+    "code": "A044636",
+    "title": "17 Totaal cong.afw., misvorm., chrom...",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 126,
+    "description": "Totaal congenitale afwijkingen, misvormingen en chromosoomafwijkingen \r\nICD10-code: Q00-Q99"
+   },
+   {
+    "code": "A044637",
+    "title": "18 Totaal symp., bevindingen, labuitsl..",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 127,
+    "description": "Totaal symptomen, afwijkende klinische bevindingen en laboratoriumuitslagen, niet elders geclassificeerd \r\nICD10-code: R00-R99"
+   },
+   {
+    "code": "A044638",
+    "title": "18.1 Pijn in keel en borst",
+    "dimensionGroup": "21",
+    "status": null,
+    "index": 128,
+    "description": "ICD10-code: R07"
+   },
+   {
+    "code": "A044639",
+    "title": "18.2 Pijn in buik en bekken",
+    "dimensionGroup": "21",
+    "status": null,
+    "index": 129,
+    "description": "ICD10-code: R10"
+   },
+   {
+    "code": "A044640",
+    "title": "18.3 Onbekende en n.g. oorzaken ziekte",
+    "dimensionGroup": "21",
+    "status": null,
+    "index": 130,
+    "description": "Onbekende en niet gespecificeerde oorzaken van ziekte \r\nICD10-code: R69"
+   },
+   {
+    "code": "A044641",
+    "title": "18.4 Ov. symp., bevindingen, labuitsl.",
+    "dimensionGroup": "21",
+    "status": null,
+    "index": 131,
+    "description": "Overige symptomen, afwijkende klinische bevindingen en laboratoriumuitslagen \r\nICD10-code: R00-R06, R08-R09, R11-R68, R70-R99"
+   },
+   {
+    "code": "A044642",
+    "title": "19 Totaal ongevalsletsel, vergiftiging",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 132,
+    "description": "Totaal ongevalsletsel, vergiftigingen en bepaalde gevolgen van externe oorzaken \r\nICD10-code: S00-T98"
+   },
+   {
+    "code": "A044643",
+    "title": "19.1 Intracraniaal letsel",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 133,
+    "description": "Intracraniaal letsel (letsel binnen de schedel) \r\nICD10-code: S06"
+   },
+   {
+    "code": "A044644",
+    "title": "19.2 Andere verwondingen aan het hoofd",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 134,
+    "description": "ICD10-code: S00-S05, S07-S09"
+   },
+   {
+    "code": "A044645",
+    "title": "19.3 Fractuur van elleboog en onderarm",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 135,
+    "description": "ICD10-code: S52"
+   },
+   {
+    "code": "A044646",
+    "title": "19.4 Femurfractuur",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 136,
+    "description": "Femurfractuur (dijbeenfractuur) \r\nICD10-code: S72"
+   },
+   {
+    "code": "A044647",
+    "title": "19.5 Fractuur onderbeen, inclusief enkel",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 137,
+    "description": "Fractuur van onderbeen, inclusief enkel \r\nICD10-code: S82"
+   },
+   {
+    "code": "A044648",
+    "title": "19.6 Andere verwondingen",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 138,
+    "description": "ICD10-code: S10-S51, S53-S71, S73-S81, S83-T14, T79"
+   },
+   {
+    "code": "A044649",
+    "title": "19.7 Brandwonden en etsingen",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 139,
+    "description": "Brandwonden en etsingen (etsing = beschadiging van huid of slijmvlies door inwerking van zuren of basen) \r\nICD10-code: T20-T32"
+   },
+   {
+    "code": "A044650",
+    "title": "19.8 Vergiftiging door geneesmiddelen...",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 140,
+    "description": "Vergiftiging door geneesmiddelen en biologische stoffen alsmede toxische gevolgen van stoffen van niet medicinale herkomst\r\nICD10-code: T36-T65"
+   },
+   {
+    "code": "A044651",
+    "title": "19.9 Compl. chirurgisch en medisch beh..",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 141,
+    "description": "Complicaties van chirurgische en medische behandeling, niet elders geclassificeerd \r\nICD10-code: T80-T88"
+   },
+   {
+    "code": "A044652",
+    "title": "19.10 Gevolgen letsels, vergiftigingen",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 142,
+    "description": "Late gevolgen van letsels, van vergiftigingen en van andere gevolgen van uitwendige oorzaken \r\nICD10-code: T90-T98"
+   },
+   {
+    "code": "A044653",
+    "title": "19.11 Ov. gevolgen externe oorzaken",
+    "dimensionGroup": "22",
+    "status": null,
+    "index": 143,
+    "description": "Overige en ongespecificeerde gevolgen van externe oorzaken \r\nICD10-code: T15-T19, T33-T35, T66-T78, T89"
+   },
+   {
+    "code": "A044654",
+    "title": "20 Totaal factor. gez.toestand beïnvl...",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 144,
+    "description": "Totaal factoren die de gezondheidstoestand beïnvloeden en contacten met gezondheidsdiensten. \r\nICD10-code: Z00-Z99"
+   },
+   {
+    "code": "A044655",
+    "title": "20.1 Observatie i.v.m. ziekten en aand..",
+    "dimensionGroup": "23",
+    "status": null,
+    "index": 145,
+    "description": "Medische observatie en evaluatie in verband met verdenking op ziekten en aandoeningen \r\nICD10-code: Z03"
+   },
+   {
+    "code": "A044656",
+    "title": "20.2 Hulpverlening i.v.m. anticonceptie",
+    "dimensionGroup": "23",
+    "status": null,
+    "index": 146,
+    "description": "Hulpverlening in verband met anticonceptie \r\nICD10-code: Z30"
+   },
+   {
+    "code": "A044657",
+    "title": "20.3 Levendgeboren zuigelingen",
+    "dimensionGroup": "23",
+    "status": null,
+    "index": 147,
+    "description": "Levendgeboren zuigelingen naar plaats van geboorte \r\nICD10-code: Z38"
+   },
+   {
+    "code": "A044658",
+    "title": "20.4 Overige medische zorg",
+    "dimensionGroup": "23",
+    "status": null,
+    "index": 148,
+    "description": "Overige medische zorg (inclusief radio- en chemotherapie) \r\nICD10-code: Z51"
+   },
+   {
+    "code": "A044659",
+    "title": "20.5 Ov. factor. gez.toestand beïnvl...",
+    "dimensionGroup": "23",
+    "status": null,
+    "index": 149,
+    "description": "Overige factoren die de gezondheidstoestand beïnvloeden en contacten met gezondheidsdiensten \r\nICD10-code: Z00-Z02, Z04-Z29, Z31-Z37, Z39-Z50, Z52-Z99"
+   },
+   {
+    "code": "A050882",
+    "title": "21 Totaal COVID-19 en andere nieuwe ...",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 150,
+    "description": "Totaal COVID-19 (coronavirus disease 2019) en andere nieuwe ziekten \r\nICD10-code: U00-U49"
+   },
+   {
+    "code": "A050883",
+    "title": "21.1 COVID-19 infectie",
+    "dimensionGroup": "24",
+    "status": null,
+    "index": 151,
+    "description": "COVID-19 door laboratoriumtest bevestigd en COVID-19 klinisch gediagnosticeerd, (nog) niet bevestigd door laboratoriumtest\r\nICD10-code: U07.1 en U07.2"
+   },
+   {
+    "code": "A050884",
+    "title": "21.2 Status na COVID-19",
+    "dimensionGroup": "24",
+    "status": null,
+    "index": 152,
+    "description": "Persoonlijke anamnese van COVID-19 en post-COVID-19 aandoening\r\nICD10-code: U08.9 en U09.9"
+   },
+   {
+    "code": "A050885",
+    "title": "21.3 MIS-syndroom gerelat. aan COVID-19",
+    "dimensionGroup": "24",
+    "status": null,
+    "index": 153,
+    "description": "Multisysteem Inflammatoir Syndroom gerelateerd aan COVID-19\r\nICD10-code: U10.9"
+   },
+   {
+    "code": "A050886",
+    "title": "21.4 Ongewenste gevlgn. COVID-19 vacc.",
+    "dimensionGroup": "24",
+    "status": null,
+    "index": 154,
+    "description": "Ongewenste gevolgen bij therapeutisch gebruik van COVID-19 vaccinatie\r\nICD10-code: U12.9"
+   },
+   {
+    "code": "A050887",
+    "title": "21.5 Overige nieuwe ziekten",
+    "dimensionGroup": "24",
+    "status": null,
+    "index": 155,
+    "description": "Overige nieuwe ziekten met voorlopige codering\r\nICD10-code (vanaf 2020): U07.0 (dampen [vapen] gerelateerde aandoening), U04.9 (SARS; in de jaren t/m 2019 is SARS ingedeeld in ISHMT diagnosegroep '1.6 Ov. infectieuze en paras. ziekten)"
+   },
+   {
+    "code": "A025730",
+    "title": "99 Totaal ext. oorz. letsels, vergift.",
+    "dimensionGroup": "26",
+    "status": null,
+    "index": 156,
+    "description": "Totaal externe oorzaken van letsels en vergiftigingen \r\nICD10-code: V01-Y98 \r\nIndien er naast de hoofddiagnose ook een uitwendige oorzaak (bijvoorbeeld een bepaald ongeval) bij een opname is geregistreerd, wordt de uitwendige oorzaak in deze diagnosehoofdgroep (V01-Y98) weergegeven. Deze groep telt niet mee in het totaal van alle (hoofd-)diagnosen."
+   },
+   {
+    "code": "A025731",
+    "title": "99.1 Vervoersongeval",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 157,
+    "description": "ICD10-code: V01-V99, Y85"
+   },
+   {
+    "code": "A025732",
+    "title": "99.1.1 Vervoersongeval trein/vaartuig",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 158,
+    "description": "Vervoersongeval met trein, vaartuig, lucht/ruimtevaartuig \r\nICD10-code: V81.0, V81.2-V81.9, V88.6, V89.9, V90-V99"
+   },
+   {
+    "code": "A025733",
+    "title": "99.1.2 Verkeersongevallen",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 159,
+    "description": "ICD10-code: V01.1,V02.1,V03.1,V04.1,V05.1,V06.1,V09.2-V09.3,V10.3-V10.7,V10.9,V11.3-V11.7,V11.9,V12.3-V12.7,V12.9,V13.3-V13.7,V13.9,V14.3-V14.7,V14.9,V15.3-V15.7,V15.9,V16.3-V16.7,V16.9,V17.3-V17.7,V17.9,V18.3-V18.7,V18.9,V19.4-V19.6,V19.9,V20.3-V20.9,V21.3-V21.9,V22.3-V22.9,V23.3-V23.9,V24.3-V24.9,V25.3-V25.9,V26.3-V26.9,V27.3-V27.9,V28.3-V28.9,V29.4-V29.6,V29.9,V30.3-V30.9,V31.3-V31.9,V32.3-V32.9,V33.3-V33.9,V34.3-V34.9,V35.3-V35.9,V36.3-V36.9,V37.3-V37.9,V38.3-V38.9,V39.4-V39.6,V39.9,V40.5-V40.7,V40.9,V41.5-V41.7,V41.9,V42.5-V42.7,V42.9,V43.5-V43.7,V43.9,V44.5-V44.7,V44.9,V45.5-V45.7,V45.9,V46.5-V46.7,V46.9,V47.5-V47.7,V47.9,V48.5-V48.7,V48.9,V49.4-V49.6,V49.9,V50.5-V50.7,V50.9,V51.5-V51.7,V51.9,V52.5-V52.7,V52.9,V53.5-V53.7,V53.9,V54.5-V54.7,V54.9,V55.5-V55.7,V55.9,V56.5-V56.7,V56.9,V57.5-V57.7,V57.9,V58.5-V58.7,V58.9,V59.4-V59.6,V59.9,V60.5-V60.7,V60.9,V61.5-V61.7,V61.9,V62.5-V62.7,V62.9,V63.5-V63.7,V63.9,V64.5-V64.7,V64.9,V65.5-V65.7,V65.9,V66.5-V66.7,V66.9,V67.5-V67.7,V67.9,V68.5-V68.7,V68.9,V69.4-V69.6,V69.9,V70.5-V70.7,V70.9,V71.5-V71.7,V71.9,V72.5-V72.7,V72.9,V73.5-V73.7,V73.9,V74.5-V74.7,V74.9,V75.5-V75.7,V75.9,V76.5-V76.7,V76.9,V77.5-V77.7,V77.9,V78.5-V78.7,V78.9,V79.4-V79.6,V79.9,V80.2-V80.6,V81.1,V82.1-V82.3,V82.6-V82.9,V83.0-V83.3,V84.0-V84.3,V85.0-V85.3,V86.0-V86.3,V87,V89.2-V89.3"
+   },
+   {
+    "code": "A025734",
+    "title": "99.1.3 Vervoersongeval, niet in verkeer",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 160,
+    "description": "Vervoersongeval, niet in het verkeer \r\nICD10-code: V01.0,V02.0,V03.0,V04.0,V05.0,V06.0,V09.0-V09.1,V10.0-V10.2,V11.0-V11.2,V12.0-V12.2,V13.0-V13.2,V14.0-V14.2,V15.0-V15.2,V16.0-V16.2,V17.0-V17.2,V18.0-V18.2,V19.0-V19.3,V20.0-V20.2,V21.0-V21.2,V22.0-V22.2,V23.0-V23.2,V24.0-V24.2,V25.0-V25.2,V26.0-V26.2,V27.0-V27.2,V28.0-V28.2,V29.0-V29.3,V30.0-V30.2,V31.0-V31.2,V32.0-V32.2,V33.0-V33.2,V34.0-V34.2,V35.0-V35.2,V36.0-V36.2,V37.0-V37.2,V38.0-V38.2,V39.0-V39.3,V40.0-V40.3,V41.0-V41.3,V42.0-V42.3,V43.0-V43.3,V44.0-V44.3,V45.0-V45.3,V46.0-V46.3,V47.0-V47.3,V48.0-V48.3,V49.0-V49.3,V50.0-V50.3,V51.0-V51.3,V52.0-V52.3,V53.0-V53.3,V54.0-V54.3,V55.0-V55.3,V56.0-V56.3,V57.0-V57.3,V58.0-V58.3,V59.0-V59.3,V60.0-V60.3,V61.0-V61.3,V62.0-V62.3,V63.0-V63.3,V64.0-V64.3,V65.0-V65.3,V66.0-V66.3,V67.0-V67.3,V68.0-V68.3,V69.0-V69.3,V70.0-V70.3,V71.0-V71.3,V72.0-V72.3,V73.0-V73.3,V74.0-V74.3,V75.0-V75.3,V76.0-V76.3,V77.0-V77.3,V78.0-V78.3,V79.0-V79.3,V80.0-V80.1,V80.7-V80.9,V82.0,V82.5,V83.5-V83.7,V83.9,V84.5-V84.7,V84.9,V85.5-V85.7,V85.9,V86.5-V86.7,V86.9,V88.0-V88.5,V88.7-V88.9,V89.0-V89.1"
+   },
+   {
+    "code": "A025735",
+    "title": "99.1.4 Vervoersongeval, n.g.",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 161,
+    "description": "Vervoersongeval, niet gespecificeerd \r\nICD10-code: V01.9,V02.9,V03.9,V04.9,V05.9,V06.9,V09.9,V19.8,V29.8,V39.8,V40.4,V41.4,V42.4,V43.4,V44.4,V45.4,V46.4,V47.4,V48.4,V49.8,V50.4,V51.4,V52.4,V53.4,V54.4,V55.4,V56.4,V57.4,V58.4,V59.8,V60.4,V61.4,V62.4,V63.4,V64.4,V65.4,V66.4,V67.4,V68.4,V69.8,V70.4,V71.4,V72.4,V73.4,V74.4,V75.4,V76.4,V77.4,V78.4,V79.8,V82.4,V83.4,V84.4,V85.4,V86.4,Y85"
+   },
+   {
+    "code": "A025736",
+    "title": "99.2 Accidentele vergiftiging",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 162,
+    "description": "ICD10-code: X40-X49"
+   },
+   {
+    "code": "A025737",
+    "title": "99.3 Medische ongevallen",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 163,
+    "description": "ICD10-code: Y60-Y82, Y88.1"
+   },
+   {
+    "code": "A025738",
+    "title": "99.4 Complicatie van behandeling",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 164,
+    "description": "ICD10-code: Y83-Y84, Y88.2-Y88.3"
+   },
+   {
+    "code": "A025739",
+    "title": "99.5 Accidentele val",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 165,
+    "description": "ICD10-code: W00-W19"
+   },
+   {
+    "code": "A025740",
+    "title": "99.6 Ongeval door brand en verbranding",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 166,
+    "description": "ICD10-code: X00-X19"
+   },
+   {
+    "code": "A025741",
+    "title": "99.7 Overige niet-vervoersongevallen",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 167,
+    "description": "ICD10-code: W20-W64, W75-W99, X20-X39, X50-X59, Y86"
+   },
+   {
+    "code": "A025742",
+    "title": "99.8 Accidentele verdrinking",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 168,
+    "description": "ICD10-code: W65-W74"
+   },
+   {
+    "code": "A025743",
+    "title": "99.9 Bijwerkingen van geneesmiddelen",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 169,
+    "description": "ICD10-code: Y40-Y59, Y88.0\r\nInclusief ICD10-code U12.9 (Ongewenste gevolgen bij therapeutisch gebruik van COVID-19 vaccinatie), wat een subcode is van Y59.0 (Ongewenste gevolgen bij therapeutisch gebruik van virusvaccins)."
+   },
+   {
+    "code": "A025744",
+    "title": "99.10 Zelftoegebracht letsel",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 170,
+    "description": "ICD10-code: X60-X84, Y87.0"
+   },
+   {
+    "code": "A025745",
+    "title": "99.11 Geweld",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 171,
+    "description": "ICD10-code: X85-Y09, Y87.1"
+   },
+   {
+    "code": "A025746",
+    "title": "99.12 Ov. ext. oorz. letsel/vergiftiging",
+    "dimensionGroup": "27",
+    "status": null,
+    "index": 172,
+    "description": "Overige externe oorzaken van letsels en vergiftigingen \r\nICD10-code: Y10-Y36, Y87.2, Y89-Y98"
+   }
+  ],
+  "Geslacht": [
+   {
+    "code": "T001038",
+    "title": "Totaal mannen en vrouwen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "3000",
+    "title": "Mannen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "4000",
+    "title": "Vrouwen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   }
+  ],
+  "Leeftijd": [
+   {
+    "code": "10000",
+    "title": "Totaal leeftijd",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "T001249",
+    "title": "Totaal, gestandaardiseerd",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 2,
+    "description": "Totaal van alle leeftijden, waarbij per geslacht is gestandaardiseerd naar de leeftijdsverdeling van de totale bevolking in het verslagjaar. Hiermee wordt gecorrigeerd voor verschillen in bevolkingsopbouw tussen de verschillende bevolkingsgroepen die in de tabel worden weergegeven (zoals inkomensgroepen of regionale bevolkingsgroepen), waardoor de cijfers tussen deze groepen beter kunnen worden vergeleken. \r\nDe standaardisatie is gedaan via de methode van directe standaardisatie.\r\n"
+   },
+   {
+    "code": "10010",
+    "title": "0 jaar",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "53987",
+    "title": "1 tot 20 jaar",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "53988",
+    "title": "20 tot 45 jaar",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "53715",
+    "title": "45 tot 65 jaar",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "53950",
+    "title": "65 tot 80 jaar",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 7
+   },
+   {
+    "code": "21700",
+    "title": "80 jaar of ouder",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 8
+   }
+  ],
+  "SoortOpname": [
+   {
+    "code": "T001389",
+    "title": "Totaal opnamen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Totaal opnamen betreft het totaal van dagopnamen, klinische opnamen en (vanaf 2015) observaties."
+   },
+   {
+    "code": "A047722",
+    "title": "Klinische opnamen en observaties",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Een klinische opname betreft een verblijf op een voor verpleging ingerichte afdeling, waarvoor één of meer verpleegdagen worden geregistreerd.\r\n\r\n\r\n\r\nEen observatie is een 'langdurige observatie zonder overnachting'. Dit is een niet geplande vorm van verpleging van minimaal vier aaneengesloten uren, zonder overnachting, op een voor verpleging ingerichte afdeling, met als doel observatie van de patiënt. Een observatie omvat ten minste een systematische controle van de conditie van de patiënt op bepaalde parameters zoals bewustzijn, bloeddruk of lichaamstemperatuur. \r\n\r\nDit zorgtype is in 2014 ingevoerd en wordt vanaf 2015 in de tabel weergegeven."
+   },
+   {
+    "code": "A044921",
+    "title": "Dagopnamen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Een dagopname (dagverpleging) betreft een aantal uren durende vorm van verpleging op een voor dagverpleging ingerichte afdeling, in het algemeen voorzienbaar (vooraf ingepland) en noodzakelijk in verband met het op dezelfde dag plaatsvinden van een medisch specialistisch(e) onderzoek of behandeling."
+   }
+  ],
+  "RegioS": [
+   {
+    "code": "NL01",
+    "title": "Nederland",
+    "dimensionGroup": "NL",
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "LD01",
+    "title": "Noord-Nederland (LD)",
+    "dimensionGroup": "LD",
+    "status": null,
+    "index": 2,
+    "description": "LD = Landsdeel\r\n\r\nNoord-Nederland: Groningen, Fryslân, Drenthe\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen."
+   },
+   {
+    "code": "LD02",
+    "title": "Oost-Nederland (LD)",
+    "dimensionGroup": "LD",
+    "status": null,
+    "index": 3,
+    "description": "LD = Landsdeel\r\n\r\nOost-Nederland: Overijssel, Flevoland, Gelderland\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen."
+   },
+   {
+    "code": "LD03",
+    "title": "West-Nederland (LD)",
+    "dimensionGroup": "LD",
+    "status": null,
+    "index": 4,
+    "description": "LD = Landsdeel\r\n\r\nWest-Nederland: Utrecht, Noord-Holland, Zuid-Holland, Zeeland\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen."
+   },
+   {
+    "code": "LD04",
+    "title": "Zuid-Nederland (LD)",
+    "dimensionGroup": "LD",
+    "status": null,
+    "index": 5,
+    "description": "LD = Landsdeel\r\n\r\nZuid-Nederland: Noord-Brabant, Limburg\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen."
+   },
+   {
+    "code": "PV20",
+    "title": "Groningen (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 6,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV21",
+    "title": "Fryslân (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 7,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV22",
+    "title": "Drenthe (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 8,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV23",
+    "title": "Overijssel (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 9,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV24",
+    "title": "Flevoland (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 10,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV25",
+    "title": "Gelderland (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 11,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV26",
+    "title": "Utrecht (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 12,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV27",
+    "title": "Noord-Holland (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 13,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV28",
+    "title": "Zuid-Holland (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 14,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV29",
+    "title": "Zeeland (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 15,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV30",
+    "title": "Noord-Brabant (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 16,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV31",
+    "title": "Limburg (PV)",
+    "dimensionGroup": "PV",
+    "status": null,
+    "index": 17,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "GM1680",
+    "title": "Aa en Hunze",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 18,
+    "description": "Ontstaan per 01-01-1998"
+   },
+   {
+    "code": "GM0738",
+    "title": "Aalburg",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 19,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1973"
+   },
+   {
+    "code": "GM0358",
+    "title": "Aalsmeer",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 20,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0197",
+    "title": "Aalten",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 21,
+    "description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0059",
+    "title": "Achtkarspelen",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 22,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0482",
+    "title": "Alblasserdam",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 23,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0613",
+    "title": "Albrandswaard",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 24,
+    "description": "Ontstaan per 01-01-1985"
+   },
+   {
+    "code": "GM0361",
+    "title": "Alkmaar",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 25,
+    "description": "Gemeentelijke herindeling per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0141",
+    "title": "Almelo",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 26,
+    "description": "Begindatum 01-12-1913"
+   },
+   {
+    "code": "GM0034",
+    "title": "Almere",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 27,
+    "description": "Ontstaan per 01-01-1984"
+   },
+   {
+    "code": "GM0484",
+    "title": "Alphen aan den Rijn",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 28,
+    "description": "Gemeentelijke herindeling per 01-01-2014\r\nNaamswijziging per 01-01-1918"
+   },
+   {
+    "code": "GM1723",
+    "title": "Alphen-Chaam",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 29,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM1959",
+    "title": "Altena",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 30,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM0060",
+    "title": "Ameland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 31,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0307",
+    "title": "Amersfoort",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 32,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0362",
+    "title": "Amstelveen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 33,
+    "description": "Naamswijziging per 01-01-1964"
+   },
+   {
+    "code": "GM0363",
+    "title": "Amsterdam",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 34,
+    "description": "Gemeentelijke herindeling per 24-03-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0200",
+    "title": "Apeldoorn",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 35,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0003",
+    "title": "Appingedam",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 36,
+    "description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0202",
+    "title": "Arnhem",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 37,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0106",
+    "title": "Assen",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 38,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0743",
+    "title": "Asten",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 39,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0744",
+    "title": "Baarle-Nassau",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 40,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0308",
+    "title": "Baarn",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 41,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0489",
+    "title": "Barendrecht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 42,
+    "description": "Naamswijziging per 10-12-1886"
+   },
+   {
+    "code": "GM0203",
+    "title": "Barneveld",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 43,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0005",
+    "title": "Bedum",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 44,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0888",
+    "title": "Beek (L.)",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 45,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1954",
+    "title": "Beekdaelen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 46,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM0370",
+    "title": "Beemster",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 47,
+    "description": "Opgeheven per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0889",
+    "title": "Beesel",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 48,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0007",
+    "title": "Bellingwedde",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 49,
+    "description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-09-1968"
+   },
+   {
+    "code": "GM1945",
+    "title": "Berg en Dal",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 50,
+    "description": "Naamswijziging per 01-01-2016"
+   },
+   {
+    "code": "GM0491",
+    "title": "Bergambacht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 51,
+    "description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1724",
+    "title": "Bergeijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 52,
+    "description": "Naamswijziging per 25-09-1998"
+   },
+   {
+    "code": "GM0893",
+    "title": "Bergen (L.)",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 53,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0373",
+    "title": "Bergen (NH.)",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 54,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0748",
+    "title": "Bergen op Zoom",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 55,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1859",
+    "title": "Berkelland",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 56,
+    "description": "Ontstaan per 01-01-2005"
+   },
+   {
+    "code": "GM1721",
+    "title": "Bernheze",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 57,
+    "description": "Naamswijziging per 28-01-1995"
+   },
+   {
+    "code": "GM0568",
+    "title": "Bernisse",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 58,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1980"
+   },
+   {
+    "code": "GM0753",
+    "title": "Best",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 59,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0209",
+    "title": "Beuningen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 60,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0375",
+    "title": "Beverwijk",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 61,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0063",
+    "title": "het Bildt",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 62,
+    "description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0310",
+    "title": "De Bilt",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 63,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0585",
+    "title": "Binnenmaas",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 64,
+    "description": "Opgeheven per 01-01-2019\r\nGemeentelijke herindeling per 01-01-2007\r\nOntstaan per 01-01-1984"
+   },
+   {
+    "code": "GM1728",
+    "title": "Bladel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 65,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0376",
+    "title": "Blaricum",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 66,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0377",
+    "title": "Bloemendaal",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 67,
+    "description": "Gemeentelijke herindeling per 01-01-2009\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0055",
+    "title": "Boarnsterhim",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 68,
+    "description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 03-01-1985"
+   },
+   {
+    "code": "GM1901",
+    "title": "Bodegraven-Reeuwijk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 69,
+    "description": "Ontstaan per 01-01-2011"
+   },
+   {
+    "code": "GM0755",
+    "title": "Boekel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 70,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0009",
+    "title": "Ten Boer",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 71,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1681",
+    "title": "Borger-Odoorn",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 72,
+    "description": "Ontstaan per 01-01-1998"
+   },
+   {
+    "code": "GM0147",
+    "title": "Borne",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 73,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0654",
+    "title": "Borsele",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 74,
+    "description": "Naamswijziging per 01-01-1970"
+   },
+   {
+    "code": "GM0499",
+    "title": "Boskoop",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 75,
+    "description": "Opgeheven per 01-01-2014\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0756",
+    "title": "Boxmeer",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 76,
+    "description": "Opgeheven per 01-01-2022\r\nGemeentelijke herindeling per 01-01-1998\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0757",
+    "title": "Boxtel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 77,
+    "description": "Gemeentelijke herindeling per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0758",
+    "title": "Breda",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 78,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0501",
+    "title": "Brielle",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 79,
+    "description": "Opgeheven per 01-01-2023\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1876",
+    "title": "Bronckhorst",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 80,
+    "description": "Ontstaan per 01-01-2005"
+   },
+   {
+    "code": "GM0213",
+    "title": "Brummen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 81,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0899",
+    "title": "Brunssum",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 82,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0312",
+    "title": "Bunnik",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 83,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0313",
+    "title": "Bunschoten",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 84,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0214",
+    "title": "Buren",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 85,
+    "description": "Gemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0381",
+    "title": "Bussum",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 86,
+    "description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0502",
+    "title": "Capelle aan den IJssel",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 87,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0383",
+    "title": "Castricum",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 88,
+    "description": "Gemeentelijke herindeling per 01-01-2002\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0109",
+    "title": "Coevorden",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 89,
+    "description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1706",
+    "title": "Cranendonck",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 90,
+    "description": "Naamswijziging per 28-01-1998"
+   },
+   {
+    "code": "GM0611",
+    "title": "Cromstrijen",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 91,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984"
+   },
+   {
+    "code": "GM1684",
+    "title": "Cuijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 92,
+    "description": "Opgeheven per 01-01-2022\r\nOntstaan per 01-01-1994"
+   },
+   {
+    "code": "GM0216",
+    "title": "Culemborg",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 93,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0148",
+    "title": "Dalfsen",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 94,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1891",
+    "title": "Dantumadiel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 95,
+    "description": "Naamswijziging per 01-01-2009"
+   },
+   {
+    "code": "GM0503",
+    "title": "Delft",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 96,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0010",
+    "title": "Delfzijl",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 97,
+    "description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0762",
+    "title": "Deurne",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 98,
+    "description": "Naamswijziging per 01-01-1926"
+   },
+   {
+    "code": "GM0150",
+    "title": "Deventer",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 99,
+    "description": "Gemeentelijke herindeling per 01-01-2005\r\nGemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0384",
+    "title": "Diemen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 100,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1980",
+    "title": "Dijk en Waard",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 101,
+    "description": "Ontstaan per 01-01-2022"
+   },
+   {
+    "code": "GM1774",
+    "title": "Dinkelland",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 102,
+    "description": "Naamswijziging per 01-06-2002"
+   },
+   {
+    "code": "GM0221",
+    "title": "Doesburg",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 103,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0222",
+    "title": "Doetinchem",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 104,
+    "description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum 01-01-1920"
+   },
+   {
+    "code": "GM0766",
+    "title": "Dongen",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 105,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0058",
+    "title": "Dongeradeel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 106,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984"
+   },
+   {
+    "code": "GM0505",
+    "title": "Dordrecht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 107,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0498",
+    "title": "Drechterland",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 108,
+    "description": "Gemeentelijke herindeling per 01-01-2006\r\nNaamswijziging per 01-01-1980"
+   },
+   {
+    "code": "GM1719",
+    "title": "Drimmelen",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 109,
+    "description": "Naamswijziging per 25-04-1998"
+   },
+   {
+    "code": "GM0303",
+    "title": "Dronten",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 110,
+    "description": "Ontstaan per 01-01-1972"
+   },
+   {
+    "code": "GM0225",
+    "title": "Druten",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 111,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0226",
+    "title": "Duiven",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 112,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1711",
+    "title": "Echt-Susteren",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 113,
+    "description": "Ontstaan per 01-01-2003"
+   },
+   {
+    "code": "GM0385",
+    "title": "Edam-Volendam",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 114,
+    "description": "Gemeentelijke herindeling per 01-01-2016\r\nNaamswijziging per 01-01-1975"
+   },
+   {
+    "code": "GM0228",
+    "title": "Ede",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 115,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0317",
+    "title": "Eemnes",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 116,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1979",
+    "title": "Eemsdelta",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 117,
+    "description": "Ontstaan per 01-01-2021"
+   },
+   {
+    "code": "GM1651",
+    "title": "Eemsmond",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 118,
+    "description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1992"
+   },
+   {
+    "code": "GM0770",
+    "title": "Eersel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 119,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1903",
+    "title": "Eijsden-Margraten",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 120,
+    "description": "Ontstaan per 01-01-2011"
+   },
+   {
+    "code": "GM0772",
+    "title": "Eindhoven",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 121,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0230",
+    "title": "Elburg",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 122,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0114",
+    "title": "Emmen",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 123,
+    "description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0388",
+    "title": "Enkhuizen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 124,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0153",
+    "title": "Enschede",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 125,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0232",
+    "title": "Epe",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 126,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0233",
+    "title": "Ermelo",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 127,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0777",
+    "title": "Etten-Leur",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 128,
+    "description": "Naamswijziging per 01-01-1968"
+   },
+   {
+    "code": "GM1722",
+    "title": "Ferwerderadiel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 129,
+    "description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1999"
+   },
+   {
+    "code": "GM0070",
+    "title": "Franekeradeel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 130,
+    "description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1921",
+    "title": "De Friese Meren",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 131,
+    "description": "Naamswijziging per 01-07-2015\r\nOntstaan per 01-01-2014"
+   },
+   {
+    "code": "GM1940",
+    "title": "De Fryske Marren",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 132,
+    "description": "Naamswijziging per 01-07-2015"
+   },
+   {
+    "code": "GM0653",
+    "title": "Gaasterlân-Sleat",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 133,
+    "description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 05-06-1985"
+   },
+   {
+    "code": "GM0779",
+    "title": "Geertruidenberg",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 134,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0236",
+    "title": "Geldermalsen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 135,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1771",
+    "title": "Geldrop-Mierlo",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 136,
+    "description": "Ontstaan per 01-01-2004"
+   },
+   {
+    "code": "GM1652",
+    "title": "Gemert-Bakel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 137,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0907",
+    "title": "Gennep",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 138,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0689",
+    "title": "Giessenlanden",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 139,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1986"
+   },
+   {
+    "code": "GM0784",
+    "title": "Gilze en Rijen",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 140,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1924",
+    "title": "Goeree-Overflakkee",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 141,
+    "description": "Ontstaan per 01-01-2013"
+   },
+   {
+    "code": "GM0664",
+    "title": "Goes",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 142,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0785",
+    "title": "Goirle",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 143,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1942",
+    "title": "Gooise Meren",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 144,
+    "description": "Ontstaan per 01-01-2016"
+   },
+   {
+    "code": "GM0512",
+    "title": "Gorinchem",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 145,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0513",
+    "title": "Gouda",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 146,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0365",
+    "title": "Graft-De Rijp",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 147,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-08-1970"
+   },
+   {
+    "code": "GM0786",
+    "title": "Grave",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 148,
+    "description": "Opgeheven per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0518",
+    "title": "'s-Gravenhage (gemeente)",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 149,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0241",
+    "title": "Groesbeek",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 150,
+    "description": "Naamswijziging per 01-01-2016\r\nGemeentelijke herindeling per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0014",
+    "title": "Groningen (gemeente)",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 151,
+    "description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0015",
+    "title": "Grootegast",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 152,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1729",
+    "title": "Gulpen-Wittem",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 153,
+    "description": "Ontstaan per 01-01-1999"
+   },
+   {
+    "code": "GM0158",
+    "title": "Haaksbergen",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 154,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0788",
+    "title": "Haaren",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 155,
+    "description": "Opgeheven per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0392",
+    "title": "Haarlem",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 156,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0393",
+    "title": "Haarlemmerliede en Spaarnwoude",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 157,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum 13-06-1857"
+   },
+   {
+    "code": "GM0394",
+    "title": "Haarlemmermeer",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 158,
+    "description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum 16-11-1855"
+   },
+   {
+    "code": "GM1655",
+    "title": "Halderberge",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 159,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0160",
+    "title": "Hardenberg",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 160,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nOntstaan per 01-05-1941"
+   },
+   {
+    "code": "GM0243",
+    "title": "Harderwijk",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 161,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0523",
+    "title": "Hardinxveld-Giessendam",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 162,
+    "description": "Ontstaan per 01-01-1957"
+   },
+   {
+    "code": "GM0017",
+    "title": "Haren",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 163,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0072",
+    "title": "Harlingen",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 164,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0244",
+    "title": "Hattem",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 165,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0396",
+    "title": "Heemskerk",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 166,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0397",
+    "title": "Heemstede",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 167,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0246",
+    "title": "Heerde",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 168,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0074",
+    "title": "Heerenveen",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 169,
+    "description": "Gemeentelijke herindeling per 01-01-2014\r\nBegindatum 01-07-1934"
+   },
+   {
+    "code": "GM0398",
+    "title": "Heerhugowaard",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 170,
+    "description": "Opgeheven per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0917",
+    "title": "Heerlen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 171,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1658",
+    "title": "Heeze-Leende",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 172,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0399",
+    "title": "Heiloo",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 173,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0400",
+    "title": "Den Helder",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 174,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0163",
+    "title": "Hellendoorn",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 175,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0530",
+    "title": "Hellevoetsluis",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 176,
+    "description": "Opgeheven per 01-01-2023\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0794",
+    "title": "Helmond",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 177,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0531",
+    "title": "Hendrik-Ido-Ambacht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 178,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0164",
+    "title": "Hengelo (O.)",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 179,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0796",
+    "title": "'s-Hertogenbosch",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 180,
+    "description": "Gemeentelijke herindeling per 01-01-2015\r\nGemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0252",
+    "title": "Heumen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 181,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0797",
+    "title": "Heusden",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 182,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0534",
+    "title": "Hillegom",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 183,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0798",
+    "title": "Hilvarenbeek",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 184,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0402",
+    "title": "Hilversum",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 185,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1963",
+    "title": "Hoeksche Waard",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 186,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM1735",
+    "title": "Hof van Twente",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 187,
+    "description": "Ontstaan per 01-01-2001"
+   },
+   {
+    "code": "GM1966",
+    "title": "Het Hogeland",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 188,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM1911",
+    "title": "Hollands Kroon",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 189,
+    "description": "Ontstaan per 01-01-2012"
+   },
+   {
+    "code": "GM0118",
+    "title": "Hoogeveen",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 190,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0018",
+    "title": "Hoogezand-Sappemeer",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 191,
+    "description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-04-1949"
+   },
+   {
+    "code": "GM0405",
+    "title": "Hoorn",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 192,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1507",
+    "title": "Horst aan de Maas",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 193,
+    "description": "Gemeentelijke herindeling per 01-01-2010\r\nOntstaan per 01-01-2001"
+   },
+   {
+    "code": "GM0321",
+    "title": "Houten",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 194,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0406",
+    "title": "Huizen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 195,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0677",
+    "title": "Hulst",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 196,
+    "description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0353",
+    "title": "IJsselstein",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 197,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1884",
+    "title": "Kaag en Braassem",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 198,
+    "description": "Ontstaan per 01-01-2009"
+   },
+   {
+    "code": "GM0166",
+    "title": "Kampen",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 199,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0678",
+    "title": "Kapelle",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 200,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0537",
+    "title": "Katwijk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 201,
+    "description": "Gemeentelijke herindeling per 01-01-2006\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0928",
+    "title": "Kerkrade",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 202,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1598",
+    "title": "Koggenland",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 203,
+    "description": "Ontstaan per 01-01-2007"
+   },
+   {
+    "code": "GM0079",
+    "title": "Kollumerland en Nieuwkruisland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 204,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0588",
+    "title": "Korendijk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 205,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984"
+   },
+   {
+    "code": "GM0542",
+    "title": "Krimpen aan den IJssel",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 206,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1931",
+    "title": "Krimpenerwaard",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 207,
+    "description": "Ontstaan per 01-01-2015"
+   },
+   {
+    "code": "GM1659",
+    "title": "Laarbeek",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 208,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM1982",
+    "title": "Land van Cuijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 209,
+    "description": "Ontstaan per 01-01-2022"
+   },
+   {
+    "code": "GM1685",
+    "title": "Landerd",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 210,
+    "description": "Opgeheven per 01-01-2022\r\nOntstaan per 01-01-1994"
+   },
+   {
+    "code": "GM0882",
+    "title": "Landgraaf",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 211,
+    "description": "Ontstaan per 01-01-1982"
+   },
+   {
+    "code": "GM0415",
+    "title": "Landsmeer",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 212,
+    "description": "Gemeentelijke herindeling per 01-01-1991\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0416",
+    "title": "Langedijk",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 213,
+    "description": "Opgeheven per 01-01-2022\r\nOntstaan per 01-08-1941"
+   },
+   {
+    "code": "GM1621",
+    "title": "Lansingerland",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 214,
+    "description": "Ontstaan per 01-01-2007"
+   },
+   {
+    "code": "GM0417",
+    "title": "Laren (NH.)",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 215,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0022",
+    "title": "Leek",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 216,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0545",
+    "title": "Leerdam",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 217,
+    "description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0080",
+    "title": "Leeuwarden",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 218,
+    "description": "Gemeentelijke herindeling per 01-01-2018\r\nGemeentelijke herindeling per 01-01-2014\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0081",
+    "title": "Leeuwarderadeel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 219,
+    "description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0546",
+    "title": "Leiden",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 220,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0547",
+    "title": "Leiderdorp",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 221,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1916",
+    "title": "Leidschendam-Voorburg",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 222,
+    "description": "Ontstaan per 01-01-2002"
+   },
+   {
+    "code": "GM0995",
+    "title": "Lelystad",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 223,
+    "description": "Ontstaan per 01-01-1980"
+   },
+   {
+    "code": "GM0082",
+    "title": "Lemsterland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 224,
+    "description": "Opgeheven per 01-01-2014\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1640",
+    "title": "Leudal",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 225,
+    "description": "Ontstaan per 01-01-2007"
+   },
+   {
+    "code": "GM0327",
+    "title": "Leusden",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 226,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0733",
+    "title": "Lingewaal",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 227,
+    "description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 03-01-1987"
+   },
+   {
+    "code": "GM1705",
+    "title": "Lingewaard",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 228,
+    "description": "Naamswijziging per 01-01-2003"
+   },
+   {
+    "code": "GM0553",
+    "title": "Lisse",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 229,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0140",
+    "title": "Littenseradiel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 230,
+    "description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 26-01-1985"
+   },
+   {
+    "code": "GM0262",
+    "title": "Lochem",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 231,
+    "description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0809",
+    "title": "Loon op Zand",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 232,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0331",
+    "title": "Lopik",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 233,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0024",
+    "title": "Loppersum",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 234,
+    "description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0168",
+    "title": "Losser",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 235,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1671",
+    "title": "Maasdonk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 236,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1993"
+   },
+   {
+    "code": "GM0263",
+    "title": "Maasdriel",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 237,
+    "description": "Gemeentelijke herindeling per 01-01-1999\r\nNaamswijziging per 01-08-1944"
+   },
+   {
+    "code": "GM1641",
+    "title": "Maasgouw",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 238,
+    "description": "Ontstaan per 01-01-2007"
+   },
+   {
+    "code": "GM1991",
+    "title": "Maashorst",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 239,
+    "description": "Ontstaan per 01-01-2022"
+   },
+   {
+    "code": "GM0556",
+    "title": "Maassluis",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 240,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0935",
+    "title": "Maastricht",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 241,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1663",
+    "title": "De Marne",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 242,
+    "description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1992"
+   },
+   {
+    "code": "GM0025",
+    "title": "Marum",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 243,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0420",
+    "title": "Medemblik",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 244,
+    "description": "Gemeentelijke herindeling per 01-01-2011\r\nGemeentelijke herindeling per 01-01-2007\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0938",
+    "title": "Meerssen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 245,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1948",
+    "title": "Meierijstad",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 246,
+    "description": "Ontstaan per 01-01-2017"
+   },
+   {
+    "code": "GM1908",
+    "title": "Menameradiel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 247,
+    "description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 01-01-2011"
+   },
+   {
+    "code": "GM1987",
+    "title": "Menterwolde",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 248,
+    "description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 01-02-1991"
+   },
+   {
+    "code": "GM0119",
+    "title": "Meppel",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 249,
+    "description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0687",
+    "title": "Middelburg (Z.)",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 250,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1842",
+    "title": "Midden-Delfland",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 251,
+    "description": "Ontstaan per 01-01-2004"
+   },
+   {
+    "code": "GM1731",
+    "title": "Midden-Drenthe",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 252,
+    "description": "Naamswijziging per 01-01-2000"
+   },
+   {
+    "code": "GM1952",
+    "title": "Midden-Groningen",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 253,
+    "description": "Ontstaan per 01-01-2018"
+   },
+   {
+    "code": "GM0815",
+    "title": "Mill en Sint Hubert",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 254,
+    "description": "Opgeheven per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0265",
+    "title": "Millingen aan de Rijn",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 255,
+    "description": "Opgeheven per 01-01-2015\r\nNaamswijziging per 01-01-1954"
+   },
+   {
+    "code": "GM1709",
+    "title": "Moerdijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 256,
+    "description": "Naamswijziging per 04-04-1998"
+   },
+   {
+    "code": "GM1978",
+    "title": "Molenlanden",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 257,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM1927",
+    "title": "Molenwaard",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 258,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-2013"
+   },
+   {
+    "code": "GM1955",
+    "title": "Montferland",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 259,
+    "description": "Ontstaan per 01-01-2005"
+   },
+   {
+    "code": "GM0335",
+    "title": "Montfoort",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 260,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0944",
+    "title": "Mook en Middelaar",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 261,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0424",
+    "title": "Muiden",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 262,
+    "description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0425",
+    "title": "Naarden",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 263,
+    "description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1740",
+    "title": "Neder-Betuwe",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 264,
+    "description": "Naamswijziging per 01-04-2003"
+   },
+   {
+    "code": "GM0643",
+    "title": "Nederlek",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 265,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1985"
+   },
+   {
+    "code": "GM0946",
+    "title": "Nederweert",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 266,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0304",
+    "title": "Neerijnen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 267,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1978"
+   },
+   {
+    "code": "GM0356",
+    "title": "Nieuwegein",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 268,
+    "description": "Ontstaan per 01-07-1971"
+   },
+   {
+    "code": "GM0569",
+    "title": "Nieuwkoop",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 269,
+    "description": "Gemeentelijke herindeling per 01-01-2007\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0267",
+    "title": "Nijkerk",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 270,
+    "description": "Gemeentelijke herindeling per 01-01-2000\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0268",
+    "title": "Nijmegen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 271,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1930",
+    "title": "Nissewaard",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 272,
+    "description": "Ontstaan per 01-01-2015"
+   },
+   {
+    "code": "GM1970",
+    "title": "Noardeast-Fryslân",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 273,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM1695",
+    "title": "Noord-Beveland",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 274,
+    "description": "Ontstaan per 01-01-1995"
+   },
+   {
+    "code": "GM1699",
+    "title": "Noordenveld",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 275,
+    "description": "Ontstaan per 01-01-1998"
+   },
+   {
+    "code": "GM0171",
+    "title": "Noordoostpolder",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 276,
+    "description": "Provinciale wijziging per 01-01-1986\r\nNaamswijziging per 01-07-1962"
+   },
+   {
+    "code": "GM0575",
+    "title": "Noordwijk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 277,
+    "description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0576",
+    "title": "Noordwijkerhout",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 278,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0820",
+    "title": "Nuenen, Gerwen en Nederwetten",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 279,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0302",
+    "title": "Nunspeet",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 280,
+    "description": "Ontstaan per 01-01-1972"
+   },
+   {
+    "code": "GM0951",
+    "title": "Nuth",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 281,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum 02-01-1839"
+   },
+   {
+    "code": "GM0579",
+    "title": "Oegstgeest",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 282,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0823",
+    "title": "Oirschot",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 283,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0824",
+    "title": "Oisterwijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 284,
+    "description": "Gemeentelijke herindeling per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1895",
+    "title": "Oldambt",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 285,
+    "description": "Ontstaan per 01-01-2010"
+   },
+   {
+    "code": "GM0269",
+    "title": "Oldebroek",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 286,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0173",
+    "title": "Oldenzaal",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 287,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1773",
+    "title": "Olst-Wijhe",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 288,
+    "description": "Naamswijziging per 26-03-2002"
+   },
+   {
+    "code": "GM0175",
+    "title": "Ommen",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 289,
+    "description": "Begindatum 01-05-1923"
+   },
+   {
+    "code": "GM0881",
+    "title": "Onderbanken",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 290,
+    "description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1982"
+   },
+   {
+    "code": "GM1586",
+    "title": "Oost Gelre",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 291,
+    "description": "Naamswijziging per 19-05-2006"
+   },
+   {
+    "code": "GM0826",
+    "title": "Oosterhout",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 292,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0085",
+    "title": "Ooststellingwerf",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 293,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0431",
+    "title": "Oostzaan",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 294,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0432",
+    "title": "Opmeer",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 295,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0086",
+    "title": "Opsterland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 296,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0828",
+    "title": "Oss",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 297,
+    "description": "Gemeentelijke herindeling per 01-01-2015\r\nGemeentelijke herindeling per 01-01-2011\r\nGemeentelijke herindeling per 01-01-2003\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0584",
+    "title": "Oud-Beijerland",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 298,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1509",
+    "title": "Oude IJsselstreek",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 299,
+    "description": "Ontstaan per 01-01-2005"
+   },
+   {
+    "code": "GM0437",
+    "title": "Ouder-Amstel",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 300,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0644",
+    "title": "Ouderkerk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 301,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1985"
+   },
+   {
+    "code": "GM0589",
+    "title": "Oudewater",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 302,
+    "description": "Provinciale wijziging per 01-09-1970\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1734",
+    "title": "Overbetuwe",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 303,
+    "description": "Ontstaan per 01-01-2001"
+   },
+   {
+    "code": "GM0590",
+    "title": "Papendrecht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 304,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1894",
+    "title": "Peel en Maas",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 305,
+    "description": "Ontstaan per 01-01-2010"
+   },
+   {
+    "code": "GM0765",
+    "title": "Pekela",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 306,
+    "description": "Ontstaan per 01-01-1990"
+   },
+   {
+    "code": "GM1926",
+    "title": "Pijnacker-Nootdorp",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 307,
+    "description": "Ontstaan per 01-01-2002"
+   },
+   {
+    "code": "GM0439",
+    "title": "Purmerend",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 308,
+    "description": "Gemeentelijke herindeling per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0273",
+    "title": "Putten",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 309,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0177",
+    "title": "Raalte",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 310,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0703",
+    "title": "Reimerswaal",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 311,
+    "description": "Ontstaan per 01-01-1970"
+   },
+   {
+    "code": "GM0274",
+    "title": "Renkum",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 312,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0339",
+    "title": "Renswoude",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 313,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1667",
+    "title": "Reusel-De Mierden",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 314,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0275",
+    "title": "Rheden",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 315,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0340",
+    "title": "Rhenen",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 316,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0597",
+    "title": "Ridderkerk",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 317,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0196",
+    "title": "Rijnwaarden",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 318,
+    "description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-01-1985"
+   },
+   {
+    "code": "GM1672",
+    "title": "Rijnwoude",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 319,
+    "description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 01-01-1993"
+   },
+   {
+    "code": "GM1742",
+    "title": "Rijssen-Holten",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 320,
+    "description": "Naamswijziging per 15-03-2003"
+   },
+   {
+    "code": "GM0603",
+    "title": "Rijswijk (ZH.)",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 321,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1669",
+    "title": "Roerdalen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 322,
+    "description": "Gemeentelijke herindeling per 01-01-2007\r\nNaamswijziging per 01-01-1993"
+   },
+   {
+    "code": "GM0957",
+    "title": "Roermond",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 323,
+    "description": "Gemeentelijke herindeling per 01-01-2007\r\nGemeentelijke herindeling per 01-01-1991\r\nBegindatum 02-01-1839"
+   },
+   {
+    "code": "GM0736",
+    "title": "De Ronde Venen",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 324,
+    "description": "Gemeentelijke herindeling per 01-01-2011\r\nOntstaan per 01-01-1989"
+   },
+   {
+    "code": "GM1674",
+    "title": "Roosendaal",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 325,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0599",
+    "title": "Rotterdam",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 326,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0277",
+    "title": "Rozendaal",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 327,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0840",
+    "title": "Rucphen",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 328,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0441",
+    "title": "Schagen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 329,
+    "description": "Gemeentelijke herindeling per 01-01-2013\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0458",
+    "title": "Schermer",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 330,
+    "description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-08-1970"
+   },
+   {
+    "code": "GM0279",
+    "title": "Scherpenzeel",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 331,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0606",
+    "title": "Schiedam",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 332,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0088",
+    "title": "Schiermonnikoog",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 333,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0844",
+    "title": "Schijndel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 334,
+    "description": "Opgeheven per 01-01-2017\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0962",
+    "title": "Schinnen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 335,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum 02-01-1839"
+   },
+   {
+    "code": "GM0608",
+    "title": "Schoonhoven",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 336,
+    "description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1676",
+    "title": "Schouwen-Duiveland",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 337,
+    "description": "Ontstaan per 01-01-1997"
+   },
+   {
+    "code": "GM0965",
+    "title": "Simpelveld",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 338,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1702",
+    "title": "Sint Anthonis",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 339,
+    "description": "Opgeheven per 01-01-2022\r\nNaamswijziging per 04-07-1995"
+   },
+   {
+    "code": "GM0845",
+    "title": "Sint-Michielsgestel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 340,
+    "description": "Gemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0846",
+    "title": "Sint-Oedenrode",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 341,
+    "description": "Opgeheven per 01-01-2017\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1883",
+    "title": "Sittard-Geleen",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 342,
+    "description": "Ontstaan per 01-01-2001"
+   },
+   {
+    "code": "GM0051",
+    "title": "Skarsterlân",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 343,
+    "description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 01-03-1985"
+   },
+   {
+    "code": "GM0610",
+    "title": "Sliedrecht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 344,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0040",
+    "title": "Slochteren",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 345,
+    "description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1714",
+    "title": "Sluis",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 346,
+    "description": "Ontstaan per 01-01-2003"
+   },
+   {
+    "code": "GM0090",
+    "title": "Smallingerland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 347,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0342",
+    "title": "Soest",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 348,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0847",
+    "title": "Someren",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 349,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0848",
+    "title": "Son en Breugel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 350,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0612",
+    "title": "Spijkenisse",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 351,
+    "description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0037",
+    "title": "Stadskanaal",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 352,
+    "description": "Ontstaan per 01-01-1969"
+   },
+   {
+    "code": "GM0180",
+    "title": "Staphorst",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 353,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0532",
+    "title": "Stede Broec",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 354,
+    "description": "Ontstaan per 01-01-1979"
+   },
+   {
+    "code": "GM0851",
+    "title": "Steenbergen",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 355,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nNaamswijziging per 25-06-1962"
+   },
+   {
+    "code": "GM1708",
+    "title": "Steenwijkerland",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 356,
+    "description": "Naamswijziging per 01-01-2003"
+   },
+   {
+    "code": "GM0971",
+    "title": "Stein (L.)",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 357,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1904",
+    "title": "Stichtse Vecht",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 358,
+    "description": "Ontstaan per 01-01-2011"
+   },
+   {
+    "code": "GM0617",
+    "title": "Strijen",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 359,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1900",
+    "title": "Súdwest-Fryslân",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 360,
+    "description": "Gemeentelijke herindeling per 01-01-2018\r\nOntstaan per 01-01-2011"
+   },
+   {
+    "code": "GM0715",
+    "title": "Terneuzen",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 361,
+    "description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0093",
+    "title": "Terschelling",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 362,
+    "description": "Provinciale wijziging per 01-09-1942\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0448",
+    "title": "Texel",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 363,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1525",
+    "title": "Teylingen",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 364,
+    "description": "Ontstaan per 01-01-2006"
+   },
+   {
+    "code": "GM0716",
+    "title": "Tholen",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 365,
+    "description": "Gemeentelijke herindeling per 01-01-1995\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0281",
+    "title": "Tiel",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 366,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0855",
+    "title": "Tilburg",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 367,
+    "description": "Gemeentelijke herindeling per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0183",
+    "title": "Tubbergen",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 368,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1700",
+    "title": "Twenterand",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 369,
+    "description": "Naamswijziging per 01-06-2002"
+   },
+   {
+    "code": "GM1730",
+    "title": "Tynaarlo",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 370,
+    "description": "Naamswijziging per 01-12-1999"
+   },
+   {
+    "code": "GM0737",
+    "title": "Tytsjerksteradiel",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 371,
+    "description": "Naamswijziging per 01-01-1989"
+   },
+   {
+    "code": "GM0282",
+    "title": "Ubbergen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 372,
+    "description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0856",
+    "title": "Uden",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 373,
+    "description": "Opgeheven per 01-01-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0450",
+    "title": "Uitgeest",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 374,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0451",
+    "title": "Uithoorn",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 375,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0184",
+    "title": "Urk",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 376,
+    "description": "Provinciale wijziging per 01-01-1986\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0344",
+    "title": "Utrecht (gemeente)",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 377,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1581",
+    "title": "Utrechtse Heuvelrug",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 378,
+    "description": "Ontstaan per 01-01-2006"
+   },
+   {
+    "code": "GM0981",
+    "title": "Vaals",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 379,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0994",
+    "title": "Valkenburg aan de Geul",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 380,
+    "description": "Ontstaan per 01-01-1982"
+   },
+   {
+    "code": "GM0858",
+    "title": "Valkenswaard",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 381,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0047",
+    "title": "Veendam",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 382,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0345",
+    "title": "Veenendaal",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 383,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0717",
+    "title": "Veere",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 384,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0860",
+    "title": "Veghel",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 385,
+    "description": "Opgeheven per 01-01-2017\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0861",
+    "title": "Veldhoven",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 386,
+    "description": "Naamswijziging per 01-05-1921"
+   },
+   {
+    "code": "GM0453",
+    "title": "Velsen",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 387,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0983",
+    "title": "Venlo",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 388,
+    "description": "Gemeentelijke herindeling per 01-01-2010\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum 02-01-1839"
+   },
+   {
+    "code": "GM0984",
+    "title": "Venray",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 389,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM0620",
+    "title": "Vianen",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 390,
+    "description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2002\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1961",
+    "title": "Vijfheerenlanden",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 391,
+    "description": "Provinciale wijziging per 01-01-2019\r\nOntstaan per 01-01-2019"
+   },
+   {
+    "code": "GM0622",
+    "title": "Vlaardingen",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 392,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0048",
+    "title": "Vlagtwedde",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 393,
+    "description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0096",
+    "title": "Vlieland",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 394,
+    "description": "Provinciale wijziging per 01-09-1942\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0718",
+    "title": "Vlissingen",
+    "dimensionGroup": "GMPV29",
+    "status": null,
+    "index": 395,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0623",
+    "title": "Vlist",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 396,
+    "description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0986",
+    "title": "Voerendaal",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 397,
+    "description": "Begindatum 02-01-1839"
+   },
+   {
+    "code": "GM1992",
+    "title": "Voorne aan Zee",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 398,
+    "description": "Ontstaan per 01-01-2023"
+   },
+   {
+    "code": "GM0626",
+    "title": "Voorschoten",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 399,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0285",
+    "title": "Voorst",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 400,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0865",
+    "title": "Vught",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 401,
+    "description": "Gemeentelijke herindeling per 01-01-2021\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1949",
+    "title": "Waadhoeke",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 402,
+    "description": "Ontstaan per 01-01-2018"
+   },
+   {
+    "code": "GM0866",
+    "title": "Waalre",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 403,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0867",
+    "title": "Waalwijk",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 404,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0627",
+    "title": "Waddinxveen",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 405,
+    "description": "Begindatum 01-07-1870"
+   },
+   {
+    "code": "GM0289",
+    "title": "Wageningen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 406,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0629",
+    "title": "Wassenaar",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 407,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0852",
+    "title": "Waterland",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 408,
+    "description": "Ontstaan per 01-01-1991"
+   },
+   {
+    "code": "GM0988",
+    "title": "Weert",
+    "dimensionGroup": "GMPV31",
+    "status": null,
+    "index": 409,
+    "description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum 02-01-1839"
+   },
+   {
+    "code": "GM0457",
+    "title": "Weesp",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 410,
+    "description": "Opgeheven per 24-03-2022\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0870",
+    "title": "Werkendam",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 411,
+    "description": "Opgeheven per 01-01-2019\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1960",
+    "title": "West Betuwe",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 412,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM0668",
+    "title": "West Maas en Waal",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 413,
+    "description": "Naamswijziging per 01-07-1985"
+   },
+   {
+    "code": "GM1969",
+    "title": "Westerkwartier",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 414,
+    "description": "Ontstaan per 01-01-2019"
+   },
+   {
+    "code": "GM1701",
+    "title": "Westerveld",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 415,
+    "description": "Ontstaan per 01-01-1998"
+   },
+   {
+    "code": "GM0293",
+    "title": "Westervoort",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 416,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1950",
+    "title": "Westerwolde",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 417,
+    "description": "Ontstaan per 01-01-2018"
+   },
+   {
+    "code": "GM1783",
+    "title": "Westland",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 418,
+    "description": "Ontstaan per 01-01-2004"
+   },
+   {
+    "code": "GM0098",
+    "title": "Weststellingwerf",
+    "dimensionGroup": "GMPV21",
+    "status": null,
+    "index": 419,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0614",
+    "title": "Westvoorne",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 420,
+    "description": "Opgeheven per 01-01-2023\r\nOntstaan per 01-01-1980"
+   },
+   {
+    "code": "GM0189",
+    "title": "Wierden",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 421,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0296",
+    "title": "Wijchen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 422,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM1696",
+    "title": "Wijdemeren",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 423,
+    "description": "Ontstaan per 01-01-2002"
+   },
+   {
+    "code": "GM0352",
+    "title": "Wijk bij Duurstede",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 424,
+    "description": "Gemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0053",
+    "title": "Winsum",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 425,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0294",
+    "title": "Winterswijk",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 426,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0873",
+    "title": "Woensdrecht",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 427,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0632",
+    "title": "Woerden",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 428,
+    "description": "Gemeentelijke herindeling per 01-01-2001\r\nProvinciale wijziging per 01-01-1989\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1690",
+    "title": "De Wolden",
+    "dimensionGroup": "GMPV22",
+    "status": null,
+    "index": 429,
+    "description": "Ontstaan per 01-01-1998"
+   },
+   {
+    "code": "GM0880",
+    "title": "Wormerland",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 430,
+    "description": "Ontstaan per 01-01-1991"
+   },
+   {
+    "code": "GM0351",
+    "title": "Woudenberg",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 431,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0874",
+    "title": "Woudrichem",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 432,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0479",
+    "title": "Zaanstad",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 433,
+    "description": "Ontstaan per 01-01-1974"
+   },
+   {
+    "code": "GM0297",
+    "title": "Zaltbommel",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 434,
+    "description": "Gemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0473",
+    "title": "Zandvoort",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 435,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0707",
+    "title": "Zederik",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 436,
+    "description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2019\r\nOntstaan per 01-01-1986"
+   },
+   {
+    "code": "GM0478",
+    "title": "Zeevang",
+    "dimensionGroup": "GMPV27",
+    "status": null,
+    "index": 437,
+    "description": "Opgeheven per 01-01-2016\r\nOntstaan per 01-08-1970"
+   },
+   {
+    "code": "GM0050",
+    "title": "Zeewolde",
+    "dimensionGroup": "GMPV24",
+    "status": null,
+    "index": 438,
+    "description": "Ontstaan per 01-01-1984"
+   },
+   {
+    "code": "GM0355",
+    "title": "Zeist",
+    "dimensionGroup": "GMPV26",
+    "status": null,
+    "index": 439,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0299",
+    "title": "Zevenaar",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 440,
+    "description": "Gemeentelijke herindeling per 01-01-2018\r\nGemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0637",
+    "title": "Zoetermeer",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 441,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0638",
+    "title": "Zoeterwoude",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 442,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GM0056",
+    "title": "Zuidhorn",
+    "dimensionGroup": "GMPV20",
+    "status": null,
+    "index": 443,
+    "description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1892",
+    "title": "Zuidplas",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 444,
+    "description": "Ontstaan per 01-01-2010"
+   },
+   {
+    "code": "GM0879",
+    "title": "Zundert",
+    "dimensionGroup": "GMPV30",
+    "status": null,
+    "index": 445,
+    "description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0301",
+    "title": "Zutphen",
+    "dimensionGroup": "GMPV25",
+    "status": null,
+    "index": 446,
+    "description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM1896",
+    "title": "Zwartewaterland",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 447,
+    "description": "Ontstaan per 01-01-2001"
+   },
+   {
+    "code": "GM0642",
+    "title": "Zwijndrecht",
+    "dimensionGroup": "GMPV28",
+    "status": null,
+    "index": 448,
+    "description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830"
+   },
+   {
+    "code": "GM0193",
+    "title": "Zwolle",
+    "dimensionGroup": "GMPV23",
+    "status": null,
+    "index": 449,
+    "description": "Begindatum voor 1830"
+   },
+   {
+    "code": "GG0111",
+    "title": "GGD Groningen (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 450,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG0706",
+    "title": "GGD Drenthe (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 451,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG1009",
+    "title": "GGD IJsselland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 452,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG1106",
+    "title": "GGD Twente (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 453,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG1413",
+    "title": "GGD Noord- en Oost-Gelderland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 454,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG1911",
+    "title": "Veiligh. en Gez. Gelderland-Midden (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 455,
+    "description": "GG = GGD-regio\r\n\r\nVeiligheids- en Gezondheidsregio Gelderland-Midden (GG)\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2006",
+    "title": "GGD Rivierenland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 456,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2014",
+    "title": "GGD Gelderland-Zuid (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 457,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2106",
+    "title": "GGD Regio Nijmegen (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 458,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2209",
+    "title": "GGD Flevoland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 459,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2406",
+    "title": "GG en GD Utrecht (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 460,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2506",
+    "title": "GGD Midden-Nederland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 461,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2514",
+    "title": "GGD Regio Utrecht (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 462,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG2707",
+    "title": "GGD Hollands-Noorden (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 463,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG3109",
+    "title": "GGD Kennemerland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 464,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG3406",
+    "title": "GGD Amsterdam (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 465,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG3606",
+    "title": "GGD Gooi en Vechtstreek (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 466,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG3906",
+    "title": "GGD Den Haag (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 467,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG4106",
+    "title": "GGD Zuid-Holland-West (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 468,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG4506",
+    "title": "GGD Hollands-Midden (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 469,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG4607",
+    "title": "GGD Rotterdam-Rijnmond (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 470,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG4810",
+    "title": "GGD Zuid-Holland-Zuid (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 471,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG4816",
+    "title": "Dienst Gezondheid & Jeugd ZHZ (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 472,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG5006",
+    "title": "GGD Zeeland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 473,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG5206",
+    "title": "GGD West-Brabant (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 474,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG5406",
+    "title": "GGD Hart voor Brabant (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 475,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG5608",
+    "title": "GGD Brabant-Zuidoost (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 476,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG6011",
+    "title": "GGD Limburg-Noord (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 477,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG6106",
+    "title": "GGD Zuid-Limburg (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 478,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG7014",
+    "title": "GGD Haaglanden (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 479,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG7206",
+    "title": "GGD Fryslân (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 480,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   },
+   {
+    "code": "GG7306",
+    "title": "GGD Zaanstreek/Waterland (GG)",
+    "dimensionGroup": "GG",
+    "status": null,
+    "index": 481,
+    "description": "GG = GGD-regio\r\n\r\nEen in 1990 door het toenmalig Ministerie van Welzijn, Volksgezondheid en Cultuur vastgestelde indeling in samenwerkingsgebieden voor de gemeentelijke gezondheidsdiensten (GGD). Deze indeling is in de loop der jaren verschillende keren gewijzigd. De indeling is voor het laatst herzien op 1 januari 2016 en telt vanaf die datum 25 gebieden."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 7
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 8
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 9
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 10
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 11,
+    "description": "Voorlopige cijfers"
+   }
+  ]
+ }
+}
