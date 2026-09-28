@@ -1,0 +1,713 @@
+{
+ "fetchedAt": "2026-09-28T16:24:08.449Z",
+ "schema": {
+  "tableId": "82883NED",
+  "title": "Watergebruik binnen de Nederlandse economie; Milieurekeningen",
+  "dimensions": [
+   {
+    "name": "Watergebruikers",
+    "kind": "Dimension",
+    "title": "Watergebruikers"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "M005248_2",
+    "title": "Totaal leidingwater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Drinkwater en industriewater samengenomen.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M000687",
+    "title": "Drinkwater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Water van drinkwaterkwaliteit ontvangen en geproduceerd door de drinkwaterbedrijven. Dit is gezuiverd grond- of oppervlaktewater dat door een buizen of waterleidingennet wordt getransporteerd.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M001599",
+    "title": "Totaal Industriewater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Industriewater is leidingwater met een mindere of betere kwaliteit (in het geval van gedemineraliseerd water) dan drinkwater.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008179",
+    "title": "Industriewater voor koeling",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van industriewater voor koelingsdoeleinden.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008178",
+    "title": "Overig Industriewater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van industriewater voor andere doeleinden dan koeling.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M006369_2",
+    "title": "Totaal grondwater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van water dat uit de ondergrond wordt opgepompt of naar boven komt. Dit kan zoet, maar ook brak of zout zijn.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M006370",
+    "title": "Grondwater voor koeling",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van grondwater voor koelingsdoeleinden.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M006511",
+    "title": "Overig grondwater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van grondwater voor andere doeleinden dan koeling.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M006372_2",
+    "title": "Totaal oppervlaktewater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van water van binnenwateren zoals rivieren, meren, kanalen (met uitzondering van grondwater), overgangswater, kustwateren en, voor zover het de chemische toestand betreft, ook territoriale wateren (o.a. de zee).",
+    "dataType": "Double"
+   },
+   {
+    "code": "M000255",
+    "title": "Totaal zoet oppervlaktewater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zoet oppervlaktewater zoals rivieren en meren.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008174",
+    "title": "Zoet oppervlaktewater voor koeling",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zoet oppervlaktewater voor koelingsdoeleinden.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008175",
+    "title": "Overig zoet oppervlaktewater ",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zoet oppervlaktewater voor andere doeleinden dan koeling.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M000359",
+    "title": "Totaal zout oppervlaktewater",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zout oppervlaktewater zoals de zee.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008176",
+    "title": "Zout oppervlaktewater voor koeling",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zout oppervlaktewater voor koelingsdoeleinden.",
+    "dataType": "Double"
+   },
+   {
+    "code": "M008177",
+    "title": "Overig zout oppervlaktewater ",
+    "unit": "mln m3",
+    "decimals": 1,
+    "description": "Gebruik van zout oppervlaktewater voor andere doeleinden dan koeling.",
+    "dataType": "Double"
+   }
+  ],
+  "modified": "2026-08-28T00:00:00+02:00"
+ },
+ "codeLists": {
+  "Watergebruikers": [
+   {
+    "code": "B000579",
+    "title": "Nederlandse economie totaal",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "1050010",
+    "title": "Particuliere huishoudens",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 2,
+    "description": "Eén of meer personen die samen een woonruimte bewonen en zichzelf, dus niet-bedrijfsmatig, voorzien in de dagelijkse levensbehoeften."
+   },
+   {
+    "code": "T001081",
+    "title": "A-U Alle economische activiteiten",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 3,
+    "description": "Alle economische activiteiten \r\nDeze categorie is een samentelling van categorieën: \r\nA Landbouw, bosbouw en visserij \r\nB Winning van delfstoffen \r\nC Industrie \r\nD Productie en distributie van en handel in elektriciteit, aardgas, stoom en gekoelde lucht \r\nE Winning en distributie van water; afval- en afvalwaterbeheer en sanering \r\nF Bouwnijverheid \r\nG Groot- en detailhandel; reparatie van auto's \r\nH Vervoer en opslag \r\nI Logies-, maaltijd- en drankverstrekking \r\nJ Informatie en communicatie \r\nK Financiële instellingen \r\nL Verhuur van en handel in onroerend goed \r\nM Advisering, onderzoek en overige specialistische zakelijke dienstverlening \r\nN Verhuur van roerende goederen en overige zakelijke dienstverlening \r\nO Openbaar bestuur, overheidsdiensten en verplichte sociale verzekeringen \r\nP Onderwijs \r\nQ Gezondheids- en welzijnszorg \r\nR Cultuur, sport en recreatie \r\nS Overige dienstverlening \r\nT Huishoudens als werkgever; niet-gedifferentieerde productie van goederen en diensten door huishoudens voor eigen gebruik \r\nU Extraterritoriale organisaties en lichamen"
+   },
+   {
+    "code": "301000",
+    "title": "A Landbouw, bosbouw en visserij",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 4,
+    "description": "Landbouw, bosbouw en visserij \r\nDeze sectie omvat: \r\n- de exploitatie van natuurlijke plantaardige en dierlijke hulpbronnen: \r\n w.o. de akkerbouw, veeteelt en de productie van overige planten en dieren op een agrarisch bedrijf of in het natuurlijke leefgebied; \r\n w.o. bosbouw, houtteelt en jacht; \r\n w.o. specifieke loondiensten met betrekking tot het productieproces landbouw, jacht en bosbouw worden eveneens in deze sectie ingedeeld; \r\n w.o. visserij: de vangst of het kweken van vis, schaaldieren en weekdieren."
+   },
+   {
+    "code": "305700",
+    "title": "B Delfstoffenwinning",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 5,
+    "description": "Winning van delfstoffen \r\nDeze sectie omvat: \r\n- de winning van in de natuur voorkomende mineralen in vaste vorm (steenkool, turf en erts), in vloeibare vorm (aardolie) of in de vorm van een gas (aardgas). Winning vindt plaats door middel van ondergrondse mijnbouw, dagbouw of boringen. \r\nDeze sectie omvat voorts bijkomende bewerkingen die voor het vervoer en de afzet van de minerale producten noodzakelijk zijn, bijvoorbeeld het vergruizen, malen, wassen, drogen, sorteren of concentreren van ertsen, het vloeibaar maken van aardgas en het briketteren van vaste brandstoffen. \r\nDeze werkzaamheden worden vaak door de eenheden die de delfstoffen winnen zelf uitgeoefend en/of door andere eenheden in de buurt van de winplaats. \r\nDeze sectie omvat ook: \r\n- de vervaardiging van steenkool- en bruinkoolbriketten, het sinteren van ertsen; \r\n- het vergruizen, malen of op andere wijze behandelen van bepaalde soorten aarde, steen en mineralen. \r\nDeze sectie omvat niet: \r\n- de verwerking van delfstoffen (sectie C); \r\n- de productie aan de bron van natuurlijk bron- of mineraalwater (1107); \r\n- de winning, zuivering en distributie van water (3600)."
+   },
+   {
+    "code": "307500",
+    "title": "C Industrie",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 6,
+    "description": "Industrie \r\nDeze sectie omvat: \r\n- de mechanische, fysische of chemische verwerking van materialen, stoffen of onderdelen tot nieuwe producten. De verwerkte materialen, stoffen of onderdelen zijn grondstoffen uit de landbouw, bosbouw, visserij en mijnbouw, alsmede (half)fabricaten uit de industrie. \r\n- reparatie en installatie van machines, apparatuur en andere benodigdheden voor bedrijven (geen consumentengoederen). \r\nBij de eenheden in deze sectie gaat het vaak om fabrieken waar gewoonlijk machines en apparaten worden gebruikt. Eenheden waar materialen of stoffen met de hand of in de eigen woning tot nieuwe producten worden verwerkt en die producten op de plaats waar deze zijn gemaakt, zelf verkopen, zoals bakkerijen en kleermakerijen, vallen echter ook onder deze sectie. \r\nIndustriële eenheden kunnen materialen zelf verwerken of dit aan andere eenheden uitbesteden. In beide gevallen valt dit onder de sectie Industrie. \r\nReparatie van huishoudelijke apparaten en consumptiegoederen wordt ingedeeld in afdeling 95; \r\nde reparatie van (bedrijfs-)auto's en motoren in afdeling 45: de autobranche. \r\nDe vervaardiging van specifieke componenten en onderdelen, toebehoren en hulpstukken voor machines en apparaten wordt gewoonlijk ingedeeld in dezelfde klasse als de vervaardiging van de desbetreffende machines en apparaten. \r\nDe vervaardiging van niet-specifieke componenten en onderdelen voor machines en apparatuur, zoals motoren, zuigers, elektromotoren, \r\nelektra-installatiemateriaal, kleppen, kogellagers, rollagers, worden in de passende klasse van de sectie industrie ingedeeld. \r\nDe sectie omvat niet: \r\n- activiteiten die niet leiden tot een nieuw product, maar tot een gewijzigde versie van hetzelfde product: \r\n* het opsplitsen van partijen stukgoederen in kleinere partijen, inclusief het verpakken, herverpakken; \r\n* het bottelen van producten als alcoholhoudende dranken of chemicaliën; \r\n* de montage van computers volgens de specifieke wensen van een klant; \r\n* het mengen van verf; \r\nDeze activiteiten worden ingedeeld in sectie G (groothandel en detailhandel)."
+   },
+   {
+    "code": "307600",
+    "title": "10 Voedingsmiddelenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 7,
+    "description": "Vervaardiging van voedingsmiddelen"
+   },
+   {
+    "code": "311300",
+    "title": "11 Drankenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 8,
+    "description": "Vervaardiging van dranken"
+   },
+   {
+    "code": "312200",
+    "title": "12 Tabaksindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 9,
+    "description": "Vervaardiging van tabaksproducten \r\nDeze afdeling omvat: \r\n- vervaardiging van sigaretten, shag, sigaren, pijptabak, pruimtabak, snuif; \r\n- vervaardiging van \"gehomogeniseerde\" en \"gereconstitueerde\" tabak."
+   },
+   {
+    "code": "312500",
+    "title": "13 Textielindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 10,
+    "description": "Vervaardiging van textiel"
+   },
+   {
+    "code": "314000",
+    "title": "14 Kledingindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 11,
+    "description": "Vervaardiging van kleding"
+   },
+   {
+    "code": "315200",
+    "title": "15 Leer- en schoenenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 12,
+    "description": "Vervaardiging van leer, lederwaren en schoenen"
+   },
+   {
+    "code": "315800",
+    "title": "16 Houtindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 13,
+    "description": "Primaire houtbewerking en vervaardiging van artikelen van hout, kurk, riet en vlechtwerk (geen meubels)"
+   },
+   {
+    "code": "317100",
+    "title": "17 Papierindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 14,
+    "description": "Vervaardiging van papier, karton en papier- en kartonwaren"
+   },
+   {
+    "code": "318600",
+    "title": "18 Grafische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 15,
+    "description": "Drukkerijen, reproductie van opgenomen media"
+   },
+   {
+    "code": "320000",
+    "title": "19 Aardolie-industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 16,
+    "description": "Vervaardiging van cokesovenproducten en aardolieverwerking"
+   },
+   {
+    "code": "320700",
+    "title": "20 Chemische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 17,
+    "description": "Vervaardiging van chemische producten"
+   },
+   {
+    "code": "323200",
+    "title": "21 Farmaceutische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 18,
+    "description": "Vervaardiging van farmaceutische grondstoffen en producten"
+   },
+   {
+    "code": "323700",
+    "title": "22 Rubber- en kunststofproductindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 19,
+    "description": "Vervaardiging van producten van rubber en kunststof"
+   },
+   {
+    "code": "324600",
+    "title": "23 Bouwmaterialenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 20,
+    "description": "Vervaardiging van overige niet-metaalhoudende minerale producten \r\nDeze afdeling omvat: vervaardiging van glas, keramische producten, cement, kalk en gips, producten van beton, gips en cement, en natuursteenbewerking"
+   },
+   {
+    "code": "328100",
+    "title": "24 Basismetaalindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 21,
+    "description": "Vervaardiging van metalen in primaire vorm"
+   },
+   {
+    "code": "330300",
+    "title": "25 Metaalproductenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 22,
+    "description": "Vervaardiging van producten van metaal (geen machines en apparaten)"
+   },
+   {
+    "code": "332900",
+    "title": "26 Elektrotechnische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 23,
+    "description": "Vervaardiging van computers en van elektronische en optische apparatuur."
+   },
+   {
+    "code": "334800",
+    "title": "27 Elektrische apparatenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 24,
+    "description": "Vervaardiging van elektrische apparatuur"
+   },
+   {
+    "code": "336500",
+    "title": "28 Machine-industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 25,
+    "description": "Vervaardiging van overige machines en apparaten"
+   },
+   {
+    "code": "339200",
+    "title": "29 Auto- en aanhangwagenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 26,
+    "description": "Vervaardiging van auto's, aanhangwagens en opleggers"
+   },
+   {
+    "code": "340200",
+    "title": "30 Overige transportmiddelenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 27,
+    "description": "Vervaardiging van overige transportmiddelen"
+   },
+   {
+    "code": "341600",
+    "title": "31 Meubelindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 28,
+    "description": "Vervaardiging van meubels \r\nDeze afdeling omvat: \r\n- vervaardiging van slaapkamer-, woonkamer-, tuinmeubels enz.; \r\n- vervaardiging van doe-het-zelf meubelpakketten; \r\n- vervaardiging van kleinmeubels, zoals van dekenkisten, kapstokken enz.; \r\n- afwerken van stoelen en andere meubels, zoals spuiten, lakken, schilderen, stofferen, logen van nieuwe meubels; \r\n- interieurbouw; \r\n- vervaardiging van keuken- en badkamermeubels; \r\n- vervaardiging van bedrijfsmeubels voor werkruimten, restaurants, scholen, kerken, kantoren en kantines, theaters, bioscopen e.d.; \r\n- vervaardiging van matrassen. \r\nDeze klasse omvat niet: \r\n- vervaardiging van meubelveren (25.99); \r\n- vervaardiging van verlichtingsarmaturen (27.40)."
+   },
+   {
+    "code": "342400",
+    "title": "32 Overige industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 29,
+    "description": "Vervaardiging van overige goederen"
+   },
+   {
+    "code": "344400",
+    "title": "33 Reparatie en installatie van machines",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 30,
+    "description": "Reparatie en installatie van machines en apparaten"
+   },
+   {
+    "code": "346600",
+    "title": "D Energievoorziening",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 31,
+    "description": "Productie en distributie van en handel in elektriciteit, aardgas, stoom en gekoelde lucht \r\nDeze sectie omvat: \r\n- productie en distributie van en handel in elektriciteit, aardgas en warm water."
+   },
+   {
+    "code": "348000",
+    "title": "E Waterbedrijven en afvalbeheer",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 32,
+    "description": "Winning en distributie van water; afval- en afvalwaterbeheer en sanering \r\nDeze sectie omvat: \r\n- winning en distributie van water; \r\n- afvalbehandeling en recycling."
+   },
+   {
+    "code": "348100",
+    "title": "36 Waterleidingbedrijven",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 33,
+    "description": "Winning en distributie van water \r\nDeze afdeling omvat: \r\n- winning van water; \r\n- transport en distributie van water; \r\n- watervoorziening aan schepen via boten; \r\n- ontzouten van zeewater voor de productie van water."
+   },
+   {
+    "code": "348400",
+    "title": "37 Afvalwaterinzameling en -behandeling",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 34,
+    "description": "Afvalwaterinzameling en -behandeling \r\nDeze afdeling omvat: \r\n- reinigen van riolen in combinatie met rioolbeheer; \r\n- legen en reinigen van straat- en -trottoirkolken in combinatie met rioolbeheer; \r\n- legen en reinigen van septictanks en beerputten; \r\n- transporteren van afvalwater naar een zuiveringsinstallatie of punt van lozing; \r\n- zuiveren van afvalwater ook afkomstig van zwembaden en industrie door fysische, chemische en biologische processen. \r\nDeze klasse omvat niet: \r\n- aanleg en renovatie van rioleringen (42.21); \r\n- ontstoppen van riolen (43.22.1); \r\n- verwijderen van zwerf- en drijfafval uit grachten, sloten e.d. (38.11); \r\n- behandelen van verontreinigd grond- of oppervlaktewater in combinatie met saneren van milieuverontreiniging (39.00)."
+   },
+   {
+    "code": "348700",
+    "title": "38 Afvalbehandeling en recycling",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 35,
+    "description": "Afvalinzameling en -behandeling; voorbereiding tot recycling"
+   },
+   {
+    "code": "349700",
+    "title": "39 Sanering en overig afvalbeheer",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 36,
+    "description": "Sanering en overig afvalbeheer \r\nDeze afdeling omvat: \r\n- saneren van verontreinigde bodems of (onder)waterbodems; \r\n- saneren van verontreinigd grond- of oppervlaktewater; \r\n- verwijderen van asbest in woningen en gebouwen; \r\n- saneren van (ondergrondse) opslagtanks. \r\nDeze klasse omvat ook: \r\n- het opruimen en onschadelijk maken van explosieven. \r\nDeze klasse omvat niet: \r\n- zuiveren van afvalwater (37.00)."
+   },
+   {
+    "code": "350000",
+    "title": "F Bouwnijverheid",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 37,
+    "description": "Bouwnijverheid \r\nDeze sectie omvat: \r\n- algemene en gespecialiseerde bouwkundige en civieltechnische werken, de bouwinstallatie en de afwerking van gebouwen. \r\nZij omvat ook nieuwbouw, reparatie, aan- en verbouwwerkzaamheden, het optrekken van geprefabriceerde gebouwen of constructies ter plaatse en van tijdelijke bouwwerken. \r\nOnder algemene bouw valt de bouw van woningen, kantoren, winkels en andere vormen van burgerlijke- en utiliteitsbouw enzovoort of de bouw of aanleg van zware constructies als autowegen, straten, bruggen, tunnels, spoorwegen, vliegvelden, havens en andere waterbouwkundige projecten, irrigatiesystemen, rioleringen, industriële installaties, pijpleidingen en elektriciteitsleidingen, sportvoorzieningen enzovoort. Deze werkzaamheden kunnen voor eigen rekening of voor een vast bedrag of op contractbasis worden uitgevoerd. Een deel van de werkzaamheden of soms zelfs alle uitvoerende werkzaamheden kunnen worden uitbesteed aan onderaannemers. \r\nGespecialiseerde bouw omvat de bouw of aanleg van een gedeelte van bouwwerken en van civieltechnische werken of de hiervoor vereiste voorbereidende werkzaamheden. Er is gewoonlijk sprake van gespecialiseerde werkzaamheden ten behoeve van diverse bouwwerken, waarvoor specifieke ervaring of een speciale uitrusting nodig is. Het heien, leggen van funderingen, boren van waterputten, de cascobouw, het storten van beton, metselen, zetten van natuursteen, de bouw van steigers, dakbedekking enzovoort worden hiertoe gerekend. Gespecialiseerde bouwkundige werkzaamheden worden meestal aan onderaannemers uitbesteed, maar vooral reparaties worden in de bouw rechtstreeks voor de eigenaar van het onroerend goed uitgevoerd. \r\nDe bouwinstallatie omvat de installatie van alle voorzieningen waardoor een bouwwerk als zodanig zijn functie kan vervullen. Deze werkzaamheden worden meestal op de bouwplaats zelf verricht, hoewel bepaalde gedeelten ervan in een werkplaats kunnen worden uitgevoerd. Inbegrepen zijn loodgieterswerk, de installatie van verwarmings- en klimaatregelingssystemen, alarmsystemen en andere elektrische apparatuur, sprinklerinstallaties, liften en roltrappen enzovoort. Ook vallen hieronder isolatiewerkzaamheden (vochtwering, warmte- en geluidsisolatie), het aanbrengen van metalen beplating, de installatie van commerciële koelapparatuur, verlichtings- en signaleringssystemen voor wegen, spoorwegen, luchthavens, havens enzovoort. Het uitvoeren van reparaties in verband met deze activiteiten is ook inbegrepen. \r\nDe afwerking van gebouwen omvat werkzaamheden die zijn gericht op de afwerking of voltooiing van een bouwwerk, zoals glaszetten, stukadoorswerk, schilderen, sauzen, het aanbrengen van vloer- of wandtegels of van andere bekleding of bedekking zoals parket, tapijt, behang enzovoort, schuren van vloeren, aftimmeren, geluidstechnische werkzaamheden enzovoort. Het uitvoeren van reparaties in verband met deze activiteiten is ook inbegrepen. \r\nDeze sectie omvat niet: \r\n- de bouw of installatie van industriële apparatuur en machines (bijvoorbeeld de installatie van industriële ovens, turbines enzovoort) \r\n(sectie C); \r\n- het optrekken van volledige geprefabriceerde gebouwen of bouwwerken van zelf vervaardigde onderdelen wordt ingedeeld bij de toepasselijke rubriek van de sectie Industrie, afhankelijk van het materiaal waaruit deze voornamelijk bestaan. Indien dit echter beton is, wordt deze activiteit in deze afdeling ingedeeld."
+   },
+   {
+    "code": "354200",
+    "title": "G Handel",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 38,
+    "description": "Groot- en detailhandel; reparatie van auto's \r\nDeze sectie omvat: \r\n- de groot- en detailhandel (verkoop zonder aanbrengen van veranderingen) in alle soorten goederen en de diensten die bij de verkoop van goederen worden verleend; \r\n- tussenhandel/handelsbemiddeling; \r\n- reparatie van auto's en motoren. \r\nDe verkoop zonder bewerking omvat de in de handel gebruikelijke handelingen, bijvoorbeeld sorteren, samenvoegen en combineren van goederen, mengen (versnijden) van goederen (bijvoorbeeld wijn of zand), bottelen (met of zonder reiniging van de fles vooraf), verpakken, opsplitsen en anders verpakken van partijen stukgoederen voor distributie in kleinere hoeveelheden, opslag (al dan niet bevroren of gekoeld), schoonmaken en drogen van landbouwproducten, snijden van houtvezel- of metalen platen voor eigen rekening. \r\nGroothandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen aan de detailhandel, aan industriële en andere bedrijfsmatige gebruikers, of aan andere groothandelaren, alsmede de handelsbemiddeling bij de aankoop van goederen voor of de verkoop van goederen aan dergelijke personen of bedrijven. De belangrijkste soort van groothandel is de groothandel in goederen, dat wil zeggen groothandelaren die goederen verkopen die zij in eigendom hebben zoals grossiers, dealers, exporteurs, importeurs en coöperatieve inkooporganisaties, verkooporganisaties en verkoopkantoren (detailhandelsbedrijven uitgezonderd) van industriële ondernemingen, die tot taak hebben de producten ervan op de markt te brengen. \r\nTussenhandel/handelsbemiddeling is het samenbrengen van koper en verkoper of het uitvoeren van transacties voor rekening van derden. Inbegrepen zijn makelaars op goederenbeurzen, commissionairs, en andere op commissiebasis werkzame tussenpersonen. \r\nDetailhandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen hoofdzakelijk aan het publiek voor persoonlijk of huishoudelijk ge- of verbruik, op de markt of door winkels, warenhuizen, postorderbedrijven, straathandelaren, consumentencoöperaties, veilinghuizen enzovoort. De meeste detailhandelaren zijn eigenaar van de goederen die zij verkopen, maar sommigen werken als tussenpersoon voor een opdrachtgever en verkopen in consignatie dan wel op commissiebasis."
+   },
+   {
+    "code": "383100",
+    "title": "H Vervoer en opslag",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 39,
+    "description": "Vervoer en opslag \r\nDeze sectie omvat: \r\n- het vervoer van personen of goederen, al dan niet volgens een dienstregeling, per spoor, via een pijpleiding, over de weg, over water of door de lucht; \r\n- de ondersteunende activiteiten als terminal- en parkeerfaciliteiten, vrachtbehandeling, opslag enz.; \r\n- de posterijen; \r\n- de verhuur van transportmiddelen met bestuurder of bedienend personeel. \r\nDeze sectie omvat niet: \r\n- het onderhoud en de reparatie van auto's (45)."
+   },
+   {
+    "code": "389100",
+    "title": "I Horeca",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 40,
+    "description": "Logies-, maaltijd- en drankverstrekking \r\nDeze sectie omvat: \r\n- het aan gasten verschaffen van logies en/of bereide maaltijden, snacks en dranken voor onmiddellijke consumptie. \r\nDe verschillende activiteiten in sectie I overlappen elkaar in zekere mate, omdat bijvoorbeeld de verkoop van dranken een activiteit op zich is, maar ook deel uitmaakt van de activiteiten van een restaurant (waar bij de \r\nmaaltijden dranken worden verstrekt) en dan met de verkoop van maaltijden bij 56.1 (Restaurants) wordt ingedeeld. Evenzo vormt de exploitatie van een restaurant een aparte activiteit, maar kan zij ook deel uitmaken van een bedrijf dat logies verschaft. \r\nLogiesverschaffende eenheden bieden reizigers, vakantiegangers en anderen accommodatie voor kortstondig verblijf (korter dan 3 maanden) aan. Er zijn vele verschillende eenheden. Sommige verschaffen alleen logies, terwijl andere naast logies ook maaltijden en recreatieve faciliteiten aanbieden. Het soort aanvullende dienstverlening kan van eenheid tot eenheid verschillen. \r\nRestaurants verstrekken volledige, voor onmiddellijke consumptie geschikte maaltijden, ongeacht of het traditionele restaurants, zelfbedienings- of afhaalrestaurants, dan wel permanente of tijdelijke viskramen en \r\ndergelijke met of zonder zitplaatsen zijn. Bepalend is het feit dat er voor onmiddellijke consumptie geschikte maaltijden worden aangeboden, niet het soort gelegenheid dat deze maaltijden verstrekt. \r\nDeze sectie omvat niet: \r\n- de productie van maaltijden niet voor onmiddellijke consumptie geschikt of maaltijden of bereid voedsel dat niet als maaltijd wordt beschouwd (SBI 10: voedingsmiddelenindustrie); \r\n- de verkoop van niet zelf vervaardigd voedsel dat niet als maaltijd wordt beschouwd of van niet voor onmiddellijke consumptie geschikte maaltijden (SBI 46 groothandel of SBI 47 detailhandel afhankelijk van de afnemerscategorie)."
+   },
+   {
+    "code": "391600",
+    "title": "J Informatie en communicatie",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 41,
+    "description": "Informatie en communicatie \r\nDeze sectie omvat: \r\n- de productie en distributie van informatie, de voorziening van de infrastructuur om die informatie door te geven, alsmede activiteiten op het gebied van data- en communicatie-informatietechnologie en het bewerken van data en andere informatie. \r\nDe belangrijkste activiteiten die hier ingedeeld worden zijn het uitgeven (afdeling 58, incl. het uitgeven van software), productie van films en geluidsopnamen (afdeling 59) radio en TV (afdeling 60), telecommunicatie (afdeling 61), informatietechnologie (afdeling 62) en andere dienstverlening op het gebied van informatie (afdeling 63). Uitgeven omvat ook het verkrijgen van de copyrights voor de content (informatieproducten) en het toegankelijk maken hiervan voor een breed publiek. Alle mogelijke vormen van uitgeven vallen onder deze sectie (in drukvorm, elektronisch of audio, op het internet, als multimediaproduct enzovoorts)."
+   },
+   {
+    "code": "396300",
+    "title": "K Financiële dienstverlening",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 42,
+    "description": "Financiële instellingen \r\nDeze sectie omvat: \r\n- financiële instellingen; \r\n- verzekeringswezen en pensioenfondsen (geen verplichte sociale verzekeringen); \r\n- financiële beurzen, effectenmakelaars, assurantietussenpersonen, administratiekantoren voor aandelen, waarborgfondsen en dergelijke."
+   },
+   {
+    "code": "402000",
+    "title": "L Verhuur en handel van onroerend goed",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 43,
+    "description": "Verhuur van en handel in onroerend goed \r\nDeze sectie omvat: \r\n- verhuur van onroerend goed; \r\n- bemiddeling in en beheer van onroerend goed."
+   },
+   {
+    "code": "403300",
+    "title": "M Specialistische zakelijke diensten",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 44,
+    "description": "Advisering, onderzoek en overige specialistische zakelijke dienstverlening \r\nDeze sectie omvat: \r\n- gespecialiseerde professionele wetenschappelijke en technische activiteiten. Deze activiteiten vereisen een hoge opleiding en stellen specifieke kennis ter beschikking."
+   },
+   {
+    "code": "410200",
+    "title": "N Verhuur en overige zakelijke diensten",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 45,
+    "description": "Verhuur van roerende goederen en overige zakelijke dienstverlening \r\nDeze sectie omvat: \r\n- activiteiten die zakelijke gebruikers ondersteunen bij de bedrijfsvoering. Het verschil van deze activiteiten met die uit sectie M is dat de activiteiten uit deze sectie niet primair gericht zijn op het overbrengen van expertise en kennis."
+   },
+   {
+    "code": "417400",
+    "title": "O Openbaar bestuur en overheidsdiensten",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 46,
+    "description": "Openbaar bestuur, overheidsdiensten en verplichte sociale verzekeringen \r\nDeze sectie omvat: \r\n- eenheden die deel uitmaken van de lagere of centrale overheid en die tot een goede werking van het bestuur van de samenleving bijdragen en ook het beheer van de verplichte sociale verzekeringsregelingen; \r\n- defensie, justitie, politie, buitenlandse zaken enzovoort; \r\n- het algemeen openbaar bestuur (bijvoorbeeld uitvoerende, wetgevende, financiële taken enzovoort op alle bestuursniveaus) en het toezicht op het economische en sociale leven; \r\n- provincies en gemeentes; \r\n- het beheer van de verplichte socialeverzekeringsregelingen. \r\nActiviteiten die elders in de SBI zijn geclassificeerd vallen niet onder afdeling 75, ook al worden zij door overheidinstanties uitgevoerd. Enkele voorbeelden: \r\n- het beheer van het onderwijsstelsel (d.w.z. regelgeving, inspecties, onderwijsprogramma's) valt onder deze sectie O, maar het onderwijs zelf valt onder afdeling 85 \"Onderwijs\"; \r\n- militaire en penitentiaire ziekenhuizen worden ingedeeld bij afdeling 86 \"Gezondheidszorg\"; \r\n- inzameling en verwerking van afvalwater en afval valt onder afdeling 38 \"Milieudienstverlening\"."
+   },
+   {
+    "code": "419000",
+    "title": "P Onderwijs",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 47,
+    "description": "Onderwijs \r\nDeze sectie omvat: \r\n- alle vormen van openbaar en particulier onderwijs, op elk niveau en voor elk beroep, zowel mondeling en schriftelijk als via radio en televisie; zowel het onderwijs door de instellingen op de verschillende niveaus van het normale schoolstelsel als volwasseneneducatie, alfabetiseringsprogramma's e.d. \r\nVolwasseneneducatie waarvan de inhoud vergelijkbaar is met die van het onderwijs op een specifiek niveau wordt bij dat niveau ingedeeld. Op ieder niveau van het initiële onderwijs omvatten de klassen het speciale onderwijs aan lichamelijk of geestelijk gehandicapte leerlingen. \r\nDeze sectie omvat ook: \r\n- het overige onderwijs, zoals autorijscholen. \r\nDeze sectie omvat niet: \r\n- hoofdzakelijk op ontspanning gericht onderwijs, zoals bridge- en golflessen, dansonderwijs (93 of 94)."
+   },
+   {
+    "code": "422400",
+    "title": "Q Gezondheids- en welzijnszorg",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 48,
+    "description": "Gezondheids- en welzijnszorg \r\nDeze sectie omvat: \r\n- behandeling in algemene en gespecialiseerde ziekenhuizen; \r\n- geestelijke gezondheidszorg en verslavingszorg, eventueel in combinatie met overnachting; \r\n- behandeling door medische en paramedische praktijken; \r\n- ondersteunende activiteiten voor de gezondheidszorg, door bijvoorbeeld laboratoria en ambulancediensten; \r\n- verpleging, verzorging of begeleiding met huisvesting door bijvoorbeeld verpleeg- en verzorgingshuizen of via begeleid wonen; \r\n- welzijnszorg, zoals thuiszorg, lokaal welzijnswerk en hulp aan gehandicapten en ouderen; \r\n- kinderopvang."
+   },
+   {
+    "code": "428100",
+    "title": "R Cultuur, sport en recreatie",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 49,
+    "description": "Cultuur, sport en recreatie \r\nDeze sectie omvat een wijde range aan activiteiten op het gebied van cultuur en recreatie, zoals culturele voorstellingen, musea, sport en recreatieve evenementen."
+   },
+   {
+    "code": "435500",
+    "title": "S Overige dienstverlening",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 50,
+    "description": "Overige dienstverlening \r\nDeze sectie omvat (als restcategorie) de activiteiten van belangenverenigingen, reparatie van computers en consumentenartikelen en veel andere activiteiten op het gebied van persoonlijke dienstverlening die niet elders zijn ingedeeld."
+   },
+   {
+    "code": "440000",
+    "title": "T Huishoudens",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 51,
+    "description": "Huishoudens als werkgever; niet-gedifferentieerde productie van goederen en diensten door huishoudens voor eigen gebruik \r\nDeze sectie omvat: \r\n- particuliere huishoudens met huishoudelijk personeel, zoals dienstmeisjes, koks, huisknechten, butlers, tuinlieden, conciërges, staljongens, chauffeurs, huismeesters en babysitters."
+   },
+   {
+    "code": "440900",
+    "title": "U Extraterritoriale organisaties",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 52,
+    "description": "Extraterritoriale organisaties en lichamen \r\nDeze sectie omvat: \r\n- internationale organisaties, zoals de Verenigde Naties en hun gespecialiseerde en regionale organisaties, de Europese Unie, de Europese Vrijhandelsassociatie, de Organisatie voor Economische Samenwerking en Ontwikkeling, de Internationale Douaneraad, het Internationaal Monetair Fonds en de Wereldbank; \r\n- diplomatieke en consulaire vertegenwoordigingen wanneer zij waargenomen worden door het land van vestiging en niet door het land dat zij vertegenwoordigen. \r\nDeze sectie omvat niet: \r\n- Nederlandse diplomatieke en consulaire vertegenwoordigingen in het buitenland (84.21)."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2003JJ00",
+    "title": "2003",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "2004JJ00",
+    "title": "2004",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2
+   },
+   {
+    "code": "2005JJ00",
+    "title": "2005",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "2006JJ00",
+    "title": "2006",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "2007JJ00",
+    "title": "2007",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "2008JJ00",
+    "title": "2008",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "2009JJ00",
+    "title": "2009",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 7
+   },
+   {
+    "code": "2010JJ00",
+    "title": "2010",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 8
+   },
+   {
+    "code": "2011JJ00",
+    "title": "2011",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 9
+   },
+   {
+    "code": "2012JJ00",
+    "title": "2012",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 10
+   },
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 11
+   },
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 12
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 13
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 14
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 15
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 16
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 17
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 18
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 19,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 20,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 21,
+    "description": "Voorlopige cijfers"
+   }
+  ]
+ }
+}

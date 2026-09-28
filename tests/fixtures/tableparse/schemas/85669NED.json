@@ -1,0 +1,752 @@
+{
+ "fetchedAt": "2026-09-28T16:23:59.507Z",
+ "schema": {
+  "tableId": "85669NED",
+  "title": "Emissies van broeikasgassen berekend volgens IPCC-voorschriften",
+  "dimensions": [
+   {
+    "name": "EmissiesNaarLucht",
+    "kind": "Dimension",
+    "title": "Emissies naar lucht"
+   },
+   {
+    "name": "Klimaatsectoren",
+    "kind": "Dimension",
+    "title": "Klimaatsectoren"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "D003040",
+    "title": "Emissie broeikasgassen",
+    "unit": "miljard kg CO2-equivalent",
+    "decimals": 1,
+    "description": "De emissies van gasvormige stoffen in Nederland die in de atmosfeer bijdragen aan het broeikaseffect; uitgedrukt in kilogrammen CO2-equivalent en uitgesplitst naar klimaatsectoren.",
+    "dataType": "Double"
+   }
+  ],
+  "modified": "2026-09-03T00:00:00+02:00"
+ },
+ "codeLists": {
+  "EmissiesNaarLucht": [
+   {
+    "code": "T001372",
+    "title": "Totaal broeikasgassen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Naast koolstofdioxide (CO2) worden ook andere broeikasgassen meegeteld. Dit zijn lachgas (N2O, distikstofoxide), methaan (CH4) en fluorhoudende gassen (F-gassen). Om de hoeveelheden bij elkaar te kunnen optellen wordt gebruik gemaakt van de eenheid ‘kg CO2-equivalent’."
+   },
+   {
+    "code": "A044109",
+    "title": "Kooldioxide (CO2)",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "CO2 ontstaat onder andere bij verbranding van de koolstof in brandstoffen. Eén megaton CO2-equivalent staat gelijk aan de broeikasgaswerking van de uitstoot van één megaton koolstofdioxide (= 1 miljard kilogram CO2)."
+   },
+   {
+    "code": "A044110",
+    "title": "Distikstofoxide (N20)",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "N2O ontstaat bij allerlei chemische omzettingsprocessen, zoals denitrificatieprocessen bij mest en kunstmest, bij de productie van salpeterzuur en in autokatalysatoren. De uitstoot van 1 megaton lachgas staat gelijk aan 265 megaton CO2-equivalent. "
+   },
+   {
+    "code": "A044107",
+    "title": "Methaan (CH4)",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4,
+    "description": "CH4 ontstaat onder andere door onvolledige verbranding van brandstoffen, lekkage van het aardgasnet en door vergisting. Methaan is een broeikasgas (veroorzaakt opwarming van de aarde). De uitstoot van 1 megaton methaan staat gelijk aan 28 megaton CO2-equivalent."
+   },
+   {
+    "code": "A052484",
+    "title": "F-gassen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5,
+    "description": "Gefluoreerde broeikasgassen. HFK's (Fluorkoolwaterstoffen), PFK's (Per Fluorkoolstof Waterstoffen) en SF6 (zwavelhexafluoride) zijn voorbeelden van F-gassen. F-gassen zijn synthetische koudemiddelen en worden gebruikt in airconditioningsystemen, koelmachines en warmtepompen. Het zijn ozonlaag afbrekende stoffen en het effect van F-gassen aan de broeikasgaswerking is veel groter dan CO2. Bijvoorbeeld, 1 megaton zwavelhexafluoride (SF6) staat gelijk aan 23,5 duizend megaton CO2-equivalent."
+   }
+  ],
+  "Klimaatsectoren": [
+   {
+    "code": "T001616",
+    "title": "Totaal klimaatsectoren",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 1,
+    "description": "Binnen het op 28 juni 2019 gepresenteerde Klimaatakkoord worden zes sectoren onderscheiden: Industrie, Elektriciteit, Mobiliteit, Gebouwde omgeving, Landbouw en  LULUCF. Deze sectorindeling komt overeen met de  'klimaattafels', waaraan onderhandeld wordt over de per sector door te voeren maatregelen om de broeikasgasuitstoot in Nederland te verminderen."
+   },
+   {
+    "code": "A025447",
+    "title": "Stationaire bronnen; totaal",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 2,
+    "description": "Stationaire bronnen zijn een samentelling van de klimaatsectoren Industrie, Elektriciteit, landbouw en Gebouwde omgeving. Het zijn niet mobiele bronnen zoals de inzet van energiedragers in ovens, kachels en  ketels, industriële processen en bijvoorbeeld emissies uit stortplaatsen en activiteiten in de land en tuinbouw."
+   },
+   {
+    "code": "A050124",
+    "title": "Elektriciteit",
+    "dimensionGroup": "6",
+    "status": null,
+    "index": 3,
+    "description": "Bij klimaatsector Elektriciteit gaat het om de broeikasgasuitstoot door energiebedrijven die elektriciteit produceren. "
+   },
+   {
+    "code": "A050123",
+    "title": "Industrie",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 4,
+    "description": "Bij klimaatsector Industrie gaat het om de broeikasgasuitstoot door de (bouw)nijverheid (o.a. basismetaal- en chemische industrie) en de energiegerelateerde industrie (raffinaderijen, cokesfabrieken, olie- en gaswinning, waterbedrijven en afvalbeheer). De uitstoot horend bij de inzet van mobiele werktuigen telt hier niet mee."
+   },
+   {
+    "code": "305800",
+    "title": "06 Winning van aardolie en aardgas",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 5,
+    "description": "Winning van aardolie en aardgas"
+   },
+   {
+    "code": "348000",
+    "title": "E Waterbedrijven en afvalbeheer",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 6,
+    "description": "Winning en distributie van water; afval- en afvalwaterbeheer en sanering\r\nDeze categorie is een samentelling van:\r\n36 Winning en distributie van water\r\n37 Afvalwaterinzameling en -behandeling\r\n38 Afvalinzameling en –behandeling; voorbereiding tot recycling\r\n39 Sanering en overig afvalbeheer\r\n"
+   },
+   {
+    "code": "320300",
+    "title": "192 Aardolie-industrie",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 7,
+    "description": "Aardolie-industrie\r\nDeze groep omvat:\r\nAardolieraffinage:\r\n- vervaardiging van motorbrandstoffen: benzine, kerosine, enz.;\r\n- productie van overige brandstoffen: lichte en zware stookolie, raffinaderijgassen als ethaan, propaan, butaan, enz.;\r\n- vervaardiging van producten voor de petrochemische industrie en voor de vervaardiging van wegdekken;\r\n- vervaardiging van overige aardolieproducten: white spirit, vaseline, paraffine, enz.\r\nAardolieverwerking (geen -raffinage):\r\n- vervaardiging van smeeroliën en vetten uit aardolie;\r\n- recycling van afgewerkte olie;\r\n- vervaardiging van aardolieproducten uit afvalolie."
+   },
+   {
+    "code": "E007211",
+    "title": "Cokesfabrieken",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 8,
+    "description": "Cokesovens zijn grote ovens waarin cokesovencokes, cokesovengas en steenkoolteer worden geproduceerd bij verkoling van cokeskolen bij hoge temperatuur."
+   },
+   {
+    "code": "307610",
+    "title": "10-12 Voedings-, genotmiddelenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 9,
+    "description": "\"Vervaardiging van voedingsmiddelen, dranken en tabaksproducten \r\nDeze categorie is een samentelling van categorieën: \r\n10 Vervaardiging van voedingsmiddelen \r\n11 Vervaardiging van dranken \r\n12 Vervaardiging van tabaksproducten\"\r\n"
+   },
+   {
+    "code": "312505",
+    "title": "13-15 Textiel-, kleding-, lederindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 10,
+    "description": "\"Vervaardiging van textiel, kleding en lederwaren \r\nDeze categorie is een samentelling van categorieën: \r\n13 Vervaardiging van textiel \r\n14 Vervaardiging van kleding \r\n15 Vervaardiging van leer, lederwaren en schoenen\"\r\n"
+   },
+   {
+    "code": "315800",
+    "title": "16 Houtindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 11,
+    "description": "Primaire houtbewerking en vervaardiging van artikelen van hout, kurk, riet en vlechtwerk (geen meubels)\r\n"
+   },
+   {
+    "code": "317100",
+    "title": "17 Papierindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 12,
+    "description": "Vervaardiging van papier, karton en papier- en kartonwaren\r\n"
+   },
+   {
+    "code": "318600",
+    "title": "18 Grafische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 13,
+    "description": "Drukkerijen, reproductie van opgenomen media\r\n"
+   },
+   {
+    "code": "320800",
+    "title": "201 Basischemie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 14,
+    "description": "Vervaardiging van basischemicaliën, kunstmeststoffen en stikstofverbindingen en van kunststof en synthetische rubber in primaire vorm"
+   },
+   {
+    "code": "800046",
+    "title": "Overige chemie, farmaceutische industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 15,
+    "description": "Deze categorie is een samentelling van categorieën:\r\n202 Landbouwchemicaliënindustrie\r\n203 Verf-, vernis- en drukinktindustrie\r\n204 Wasmiddel- en cosmeticaindustrie\r\n205 Overige chemische productenindustrie\r\n206 Synthetische vezelindustrie\r\n21 Farmaceutische industrie"
+   },
+   {
+    "code": "324600",
+    "title": "23 Bouwmaterialenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 16,
+    "description": "\"Vervaardiging van overige niet-metaalhoudende minerale producten \r\nDeze afdeling omvat: vervaardiging van glas, keramische producten, cement, kalk en gips, producten van beton, gips en cement, en natuursteenbewerking\"\r\n"
+   },
+   {
+    "code": "328100",
+    "title": "24 Basismetaalindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 17,
+    "description": "Vervaardiging van metalen in primaire vorm. "
+   },
+   {
+    "code": "800049",
+    "title": "25-28 Metaalprod.- en machine-industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 18,
+    "description": "Deze categorie is een samentelling van categorieën:\r\n25 Vervaardiging van producten van metaal (geen machines en apparaten)\r\n26 Vervaardiging van computers en van elektronische en optische apparatuur\r\n27 Vervaardiging van elektrische apparatuur\r\n28 Vervaardiging van overige machines en apparaten"
+   },
+   {
+    "code": "339205",
+    "title": "29-30 Transportmiddelenindustrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 19,
+    "description": "Vervaardiging van transportmiddelen Deze categorie is een samentelling van categorieën: 29 Vervaardiging van auto's, aanhangwagens en opleggers 30 Vervaardiging van overige transportmiddelen"
+   },
+   {
+    "code": "800050",
+    "title": "22, 31-32 Overige industrie",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 20,
+    "description": "Deze categorie is een samentelling van categorieën: \r\n22 Rubber- en kunststofproductenindustrie \r\n31 Vervaardiging van meubels \r\n32 Vervaardiging van overige goederen\r\n"
+   },
+   {
+    "code": "350000",
+    "title": "F Bouwnijverheid",
+    "dimensionGroup": "5",
+    "status": null,
+    "index": 21,
+    "description": "F Bouwnijverheid\r\n41 Algemene burgerlijke en utiliteitsbouw en projectontwikkeling\r\n42 Grond-, water- en wegenbouw (geen grondverzet)\r\n43 Gespecialiseerde werkzaamheden in de bouw\r\n"
+   },
+   {
+    "code": "301100",
+    "title": "01 Landbouw (stationaire bronnen)",
+    "dimensionGroup": "7",
+    "status": null,
+    "index": 22,
+    "description": "Bij klimaatsector Landbouw gaat het om de broeikasgasuitstoot als gevolg van landbouwactiviteiten, exclusief de inzet van mobiele werktuigen."
+   },
+   {
+    "code": "A050127",
+    "title": "Gebouwde omgeving",
+    "dimensionGroup": "8",
+    "status": null,
+    "index": 23,
+    "description": "Bij klimaatsector Gebouwde omgeving gaat het om de broeikasgasuitstoot door huishoudens en de dienstensector, exclusief de uitstoot die gerelateerd is aan verkeer en vervoer (deze zit in sector mobiliteit). Het omvat vooral de uitstoot horend bij het warm stoken met aardgas van woningen en de te verwarmen gebouwen van de dienstensector."
+   },
+   {
+    "code": "1050010",
+    "title": "Particulier huishouden",
+    "dimensionGroup": "8",
+    "status": null,
+    "index": 24,
+    "description": "Eén of meer personen die samen een woonruimte bewonen en zichzelf, dus niet-bedrijfsmatig, voorzien in de dagelijkse levensbehoeften. Dit betreft de SBI-sectie T."
+   },
+   {
+    "code": "300008",
+    "title": "G-U Dienstverlening",
+    "dimensionGroup": "8",
+    "status": null,
+    "index": 25,
+    "description": "Deze categorie is een samentelling van SBI-secties:  G Groot- en detailhandel; reparatie van auto's; H Vervoer en opslag; I Logies-, maaltijd- en drankverstrekking;J Informatie en communicatie; K Financiële instellingen ; L Verhuur van en handel in onroerend goed; M Advisering, onderzoek en overige specialistische zakelijke dienstverlening; N Verhuur van roerende goederen en overige zakelijke dienstverlening; O Openbaar bestuur, overheidsdiensten en verplichte sociale verzekeringen; P Onderwijs; Q Gezondheids- en welzijnszorg; R Cultuur, sport en recreatie; S Overige dienstverlening; U Extraterritoriale organisaties en lichamen."
+   },
+   {
+    "code": "A052138",
+    "title": "Landgebruik",
+    "dimensionGroup": "9",
+    "status": null,
+    "index": 26,
+    "description": "Bij klimaatsector Landgebruik gaat het om de netto-broeikasgasuitstoot horend bij landgebruik, landgebruiksverandering en houtoogst. Het wordt ook vaak aangeduid met de afkorting LULUCF (Land Use, Land-Use Change and Forestry). Het gaat bijvoorbeeld om de CO2-uitstoot door veenoxidatie, minus de CO2-vastlegging door bossen, en inclusief de netto-uitstoot horend bij landgebruiksveranderingen (zoals het verlies van CO2-vastlegging door bebouwing in groene gebieden). \r\nDe categorie Landgebruik komt alleen voor bij de IPCC-emissies; de categorie ontbreekt bij de tabellen met NEC-emissies en feitelijke emissies.\r\n"
+   },
+   {
+    "code": "A025421",
+    "title": "Mobiele bronnen; totaal",
+    "dimensionGroup": "10",
+    "status": null,
+    "index": 27,
+    "description": "Dit betreft de klimaatsector Mobiliteit. Mobiele bronnen zijn transportmiddelen en mobiele werktuigen met een verbrandingsmotor, exclusief zeevaart, internationale binnenvaart en internationale luchtvaart en inclusief defensie-activiteiten. Voorbeelden van transportmiddelen zijn personenauto's, vrachtauto's, binnenvaartschepen en vliegtuigen. Voorbeelden van mobiele werktuigen zijn landbouwtrekkers, vorkheftrucks en (wegen)bouwmachines. De emissies zijn berekend op basis van het energieverbruik volgens de Nederlandse Energiehuishouding (CBS-NEH)."
+   },
+   {
+    "code": "A025422",
+    "title": "Vervoer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 28,
+    "description": "Alle vervoer van personen en goederen over rail, weg, water en door de lucht, exclusief zeevaart, internationale binnenvaart, internationale luchtvaart en vervoer op het eigen bedrijfsterrein.\r\nDe categorie Scheepvaart betreft bij de IPCC-en NEC-emissies alleen de Binnenscheepvaart en niet de Zeescheepvaart; bij de feitelijke emissies is de Zeescheepvaart (binnengaats en op NCP) wel opgenomen onder de categorie Zeevaart.\r\nDe categorie Luchtvaart omvat bij de IPCC alleen de emissies door binnenlandse vluchten; bij de NEC- en feitelijke emissies betreft dit de binnenlandse vluchten, en de emissies bij het taxiën, landen en stijgen tot 3000 voet vanaf Nederlands grondgebied van internationale vluchten.\r\n"
+   },
+   {
+    "code": "A025424",
+    "title": "Wegverkeer; totaal",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 29,
+    "description": "Alle vervoer van personen en goederen via de openbare weg. Vervoer op het eigen bedrijfsterrein valt hier niet onder. De emissies zijn bereekend op basis van het energieverbruik volgens de Nederlandse Energiehuishouding (NEH); de zogenaamde  \"fuel sold\"."
+   },
+   {
+    "code": "A048112",
+    "title": "Wegverkeer; personenauto's",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 30,
+    "description": "Verkeer binnen Nederland, inclusief buitenlandse voertuigen. \r\n"
+   },
+   {
+    "code": "A052486",
+    "title": "Wegverkeer; motorfietsen",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 31,
+    "description": "Motorvoertuigen voor het wegverkeer op twee, drie of vier wielen met een onbeladen gewicht van maximaal 400 kg.\t"
+   },
+   {
+    "code": "A052487",
+    "title": "Wegverkeer; lichte bedrijfsvoertuigen",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 32,
+    "description": "Lichte motorvoertuigen ingericht voor het vervoer van goederen, voor het uitvoeren van bijzondere doeleinden. Hieronder vallen de bestelauto's en de lichte speciale voertuigen.\t"
+   },
+   {
+    "code": "A052488",
+    "title": "Wegverkeer; zware bedrijfsvoertuigen",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 33,
+    "description": "Zware motorvoertuigen ingericht voor het vervoer van goederen, voor het uitvoeren van bijzondere doeleinden of voor het trekken van opleggers. Hieronder vallen de vrachtauto's (excl. trekker voor oplegger), trekkers voor oplegger en de zware speciale voertuigen.\t"
+   },
+   {
+    "code": "A052489",
+    "title": "Wegverkeer; bussen",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 34,
+    "description": "Motorvoertuigen voor personenvervoer over de weg met meer dan negen zitplaatsen (met inbegrip van de bestuurdersplaats).\t"
+   },
+   {
+    "code": "A025423",
+    "title": "Railverkeer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 35,
+    "description": "Alle vervoer van personen en goederen door de dieseltractie van de spoorwegen. Vervoer op het eigen bedrijfsterrein valt hier niet onder. De emissies zijn berekend op basis van brandstofleveringen (NEH)."
+   },
+   {
+    "code": "A025426",
+    "title": "Binnenvaart; totaal",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 36,
+    "description": "Alle vervoer van personen en goederen via binnenlandse waterwegen door schepen met een Nederlandse bestemming, exclusief internationale binnenvaart. Visserij valt hier niet onder. De emissies zijn berekend op basis van brandstofleveringen (NEH).\r\nDe categorie Scheepvaart betreft bij de IPCC-en NEC-emissies alleen de Binnenvaart en niet de Zeescheepvaart; bij de feitelijke emissies is de Zeescheepvaart (binnengaats en op NCP) wel opgenomen. Binnenscheepvaart omvat bij de IPCC alleen de emissies door schepen met een Nederlandse bestemming; bij de NEC- en feitelijke emissies betreft dit de emissies op Nederlands grondgebied met Nederlandse of buitenlandse bestemming.\r\n"
+   },
+   {
+    "code": "A048114",
+    "title": "Binnenvaart; personenvervoer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 37,
+    "description": "Passagiersvaart binnen Nederland, inclusief buitenlandse vaartuigen."
+   },
+   {
+    "code": "A048115",
+    "title": "Binnenvaart; vrachtververvoer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 38,
+    "description": "Vrachtvaart binnen Nederland, inclusief buitenlandse vaartuigen. Emissies zijn inclusief de verdamping van ladingresten (VOS).\t"
+   },
+   {
+    "code": "A048116",
+    "title": "Binnenvaart; recreatievervoer",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 39,
+    "description": "Recreatievaart binnen Nederland, inclusief buitenlandse vaartuigen."
+   },
+   {
+    "code": "A025428",
+    "title": "Luchtvaart",
+    "dimensionGroup": "11",
+    "status": null,
+    "index": 40,
+    "description": "Vervoer van personen en goederen via de lucht. Emissies door het verbranden en verdampen van vliegtuigbrandstoffen tijdens binnenlandse vluchten (vertrek én aankomst in Nederland). De emissies zijn berekend op basis van brandstofleveringen (NEH).\r\nDe categorie Luchtvaart omvat bij de IPCC alleen de emissies door binnenlandse vluchten; bij de NEC- en feitelijke emissies betreft dit de binnenlandse vluchten én de emissies bij het taxiën, landen en stijgen tot 3000 voet vanaf Nederlands grondgebied van internationale vluchten.\r\n"
+   },
+   {
+    "code": "A025429",
+    "title": "Overige mobiele bronnen; totaal",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 41,
+    "description": "Visserij (vissersschepen) en werktuigen met een verbrandingsmotor; hieronder vallen bijvoorbeeld landbouwtrekkers, vorkheftrucks, kranen en bouwmachines. Visserij-emissies zijn berekend op basis van brandstofleveringen (NEH)."
+   },
+   {
+    "code": "A048119",
+    "title": "Mobiele werktuigen; totaal",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 42,
+    "description": "Werktuigen met een verbrandingsmotor. Hieronder vallen bijvoorbeeld landbouwtrekkers, vorkheftrucks en (wegen)bouwmachines"
+   },
+   {
+    "code": "A025430",
+    "title": "Mobiele werktuigen; landbouw",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 43,
+    "description": "Werktuigen met een verbrandingsmotor in de landbouw, zoals landbouwtrekkers en laadschoppen.."
+   },
+   {
+    "code": "A048120",
+    "title": "Mobiele werktuigen; bouwnijverheid",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 44,
+    "description": "Werktuigen met een verbrandingsmotor in de bouwnijverheid, zoals laadschoppen, graafmachines en generatoren."
+   },
+   {
+    "code": "A052490",
+    "title": "Mobiele werktuigen; industrie",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 45,
+    "description": "Werktuigen met een verbrandingsmotor in de industrie, zoals verreikers en generatoren."
+   },
+   {
+    "code": "A052491",
+    "title": "Mobiele werktuigen; diensten",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 46,
+    "description": "Werktuigen met een verbrandingsmotor in de dienstensector, zoals vorkheftrucks."
+   },
+   {
+    "code": "A025433",
+    "title": "Mobiele werktuigen; overige sectoren",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 47,
+    "description": "Werktuigen met een verbrandingsmotoren voor o.a. consumenten , zoals grasmaaiers en bladblazers."
+   },
+   {
+    "code": "A025431",
+    "title": "Visserij",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 48,
+    "description": "Omvat binnenvisserij, kustvisserij en visserij op het Nederlands deel van het Continentaal Plat (zie zeevaart). De emissies zijn berekend op basis van brandstofleveringen (NEH)."
+   },
+   {
+    "code": "A025432",
+    "title": "Defensie-activiteiten",
+    "dimensionGroup": "12",
+    "status": null,
+    "index": 49,
+    "description": "Marineschepen en militaire vliegtuigen, ook voor internationale operaties. De emissies zijn berekend op basis van op basis van brandstofleveringen (NEH)."
+   },
+   {
+    "code": "E007203",
+    "title": "Afzet voor bunkers",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 50,
+    "description": "De levering van brandstof voor de internationale scheepvaart en de internationale luchtvaart. Dit betreft schepen of vliegtuigen die vertrekken uit Nederlandse havens en aankomen in/op buitenlandse (lucht)havens. De post bunkers wordt in de energiebalans gezien als een vorm van uitvoer. De brandstof komt namelijk niet beschikbaar voor binnenlands verbruik. De emissies zijn berekend op basis van brandstofleveringen (NEH). \r\nDe categorie Bunkers komt alleen voor bij de IPCC-emissies; de categorie ontbreekt bij de tabellen met NEC-emissies en feitelijke emissies.\r\n"
+   },
+   {
+    "code": "A052482",
+    "title": "Afzet voor bunkers; luchtvaart",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 51,
+    "description": "De levering van brandstof voor de internationale luchtvaart. Dit betreft vliegtuigen die vertrekken uit Nederlandse luchthavens en aankomen op buitenlandse luchthavens. De emissies zijn berekend op basis van brandstofleveringen (NEH)."
+   },
+   {
+    "code": "A052483",
+    "title": "Afzet voor bunkers; scheepvaart",
+    "dimensionGroup": "14",
+    "status": null,
+    "index": 52,
+    "description": "De levering van brandstof voor de internationale scheepvaart. Dit betreft schepen die vertrekken uit Nederlandse havens en aankomen in buitenlandse havens. De emissies zijn berekend op basis van brandstofleveringen (NEH)."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "1990JJ00",
+    "title": "1990",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "1991JJ00",
+    "title": "1991 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2
+   },
+   {
+    "code": "1992JJ00",
+    "title": "1992",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "1993JJ00",
+    "title": "1993 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "1994JJ00",
+    "title": "1994 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "1995JJ00",
+    "title": "1995",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "1996JJ00",
+    "title": "1996 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 7
+   },
+   {
+    "code": "1997JJ00",
+    "title": "1997 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 8
+   },
+   {
+    "code": "1998JJ00",
+    "title": "1998 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 9
+   },
+   {
+    "code": "1999JJ00",
+    "title": "1999 ",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 10
+   },
+   {
+    "code": "2000JJ00",
+    "title": "2000",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 11
+   },
+   {
+    "code": "2001JJ00",
+    "title": "2001",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 12
+   },
+   {
+    "code": "2002JJ00",
+    "title": "2002",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 13
+   },
+   {
+    "code": "2003JJ00",
+    "title": "2003",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 14
+   },
+   {
+    "code": "2004JJ00",
+    "title": "2004",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 15
+   },
+   {
+    "code": "2005JJ00",
+    "title": "2005",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 16
+   },
+   {
+    "code": "2006JJ00",
+    "title": "2006",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 17
+   },
+   {
+    "code": "2007JJ00",
+    "title": "2007",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 18
+   },
+   {
+    "code": "2008JJ00",
+    "title": "2008",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 19
+   },
+   {
+    "code": "2009JJ00",
+    "title": "2009",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 20
+   },
+   {
+    "code": "2010JJ00",
+    "title": "2010",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 21
+   },
+   {
+    "code": "2011JJ00",
+    "title": "2011",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 22
+   },
+   {
+    "code": "2012JJ00",
+    "title": "2012",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 23
+   },
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 24
+   },
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 25
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 26
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 27
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 28
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 29
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 30
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 31
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 32
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 33
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 34
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 35
+   },
+   {
+    "code": "2025JJ00",
+    "title": "2025",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 36,
+    "description": "Voorlopige cijfers"
+   }
+  ]
+ }
+}

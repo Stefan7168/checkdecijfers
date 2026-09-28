@@ -1,0 +1,283 @@
+{
+ "fetchedAt": "2026-09-28T16:24:05.605Z",
+ "schema": {
+  "tableId": "83052NED",
+  "title": "Arbeidsongevallen werknemers; geslacht en leeftijd",
+  "dimensions": [
+   {
+    "name": "Geslacht",
+    "kind": "Dimension",
+    "title": "Geslacht"
+   },
+   {
+    "name": "Leeftijd",
+    "kind": "Dimension",
+    "title": "Leeftijd"
+   },
+   {
+    "name": "Marges",
+    "kind": "Dimension",
+    "title": "Marges"
+   },
+   {
+    "name": "Perioden",
+    "kind": "Dimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "D001910",
+    "title": "Totaal werknemers met een ongeval",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij zowel om arbeidsongevallen die leiden tot arbeidsverzuim als om arbeidsongevallen zonder verzuim op het werk. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001913",
+    "title": "Werknemers ongeval zonder verzuim",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen zonder verzuim op het werk. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001911",
+    "title": "Werknemers ongeval 1 dag of meer verzuim",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen die leiden tot arbeidsverzuim van ten minste 1 dag. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001912",
+    "title": "Werknemers ongeval 4 dgn of meer verzuim",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen die leiden tot arbeidsverzuim van ten minste 4 dagen. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001763",
+    "title": "Lichamelijk letsel",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval met lichamelijk letsel bij het meest recente arbeidsongeval.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001743",
+    "title": "Geestelijk letsel",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval met  geestelijk letsel bij het meest recente arbeidsongeval.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001992",
+    "title": "Onderscheid niet te maken",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval waarbij het onderscheid tussen lichamelijk en geestelijk letsel niet is te maken bij het meest recente arbeidsongeval.\r\n\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001762",
+    "title": "Letsel onbekend",
+    "unit": "In % van alle werknemers",
+    "decimals": 1,
+    "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval waarbij het letsel van het meest recente arbeidsongeval onbekend is.\r\n",
+    "dataType": "Double"
+   }
+  ],
+  "modified": "2026-04-15T06:30:00+02:00"
+ },
+ "codeLists": {
+  "Geslacht": [
+   {
+    "code": "T001038",
+    "title": "Totaal mannen en vrouwen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "3000",
+    "title": "Mannen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "4000",
+    "title": "Vrouwen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   }
+  ],
+  "Leeftijd": [
+   {
+    "code": "52052",
+    "title": "15 tot 75 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "53050",
+    "title": "15 tot 25 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "53500",
+    "title": "25 tot 35 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "53700",
+    "title": "35 tot 45 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "53800",
+    "title": "45 tot 55 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "53900",
+    "title": "55 tot 65 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "53925",
+    "title": "65 tot 75 jaar",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 7
+   }
+  ],
+  "Marges": [
+   {
+    "code": "MW00000",
+    "title": "Waarde",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "MOG0095",
+    "title": "Ondergrens 95%-interval",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Dit is de ondergrens van het interval waarvan met 95% zekerheid verwacht wordt dat de werkelijke waarde er binnen ligt."
+   },
+   {
+    "code": "MBG0095",
+    "title": "Bovengrens 95%-interval",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Dit is de bovengrens van het interval waarvan met 95% zekerheid verwacht wordt dat de werkelijke waarde er binnen ligt."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 7
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 8
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 9
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 10
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 11
+   },
+   {
+    "code": "2025JJ00",
+    "title": "2025",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 12
+   }
+  ]
+ }
+}

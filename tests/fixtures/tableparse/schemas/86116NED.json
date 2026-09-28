@@ -1,0 +1,1532 @@
+{
+ "fetchedAt": "2026-09-28T16:24:09.982Z",
+ "schema": {
+  "tableId": "86116NED",
+  "title": "ICT-gebruik bij kleine bedrijven; bedrijfstak en bedrijfsgrootte, 2025",
+  "dimensions": [
+   {
+    "name": "Bedrijfsgrootte",
+    "kind": "Dimension",
+    "title": "Bedrijfsgrootte"
+   },
+   {
+    "name": "BedrijfstakkenBranchesSBI2008",
+    "kind": "Dimension",
+    "title": "Bedrijfstakken/branches (SBI 2008)"
+   }
+  ],
+  "measures": [
+   {
+    "code": "M000706",
+    "title": "Personeel dat werkt met internet",
+    "unit": "% van werkzame personen",
+    "decimals": 0,
+    "description": "Werkzame personen met internettoegang voor werkdoeleinden.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000783",
+    "title": "Bedrijfs-e-mails",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot bedrijfs-e-mail.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000787",
+    "title": "Bedrijfsdocumenten",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot documenten van het bedrijf (zoals bestanden, spreadsheets, presentaties, plaatjes, enz.).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007862",
+    "title": "Bedrijfsapplicaties of -software",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot bedrijfsapplicaties of –software zoals klantbeheersoftware, databasesoftware, enz.?",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000776",
+    "title": "Telewerkers",
+    "unit": "% van werkzame personen",
+    "decimals": 0,
+    "description": "Werkzame personen die buiten de bedrijfsvestiging toegang hebben tot bestanden of software van het bedrijf (dus meer dan alleen e-mail).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000775",
+    "title": "Telewerk komt voor",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met medewerkers die buiten de bedrijfsvestiging toegang hebben tot bestanden of software van het bedrijf (dus meer dan alleen e-mail).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M004746_2",
+    "title": "Internet, vast",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een internetaansluiting van het type ADSL, VDSL, SDSL en dergelijke, of een andere hoogwaardige vaste verbinding zoals glasvezel of kabel (A/S/V)DSL: (Asymmetric/Symmetric/Very-high-bitrate) Digital Subscriber Line",
+    "dataType": "Integer"
+   },
+   {
+    "code": "A050073",
+    "title": "Minder dan 30 Mbit/s",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "A045890",
+    "title": "30 tot 100 Mbit/s",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "A050070",
+    "title": "100 tot 500 Mbit/s",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "A050071",
+    "title": "500 Mbit/s tot 1 Gbit/s",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "A050072",
+    "title": "Ten minste 1 Gbit/s",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000448_2",
+    "title": "Bedrijven met website",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die een eigen website hebben",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000457",
+    "title": "Beschrijvingen van producten, prijslijst",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een website waarop beschrijvingen van goederen/diensten of prijslijsten staan",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000674",
+    "title": "Online bestellen, boeken of reserveren",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een website die de mogelijkheid biedt om online te bestellen, te boeken of te reserveren.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000722",
+    "title": "Productaanpassing door klant",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een website die klanten de mogelijkheid biedt zelf hun product (goederen of diensten) te ontwerpen of aan te passen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000459",
+    "title": "Bestelling online volgen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een website die de mogelijkheid biedt een bestelling online te volgen, of met informatie over de status van een bestelling",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000611",
+    "title": "Klantspecifieke info voor de bezoeker",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven met een website met klantspecifieke informatie voor reguliere bezoekers",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007948",
+    "title": "(Virtuele) klantenservice",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Mogelijkheid met de klantenservice te chatten, waarbij een virtuele chatbot of een echt persoon de klant te woord staat",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007949",
+    "title": "Online solliciteren",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Vermelding van openstaande vacatures of online sollicitaties",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007950",
+    "title": "Meertalige onderdelen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Onderdelen van de website die in ten minste twee talen gegeven worden",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007951",
+    "title": "Mobiele app voor klanten",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die een mobiele app via website bieden, bijvoorbeeld voor loyaliteitsprogramma, e‐commerce or klantenservice.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008199",
+    "title": "Website of app heeft platformfunctie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven wiens website of app een platformfunctie heeft. Met platformfunctie wordt bedoeld dat de website of app bemiddelt (of biedt ondersteuning) bij de uitwisseling van goederen, diensten of informatie tussen andere personen, bedrijven of organisaties. Het bedrijf is hierbij niet (of gedeeltelijk) de eigenaar van de goederen, diensten of informatie, maar wel de bemiddelaar.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000753",
+    "title": "Sociale media gebruikt",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die ten minste één van de volgende typen sociale media gebruiken: sociale netwerken, blogs of microblogs, sites die multimedia delen om kennis te delen. Bedrijven die deze sociale media uitsluitend gebruiken om advertenties te plaatsen, vallen hier niet onder.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000755",
+    "title": "Sociale netwerken (bijv. Facebook)",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Sociale netwerken zoals Facebook, LinkedIn",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000474",
+    "title": "Blogs of microblogs (bijv. X)",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Blogs of microblogs zoals X (voormalig Twitter) of Bluesky",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000652",
+    "title": "Multimedia delen (bijv. YouTube)",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Websites die multimedia (filmpjes, foto's) delen zoals YouTube, Snapchat, TikTok, Flickr, Pinterest of Instagram",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001192",
+    "title": "Clouddiensten gebruikt",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die betaalde clouddiensten gebruiken",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000518",
+    "title": "E-mail",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "E-mail als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000664",
+    "title": "Office software",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Office software, zoals tekstverwerkers, spreadsheetprogramma’s als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001651",
+    "title": "Opslag databases",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Opslag (hosting) van databases van het bedrijf als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000458",
+    "title": "Opslag bestanden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bestanden opslaan als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000760",
+    "title": "Boekhoudingsoftware",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Software voor boekhouding of financieel beheer als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000525",
+    "title": "ERP-software",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Software om Enterprise Resource Planning (ERP) te beheren als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000484",
+    "title": "CRM-software",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Software om informatie over klanten te beheren (ook wel Customer Relationship Management of CRM software) als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001616",
+    "title": "Veiligheidssoftware",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Veiligheidssoftware, zoals antivirussoftware, network acces control (als clouddienst)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001705",
+    "title": "Rekenkracht",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Rekenkracht om software te draaien als clouddienst",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000815",
+    "title": "Rekenplatform",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Rekenplatform om hostomgeving te gebruiken voor ontwikkeling, testing of uitrollen van applicaties zoals herbruikbare softwaremodules of application programming interfaces (API's) (als clouddienst)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007286",
+    "title": "AI gebruikt",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt ten minste één van de acht gevraagde AI-technologieën",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007931",
+    "title": "Textmining",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die een analyse van geschreven taal uitvoeren.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007787",
+    "title": "Spraakherkenning",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die gesproken taal omzetten in machinaal leesbare vorm.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007932",
+    "title": "Natural language generation",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die gesproken of geschreven taal genereren.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008327",
+    "title": "Afbeeldingen, video's, geluid genereren",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die afbeeldingen, video's of geluid genereren.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007933",
+    "title": "Afbeeldingherkenning",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die objecten of personen identificeren op basis van afbeeldingen (beeldherkenning, beeldbewerking).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007793",
+    "title": "Machine learning",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt machine learning (zoals deeplearningmethodieken) voor data-analytics die nog niet hierboven genoemd zijn.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007792",
+    "title": "Robotondersteunde procesautomatisering",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die verschillende werkstromen automatiseren of helpen bij het nemen van beslissingen (bijvoorbeeld op AI-gebaseerde software voor robotgestuurde procesautomatisering).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007791",
+    "title": "Servicerobots of autonome voertuigen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt technologieën die fysieke beweging van machines mogelijk maken door middel van autonoom genomen beslissingen op basis van observatie van de omgeving (bijvoorbeeld autonome robots, zelfrijdende voertuigen, autonome drones).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006101",
+    "title": "Marketing of verkoop",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor marketing of verkoop. Bijvoorbeeld: a) chatbots op basis van natuurlijke taalverwerking voor klantondersteuning; b) klantprofilering, prijsoptimalisatie, gepersonaliseerde marketingaanbiedingen, marktanalyse op basis van machine learning; c) autonome robots voor orderverwerking.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007801",
+    "title": "Productie- of serviceprocessen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor productie- of serviceprocessen. Bijvoorbeeld: a) voorspellend onderhoud op basis van machine learning; b) tools om producten te classificeren of defecten in producten op te sporen op basis van computervisie (computer vision); c) autonome drones voor productietoezicht, beveiligings- of inspectietaken; d) assemblagewerkzaamheden uitgevoerd door bijvoorbeeld autonome robots.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D008050",
+    "title": "Administratieve processen/bestuurstaken",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor organisatie van administratieve processen in het bedrijf of voor bestuurstaken. Bijvoorbeeld: a) zakelijke virtuele assistenten op basis van machine learning of natuurlijke taalverwerking; b) data‐analyse of strategische besluitvorming op basis van machine learning, bijvoorbeeld risicobeoordeling op basis van machine learning; c) conversie van spraak naar tekst op basis van spraakherkenning voor het opstellen van documenten; d) geautomatiseerde planning of planning op basis van machine learning; e) personeelsmanagement gebaseerd op machine learning of natuurlijke taalverwerking, o.a. voorselectie van kandidaten, profilering van medewerkers of prestatieanalyse; f) vertaling van documenten op basis van AI",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006213",
+    "title": "Logistiek",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor logistiek. Bijvoorbeeld: a) autonome robots voor pick‐and‐pack‐oplossingen in magazijnen; b) routeoptimalisatie op basis van machine learning.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006638",
+    "title": "ICT-beveiliging",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor ICT-beveiliging. Bijvoorbeeld: a) gezichtsherkenning op basis van computervisie voor authenticatie van ICT‐gebruikers; b) detectie en preventie van cyberaanvallen op basis van bijvoorbeeld machine learning.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D008051",
+    "title": "Boekhouding, controle/financieel beheer",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor boekhouding, controle of financieel beheer die helpen bij het nemen van financiële beslissingen.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D008052",
+    "title": "R&D of innovatie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt software of systemen op basis van AI voor activiteiten op het gebied van onderzoek en ontwikkeling of innovatie (m.u.v. onderzoek op AI.)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006843",
+    "title": "Door eigen werknemers ontwikkeld",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft de gebruikte AI-software of -systemen ontwikkeld door eigen werknemers.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006971",
+    "title": "Commerciële software zelf aangepast",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft de gebruikte AI-software of -systemen verkregen als commerciële software of systemen en die aangepast door eigen medewerkers.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007048",
+    "title": "Opensourcesoftware zelf aangepast",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft de gebruikte AI-software of -systemen verkregen als open-source software of systemen en die aangepast door eigen medewerkers",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007067",
+    "title": "Commerciële software gebruikt",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft de gebruikte AI-software of -systemen als commerciële software of gebruiksklare systemen aangeschaft, inclusief voorbereiden waar het al in een gekocht artikel of systeem was verwerkt.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006835_2",
+    "title": "Door externe leveranciers ontwikkeld",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft de gebruikte AI-software of -systemen laten ontwikkelen of aanpassen door ingehuurde externe leveranciers.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007802_2",
+    "title": "Heeft AI overwogen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft ooit overwogen om software of systemen op basis van AI te gebruiken.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007936",
+    "title": "Kosten zijn te hoog",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten zijn te hoog",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007937",
+    "title": "Gebrek aan relevante ervaring in bedrijf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Gebrek aan relevante ervaring in bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007938",
+    "title": "Incompatibiliteit bestaande ICT-systeem",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Incompatibiliteit met bestaande apparatuur, software of systemen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007939",
+    "title": "Moeilijkheden beschikbaarheid gegevens",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Moeilijkheden met beschikbaarheid of kwaliteit van de benodigde gegevens",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007940",
+    "title": "Bezorgdheid gegevensbescherming",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bezorgdheid over schending van gegevensbescherming en privacy",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007941",
+    "title": "Onduidelijkheid over juridische gevolgen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Onduidelijkheid over de juridische gevolgen zoals aansprakelijkheid bij schade veroorzaakt bij gebruik van AI",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007942",
+    "title": "Ethische overwegingen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Ethische overwegingen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007943",
+    "title": "Niet nuttig voor onderneming",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "AI-technologieën zijn niet nuttig voor de onderneming",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000436",
+    "title": "Antivirussoftware",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gebruik van antivirussoftware betreft zowel gratis als betaalde software.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000453",
+    "title": "Beleid voor sterke wachtwoorden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Wachtwoorden die ten minste acht gemengde karakters hebben, die veranderd moeten worden na een bepaalde periode en/of naar aanleiding van bijvoorbeeld een ICT-veiligheidsincident, en die versleuteld worden verstuurd en opgeslagen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000473",
+    "title": "Biometrische methoden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Identificatie en authenticatie van gebruikers worden via biometrische methoden vastgesteld, zoals een vingerafdruk, de stem of het gezicht.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000438",
+    "title": "Multifactorauthenticatie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om identificatie en authenticatie van gebruikers via software of hardware-tokens om toegang te krijgen tot de ICT-systemen (oftewel twee- of multifactorauthenticatie), bijvoorbeeld via smartcards, USB-beveiligingssleutels of mobiele telefoons (eenmalige inlogcodes via SMS of app).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006715",
+    "title": "Encryptie van data",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om versleutelingstechnieken (encryptie) van data, documenten of e-mails. In 2017 werd encryptie nog opgedeeld in encryptie van opslagen en verstuurde data; vanaf 2018 is het samengevoegd.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000552",
+    "title": "Gegevens op andere fysieke locatie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om het op een andere fysieke locatie bewaren van (reserve)gegevens (offsite data-backup). Opslag in de cloud telt ook mee.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000655",
+    "title": "Network access control",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Alleen apparaten die voldoen aan bepaalde eisen krijgen toegang tot het bedrijfsnetwerk, bijvoorbeeld alleen apparaten die de laatste update van een besturingssysteem hebben geïnstalleerd.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000856",
+    "title": "VPN-gebruik buiten het bedrijf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om het gebruik van een Virtual Private Network (VPN) bij internetgebruik buiten het eigen bedrijf. Een VPN zorgt ervoor dat alle internetverkeer tussen de gebruiker en de VPN-server wordt versleuteld. Daardoor kan het verkeer niet worden afgeluisterd, en kan de inhoud van bezochte websites niet worden gemanipuleerd door kwaadwillenden (bijvoorbeeld man-in-the-middle-aanvallen).",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000623",
+    "title": "Logbestanden voor analyse incidenten",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Logbestanden opslaan om incidenten achteraf te analyseren",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000635",
+    "title": "Methodes voor beoordelen ICT-veiligheid",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om methodes om de ICT-veiligheid in het bedrijf te kunnen beoordelen, zoals de veiligheidsmaatregelen laten controleren door derden, of tests uitvoeren. Voorbeelden zijn: penetration testing (pen test), red teaming, ethisch hacken, back-up systemen testen of gesimuleerde ICT-veiligheidsincidenten zoals phishing-emails versturen. Dergelijke tests worden uitgevoerd om op een veilige manier kwetsbaarheden in ICT-systemen op te sporen.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000741",
+    "title": "Risicoanalyses",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Periodiek beoordelen wat de kans is dat het bedrijf wordt getroffen door een incident, en wat daarvan de mogelijke gevolgen zouden zijn",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D008137",
+    "title": "ICT-beveiligingsmonitoringsysteem",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om het gebruik van een monitoringsysteem om verdachte activiteiten te detecteren (bijvoorbeeld inbraakdetectie‐ of preventiesystemen die het gedrag van gebruikers of apparaten, netwerkverkeer monitoren). Sluit antivirussoftware, standaard firewalloplossing opgenomen in het besturingssysteem van personal computers en routers uit.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000857",
+    "title": "Door vrijwillige training",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Vrijwillige training of het aanbieden van intern beschikbare informatie (bijvoorbeeld informatie op het intranet)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000827",
+    "title": "Door verplichte training",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Verplichte trainingen of cursussen of het verplicht bekijken van documenten of instructiefilmpjes",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007830",
+    "title": "Met contract",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Met een contract (bijvoorbeeld een arbeidscontract)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007877",
+    "title": "Cyberincident geoefend",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf heeft in 2024 één (of meer) cyberincident(en) door een aanval van buiten geoefend.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D003491",
+    "title": "ICT-veiligheidsdocumenten aanwezig",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Documenten over ICT-veiligheid en datavertrouwelijkheid hebben betrekking op training in ICT-gebruik, ICT-veiligheidsmaatregelen, de evaluatie van ICT-veiligheidsmaatregelen, schema’s om ICT-veiligheidsdocumenten te updaten, enz.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000406",
+    "title": "12 maanden of minder lang geleden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D004640",
+    "title": "Tussen de 12 en 24 maanden geleden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D002625",
+    "title": "Langer dan 24 maanden geleden",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M002029",
+    "title": "Uitbesteed aan extern bedrijf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001622",
+    "title": "Eigen personeel",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001623",
+    "title": "Eigen personeel en extern bedrijf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000659",
+    "title": "Niet van toepassing",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008329",
+    "title": "Phishing-aanval",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Phishing‐ of spoofing‐aanval (oplichting via link in e‐mail, telefoongesprek of sms)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008330",
+    "title": "(D)DoS‐aanval",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "(D)DoS‐aanval waarbij een website of server wordt overspoeld met een reeks bots, of een botnet waardoor de website of server overbelast en onbereikbaar wordt.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008331",
+    "title": "Datalek of datamanipulatie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Datalek of datamanipulatie (gegevens liggen op straat)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008332",
+    "title": "Gehackt socialemedia-account",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Gehackt socialemedia-account (accounts zijn gecompromitteerd)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008333",
+    "title": "BEC-fraude",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "BEC‐fraude (Business E‐mail Compromise). Een vorm van phishing waarbij een gehackt email adres wordt gebruikt om om geld of gevoelige bedrijfsinformatie te bemachtigen.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008334",
+    "title": "Andere (cyber)incidenten",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Andere (cyber)incidenten",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D005204_1",
+    "title": "Incident met interne oorzaak gehad",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven waarbij één of meerdere onbedoelde ICT-veiligheidsincidenten zijn voorgevallen in 2024, zoals incidenten door onopzettelijk toedoen van eigen personeel of incidenten door een hardware of systeemfout.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000569_1",
+    "title": "Incident door aanval van buiten gehad",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven waarbij in 2024 één of meerdere ICT-veiligheidsincidenten veroorzaakt door een aanval van buitenaf zijn voorgevallen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000800_1",
+    "title": "Uitval ICT-dienst door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven waarbij één of meerdere ICT-veiligheidsincidenten zoals een storing in hardware of software zijn opgetreden in 2024. Een aanval door kwaadwillenden valt hier niet onder.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000824_1",
+    "title": "Vernietiging data door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Vernietiging of verminking van data als gevolg van ICT-gerelateerde veiligheidsincidenten (bijv. een storing in hardware of software)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000678_1",
+    "title": "Onthulling gegevens door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Onthulling van vertrouwelijke digitale gegevens door onopzettelijk toedoen van eigen personeel",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000799_1",
+    "title": "Uitval ICT-dienst door aanval buitenaf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Uitval van ICT-diensten als gevolg van een aanval van buitenaf, bijvoorbeeld DoS (Denial of Service) of ransomware-aanvallen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000825_1",
+    "title": "Vernietiging data aanval buitenaf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Vernietiging of verminking van data als gevolg van infectie met kwaadaardige software of ongeoorloofde elektronische toegang",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000677_1",
+    "title": "Onthulling gegevens door ICT-inbraak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Onthulling vertrouwelijke digitale gegevens door inbraak, pharming of phishing",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D006100_1",
+    "title": "Kosten incident interne oorzaak gehad",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die kosten hebben gehad voor één of meerdere ICT-veiligheidsincidenten in 2024 veroorzaakt door onopzettelijk toedoen van eigen personeel.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000614_1",
+    "title": "Kosten incident aanval buitenaf gehad",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die in 2024 kosten hebben gehad door één of meerdere ICT-veiligheidsincidenten veroorzaakt door een aanval van buitenaf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000800_2",
+    "title": "Uitval ICT-dienst door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door uitval van ICT-diensten als gevolg van ICT-gerelateerde veiligheidsincidenten, zoals een storing in hardware of software",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000824_2",
+    "title": "Vernietiging data door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door vernietiging of verminking van data als gevolg van ICT-gerelateerde veiligheidsincidenten, zoals een storing in hardware of software storing in hardware of software",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000678_2",
+    "title": "Onthulling gegevens door interne oorzaak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door onthulling van vertrouwelijke digitale gegevens door onopzettelijk toedoen van eigen personeel.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000799_2",
+    "title": "Uitval ICT-dienst door aanval buitenaf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door uitval van ICT-diensten als gevolg van een aanval van buitenaf, bijvoorbeeld DoS (Denial of Service) of ransomware-aanvallen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000825_2",
+    "title": "Vernietiging data aanval buitenaf",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door vernietiging of verminking van data als gevolg van infectie met kwaadaardige software of door ongeoorloofde elektronische toegang",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000677_2",
+    "title": "Onthulling gegevens door ICT-inbraak",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Kosten door onthulling van vertrouwelijke digitale gegevens door inbraak, pharming of phishing",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007871",
+    "title": "Ransomware-aanval gehad",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijf heeft in 2024 een ransomware-aanval gehad.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008195",
+    "title": "Bestanden of ICT-systemen versleuteld",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Ransomware-aanval waarbij bestanden of ICT‐systemen van het bedrijf door cybercriminelen door middel van encryptie geblokkeerd zijn om alleen na betaling van losgeld weer vrij te geven",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008335",
+    "title": "Afpersing openbaarmaking informatie",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Ransomware-aanval waarbij bestanden met informatie (bedrijfsinformatie, klanten- of personeelsgegeven) gestolen zijn met als doel het bedrijf te dwingen een afpersbedrag te betalen om te voorkomen dat de informatie openbaar gemaakt wordt.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D005800",
+    "title": "Verzekering ICT-veiligheidsincidenten",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijf verzekerd voor ICT-veiligheidsincidenten",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M001477",
+    "title": "Bekend met DTC",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die bekend zijn met het Digital Trust Center (DTC) en/of één van de daaraan verbonden samenwerkingsverbanden op het gebied van cyberweerbaarheid",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M002396",
+    "title": "DTC-website als bron gebruikt",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die bekend zijn met het DTC en de DTC-website als bron van informatie gebruiken om het bedrijf meer cyberweerbaar te maken",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D005386",
+    "title": "Gezocht naar meldingen cyberdreigingen",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die actief op zoek zijn naar meldingen over cyberdreigingen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M002310_2",
+    "title": "Verkoop via website of app",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die in 2024 orders ontvingen voor goederen/diensten via website of app",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008201_1",
+    "title": "Fysieke goederen",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van fysieke goederen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008202_1",
+    "title": "Digitale goederen of diensten",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van digitaal geleverde goederen of diensten. Bijvoorbeeld e‐books, software als downloads, streamingdiensten voor films of muziek, clouddiensten, telecommunicatiediensten, of een dienst voor het maken of onderhouden van websites.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008203_1",
+    "title": "Niet-digitale diensten",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van diensten die niet digitaal worden geleverd. Bijvoorbeeld accommodatie, reizen, onderhouds‐ of reparatiediensten.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000610_1",
+    "title": "Klanten in Nederland",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers in Nederland",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000608_1",
+    "title": "Klanten in andere EU-landen",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers in andere EU-landen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000609_1",
+    "title": "Klanten in landen buiten de EU",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers buiten de EU",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000846",
+    "title": "Via website of apps van eigen bedrijf",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop via website/apps van het eigen bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M005595_1",
+    "title": "Via online platforms",
+    "unit": "% van omzet via website/app",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop via website/apps van een ander bedrijf, oftewel een online platform (voorbeelden: booking.com, bol.com, thuisbezorgd.nl, kieskeurig.nl, werkspot.nl)",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000074_1",
+    "title": "Verkoopwaarde <1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000068_1",
+    "title": "Verkoopwaarde ≥1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000070_1",
+    "title": "Verkoopwaarde ≥2% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000072_1",
+    "title": "Verkoopwaarde ≥5% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000069_1",
+    "title": "Verkoopwaarde ≥10% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000071_1",
+    "title": "Verkoopwaarde ≥25% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000073_1",
+    "title": "Verkoopwaarde ≥50% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000811_2",
+    "title": "Verkoop via e-commerce",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die in 2024 gebruikmaakten van websites, apps en/of EDI om goederen en/of diensten te verkopen. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000074_2",
+    "title": "Verkoopwaarde <1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000068_2",
+    "title": "Verkoopwaarde ≥1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000070_2",
+    "title": "Verkoopwaarde ≥2% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000072_2",
+    "title": "Verkoopwaarde ≥5% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000069_2",
+    "title": "Verkoopwaarde ≥10% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000071_2",
+    "title": "Verkoopwaarde ≥25% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000073_2",
+    "title": "Verkoopwaarde ≥50% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007783",
+    "title": "Via één",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007784",
+    "title": "Via twee",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D007785",
+    "title": "Via drie of meer",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007861",
+    "title": "Meer dan 75% van omzet uit één platform",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Percentage van bedrijven met meer dan twee online platformen in 2024, waarbij meer dan drie kwart van de omzet via online platformen uit slechts één platform kwam",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M007982",
+    "title": "Betaald aan platforms",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die in 2024 aan één of meer online platform(en) hebben betaald voor het gebruik van hun bemiddelingsdiensten",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000812_2",
+    "title": "Verkoop via EDI",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Bedrijven die in 2024 orders voor goederen/diensten ontvingen via EDI",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008201_2",
+    "title": "Fysieke goederen",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van fysieke goederen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008202_2",
+    "title": "Digitale goederen of diensten",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van digitaal geleverde goederen of diensten. Bijvoorbeeld e‐books, software als downloads, streamingdiensten voor films of muziek, clouddiensten, telecommunicatiediensten, een dienst voor het maken of onderhouden van websites",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008203_2",
+    "title": "Niet-digitale diensten",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van diensten die niet digitaal worden geleverd. Bijvoorbeeld accommodatie, reizen, onderhouds‐ of reparatiediensten.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000610_2",
+    "title": "Klanten in Nederland",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers in Nederland",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000608_2",
+    "title": "Klanten in andere EU-landen",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers in andere EU-landen",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M000609_2",
+    "title": "Klanten in landen buiten de EU",
+    "unit": "% van omzet via EDI",
+    "decimals": 0,
+    "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers buiten de EU",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000074_3",
+    "title": "Verkoopwaarde <1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000068_3",
+    "title": "Verkoopwaarde ≥1% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000070_3",
+    "title": "Verkoopwaarde ≥2% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000072_3",
+    "title": "Verkoopwaarde ≥5% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000069_3",
+    "title": "Verkoopwaarde ≥10% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000071_3",
+    "title": "Verkoopwaarde ≥25% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000073_3",
+    "title": "Verkoopwaarde ≥50% van de totale omzet",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008337",
+    "title": "Gebruik ICT-oplossingen voor milieu",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het bedrijf gebruikt ICT-systemen of -oplossingen om het energieverbruik te verminderen, het gebruikte materiaal te verminderen, of het gebruik van gerecyclede materialen te vergroten",
+    "dataType": "Integer"
+   },
+   {
+    "code": "D000822",
+    "title": "Verminderen energieverbruik",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "ICT-systemen of -oplossingen om het energieverbruik te verminderen. Voorbeelden: geautomatiseerd systeem dat de energie‐efficiëntie van machines verbetert, slimme thermostaat om het energieverbruik te monitoren, controleren en optimaliseren, slimme verlichtingssystemen, bewakings‐ of controlesysteem op afstand om het energieverbruik te beheren, systemen om afwijkend verbruik, spanningspieken of andere non‐conformiteiten te detecteren",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008339",
+    "title": "Verbeteren materiaalverbruik",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "ICT-systemen of -oplossingen om  het gebruikte materiaal (inclusief verbruiksartikelen) te verminderen of het gebruik van gerecyclede materialen te vergroten. Voorbeelden: computerondersteund ontwerp dat het materiaalgebruik optimaliseert, 3D‐printen voor materiaalefficiëntie, monitoringsystemen ter ondersteuning van voorspellend onderhoud van bedrijfsmiddelen, stroomsensor om het waterverbruik te verminderen en ERP‐systemen voor het minimaliseren van overvoorraden en het verminderen van materiaalverspilling",
+    "dataType": "Integer"
+   },
+   {
+    "code": "M008340",
+    "title": "Monitoring ICT-oplossingen voor milieu",
+    "unit": "% van bedrijven",
+    "decimals": 0,
+    "description": "Het percentage bedrijven dat de impact van hun ICT-systemen of -oplossingen op het energie- en/of materiaalverbruik monitort of kwantificeert. Voorbeelden: vergelijken van het energieverbruik, de hoeveelheid productieafval en de energiefactuur met en zonder ICT-systemen of -oplossingen op het energie- en/of materiaalverbruik",
+    "dataType": "Integer"
+   }
+  ],
+  "modified": "2025-12-12T06:30:00+01:00"
+ },
+ "codeLists": {
+  "Bedrijfsgrootte": [
+   {
+    "code": "WP19115",
+    "title": "2 of meer werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   },
+   {
+    "code": "WP19080",
+    "title": "2 tot 10 werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   },
+   {
+    "code": "WP19090",
+    "title": "10 tot 50 werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   },
+   {
+    "code": "WP19097",
+    "title": "50 tot 250 werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   },
+   {
+    "code": "WP19107",
+    "title": "250 of meer werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   },
+   {
+    "code": "WP19116",
+    "title": "2 tot 250 werkzame personen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6,
+    "description": "Het aantal \"werkzame personen\" bestaat uit:\r\n- werknemers en directeuren die op de loonlijst staan;\r\n- werknemers die op de loonlijst staan van een andere onderneming of instelling, maar bij de eigen onderneming werkzaam zijn en als zodanig in feite tot het personeel behoren (ingeleend personeel);\r\n- werkzame eigenaren, firmanten, leden van maatschappen, vennoten en medewerkende gezinsleden;\r\n- uitzendkrachten.\r\n\r\nUitgeleend personeel (werknemers die op de loonlijst staan, maar werken bij een andere onderneming of instelling) is hierin niet opgenomen."
+   }
+  ],
+  "BedrijfstakkenBranchesSBI2008": [
+   {
+    "code": "399907",
+    "title": "Totaal C-N en Q",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 1,
+    "description": "Totaal C-N en Q\r\nDeze categorie is een samentelling van categorieën: \r\nC Industrie \r\nD Productie en distributie van en handel in elektriciteit, aardgas, stoom en gekoelde lucht \r\nE Winning en distributie van water; afval- en afvalwaterbeheer en sanering \r\nF Bouwnijverheid \r\nG Handel \r\nH Vervoer en opslag \r\nI Horeca \r\nJ Informatie en communicatie \r\nK Financiële instellingen \r\nL Verhuur van en handel in onroerend goed \r\nM Specialistische zakelijke dienstverlening \r\nN Verhuur van roerende goederen en overige zakelijke dienstverlening \r\nQ Gezondheids- en welzijnszorg"
+   },
+   {
+    "code": "307500",
+    "title": "C Industrie",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 2,
+    "description": "Industrie \r\nDeze sectie omvat: \r\n- de mechanische, fysische of chemische verwerking van materialen, stoffen of onderdelen tot nieuwe producten. De verwerkte materialen, stoffen of onderdelen zijn grondstoffen uit de landbouw, bosbouw, visserij en mijnbouw, alsmede (half)fabricaten uit de industrie. \r\n- reparatie en installatie van machines, apparatuur en andere benodigdheden voor bedrijven (geen consumentengoederen). \r\nBij de eenheden in deze sectie gaat het vaak om fabrieken waar gewoonlijk machines en apparaten worden gebruikt. Eenheden waar materialen of stoffen met de hand of in de eigen woning tot nieuwe producten worden verwerkt en die producten op de plaats waar deze zijn gemaakt, zelf verkopen, zoals bakkerijen en kleermakerijen, vallen echter ook onder deze sectie. \r\nIndustriële eenheden kunnen materialen zelf verwerken of dit aan andere eenheden uitbesteden. In beide gevallen valt dit onder de sectie Industrie. \r\nReparatie van huishoudelijke apparaten en consumptiegoederen wordt ingedeeld in afdeling 95; \r\nde reparatie van (bedrijfs-)auto's en motoren in afdeling 45: de autobranche. \r\nDe vervaardiging van specifieke componenten en onderdelen, toebehoren en hulpstukken voor machines en apparaten wordt gewoonlijk ingedeeld in dezelfde klasse als de vervaardiging van de desbetreffende machines en apparaten. \r\nDe vervaardiging van niet-specifieke componenten en onderdelen voor machines en apparatuur, zoals motoren, zuigers, elektromotoren, \r\nelektra-installatiemateriaal, kleppen, kogellagers, rollagers, worden in de passende klasse van de sectie industrie ingedeeld. \r\nDe sectie omvat niet: \r\n- activiteiten die niet leiden tot een nieuw product, maar tot een gewijzigde versie van hetzelfde product: \r\n* het opsplitsen van partijen stukgoederen in kleinere partijen, inclusief het verpakken, herverpakken; \r\n* het bottelen van producten als alcoholhoudende dranken of chemicaliën; \r\n* de montage van computers volgens de specifieke wensen van een klant; \r\n* het mengen van verf; \r\nDeze activiteiten worden ingedeeld in sectie G (groothandel en detailhandel)."
+   },
+   {
+    "code": "800036",
+    "title": "D-E Energie, water, afvalbeheer",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 3,
+    "description": "Deze categorie is een samentelling van categorieën: \r\nD Productie en distributie van en handel in elektriciteit, aardgas, stoom en gekoelde lucht \r\nE Winning en distributie van water; afval- en afvalwaterbeheer en sanering"
+   },
+   {
+    "code": "350000",
+    "title": "F Bouwnijverheid",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 4,
+    "description": "Bouwnijverheid \r\nDeze sectie omvat: \r\n- algemene en gespecialiseerde bouwkundige en civieltechnische werken, de bouwinstallatie en de afwerking van gebouwen. \r\nZij omvat ook nieuwbouw, reparatie, aan- en verbouwwerkzaamheden, het optrekken van geprefabriceerde gebouwen of constructies ter plaatse en van tijdelijke bouwwerken. \r\nOnder algemene bouw valt de bouw van woningen, kantoren, winkels en andere vormen van burgerlijke- en utiliteitsbouw enzovoort of de bouw of aanleg van zware constructies als autowegen, straten, bruggen, tunnels, spoorwegen, vliegvelden, havens en andere waterbouwkundige projecten, irrigatiesystemen, rioleringen, industriële installaties, pijpleidingen en elektriciteitsleidingen, sportvoorzieningen enzovoort. Deze werkzaamheden kunnen voor eigen rekening of voor een vast bedrag of op contractbasis worden uitgevoerd. Een deel van de werkzaamheden of soms zelfs alle uitvoerende werkzaamheden kunnen worden uitbesteed aan onderaannemers. \r\nGespecialiseerde bouw omvat de bouw of aanleg van een gedeelte van bouwwerken en van civieltechnische werken of de hiervoor vereiste voorbereidende werkzaamheden. Er is gewoonlijk sprake van gespecialiseerde werkzaamheden ten behoeve van diverse bouwwerken, waarvoor specifieke ervaring of een speciale uitrusting nodig is. Het heien, leggen van funderingen, boren van waterputten, de cascobouw, het storten van beton, metselen, zetten van natuursteen, de bouw van steigers, dakbedekking enzovoort worden hiertoe gerekend. Gespecialiseerde bouwkundige werkzaamheden worden meestal aan onderaannemers uitbesteed, maar vooral reparaties worden in de bouw rechtstreeks voor de eigenaar van het onroerend goed uitgevoerd. \r\nDe bouwinstallatie omvat de installatie van alle voorzieningen waardoor een bouwwerk als zodanig zijn functie kan vervullen. Deze werkzaamheden worden meestal op de bouwplaats zelf verricht, hoewel bepaalde gedeelten ervan in een werkplaats kunnen worden uitgevoerd. Inbegrepen zijn loodgieterswerk, de installatie van verwarmings- en klimaatregelingssystemen, alarmsystemen en andere elektrische apparatuur, sprinklerinstallaties, liften en roltrappen enzovoort. Ook vallen hieronder isolatiewerkzaamheden (vochtwering, warmte- en geluidsisolatie), het aanbrengen van metalen beplating, de installatie van commerciële koelapparatuur, verlichtings- en signaleringssystemen voor wegen, spoorwegen, luchthavens, havens enzovoort. Het uitvoeren van reparaties in verband met deze activiteiten is ook inbegrepen. \r\nDe afwerking van gebouwen omvat werkzaamheden die zijn gericht op de afwerking of voltooiing van een bouwwerk, zoals glaszetten, stukadoorswerk, schilderen, sauzen, het aanbrengen van vloer- of wandtegels of van andere bekleding of bedekking zoals parket, tapijt, behang enzovoort, schuren van vloeren, aftimmeren, geluidstechnische werkzaamheden enzovoort. Het uitvoeren van reparaties in verband met deze activiteiten is ook inbegrepen. \r\nDeze sectie omvat niet: \r\n- de bouw of installatie van industriële apparatuur en machines (bijvoorbeeld de installatie van industriële ovens, turbines enzovoort) \r\n(sectie C); \r\n- het optrekken van volledige geprefabriceerde gebouwen of bouwwerken van zelf vervaardigde onderdelen wordt ingedeeld bij de toepasselijke rubriek van de sectie Industrie, afhankelijk van het materiaal waaruit deze voornamelijk bestaan. Indien dit echter beton is, wordt deze activiteit in deze afdeling ingedeeld."
+   },
+   {
+    "code": "354200",
+    "title": "G Handel",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 5,
+    "description": "Groot- en detailhandel; reparatie van auto's \r\nDeze sectie omvat: \r\n- de groot- en detailhandel (verkoop zonder aanbrengen van veranderingen) in alle soorten goederen en de diensten die bij de verkoop van goederen worden verleend; \r\n- tussenhandel/handelsbemiddeling; \r\n- reparatie van auto's en motoren. \r\nDe verkoop zonder bewerking omvat de in de handel gebruikelijke handelingen, bijvoorbeeld sorteren, samenvoegen en combineren van goederen, mengen (versnijden) van goederen (bijvoorbeeld wijn of zand), bottelen (met of zonder reiniging van de fles vooraf), verpakken, opsplitsen en anders verpakken van partijen stukgoederen voor distributie in kleinere hoeveelheden, opslag (al dan niet bevroren of gekoeld), schoonmaken en drogen van landbouwproducten, snijden van houtvezel- of metalen platen voor eigen rekening. \r\nGroothandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen aan de detailhandel, aan industriële en andere bedrijfsmatige gebruikers, of aan andere groothandelaren, alsmede de handelsbemiddeling bij de aankoop van goederen voor of de verkoop van goederen aan dergelijke personen of bedrijven. De belangrijkste soort van groothandel is de groothandel in goederen, dat wil zeggen groothandelaren die goederen verkopen die zij in eigendom hebben zoals grossiers, dealers, exporteurs, importeurs en coöperatieve inkooporganisaties, verkooporganisaties en verkoopkantoren (detailhandelsbedrijven uitgezonderd) van industriële ondernemingen, die tot taak hebben de producten ervan op de markt te brengen. \r\nTussenhandel/handelsbemiddeling is het samenbrengen van koper en verkoper of het uitvoeren van transacties voor rekening van derden. Inbegrepen zijn makelaars op goederenbeurzen, commissionairs, en andere op commissiebasis werkzame tussenpersonen. \r\nDetailhandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen hoofdzakelijk aan het publiek voor persoonlijk of huishoudelijk ge- of verbruik, op de markt of door winkels, warenhuizen, postorderbedrijven, straathandelaren, consumentencoöperaties, veilinghuizen enzovoort. De meeste detailhandelaren zijn eigenaar van de goederen die zij verkopen, maar sommigen werken als tussenpersoon voor een opdrachtgever en verkopen in consignatie dan wel op commissiebasis."
+   },
+   {
+    "code": "383100",
+    "title": "H Vervoer en opslag",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 6,
+    "description": "Vervoer en opslag \r\nDeze sectie omvat: \r\n- het vervoer van personen of goederen, al dan niet volgens een dienstregeling, per spoor, via een pijpleiding, over de weg, over water of door de lucht; \r\n- de ondersteunende activiteiten als terminal- en parkeerfaciliteiten, vrachtbehandeling, opslag enz.; \r\n- de posterijen; \r\n- de verhuur van transportmiddelen met bestuurder of bedienend personeel. \r\nDeze sectie omvat niet: \r\n- het onderhoud en de reparatie van auto's (45)."
+   },
+   {
+    "code": "389100",
+    "title": "I Horeca",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 7,
+    "description": "Logies-, maaltijd- en drankverstrekking \r\nDeze sectie omvat: \r\n- het aan gasten verschaffen van logies en/of bereide maaltijden, snacks en dranken voor onmiddellijke consumptie. \r\nDe verschillende activiteiten in sectie I overlappen elkaar in zekere mate, omdat bijvoorbeeld de verkoop van dranken een activiteit op zich is, maar ook deel uitmaakt van de activiteiten van een restaurant (waar bij de \r\nmaaltijden dranken worden verstrekt) en dan met de verkoop van maaltijden bij 56.1 (Restaurants) wordt ingedeeld. Evenzo vormt de exploitatie van een restaurant een aparte activiteit, maar kan zij ook deel uitmaken van een bedrijf dat logies verschaft. \r\nLogiesverschaffende eenheden bieden reizigers, vakantiegangers en anderen accommodatie voor kortstondig verblijf (korter dan 3 maanden) aan. Er zijn vele verschillende eenheden. Sommige verschaffen alleen logies, terwijl andere naast logies ook maaltijden en recreatieve faciliteiten aanbieden. Het soort aanvullende dienstverlening kan van eenheid tot eenheid verschillen. \r\nRestaurants verstrekken volledige, voor onmiddellijke consumptie geschikte maaltijden, ongeacht of het traditionele restaurants, zelfbedienings- of afhaalrestaurants, dan wel permanente of tijdelijke viskramen en \r\ndergelijke met of zonder zitplaatsen zijn. Bepalend is het feit dat er voor onmiddellijke consumptie geschikte maaltijden worden aangeboden, niet het soort gelegenheid dat deze maaltijden verstrekt. \r\nDeze sectie omvat niet: \r\n- de productie van maaltijden niet voor onmiddellijke consumptie geschikt of maaltijden of bereid voedsel dat niet als maaltijd wordt beschouwd (SBI 10: voedingsmiddelenindustrie); \r\n- de verkoop van niet zelf vervaardigd voedsel dat niet als maaltijd wordt beschouwd of van niet voor onmiddellijke consumptie geschikte maaltijden (SBI 46 groothandel of SBI 47 detailhandel afhankelijk van de afnemerscategorie)."
+   },
+   {
+    "code": "391600",
+    "title": "J Informatie en communicatie",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 8,
+    "description": "Informatie en communicatie \r\nDeze sectie omvat: \r\n- de productie en distributie van informatie, de voorziening van de infrastructuur om die informatie door te geven, alsmede activiteiten op het gebied van data- en communicatie-informatietechnologie en het bewerken van data en andere informatie. \r\nDe belangrijkste activiteiten die hier ingedeeld worden zijn het uitgeven (afdeling 58, incl. het uitgeven van software), productie van films en geluidsopnamen (afdeling 59) radio en TV (afdeling 60), telecommunicatie (afdeling 61), informatietechnologie (afdeling 62) en andere dienstverlening op het gebied van informatie (afdeling 63). Uitgeven omvat ook het verkrijgen van de copyrights voor de content (informatieproducten) en het toegankelijk maken hiervan voor een breed publiek. Alle mogelijke vormen van uitgeven vallen onder deze sectie (in drukvorm, elektronisch of audio, op het internet, als multimediaproduct enzovoorts)."
+   },
+   {
+    "code": "396300",
+    "title": "K Financiële dienstverlening",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 9,
+    "description": "Financiële instellingen \r\nDeze sectie omvat: \r\n- financiële instellingen; \r\n- verzekeringswezen en pensioenfondsen (geen verplichte sociale verzekeringen); \r\n- financiële beurzen, effectenmakelaars, assurantietussenpersonen, administratiekantoren voor aandelen, waarborgfondsen en dergelijke."
+   },
+   {
+    "code": "402000",
+    "title": "L Verhuur en handel van onroerend goed",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 10,
+    "description": "Verhuur van en handel in onroerend goed \r\nDeze sectie omvat: \r\n- verhuur van onroerend goed; \r\n- bemiddeling in en beheer van onroerend goed."
+   },
+   {
+    "code": "403300",
+    "title": "M Specialistische zakelijke diensten",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 11,
+    "description": "Advisering, onderzoek en overige specialistische zakelijke dienstverlening \r\nDeze sectie omvat: \r\n- gespecialiseerde professionele wetenschappelijke en technische activiteiten. Deze activiteiten vereisen een hoge opleiding en stellen specifieke kennis ter beschikking."
+   },
+   {
+    "code": "410200",
+    "title": "N Verhuur en overige zakelijke diensten",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 12,
+    "description": "Verhuur van roerende goederen en overige zakelijke dienstverlening \r\nDeze sectie omvat: \r\n- activiteiten die zakelijke gebruikers ondersteunen bij de bedrijfsvoering. Het verschil van deze activiteiten met die uit sectie M is dat de activiteiten uit deze sectie niet primair gericht zijn op het overbrengen van expertise en kennis."
+   },
+   {
+    "code": "422400",
+    "title": "Q Gezondheids- en welzijnszorg",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 13,
+    "description": "Gezondheids- en welzijnszorg \r\nDeze sectie omvat: \r\n- behandeling in algemene en gespecialiseerde ziekenhuizen; \r\n- geestelijke gezondheidszorg en verslavingszorg, eventueel in combinatie met overnachting; \r\n- behandeling door medische en paramedische praktijken; \r\n- ondersteunende activiteiten voor de gezondheidszorg, door bijvoorbeeld laboratoria en ambulancediensten; \r\n- verpleging, verzorging of begeleiding met huisvesting door bijvoorbeeld verpleeg- en verzorgingshuizen of via begeleid wonen; \r\n- welzijnszorg, zoals thuiszorg, lokaal welzijnswerk en hulp aan gehandicapten en ouderen; \r\n- kinderopvang."
+   },
+   {
+    "code": "332915",
+    "title": "ICT-sector",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 14,
+    "description": "Deze categorie is een samentelling van categorieën: \r\n26.1 Vervaardiging van elektronische componenten en printplaten \r\n26.2 Vervaardiging van computers en randapparatuur \r\n26.3 Vervaardiging van communicatieapparatuur \r\n26.4 Vervaardiging van consumentenelektronica \r\n26.8 Vervaardiging van informatiedragers \r\n46.5 Groothandel in ICT-apparatuur \r\n58.2 Uitgeverijen van software \r\n61 Telecommunicatie \r\n62 Dienstverlenende activiteiten op het gebied van informatietechnologie \r\n63.1 Gegevensverwerking, webhosting en aanverwante activiteiten; webportals \r\n95.1 Reparatie van computers en communicatieapparatuur"
+   }
+  ]
+ }
+}

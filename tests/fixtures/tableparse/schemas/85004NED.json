@@ -1,0 +1,829 @@
+{
+ "fetchedAt": "2026-09-28T16:24:07.120Z",
+ "schema": {
+  "tableId": "85004NED",
+  "title": "Hernieuwbare energie; zonnestroom, windenergie, RES-regio",
+  "dimensions": [
+   {
+    "name": "BronEnTechniek",
+    "kind": "Dimension",
+    "title": "Bron en techniek"
+   },
+   {
+    "name": "RegioS",
+    "kind": "Dimension",
+    "title": "Regio's"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "M002199",
+    "title": "Opgesteld elektrisch vermogen",
+    "unit": "megawatt(piek)",
+    "decimals": 0,
+    "description": "Het vermogen dat op 31 december van het verslagjaar in gebruik is. Voor windenergie is de eenheid megawatt, MW. Voor zonnestroom is de eenheid megawattpiek, MWp.\r\n \r\nHet elektrisch vermogen is de hoeveelheid elektriciteit die per tijdseenheid kan worden opgewekt bij normaal gebruik van alle beschikbare installaties die elektriciteit produceren.\r\n\r\nVoor zonnestroom betreft dit het paneelvermogen. Naast het paneelvermogen is het voor zonnestroom ook mogelijk om te kijken naar het vermogen van de omvormers, of het vermogen van  hele systeem (gedefinieerd als minimum van de omvormer en de panelen).  Verwijzingen naar tabellen met gegevens over het vermogen volgens deze definitie staan in de algemene toelichting bij deze tabel.\r\n",
+    "dataType": "Long"
+   },
+   {
+    "code": "M002195",
+    "title": "Niet-genormaliseerde productie",
+    "unit": "mln kWh",
+    "decimals": 0,
+    "description": "Bruto productie (niet-genormaliseerd):\r\nDaadwerkelijke (gemeten) hernieuwbare elektriciteitsproductie in een verslagperiode, niet gecorrigeerd voor weersomstandigheden.\r\n",
+    "dataType": "Long"
+   },
+   {
+    "code": "M002194",
+    "title": "Genormaliseerde productie",
+    "unit": "mln kWh",
+    "decimals": 0,
+    "description": "Bruto productie (genormaliseerd):\r\nDe genormaliseerde elektriciteitsproductie is uitgerekend volgens definities uit de EU-Richtlijn Hernieuwbare Energie, dit is alleen voor windenergie van toepassing. Het doel is de productie te corrigeren voor veranderingen in weersomstandigheden, en daarmee de  fluctuaties in het windaanbod te neutraliseren. De genormaliseerde productie voor alle windenergie in Nederland in een bepaald verslagjaar wordt als volgt berekend: het gemiddelde van de capaciteit aan het begin en einde van een verslagjaar vermenigvuldigd met de gemiddelde productie per eenheid capaciteit in de afgelopen vijf jaar. Vanaf verslagjaar 2021 wordt deze berekening apart gedaan voor wind op land en wind op zee. Zie voor een rekenvoorbeeld Protocol Monitoring Hernieuwbare Energie RVO CBS\r\n",
+    "dataType": "Long"
+   }
+  ],
+  "modified": "2026-06-19T00:00:00+02:00"
+ },
+ "codeLists": {
+  "BronEnTechniek": [
+   {
+    "code": "E006590",
+    "title": "Zonnestroom, totaal",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Zonnestraling omgezet in elektriciteit."
+   },
+   {
+    "code": "A050176",
+    "title": "Zonnestroom, klein vermogen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Installaties van 15 kilowattpiek (kWp) paneelvermogen of minder."
+   },
+   {
+    "code": "A050177",
+    "title": "Zonnestroom, groot vermogen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Installaties van meer dan 15 kilowattpiek (kWp) paneelvermogen."
+   },
+   {
+    "code": "E006637",
+    "title": "Windenergie op land",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4,
+    "description": "Windenergie afkomstig van windmolens op land. \r\n\r\nOok de windmolens geplaatst in binnenwateren, zoals het IJsselmeer, vallen hieronder."
+   }
+  ],
+  "RegioS": [
+   {
+    "code": "NL01",
+    "title": "Nederland",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "PV20",
+    "title": "Groningen (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 2,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV21",
+    "title": "Fryslân (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 3,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV22",
+    "title": "Drenthe (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 4,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV23",
+    "title": "Overijssel (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 5,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV24",
+    "title": "Flevoland (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 6,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV25",
+    "title": "Gelderland (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 7,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV26",
+    "title": "Utrecht (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 8,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV27",
+    "title": "Noord-Holland (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 9,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV28",
+    "title": "Zuid-Holland (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 10,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV29",
+    "title": "Zeeland (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 11,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV30",
+    "title": "Noord-Brabant (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 12,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV31",
+    "title": "Limburg (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 13,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies."
+   },
+   {
+    "code": "PV99",
+    "title": "Niet in te delen (PV)",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 14,
+    "description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nNiet in te delen: door een gebrek aan informatie of door onjuiste informatie is een toedeling aan een bepaalde provincie niet altijd mogelijk."
+   },
+   {
+    "code": "ES01",
+    "title": "Groningen (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 15,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES02",
+    "title": "Friesland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 16,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES03",
+    "title": "Drenthe (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 17,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES04",
+    "title": "Twente (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 18,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES05",
+    "title": "West-Overijssel (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 19,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES06",
+    "title": "Flevoland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 20,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES07",
+    "title": "Achterhoek (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 21,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES08",
+    "title": "Arnhem/Nijmegen (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 22,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES09",
+    "title": "Foodvalley (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 23,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES10",
+    "title": "Noord-Veluwe (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 24,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES11",
+    "title": "Fruitdelta Rivierenland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 25,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES12",
+    "title": "Cleantech (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 26,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES13",
+    "title": "Amersfoort (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 27,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES14",
+    "title": "U16 (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 28,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES15",
+    "title": "Noord-Holland Noord (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 29,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES16",
+    "title": "Noord-Holland Zuid (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 30,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES17",
+    "title": "Alblasserwaard (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 31,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES18",
+    "title": "Drechtsteden (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 32,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES19",
+    "title": "Goeree-Overflakkee (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 33,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES20",
+    "title": "Hoeksche Waard (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 34,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES21",
+    "title": "Holland Rijnland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 35,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES22",
+    "title": "Midden-Holland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 36,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES23",
+    "title": "Rotterdam/Den Haag (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 37,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES24",
+    "title": "Zeeland (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 38,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES25",
+    "title": "Hart van Brabant (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 39,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES26",
+    "title": "Metropoolregio Eindhoven (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 40,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES27",
+    "title": "Noordoost-Brabant (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 41,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES28",
+    "title": "West-Brabant (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 42,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES29",
+    "title": "Noord- en Midden-Limburg (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 43,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES30",
+    "title": "Zuid-Limburg (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 44,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk."
+   },
+   {
+    "code": "ES99",
+    "title": "Niet in te delen (ES)",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 45,
+    "description": "ES = Regionale Energiestrategie regio\r\n\r\nIn het kader van het klimaatakkoord is Nederland ingedeeld in 30 regio's. In die regio's werken de lokale overheden - gemeenten, provincies en waterschappen - aan het opstellen van Regionale Energiestrategieën (RES). Samen met bedrijfsleven, maatschappelijke organisaties, netbeheerders en inwoners brengen ze mogelijkheden voor lokale energiebesparing (o.a. isolatie van woningen en andere gebouwen) en duurzame opwekking van energie in kaart en de gevolgen daarvan voor het energienetwerk.\r\n\r\nNiet in te delen: door een gebrek aan informatie of door onjuiste informatie is een toedeling aan een bepaalde Regionale Energiestrategie regio niet altijd mogelijk."
+   },
+   {
+    "code": "ET0101",
+    "title": "Groningen (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 46,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0201",
+    "title": "Friesland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 47,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0301",
+    "title": "Drenthe (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 48,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0401",
+    "title": "Twente (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 49,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0501",
+    "title": "West-Overijssel (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 50,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0601",
+    "title": "Flevoland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 51,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0701",
+    "title": "Achterhoek (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 52,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0801",
+    "title": "Arnhem/Nijmegen (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 53,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0901",
+    "title": "Foodvalley Gelderland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 54,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET0902",
+    "title": "Foodvalley Utrecht (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 55,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1001",
+    "title": "Noord-Veluwe (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 56,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1101",
+    "title": "Fruitdelta Rivierenland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 57,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1201",
+    "title": "Cleantech (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 58,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1301",
+    "title": "Amersfoort (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 59,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1401",
+    "title": "U16 (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 60,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1501",
+    "title": "Kop van Noord-Holland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 61,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1502",
+    "title": "Regio Alkmaar (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 62,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1503",
+    "title": "West-Friesland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 63,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1601",
+    "title": "Amsterdam (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 64,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1602",
+    "title": "IJmond-Zuid-Kennemerland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 65,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1603",
+    "title": "Zaanstreek-Waterland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 66,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1604",
+    "title": "Gooi en Vechtstreek (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 67,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1605",
+    "title": "Haarlemmermeer (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 68,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1606",
+    "title": "Amstelland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 69,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1701",
+    "title": "Alblasserwaard (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 70,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1801",
+    "title": "Drechtsteden (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 71,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET1901",
+    "title": "Goeree-Overflakkee (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 72,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2001",
+    "title": "Hoeksche Waard (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 73,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2101",
+    "title": "Holland Rijnland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 74,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2201",
+    "title": "Midden-Holland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 75,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2301",
+    "title": "Rotterdam/Den Haag (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 76,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2401",
+    "title": "Zeeland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 77,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2501",
+    "title": "Hart van Brabant (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 78,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2601",
+    "title": "Metropoolregio Eindhoven (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 79,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2701",
+    "title": "Noordoost-Brabant (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 80,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2801",
+    "title": "West-Brabant (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 81,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET2901",
+    "title": "Noord- en Midden-Limburg (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 82,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET3001",
+    "title": "Parkstad (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 83,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET3002",
+    "title": "Maastricht Heuvelland (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 84,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET3003",
+    "title": "Westelijke Mijnstreek (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 85,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30)."
+   },
+   {
+    "code": "ET9999",
+    "title": "Niet in te delen (ET)",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 86,
+    "description": "ET = SubRES-regio\r\n\r\n\r\nEen onderverdeling van een aantal van de 30 RES-regio’s; de volgende RES-regio’s zijn verder opgesplitst: Foodvalley (ES09), Noord-Holland Noord (ES15), Noord-Holland Zuid (ES16) en Zuid-Limburg (ES30).\r\n\r\nNiet in te delen: door een gebrek aan informatie of door onjuiste informatie is een toedeling aan een bepaalde jeugdregio niet altijd mogelijk."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2,
+    "description": "Nader voorlopige cijfers."
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": "0",
+    "status": "NaderVoorlopig",
+    "index": 7,
+    "description": "Nader voorlopige cijfers"
+   }
+  ]
+ }
+}

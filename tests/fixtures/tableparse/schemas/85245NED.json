@@ -1,0 +1,188 @@
+{
+ "fetchedAt": "2026-09-28T16:24:03.388Z",
+ "schema": {
+  "tableId": "85245NED",
+  "title": "Motorvoertuigen actief; sloopvoertuigen, voertuigtype, brandstofsoort",
+  "dimensions": [
+   {
+    "name": "VoertuigType",
+    "kind": "Dimension",
+    "title": "Voertuig type"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "A047215",
+    "title": "Voor sloop vrijgekomen voertuigen",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Nederlandse voertuigen waarvan het kenteken/kentekenbewijs ongeldig is verklaard vanwege sloop. Dit is exclusief de sloop van geïmporteerde voertuigen bestemd voor demontage.",
+    "dataType": "Long"
+   },
+   {
+    "code": "A019276",
+    "title": "Benzine",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Long"
+   },
+   {
+    "code": "A019275",
+    "title": "Diesel",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Long"
+   },
+   {
+    "code": "A027841",
+    "title": "LPG",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "LPG (Liquefied Petroleum Gas; vertaling: vloeibaar gemaakt gas)",
+    "dataType": "Long"
+   },
+   {
+    "code": "A041295",
+    "title": "Overige",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Voertuigen die rijden op elektriciteit of waterstof. Ook zijn hierin de zogenaamde hybride-voertuigen opgenomen. Dit zijn voertuigen waarvan de motor wordt aangedreven door een combinatie van brandstoffen, bijvoorbeeld elektriciteit en benzine. Ook vallen hieronder de voertuigen waarvan de gebruikte brandstof onbekend is.",
+    "dataType": "Long"
+   }
+  ],
+  "modified": "2026-02-13T00:00:00+01:00"
+ },
+ "codeLists": {
+  "VoertuigType": [
+   {
+    "code": "A018928",
+    "title": "Totaal motorvoertuigen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Motorvoertuig:\r\nGemotoriseerd voertuig voor het wegverkeer.\r\nHieronder vallen personenauto's, bedrijfsmotorvoertuigen (bestelauto's, vrachtauto's, trekkers, speciale voertuigen, bussen), motorfietsen en voertuigen met een bromfietskenteken.\r\nOp rails rijdende voertuigen en fietsen met trapondersteuning vallen hier niet onder.\r\n\r\nDeze tabel bevat cijfers over het totaal van personenauto's en bedrijfsmotorvoertuigen. \r\nMotorfietsen, aanhangwagens, opleggers en voertuigen met bromfietskenteken vallen hier niet onder."
+   },
+   {
+    "code": "A018943",
+    "title": "Personenauto",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Motorvoertuig voor personenvervoer over de weg, exclusief brom-  en motorfietsen, met maximaal negen zitplaatsen (met inbegrip van de bestuurdersplaats).\r\n\r\nHieronder vallen:\r\na) personenauto's\r\nb) bestelwagens ontworpen voor en voornamelijk gebruikt voor het vervoer van reizigers\r\nc) taxi's\r\nd) huurauto's\r\ne) ziekenwagens\r\nf) campers.\r\nLichte wegvoertuigen voor goederenvervoer over de weg, touringcars, autobussen en minibussen vallen hier niet onder.\r\nHet begrip personenauto omvat ook taxi's en huurauto's met minder dan tien zitplaatsen. Vanaf 1 mei 2009 worden campers gekentekend als personenauto of als bus afhankelijk van het aantal zitplaatsen. Vóór die datum zijn campers geregistreerd als speciale voertuigen."
+   },
+   {
+    "code": "A018930",
+    "title": "Totaal bedrijfsmotorvoertuigen",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Motorvoertuig ingericht voor het vervoer van goederen of personen, voor het uitvoeren van bijzondere doeleinden of voor het trekken van opleggers.\r\n\r\nHieronder vallen bestelauto's, vrachtauto's, trekkers, speciale voertuigen en bussen.\r\nAanhangwagens en opleggers vallen hier niet onder."
+   },
+   {
+    "code": "A018935",
+    "title": "Bestelauto",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4,
+    "description": "Een bedrijfsvoertuig, ingericht voor het vervoer van goederen, waarvan het leeg gewicht vermeerderd met het laadvermogen (toegestane maximum massa) ten hoogste 3500 kg bedraagt.\r\n\r\nBestelwagens ontworpen en voornamelijk gebruikt voor goederenvervoer, pick-ups en kleine vrachtwagens met een brutogewicht van niet meer dan 3500 kg vallen hieronder."
+   },
+   {
+    "code": "A018936",
+    "title": "Vrachtauto (excl. trekker voor oplegger)",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5,
+    "description": "Een niet-geleed zwaar wegvoertuig waarvan het leeg gewicht vermeerderd met het laadvermogen (toegestane maximum massa) meer dan 3500 kg bedraagt, uitsluitend of voornamelijk ontworpen voor het vervoer van goederen."
+   },
+   {
+    "code": "A018937",
+    "title": "Trekker voor oplegger",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6,
+    "description": "Motorvoertuig voor het wegverkeer, uitsluitend of hoofdzakelijk ontworpen voor het trekken van andere wegvoertuigen zonder eigen krachtbron (hoofdzakelijk opleggers).\r\n\r\nLandbouwtrekkers vallen hier niet onder."
+   },
+   {
+    "code": "A018939",
+    "title": "Speciaal voertuig",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 7,
+    "description": "Motorvoertuig voor het wegverkeer ontworpen voor andere doeleinden dan personen- of goederenvervoer.\r\n\r\nHieronder vallen:\r\na) kampeerwagens\r\nb) voertuigen voor vervoer voertuigen\r\nc) vuilniswagens\r\nd) brandweerwagens\r\ne) mobiele kranen\r\nf) hoogwerkers\r\ng) overige speciale motorvoertuigen voor het wegverkeer.\r\nVanaf 1 mei 2009 worden kampeerwagens gekentekend als personenauto of als bus afhankelijk van het aantal zitplaatsen. Vóór die datum zijn kampeerwagens geregistreerd als speciale voertuigen.\r\n"
+   },
+   {
+    "code": "A018940",
+    "title": "Bus",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 8,
+    "description": "Motorvoertuig voor personenvervoer over de weg met meer dan negen zitplaatsen (met inbegrip van de bestuurdersplaats)."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 7
+   },
+   {
+    "code": "2025JJ00",
+    "title": "2025",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 8
+   }
+  ]
+ }
+}
