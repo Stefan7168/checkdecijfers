@@ -1,0 +1,767 @@
+{
+ "fetchedAt": "2026-09-28T14:16:26.704Z",
+ "cases": [
+  {
+   "id": "geslacht_single_first_t00",
+   "table": "03759ned",
+   "dimension": "Geslacht",
+   "note": "single total candidate, first member, T00 code",
+   "kind": "Dimension",
+   "title": "Geslacht",
+   "totalMemberCount": 3,
+   "members": [
+    {
+     "code": "T001038",
+     "title": "Totaal mannen en vrouwen"
+    },
+    {
+     "code": "3000",
+     "title": "Mannen"
+    },
+    {
+     "code": "4000",
+     "title": "Vrouwen"
+    }
+   ]
+  },
+  {
+   "id": "klimaatsectoren_several_first_only_t00",
+   "table": "85669NED",
+   "dimension": "Klimaatsectoren",
+   "note": "several \"; totaal\"-suffixed candidates, but the first member is the ONLY one with a T00 code",
+   "kind": "Dimension",
+   "title": "Klimaatsectoren",
+   "totalMemberCount": 52,
+   "members": [
+    {
+     "code": "T001616",
+     "title": "Totaal klimaatsectoren"
+    },
+    {
+     "code": "A025447",
+     "title": "Stationaire bronnen; totaal"
+    },
+    {
+     "code": "A050124",
+     "title": "Elektriciteit"
+    },
+    {
+     "code": "A050123",
+     "title": "Industrie"
+    },
+    {
+     "code": "305800",
+     "title": "06 Winning van aardolie en aardgas"
+    },
+    {
+     "code": "348000",
+     "title": "E Waterbedrijven en afvalbeheer"
+    },
+    {
+     "code": "320300",
+     "title": "192 Aardolie-industrie"
+    },
+    {
+     "code": "E007211",
+     "title": "Cokesfabrieken"
+    },
+    {
+     "code": "307610",
+     "title": "10-12 Voedings-, genotmiddelenindustrie"
+    },
+    {
+     "code": "312505",
+     "title": "13-15 Textiel-, kleding-, lederindustrie"
+    },
+    {
+     "code": "315800",
+     "title": "16 Houtindustrie"
+    },
+    {
+     "code": "317100",
+     "title": "17 Papierindustrie"
+    },
+    {
+     "code": "318600",
+     "title": "18 Grafische industrie"
+    },
+    {
+     "code": "320800",
+     "title": "201 Basischemie"
+    },
+    {
+     "code": "800046",
+     "title": "Overige chemie, farmaceutische industrie"
+    },
+    {
+     "code": "324600",
+     "title": "23 Bouwmaterialenindustrie"
+    },
+    {
+     "code": "328100",
+     "title": "24 Basismetaalindustrie"
+    },
+    {
+     "code": "800049",
+     "title": "25-28 Metaalprod.- en machine-industrie"
+    },
+    {
+     "code": "339205",
+     "title": "29-30 Transportmiddelenindustrie"
+    },
+    {
+     "code": "800050",
+     "title": "22, 31-32 Overige industrie"
+    },
+    {
+     "code": "350000",
+     "title": "F Bouwnijverheid"
+    },
+    {
+     "code": "301100",
+     "title": "01 Landbouw (stationaire bronnen)"
+    },
+    {
+     "code": "A050127",
+     "title": "Gebouwde omgeving"
+    },
+    {
+     "code": "1050010",
+     "title": "Particulier huishouden"
+    },
+    {
+     "code": "300008",
+     "title": "G-U Dienstverlening"
+    },
+    {
+     "code": "A052138",
+     "title": "Landgebruik"
+    },
+    {
+     "code": "A025421",
+     "title": "Mobiele bronnen; totaal"
+    },
+    {
+     "code": "A025422",
+     "title": "Vervoer"
+    },
+    {
+     "code": "A025424",
+     "title": "Wegverkeer; totaal"
+    },
+    {
+     "code": "A048112",
+     "title": "Wegverkeer; personenauto's"
+    }
+   ]
+  },
+  {
+   "id": "kenmerken_paar_trap",
+   "table": "83842NED",
+   "dimension": "KenmerkenVanHuishoudens",
+   "note": "\"Type: Paar, totaal\" is a sub-total, not first — first member is not a candidate at all",
+   "kind": "Dimension",
+   "title": "Kenmerken van huishoudens",
+   "totalMemberCount": 54,
+   "members": [
+    {
+     "code": "1050010",
+     "title": "Particuliere huishoudens"
+    },
+    {
+     "code": "1050015",
+     "title": "Type: Eenpersoonshuishouden"
+    },
+    {
+     "code": "A043011",
+     "title": "Type: Alleenstaande onder AOW-lft"
+    },
+    {
+     "code": "A043012",
+     "title": "Type: Alleenstaande vanaf AOW-lft"
+    },
+    {
+     "code": "1016010",
+     "title": "Type: Meerpersoonshuishouden"
+    },
+    {
+     "code": "1050190",
+     "title": "Type: Eenoudergezin"
+    },
+    {
+     "code": "1050195",
+     "title": "Type: Eenouder, alle kinderen < 18 jr"
+    },
+    {
+     "code": "1050200",
+     "title": "Type: Eenouder, minst. één kind >= 18 jr"
+    },
+    {
+     "code": "1050055",
+     "title": "Type: Paar, totaal"
+    },
+    {
+     "code": "1017780",
+     "title": "Type: Paar, zonder kind"
+    },
+    {
+     "code": "1017790",
+     "title": "Type: Paar, zonder kind, onder AOW-lft"
+    },
+    {
+     "code": "1017800",
+     "title": "Type: Paar, zonder kind, vanaf AOW-lft"
+    },
+    {
+     "code": "1016090",
+     "title": "Type: Paar, met kind(eren)"
+    },
+    {
+     "code": "1017810",
+     "title": "Type: Paar, alle kinderen < 18 jr"
+    },
+    {
+     "code": "1017880",
+     "title": "Type: Paar, minstens één kind >= 18 jr"
+    },
+    {
+     "code": "1050220",
+     "title": "Type: Meerpersoonshuishouden, overig"
+    },
+    {
+     "code": "3000",
+     "title": "Hoofdkostwinner: man"
+    },
+    {
+     "code": "4000",
+     "title": "Hoofdkostwinner: vrouw"
+    },
+    {
+     "code": "A025340",
+     "title": "Hoofdkostwinner: tot 25 jaar"
+    },
+    {
+     "code": "A025343",
+     "title": "Hoofdkostwinner: 25 tot 45 jaar"
+    },
+    {
+     "code": "A025351",
+     "title": "Hoofdkostwinner: 45 tot 65 jaar"
+    },
+    {
+     "code": "A025359",
+     "title": "Hoofdkostwinner: 65 jaar of ouder"
+    },
+    {
+     "code": "A025342",
+     "title": "Hoofdkostwinner: 25 tot 35 jaar"
+    },
+    {
+     "code": "A025347",
+     "title": "Hoofdkostwinner: 35 tot 45 jaar"
+    },
+    {
+     "code": "A025350",
+     "title": "Hoofdkostwinner: 45 tot 55 jaar"
+    },
+    {
+     "code": "A025354",
+     "title": "Hoofdkostwinner: 55 tot 65 jaar"
+    },
+    {
+     "code": "A025358",
+     "title": "Hoofdkostwinner: 65 tot 75 jaar"
+    },
+    {
+     "code": "A042086",
+     "title": "Hoofdkostwinner: 75 tot 85 jaar"
+    },
+    {
+     "code": "A042087",
+     "title": "Hoofdkostwinner: 85 jaar of ouder"
+    },
+    {
+     "code": "A025362",
+     "title": "Hoofdkostwinner: Nederland"
+    }
+   ]
+  },
+  {
+   "id": "watergebruikers_t00_not_first",
+   "table": "82883NED",
+   "dimension": "Watergebruikers",
+   "note": "a T00-coded member exists (T001081) but is not first; first member is not a candidate",
+   "kind": "Dimension",
+   "title": "Watergebruikers",
+   "totalMemberCount": 52,
+   "members": [
+    {
+     "code": "B000579",
+     "title": "Nederlandse economie totaal"
+    },
+    {
+     "code": "1050010",
+     "title": "Particuliere huishoudens"
+    },
+    {
+     "code": "T001081",
+     "title": "A-U Alle economische activiteiten"
+    },
+    {
+     "code": "301000",
+     "title": "A Landbouw, bosbouw en visserij"
+    },
+    {
+     "code": "305700",
+     "title": "B Delfstoffenwinning"
+    },
+    {
+     "code": "307500",
+     "title": "C Industrie"
+    },
+    {
+     "code": "307600",
+     "title": "10 Voedingsmiddelenindustrie"
+    },
+    {
+     "code": "311300",
+     "title": "11 Drankenindustrie"
+    },
+    {
+     "code": "312200",
+     "title": "12 Tabaksindustrie"
+    },
+    {
+     "code": "312500",
+     "title": "13 Textielindustrie"
+    },
+    {
+     "code": "314000",
+     "title": "14 Kledingindustrie"
+    },
+    {
+     "code": "315200",
+     "title": "15 Leer- en schoenenindustrie"
+    },
+    {
+     "code": "315800",
+     "title": "16 Houtindustrie"
+    },
+    {
+     "code": "317100",
+     "title": "17 Papierindustrie"
+    },
+    {
+     "code": "318600",
+     "title": "18 Grafische industrie"
+    },
+    {
+     "code": "320000",
+     "title": "19 Aardolie-industrie"
+    },
+    {
+     "code": "320700",
+     "title": "20 Chemische industrie"
+    },
+    {
+     "code": "323200",
+     "title": "21 Farmaceutische industrie"
+    },
+    {
+     "code": "323700",
+     "title": "22 Rubber- en kunststofproductindustrie"
+    },
+    {
+     "code": "324600",
+     "title": "23 Bouwmaterialenindustrie"
+    },
+    {
+     "code": "328100",
+     "title": "24 Basismetaalindustrie"
+    },
+    {
+     "code": "330300",
+     "title": "25 Metaalproductenindustrie"
+    },
+    {
+     "code": "332900",
+     "title": "26 Elektrotechnische industrie"
+    },
+    {
+     "code": "334800",
+     "title": "27 Elektrische apparatenindustrie"
+    },
+    {
+     "code": "336500",
+     "title": "28 Machine-industrie"
+    },
+    {
+     "code": "339200",
+     "title": "29 Auto- en aanhangwagenindustrie"
+    },
+    {
+     "code": "340200",
+     "title": "30 Overige transportmiddelenindustrie"
+    },
+    {
+     "code": "341600",
+     "title": "31 Meubelindustrie"
+    },
+    {
+     "code": "342400",
+     "title": "32 Overige industrie"
+    },
+    {
+     "code": "344400",
+     "title": "33 Reparatie en installatie van machines"
+    }
+   ]
+  },
+  {
+   "id": "leeftijd_two_totals",
+   "table": "84521NED",
+   "dimension": "Leeftijd",
+   "note": "\"Totaal leeftijd\" (first) + \"Totaal, gestandaardiseerd\" (T00 code, not first) — two different statistics",
+   "kind": "Dimension",
+   "title": "Leeftijd",
+   "totalMemberCount": 8,
+   "members": [
+    {
+     "code": "10000",
+     "title": "Totaal leeftijd"
+    },
+    {
+     "code": "T001249",
+     "title": "Totaal, gestandaardiseerd"
+    },
+    {
+     "code": "10010",
+     "title": "0 jaar"
+    },
+    {
+     "code": "53987",
+     "title": "1 tot 20 jaar"
+    },
+    {
+     "code": "53988",
+     "title": "20 tot 45 jaar"
+    },
+    {
+     "code": "53715",
+     "title": "45 tot 65 jaar"
+    },
+    {
+     "code": "53950",
+     "title": "65 tot 80 jaar"
+    },
+    {
+     "code": "21700",
+     "title": "80 jaar of ouder"
+    }
+   ]
+  },
+  {
+   "id": "nationaliteit_subgroup_totaal",
+   "table": "83191NED",
+   "dimension": "Nationaliteit",
+   "note": "\"Nederlands (totaal)\" is a subgroup label, not a candidate (no comma/semicolon before \"totaal\")",
+   "kind": "Dimension",
+   "title": "Nationaliteit",
+   "totalMemberCount": 15,
+   "members": [
+    {
+     "code": "NAT9267",
+     "title": "Nederlands (totaal)"
+    },
+    {
+     "code": "B000101",
+     "title": "Nederlands (Aruba, Curaçao, St. Maarten)"
+    },
+    {
+     "code": "B000100",
+     "title": "Nederlands (Europa)"
+    },
+    {
+     "code": "NAT9281",
+     "title": "Amerikaans"
+    },
+    {
+     "code": "NAT9300",
+     "title": "Braziliaans"
+    },
+    {
+     "code": "NAT9301",
+     "title": "Brits"
+    },
+    {
+     "code": "NAT9307",
+     "title": "Canadees"
+    },
+    {
+     "code": "NAT9311",
+     "title": "Colombiaans"
+    },
+    {
+     "code": "NAT9321",
+     "title": "Dominicaans"
+    },
+    {
+     "code": "NAT9322",
+     "title": "Duits"
+    },
+    {
+     "code": "NAT9330",
+     "title": "Filippijns"
+    },
+    {
+     "code": "NAT9332",
+     "title": "Frans"
+    },
+    {
+     "code": "NAT9464",
+     "title": "Venezolaans"
+    },
+    {
+     "code": "NAT9478",
+     "title": "Overige Europa (exclusief Nederlands)"
+    },
+    {
+     "code": "NAT9999",
+     "title": "Overige nationaliteiten"
+    }
+   ]
+  },
+  {
+   "id": "bedrijfsgrootte_no_total",
+   "table": "86116NED",
+   "dimension": "Bedrijfsgrootte",
+   "note": "no member matches the candidate rule at all",
+   "kind": "Dimension",
+   "title": "Bedrijfsgrootte",
+   "totalMemberCount": 6,
+   "members": [
+    {
+     "code": "WP19115",
+     "title": "2 of meer werkzame personen"
+    },
+    {
+     "code": "WP19080",
+     "title": "2 tot 10 werkzame personen"
+    },
+    {
+     "code": "WP19090",
+     "title": "10 tot 50 werkzame personen"
+    },
+    {
+     "code": "WP19097",
+     "title": "50 tot 250 werkzame personen"
+    },
+    {
+     "code": "WP19107",
+     "title": "250 of meer werkzame personen"
+    },
+    {
+     "code": "WP19116",
+     "title": "2 tot 250 werkzame personen"
+    }
+   ]
+  },
+  {
+   "id": "voertuigtype_several_first_not_t00",
+   "table": "85245NED",
+   "dimension": "VoertuigType",
+   "note": "first member IS a \"Totaal\"-titled candidate, but a second \"Totaal\"-titled candidate also exists and neither has a T00 code — ask",
+   "kind": "Dimension",
+   "title": "Voertuig type",
+   "totalMemberCount": 8,
+   "members": [
+    {
+     "code": "A018928",
+     "title": "Totaal motorvoertuigen"
+    },
+    {
+     "code": "A018943",
+     "title": "Personenauto"
+    },
+    {
+     "code": "A018930",
+     "title": "Totaal bedrijfsmotorvoertuigen"
+    },
+    {
+     "code": "A018935",
+     "title": "Bestelauto"
+    },
+    {
+     "code": "A018936",
+     "title": "Vrachtauto (excl. trekker voor oplegger)"
+    },
+    {
+     "code": "A018937",
+     "title": "Trekker voor oplegger"
+    },
+    {
+     "code": "A018939",
+     "title": "Speciaal voertuig"
+    },
+    {
+     "code": "A018940",
+     "title": "Bus"
+    }
+   ]
+  },
+  {
+   "id": "marges",
+   "table": "83052NED",
+   "dimension": "Marges",
+   "note": "margins dimension — resolves to the member titled exactly \"Waarde\" (MW00000)",
+   "kind": "Dimension",
+   "title": "Marges",
+   "totalMemberCount": 3,
+   "members": [
+    {
+     "code": "MW00000",
+     "title": "Waarde"
+    },
+    {
+     "code": "MOG0095",
+     "title": "Ondergrens 95%-interval"
+    },
+    {
+     "code": "MBG0095",
+     "title": "Bovengrens 95%-interval"
+    }
+   ]
+  },
+  {
+   "id": "geo_like_alle_regio_indelingen",
+   "table": "86211NED",
+   "dimension": "AlleRegioIndelingen",
+   "note": "geo-like: kind Dimension (not GeoDimension), codes ~100% match the region-prefix regex — handled by the region resolver, never the total rule",
+   "kind": "Dimension",
+   "title": "Alle regio-indelingen",
+   "totalMemberCount": 18235,
+   "members": [
+    {
+     "code": "NL01",
+     "title": "Nederland"
+    },
+    {
+     "code": "LD01",
+     "title": "Noord-Nederland (LD)"
+    },
+    {
+     "code": "LD02",
+     "title": "Oost-Nederland (LD)"
+    },
+    {
+     "code": "LD03",
+     "title": "West-Nederland (LD)"
+    },
+    {
+     "code": "LD04",
+     "title": "Zuid-Nederland (LD)"
+    },
+    {
+     "code": "PV20",
+     "title": "Groningen (PV)"
+    },
+    {
+     "code": "PV21",
+     "title": "Fryslân (PV)"
+    },
+    {
+     "code": "PV22",
+     "title": "Drenthe (PV)"
+    },
+    {
+     "code": "PV23",
+     "title": "Overijssel (PV)"
+    },
+    {
+     "code": "PV24",
+     "title": "Flevoland (PV)"
+    },
+    {
+     "code": "PV25",
+     "title": "Gelderland (PV)"
+    },
+    {
+     "code": "PV26",
+     "title": "Utrecht (PV)"
+    },
+    {
+     "code": "PV27",
+     "title": "Noord-Holland (PV)"
+    },
+    {
+     "code": "PV28",
+     "title": "Zuid-Holland (PV)"
+    },
+    {
+     "code": "PV29",
+     "title": "Zeeland (PV)"
+    },
+    {
+     "code": "PV30",
+     "title": "Noord-Brabant (PV)"
+    },
+    {
+     "code": "PV31",
+     "title": "Limburg (PV)"
+    },
+    {
+     "code": "CR01",
+     "title": "Oost-Groningen (CR)"
+    },
+    {
+     "code": "CR02",
+     "title": "Delfzijl en omgeving (CR)"
+    },
+    {
+     "code": "CR03",
+     "title": "Overig Groningen (CR)"
+    },
+    {
+     "code": "CR04",
+     "title": "Noord-Friesland (CR)"
+    },
+    {
+     "code": "CR05",
+     "title": "Zuidwest-Friesland (CR)"
+    },
+    {
+     "code": "CR06",
+     "title": "Zuidoost-Friesland (CR)"
+    },
+    {
+     "code": "CR07",
+     "title": "Noord-Drenthe (CR)"
+    },
+    {
+     "code": "CR08",
+     "title": "Zuidoost-Drenthe (CR)"
+    },
+    {
+     "code": "CR09",
+     "title": "Zuidwest-Drenthe (CR)"
+    },
+    {
+     "code": "CR10",
+     "title": "Noord-Overijssel (CR)"
+    },
+    {
+     "code": "CR11",
+     "title": "Zuidwest-Overijssel (CR)"
+    },
+    {
+     "code": "CR12",
+     "title": "Twente (CR)"
+    },
+    {
+     "code": "CR13",
+     "title": "Veluwe (CR)"
+    }
+   ]
+  }
+ ]
+}
