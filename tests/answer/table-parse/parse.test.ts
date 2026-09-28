@@ -704,10 +704,25 @@ describe('validateTableParseOutput — places on a region-coded breakdown dimens
     expect(result.regions).toEqual(GRONINGEN);
   });
 
-  it('accepts a member pick whose title matches the named place (the prompt, not the validator, asks for anders when several fit)', () => {
-    const input = groningenInput();
-    const result = validateTableParseOutput(jsonWith(input, { RegioS: 'PV20' }, { regions: GRONINGEN }), input);
-    expect(result.breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV20' });
+  // Follow-up ruling: look-alike places must ask. When MORE THAN ONE offered
+  // member of the dimension matches the place, only 'anders' passes — even a
+  // matching member pick (PV20/ES01/ET0101 all match "Groningen") throws.
+  it.each(['PV20', 'ES01', 'ET0101'])(
+    "rejects a member pick (%s) when several offered members match the named place — only 'anders' passes",
+    (code) => {
+      const input = groningenInput();
+      const json = jsonWith(input, { RegioS: code }, { regions: GRONINGEN });
+      expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+      expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+    },
+  );
+
+  it('accepts the matching member pick when exactly ONE offered member matches the named place (85004NED "Nederland" → NL01)', () => {
+    const input = groningenInput('Hoeveel megawatt aan opgesteld vermogen was er in Nederland in 2021?');
+    const regioS = input.breakdowns.find((b) => b.name === 'RegioS')!;
+    expect(regioS.members.filter((m) => m.title === 'Nederland').map((m) => m.code)).toEqual(['NL01']);
+    const json = jsonWith(input, { RegioS: 'NL01' }, { regions: [{ name: 'Nederland', kind: 'land' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['RegioS']).toEqual({ kind: 'member', code: 'NL01' });
   });
 
   it("rejects 'niet_genoemd' on the dimension that lists the named place — the place would silently fall to the total", () => {
@@ -894,5 +909,65 @@ describe('buildTableParseSystemPrompt — final-review rules (F1, F3)', () => {
       expect(prompt).toContain(v);
     }
     expect(prompt).toContain('regionScope');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Follow-up ruling: only REGION-CODED members count as places. A birth-
+// country-like breakdown whose member is titled "Nederland" but coded
+// 1012600 is a population characteristic, not a place — a question naming
+// Nederland on such a table is region-unavailable, and that dimension's
+// 'niet_genoemd' is not rejected by the place rule. Synthetic table: no
+// fixture has this shape.
+// ---------------------------------------------------------------------------
+
+describe('validateTableParseOutput — only region-coded members count as places (follow-up)', () => {
+  function geboortelandInput(question: string): TableParseSchema {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN02',
+      title: 'Synthetische tabel naar geboorteland',
+      dimensions: [
+        { name: 'Geboorteland', kind: 'Dimension', title: 'Geboorteland' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long' }],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      Geboorteland: [
+        { code: 'T001040', title: 'Totaal', dimensionGroup: null, status: null, index: 1 },
+        { code: '1012600', title: 'Nederland', dimensionGroup: null, status: null, index: 2 },
+        { code: '1012700', title: 'Marokko', dimensionGroup: null, status: null, index: 3 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    return buildTableParseSchema(schema, codeLists, question);
+  }
+  const NEDERLAND = [{ name: 'Nederland', kind: 'land' }];
+
+  it('fixture shape: Geboorteland is an ordinary breakdown on a region-less table, offering 1012600 "Nederland"', () => {
+    const input = geboortelandInput('Hoeveel mensen woonden er in 2020 in Nederland?');
+    expect(input.hasRegions).toBe(false);
+    expect(input.breakdowns.map((b) => b.name)).toEqual(['Geboorteland']);
+    expect(input.breakdowns[0]!.members.map((m) => m.code)).toContain('1012600');
+  });
+
+  it("a place matching only a non-region-coded member is region-unavailable; 'niet_genoemd' is not rejected by the place rule", () => {
+    const input = geboortelandInput('Hoeveel mensen woonden er in 2020 in Nederland?');
+    const json = jsonWith(input, { Geboorteland: TABLE_PARSE_NOT_NAMED }, { measureCode: 'M1', regions: NEDERLAND });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    expect(() => validateTableParseOutput(json, input)).toThrow(/no offered region-coded breakdown member/);
+  });
+
+  it('picking the non-region-coded "Nederland" member does not make the place servable either', () => {
+    const input = geboortelandInput('Hoeveel in Nederland geboren mensen waren er in 2020 in Nederland?');
+    const json = jsonWith(input, { Geboorteland: '1012600' }, { measureCode: 'M1', regions: NEDERLAND });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('without a named place, the birth-country member is an ordinary pick', () => {
+    const input = geboortelandInput('Hoeveel in Nederland geboren mensen waren er in 2020?');
+    const json = jsonWith(input, { Geboorteland: '1012600' }, { measureCode: 'M1' });
+    expect(validateTableParseOutput(json, input).breakdowns['Geboorteland']).toEqual({ kind: 'member', code: '1012600' });
   });
 });

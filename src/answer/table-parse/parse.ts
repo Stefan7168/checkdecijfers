@@ -34,11 +34,12 @@
 // serve them (fix round 1, task review, CRITICAL/IMPORTANT) — the code
 // decides servability, never the model by silently omitting what the reader
 // asked. On a table WITHOUT a region/geo-like dimension (hasRegions false),
-// a named place must be an offered member of some breakdown dimension (e.g.
-// 85004NED's region-coded but ordinary `RegioS`), and that dimension must
-// then be answered with the matching member or 'anders' — never
+// a named place must be an offered, region-CODED member of some breakdown
+// dimension (e.g. 85004NED's region-coded but ordinary `RegioS`), and that
+// dimension must then be answered with the matching member or 'anders' —
+// only 'anders' when several members match (look-alike places) — never
 // 'niet_genoemd' or another member, either of which would silently answer
-// about a different population (final-review F1). A place that matches no
+// about a different population (final-review F1 + follow-up). A place that matches no
 // offered member, or a region class (`regionScope`, final-review F3) on such
 // a table, throws the distinct `TableParseRegionUnavailableError` subclass
 // (never silently dropped, which would read as a national-total answer to a
@@ -249,6 +250,17 @@ function measureFingerprint(m: TableParseMeasure): string {
   return JSON.stringify([m.title, m.unit, condense(m.description)]);
 }
 
+/** Only a member whose CODE carries a CBS region prefix counts as a place
+ * for the region checks below (follow-up ruling): a birth-country-like
+ * member titled "Nederland" but coded e.g. 1012600 is a population
+ * characteristic, not the place Nederland. Measured on the committed
+ * fixtures: 85004NED RegioS uses NL/PV/ES/ET codes, 82291NED
+ * CaribischNederland uses CN/GM codes; LD/CR/WK/BU complete CBS's own region
+ * code families (landsdeel, COROP, wijk, buurt). Deliberately local to this
+ * validator — src/query/breakdowns.ts's geo-like classification is not
+ * changed. */
+const REGION_MEMBER_CODE = /^(NL|PV|GM|LD|CR|WK|BU|CN|ES|ET)\d/;
+
 /** A member title reduced to the place name a reader would write: CBS's
  * trailing disambiguation dropped ("Groningen (PV)" → "Groningen"), then the
  * shared region-name normalization (src/sources/region-names.ts). */
@@ -422,14 +434,18 @@ export function validateTableParseOutput(
  * about a place", and the code decides whether this table can serve it:
  *
  * - A region class (`regionScope`) cannot be served → region-unavailable.
- * - Each named place must match (memberPlaceKey) at least one OFFERED member
- *   of some breakdown dimension (85004NED's RegioS, 82291NED's
- *   CaribischNederland), else → region-unavailable.
- * - Every dimension listing that place must be answered with a member whose
- *   title matches that place, or 'anders' (several members fit — e.g.
- *   "Groningen (PV)/(ES)/(ET)"). 'niet_genoemd' or a non-matching member
- *   would silently answer about the total or a different place → a plain
- *   TableParseValidationError (the output contradicts itself).
+ * - Each named place must match (memberPlaceKey) at least one OFFERED,
+ *   REGION-CODED (REGION_MEMBER_CODE) member of some breakdown dimension
+ *   (85004NED's RegioS, 82291NED's CaribischNederland), else →
+ *   region-unavailable. A non-region-coded member with the same title (a
+ *   birth country "Nederland") never counts as the place.
+ * - A dimension where exactly ONE such member matches must be answered with
+ *   that member or 'anders'. A dimension where SEVERAL match (look-alike
+ *   places, e.g. "Groningen (PV)/(ES)/(ET)") must be 'anders' — any member
+ *   pick, even a matching one, is a silent choice between different places
+ *   (follow-up ruling). 'niet_genoemd' or a non-matching member would
+ *   silently answer about the total or a different place. Each of these is a
+ *   plain TableParseValidationError (the output contradicts itself).
  */
 function checkRegionsOnRegionlessTable(
   result: TableParseResult,
@@ -446,28 +462,33 @@ function checkRegionsOnRegionlessTable(
 
   for (const region of result.regions) {
     const key = normalizeRegionName(region.name);
-    const listing: TableParseBreakdown[] = input.breakdowns.filter((b) =>
-      b.members.some((m) => memberPlaceKey(m.title) === key),
-    );
+    const listing: { dim: TableParseBreakdown; matchCodes: string[] }[] = [];
+    for (const dim of input.breakdowns) {
+      const matchCodes = dim.members
+        .filter((m) => REGION_MEMBER_CODE.test(m.code) && memberPlaceKey(m.title) === key)
+        .map((m) => m.code);
+      if (matchCodes.length > 0) listing.push({ dim, matchCodes });
+    }
     if (listing.length === 0) {
       throw new TableParseRegionUnavailableError(
         `table-parse named region '${region.name}' on table '${input.tableId}', which has no ` +
-          `region/geo-like dimension and no offered breakdown member with that name`,
+          `region/geo-like dimension and no offered region-coded breakdown member with that name`,
         outputText,
       );
     }
-    for (const dim of listing) {
+    for (const { dim, matchCodes } of listing) {
       const choice = result.breakdowns[dim.name]!;
       if (choice.kind === 'other') continue;
-      if (choice.kind === 'member') {
-        const member = dim.members.find((m) => m.code === choice.code);
-        if (member && memberPlaceKey(member.title) === key) continue;
-      }
+      if (choice.kind === 'member' && matchCodes.length === 1 && choice.code === matchCodes[0]) continue;
       const got = choice.kind === 'member' ? `member '${choice.code}'` : `'${TABLE_PARSE_NOT_NAMED}'`;
+      const required =
+        matchCodes.length === 1
+          ? `the matching member '${matchCodes[0]}' or '${TABLE_PARSE_OTHER}'`
+          : `'${TABLE_PARSE_OTHER}' — ${matchCodes.length} members match (${matchCodes.join(', ')}), so any single ` +
+            `pick is a silent choice between different places`;
       throw new TableParseValidationError(
         `table-parse named region '${region.name}', which is a member of dimension '${dim.name}', but answered ` +
-          `that dimension with ${got} — the place would silently fall to the total or another member; it must ` +
-          `be the matching member or '${TABLE_PARSE_OTHER}'`,
+          `that dimension with ${got} — it must be ${required}`,
         outputText,
       );
     }
