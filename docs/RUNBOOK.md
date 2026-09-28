@@ -1056,6 +1056,21 @@ publishes no machine status for it. Three things to know:
    `sync 70072ned --rebaseline`. Until both match, every sync refuses (by design). A new code must first be measured
    single-valued per (region, year) — the v4 feed reuses 34 codes for several figures.
 
+## Slice-cache tables (breadth step 2, ADR 062, session 138, 2026-09-28)
+
+A **slice-cache** table (`cbs_tables.ingest_mode = 'slice_cache'`) holds only the cells questions asked for, fetched on
+demand (`src/ingestion/slice-cache.ts`). Operational facts:
+
+1. **Migration 037 is FILE-ONLY** until the owner runs `npm run db:migrate` (owner-supervised live DDL). Apply it before
+   breadth step 5 goes live, not earlier-dependent: every code path is probe-guarded, and nothing calls the slice cache yet.
+2. **`ingest sync <id>` refuses a slice-cache table** (failure stage `ingest_mode`, not quarantined); **`sync --all`
+   skips them** with a log line. They are refreshed per question by `ensureSlice`, never by a whole-table sync.
+3. **A quarantined slice-cache table has no `--rebaseline` path yet.** Recovery: evict it (`tables:evict --apply`,
+   supervised; its slices go with it — `slice_fetches` cascades) and let the next question re-register it; or a
+   supervised DB edit after reading the batch's failure summary.
+4. `last_sync_at` stays NULL for these tables by design — the stale-sync alert, onboarding and the coverage page ignore
+   them; each served cell is dated by its covering slice's `checked_at`.
+
 ## Ingestion alerts (#23, built session 109, 2026-09-17)
 
 **What it is.** A proactive owner e-mail — reusing the SAME Resend mechanism as every alert above

@@ -315,6 +315,7 @@ describe('English refusal siblings — exact text for the reasons the brief name
       'no_data',
       'derivation_failed',
       'internal_inconsistency',
+      'not_fetched',
     ];
     const texts = internalKinds.map((kind) => {
       const outcome = buildQueryRefusal(queryRefusal(kind));

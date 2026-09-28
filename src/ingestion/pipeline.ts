@@ -27,7 +27,10 @@ function findDimension(dimensions: CbsDimension[], kind: CbsDimension['kind']): 
   return dimensions.find((d) => d.kind === kind);
 }
 
-async function fetchAllCodeLists(
+/** Exported for src/ingestion/slice-cache.ts (breadth step 2, Task 3):
+ * registerSchemaOnly needs the exact same all-dimensions code-list fetch
+ * registerTables uses — reused, never copied. */
+export async function fetchAllCodeLists(
   source: CbsSource,
   tableId: string,
   dimensions: CbsDimension[],
@@ -235,7 +238,7 @@ function parseRegistryRow(row: Record<string, unknown>): RegistryRow {
   };
 }
 
-interface StagedRow {
+export interface StagedRow {
   measure: string;
   region_code: string;
   period_code: string;
@@ -256,7 +259,9 @@ function sortedDims(dims: Record<string, string>): Record<string, string> {
   return out;
 }
 
-async function failBatch(
+/** Exported for src/ingestion/slice-cache.ts (breadth step 2, Task 4) —
+ * a failed slice fetch is recorded exactly like a failed sync. */
+export async function failBatch(
   db: Db,
   batchId: number,
   tableId: string,
@@ -322,8 +327,9 @@ interface LabelRow {
 }
 
 /** Flattens fetched code lists into label rows, in the same dimension-then-code
- * order the old per-row insert loops used. */
-function labelRowsFromCodeLists(
+ * order the old per-row insert loops used. Exported for src/ingestion/
+ * slice-cache.ts (breadth step 2, Task 3) — reused, never copied. */
+export function labelRowsFromCodeLists(
   dimensions: CbsDimension[],
   codeLists: Record<string, CbsCode[]>,
 ): LabelRow[] {
@@ -355,8 +361,12 @@ function labelRowsFromCodeLists(
  * semantics — it follows a delete, so a conflict there can only be a genuine
  * anomaly (a duplicate code inside one fetched CBS code list) and must stay
  * a loud unique-violation failure, never a silent drop.
+ *
+ * Exported for src/ingestion/slice-cache.ts (breadth step 2, Task 3) —
+ * registerSchemaOnly writes the same dimension_labels shape and reuses this
+ * batched writer instead of a second copy.
  */
-async function insertDimensionLabels(
+export async function insertDimensionLabels(
   tx: Db,
   tableId: string,
   rows: LabelRow[],
@@ -379,12 +389,317 @@ async function insertDimensionLabels(
   }
 }
 
+/**
+ * Derives the `observations` columns for every validated fetched row — the
+ * single column derivation shared by syncTable (whole-table sync) and
+ * fetchSlice (src/ingestion/slice-cache.ts, breadth step 2 Task 4): trimmed
+ * measure, region from the GeoDimension, parsed period grain/year/index, the
+ * remaining coordinates as sorted `dims`, unit/decimals from the registry,
+ * and the status (per-cell override, else the period's). Extracted verbatim
+ * from syncTable — same checks, same error texts. Runs only AFTER the
+ * validation stages; its throws are defensive guards those stages cover.
+ */
+export function buildStagedRows(
+  observationRows: CbsObservationRow[],
+  dimensions: CbsDimension[],
+  registryUnits: RegistryUnits,
+  periodStatusByCode: Map<string, string>,
+  tableId: string,
+): StagedRow[] {
+  const periodDim = findDimension(dimensions, 'TimeDimension');
+  const geoDim = findDimension(dimensions, 'GeoDimension');
+
+  const staged: StagedRow[] = [];
+  for (const row of observationRows) {
+    const measure = row.measure.trim();
+    const regionCode = geoDim ? (row.coordinates[geoDim.name] ?? '').trim() : '';
+    const periodCode = periodDim ? row.coordinates[periodDim.name]! : '';
+    const parsedPeriod = parsePeriodCode(periodCode);
+    if (!parsedPeriod) {
+      // Guarded by the period_parsing stage (stage 3); defensive only.
+      throw new Error(`internal error: unparseable period code "${periodCode}" survived period_parsing`);
+    }
+
+    const dims: Record<string, string> = {};
+    for (const dim of dimensions) {
+      if (dim === periodDim || dim === geoDim) continue;
+      const code = row.coordinates[dim.name];
+      if (code !== undefined) dims[dim.name] = code;
+    }
+
+    const unitMeta = registryUnits[measure];
+    // Guarded by the dimension_mapping stage (stage 4); defensive only.
+    if (!unitMeta) throw new Error(`internal error: unknown measure "${measure}" survived dimension_mapping`);
+
+    // Status transitions (Voorlopig -> Definitief) are normal CBS lifecycle:
+    // they update rows and are counted as rows_updated, not logged as
+    // corrections (docs/05 corrections log covers *value* changes).
+    // A period without a status fails at stage 3 — never defaulted here
+    // (R11: status is required; principle (c): never guess).
+    //
+    // #251 (session 109): the OPTIONAL per-CELL override. CBS's own adapter
+    // never sets `row.status` from a machine per-period status (its statuses
+    // are per-PERIOD by construction), so for an ordinary CBS row `override`
+    // is undefined and this falls through to the unchanged
+    // `periodStatusByCode` lookup below — byte-identical, pinned by test. Two
+    // things now DO set `row.status` before this point: a source whose
+    // statuses really are per cell (Eurostat's JSON-stat flags, ADR 048 D6 +
+    // its #251 addendum), and, since ADR 061 (Task 3a), the period-note reader
+    // above for a table whose Perioden code list has no machine status at all
+    // (`Phase0Table.periodNoteStatus`, e.g. 70072ned) — both supply it here
+    // instead of leaving every row to fall through to the period lookup.
+    const override = row.status;
+    if (override !== undefined && override.trim().length === 0) {
+      // Setting the field but leaving it blank is an adapter authoring bug,
+      // and the one reading of it we must never take is "definitive"
+      // (principle (c)). Omitting the field is the way to defer to the period.
+      throw new Error(
+        `adapter supplied an EMPTY per-cell status for period "${periodCode}" in table "${tableId}" — ` +
+          `omit CbsObservationRow.status to fall back to the period status; never send a blank one.`,
+      );
+    }
+    const status = override ?? periodStatusByCode.get(periodCode);
+    if (status === undefined) {
+      throw new Error(`internal error: period "${periodCode}" without status survived period_parsing`);
+    }
+
+    staged.push({
+      measure,
+      region_code: regionCode,
+      period_code: periodCode,
+      period_grain: parsedPeriod.grain,
+      period_year: parsedPeriod.year,
+      period_index: parsedPeriod.index,
+      dims: sortedDims(dims),
+      value: row.value,
+      unit: unitMeta.unit,
+      decimals: unitMeta.decimals,
+      status,
+      value_attribute: row.valueAttribute,
+    });
+  }
+  return staged;
+}
+
+/**
+ * Creates the transaction-scoped `sync_staging` temp table and loads the
+ * staged rows into it in CHUNK_SIZE batches. Shared by syncTable and
+ * fetchSlice (extracted verbatim from syncTable). Must run inside a
+ * transaction (`on commit drop`).
+ */
+export async function stageRows(tx: Db, staged: StagedRow[]): Promise<void> {
+  await tx.query(`
+    create temp table sync_staging (
+      measure text,
+      region_code text,
+      period_code text,
+      period_grain text,
+      period_year integer,
+      period_index integer,
+      dims jsonb,
+      value numeric,
+      unit text,
+      decimals integer,
+      status text,
+      value_attribute text
+    ) on commit drop
+  `);
+
+  for (let i = 0; i < staged.length; i += CHUNK_SIZE) {
+    const chunk = staged.slice(i, i + CHUNK_SIZE);
+    await tx.query(
+      `insert into sync_staging
+         (measure, region_code, period_code, period_grain, period_year, period_index,
+          dims, value, unit, decimals, status, value_attribute)
+       select measure, region_code, period_code, period_grain, period_year, period_index,
+              dims, value, unit, decimals, status, value_attribute
+       from jsonb_to_recordset($1::jsonb) as x(
+         measure text, region_code text, period_code text, period_grain text,
+         period_year integer, period_index integer, dims jsonb, value numeric,
+         unit text, decimals integer, status text, value_attribute text
+       )`,
+      [JSON.stringify(chunk)],
+    );
+  }
+}
+
+/**
+ * Natural-key diff of `sync_staging` against the stored observations: every
+ * cell whose value changed, named exactly (docs/05 silent-retroactive-
+ * corrections log). Shared by syncTable and fetchSlice (extracted verbatim).
+ */
+export async function diffCorrections(tx: Db, tableId: string): Promise<Correction[]> {
+  const correctionRows = await tx.query(`
+    select
+      s.measure, s.region_code, s.period_code, s.dims,
+      o.value as old_value, s.value as new_value,
+      o.status as old_status, s.status as new_status
+    from sync_staging s
+    join observations o
+      on o.table_id = $1
+     and o.measure = s.measure
+     and o.period_code = s.period_code
+     and o.region_code = s.region_code
+     and o.dims = s.dims
+    where o.value is distinct from s.value
+  `, [tableId]);
+
+  return correctionRows.rows.map((r) => ({
+    measure: r.measure as string,
+    region_code: r.region_code as string,
+    period_code: r.period_code as string,
+    dims: (typeof r.dims === 'string' ? JSON.parse(r.dims) : r.dims) as Record<string, string>,
+    old_value: r.old_value == null ? null : String(r.old_value),
+    new_value: r.new_value == null ? null : String(r.new_value),
+    old_status: r.old_status as string,
+    new_status: r.new_status as string,
+  }));
+}
+
+/** fetchSlice's scope for markUnseenCellsRetained: only cells whose
+ * coordinates lie inside the requested slice are candidates. */
+export interface RetainedMarkScope {
+  measures: string[];
+  periods: string[];
+  /** Allowed region codes (the GeoDimension's members), or null when the
+   * table has no GeoDimension (region_code is then '' on every cell). */
+  regionCodes: string[] | null;
+  /** Every other requested dimension → allowed codes, matched on dims->>dim. */
+  dimsIn: Record<string, string[]>;
+}
+
+/**
+ * #154: marks cells of this table that are absent from `sync_staging` as
+ * retained — `last_seen_batch_id` = the provable prior batch that last
+ * confirmed them, or (null prior, syncTable's transition fallback) the
+ * cell's own `batch_id`. Only where still NULL, so repeated absence never
+ * creeps the date forward; the observations upsert clears it again when the
+ * cell reappears. Extracted verbatim from syncTable (no scope: every cell of
+ * the table is a candidate); fetchSlice passes a `scope` so only cells inside
+ * the re-fetched request are candidates. Must run inside the transaction that
+ * staged the rows, before upsertStagedObservations.
+ */
+export async function markUnseenCellsRetained(
+  tx: Db,
+  tableId: string,
+  provablePriorId: number | null,
+  scope?: RetainedMarkScope,
+): Promise<void> {
+  const markValueSql = provablePriorId !== null ? '$2::bigint' : 'o.batch_id';
+  const markParams: unknown[] = provablePriorId !== null ? [tableId, provablePriorId] : [tableId];
+  let scopeSql = '';
+  if (scope) {
+    const p = (value: unknown) => {
+      markParams.push(value);
+      return `$${markParams.length}`;
+    };
+    scopeSql = `
+      and o.measure = any(${p(scope.measures)}::text[])
+      and o.period_code = any(${p(scope.periods)}::text[])
+      and (${p(scope.regionCodes)}::text[] is null or o.region_code = any($${markParams.length}::text[]))
+      and not exists (
+        select 1 from jsonb_each(${p(JSON.stringify(scope.dimsIn))}::jsonb) f
+        where not coalesce(jsonb_exists(f.value, o.dims ->> f.key), false)
+      )`;
+  }
+  await tx.query(
+    `update observations o
+        set last_seen_batch_id = ${markValueSql}
+      where o.table_id = $1
+        and o.last_seen_batch_id is null
+        and not exists (
+          select 1 from sync_staging s
+          where s.measure = o.measure
+            and s.period_code = o.period_code
+            and s.region_code = o.region_code
+            and s.dims = o.dims
+        )${scopeSql}`,
+    markParams,
+  );
+}
+
+/**
+ * Upserts `sync_staging` into `observations` on the natural key (table_id,
+ * measure, period_code, region_code, dims), skipping unchanged cells.
+ * Shared by syncTable and fetchSlice (extracted verbatim from syncTable).
+ */
+export async function upsertStagedObservations(
+  tx: Db,
+  tableId: string,
+  batchId: number,
+): Promise<{ rowsInserted: number; rowsUpdated: number }> {
+  const upsertResult = await tx.query(`
+    insert into observations
+      (table_id, measure, region_code, period_code, period_grain, period_year,
+       period_index, dims, value, unit, decimals, status, value_attribute, batch_id)
+    select $1::text, s.measure, s.region_code, s.period_code, s.period_grain, s.period_year,
+           s.period_index, s.dims, s.value, s.unit, s.decimals, s.status, s.value_attribute, $2::bigint
+    from sync_staging s
+    on conflict (table_id, measure, period_code, region_code, dims)
+    do update set
+      value = excluded.value,
+      status = excluded.status,
+      value_attribute = excluded.value_attribute,
+      unit = excluded.unit,
+      decimals = excluded.decimals,
+      batch_id = excluded.batch_id,
+      -- #154: a re-published cell is confirmed again — clear the
+      -- retained marker. The OR-term below lets an identical-value
+      -- reappearance through the unchanged-row guard for exactly this
+      -- reset (write cost stays proportional to anomalies, design §2).
+      last_seen_batch_id = null
+    where (observations.value, observations.status, observations.value_attribute)
+      is distinct from (excluded.value, excluded.status, excluded.value_attribute)
+       or observations.last_seen_batch_id is not null
+    returning (xmax = 0) as inserted
+  `, [tableId, batchId]);
+
+  let rowsInserted = 0;
+  let rowsUpdated = 0;
+  for (const r of upsertResult.rows) {
+    if (r.inserted) rowsInserted++;
+    else rowsUpdated++;
+  }
+  return { rowsInserted, rowsUpdated };
+}
+
 export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) => {
   const registryResult = await db.query('select * from cbs_tables where id = $1', [tableId]);
   if (registryResult.rows.length === 0) {
     throw new Error(`syncTable: table "${tableId}" is not registered. Call registerTables first.`);
   }
   const registry = parseRegistryRow(registryResult.rows[0]!);
+
+  // Breadth step 2: a slice-cache table (migration 037's ingest_mode; the
+  // column is simply absent on a database without 037, which means 'full')
+  // is filled per question by fetchSlice, never by a whole-table sync. Refuse
+  // before fetching anything (and before the quarantine check, so a
+  // quarantined slice-cache table is never pointed at --rebaseline),
+  // recorded on a batch, without quarantining.
+  if (registryResult.rows[0]!.ingest_mode === 'slice_cache') {
+    const summary =
+      `Table "${tableId}" is a slice-cache table — use fetchSlice, never a whole-table sync. ` +
+      `Nothing was fetched and the table is unchanged.`;
+    const refused = await db.query(
+      `insert into ingestion_batches (table_id, outcome, finished_at, failure_stage, failure_summary)
+       values ($1, 'failed', now(), 'ingest_mode', $2) returning id`,
+      [tableId, summary],
+    );
+    return {
+      tableId,
+      batchId: Number(refused.rows[0]!.id),
+      outcome: 'failed',
+      failureStage: 'ingest_mode',
+      failureSummary: summary,
+      rowCount: 0,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsMissing: 0,
+      corrections: [],
+      rebaselined: false,
+    };
+  }
 
   if (registry.status === 'needs_review' && !options.rebaseline) {
     throw new Error(
@@ -464,7 +779,6 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   }
 
   const periodDim = findDimension(schema.dimensions, 'TimeDimension');
-  const geoDim = findDimension(schema.dimensions, 'GeoDimension');
 
   let rebaselined = false;
   let expectedDimensions = registry.expected_dimensions;
@@ -760,75 +1074,7 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     if (code.status != null) periodStatusByCode.set(code.code, code.status);
   }
 
-  const staged: StagedRow[] = [];
-  for (const row of observationRows) {
-    const measure = row.measure.trim();
-    const regionCode = geoDim ? (row.coordinates[geoDim.name] ?? '').trim() : '';
-    const periodCode = periodDim ? row.coordinates[periodDim.name]! : '';
-    const parsedPeriod = parsePeriodCode(periodCode);
-    if (!parsedPeriod) {
-      // Guarded by stage3 above; defensive only.
-      throw new Error(`internal error: unparseable period code "${periodCode}" survived period_parsing`);
-    }
-
-    const dims: Record<string, string> = {};
-    for (const dim of schema.dimensions) {
-      if (dim === periodDim || dim === geoDim) continue;
-      const code = row.coordinates[dim.name];
-      if (code !== undefined) dims[dim.name] = code;
-    }
-
-    const unitMeta = registryUnits[measure];
-    // Guarded by stage4 above; defensive only.
-    if (!unitMeta) throw new Error(`internal error: unknown measure "${measure}" survived dimension_mapping`);
-
-    // Status transitions (Voorlopig -> Definitief) are normal CBS lifecycle:
-    // they update rows and are counted as rows_updated, not logged as
-    // corrections (docs/05 corrections log covers *value* changes).
-    // A period without a status fails at stage 3 — never defaulted here
-    // (R11: status is required; principle (c): never guess).
-    //
-    // #251 (session 109): the OPTIONAL per-CELL override. CBS's own adapter
-    // never sets `row.status` from a machine per-period status (its statuses
-    // are per-PERIOD by construction), so for an ordinary CBS row `override`
-    // is undefined and this falls through to the unchanged
-    // `periodStatusByCode` lookup below — byte-identical, pinned by test. Two
-    // things now DO set `row.status` before this point: a source whose
-    // statuses really are per cell (Eurostat's JSON-stat flags, ADR 048 D6 +
-    // its #251 addendum), and, since ADR 061 (Task 3a), the period-note reader
-    // above for a table whose Perioden code list has no machine status at all
-    // (`Phase0Table.periodNoteStatus`, e.g. 70072ned) — both supply it here
-    // instead of leaving every row to fall through to the period lookup.
-    const override = row.status;
-    if (override !== undefined && override.trim().length === 0) {
-      // Setting the field but leaving it blank is an adapter authoring bug,
-      // and the one reading of it we must never take is "definitive"
-      // (principle (c)). Omitting the field is the way to defer to the period.
-      throw new Error(
-        `adapter supplied an EMPTY per-cell status for period "${periodCode}" in table "${tableId}" — ` +
-          `omit CbsObservationRow.status to fall back to the period status; never send a blank one.`,
-      );
-    }
-    const status = override ?? periodStatusByCode.get(periodCode);
-    if (status === undefined) {
-      throw new Error(`internal error: period "${periodCode}" without status survived period_parsing`);
-    }
-
-    staged.push({
-      measure,
-      region_code: regionCode,
-      period_code: periodCode,
-      period_grain: parsedPeriod.grain,
-      period_year: parsedPeriod.year,
-      period_index: parsedPeriod.index,
-      dims: sortedDims(dims),
-      value: row.value,
-      unit: unitMeta.unit,
-      decimals: unitMeta.decimals,
-      status,
-      value_attribute: row.valueAttribute,
-    });
-  }
+  const staged = buildStagedRows(observationRows, schema.dimensions, registryUnits, periodStatusByCode, tableId);
 
   const newCodesAccepted = new Map<string, string[]>();
   if (options.acceptNewCodes) {
@@ -994,67 +1240,11 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
         );
       }
 
-      await tx.query(`
-        create temp table sync_staging (
-          measure text,
-          region_code text,
-          period_code text,
-          period_grain text,
-          period_year integer,
-          period_index integer,
-          dims jsonb,
-          value numeric,
-          unit text,
-          decimals integer,
-          status text,
-          value_attribute text
-        ) on commit drop
-      `);
-
-      for (let i = 0; i < staged.length; i += CHUNK_SIZE) {
-        const chunk = staged.slice(i, i + CHUNK_SIZE);
-        await tx.query(
-          `insert into sync_staging
-             (measure, region_code, period_code, period_grain, period_year, period_index,
-              dims, value, unit, decimals, status, value_attribute)
-           select measure, region_code, period_code, period_grain, period_year, period_index,
-                  dims, value, unit, decimals, status, value_attribute
-           from jsonb_to_recordset($1::jsonb) as x(
-             measure text, region_code text, period_code text, period_grain text,
-             period_year integer, period_index integer, dims jsonb, value numeric,
-             unit text, decimals integer, status text, value_attribute text
-           )`,
-          [JSON.stringify(chunk)],
-        );
-      }
+      await stageRows(tx, staged);
 
       // Natural-key diff against existing observations: value changes are
       // silent-retroactive-corrections, named exactly (docs/05).
-      const correctionRows = await tx.query(`
-        select
-          s.measure, s.region_code, s.period_code, s.dims,
-          o.value as old_value, s.value as new_value,
-          o.status as old_status, s.status as new_status
-        from sync_staging s
-        join observations o
-          on o.table_id = $1
-         and o.measure = s.measure
-         and o.period_code = s.period_code
-         and o.region_code = s.region_code
-         and o.dims = s.dims
-        where o.value is distinct from s.value
-      `, [tableId]);
-
-      const corrections: Correction[] = correctionRows.rows.map((r) => ({
-        measure: r.measure as string,
-        region_code: r.region_code as string,
-        period_code: r.period_code as string,
-        dims: (typeof r.dims === 'string' ? JSON.parse(r.dims) : r.dims) as Record<string, string>,
-        old_value: r.old_value == null ? null : String(r.old_value),
-        new_value: r.new_value == null ? null : String(r.new_value),
-        old_status: r.old_status as string,
-        new_status: r.new_status as string,
-      }));
+      const corrections = await diffCorrections(tx, tableId);
 
       const missingRows = await tx.query(`
         select count(*)::int as count
@@ -1091,56 +1281,10 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
           [tableId],
         );
         const provablePriorId = priorBatch.rows.length > 0 ? (priorBatch.rows[0]!.id as number) : null;
-        const markValueSql = provablePriorId !== null ? '$2::bigint' : 'o.batch_id';
-        const markParams = provablePriorId !== null ? [tableId, provablePriorId] : [tableId];
-        await tx.query(
-          `update observations o
-              set last_seen_batch_id = ${markValueSql}
-            where o.table_id = $1
-              and o.last_seen_batch_id is null
-              and not exists (
-                select 1 from sync_staging s
-                where s.measure = o.measure
-                  and s.period_code = o.period_code
-                  and s.region_code = o.region_code
-                  and s.dims = o.dims
-              )`,
-          markParams,
-        );
+        await markUnseenCellsRetained(tx, tableId, provablePriorId);
       }
 
-      const upsertResult = await tx.query(`
-        insert into observations
-          (table_id, measure, region_code, period_code, period_grain, period_year,
-           period_index, dims, value, unit, decimals, status, value_attribute, batch_id)
-        select $1::text, s.measure, s.region_code, s.period_code, s.period_grain, s.period_year,
-               s.period_index, s.dims, s.value, s.unit, s.decimals, s.status, s.value_attribute, $2::bigint
-        from sync_staging s
-        on conflict (table_id, measure, period_code, region_code, dims)
-        do update set
-          value = excluded.value,
-          status = excluded.status,
-          value_attribute = excluded.value_attribute,
-          unit = excluded.unit,
-          decimals = excluded.decimals,
-          batch_id = excluded.batch_id,
-          -- #154: a re-published cell is confirmed again — clear the
-          -- retained marker. The OR-term below lets an identical-value
-          -- reappearance through the unchanged-row guard for exactly this
-          -- reset (write cost stays proportional to anomalies, design §2).
-          last_seen_batch_id = null
-        where (observations.value, observations.status, observations.value_attribute)
-          is distinct from (excluded.value, excluded.status, excluded.value_attribute)
-           or observations.last_seen_batch_id is not null
-        returning (xmax = 0) as inserted
-      `, [tableId, batchId]);
-
-      let rowsInserted = 0;
-      let rowsUpdated = 0;
-      for (const r of upsertResult.rows) {
-        if (r.inserted) rowsInserted++;
-        else rowsUpdated++;
-      }
+      const { rowsInserted, rowsUpdated } = await upsertStagedObservations(tx, tableId, batchId);
       const rowsUnchanged = staged.length - rowsInserted - rowsUpdated;
 
       // Update Perioden label statuses to the fetched statuses.

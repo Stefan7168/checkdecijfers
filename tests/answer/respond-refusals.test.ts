@@ -513,6 +513,7 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
     'no_data',
     'derivation_failed',
     'internal_inconsistency',
+    'not_fetched',
   ];
   for (const kind of internalKinds) {
     it(`${kind} -> reason "internal", honest per-kind wording, internalNote carries refusal.message`, () => {
@@ -541,7 +542,7 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
     const allKnownKinds: RefusalKind[] = [
       'invalid_intent', 'needs_clarification', 'table_not_registered', 'table_quarantined',
       'outside_loaded_slice', 'not_published', 'freshness', 'no_data', 'derivation_failed',
-      'internal_inconsistency',
+      'internal_inconsistency', 'not_fetched',
     ];
     for (const kind of allKnownKinds) {
       expect(() => buildQueryRefusal(queryRefusal(kind))).not.toThrow();

@@ -87,7 +87,8 @@ function schema(): CbsTableSchema {
       { name: 'Perioden', kind: 'TimeDimension' },
       { name: 'RegioS', kind: 'GeoDimension' },
     ],
-    measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '' }],
+    measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+    modified: null,
   };
 }
 

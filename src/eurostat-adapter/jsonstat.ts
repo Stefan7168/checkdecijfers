@@ -536,6 +536,10 @@ export function parseJsonStatDataset(
       unit: unitLabel,
       decimals: maxDecimals(observedByUnit.get(unitCode) ?? []),
       description: '',
+      // JSON-stat carries no per-measure DataType field (Eurostat's own
+      // observations are always numeric, D6) — no source truth to carry, so
+      // '' like every other absent-field default (breadth step 2 brief).
+      dataType: '',
     });
   }
 
@@ -544,7 +548,10 @@ export function parseJsonStatDataset(
     kind: name === 'time' ? 'TimeDimension' : name === 'geo' ? 'GeoDimension' : 'Dimension',
   }));
 
-  const schema: CbsTableSchema = { tableId, title: datasetTitle, dimensions, measures };
+  // breadth step 2, Task 3: JSON-stat's own equivalent of CBS's 'Modified' —
+  // the dataset's optional `updated` timestamp, verbatim when present.
+  const modified = typeof ds.updated === 'string' ? ds.updated : null;
+  const schema: CbsTableSchema = { tableId, title: datasetTitle, dimensions, measures, modified };
 
   const codeLists: Record<string, CbsCode[]> = {};
   for (const dimName of coordinateDimNames) {

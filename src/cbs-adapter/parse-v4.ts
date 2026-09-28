@@ -42,7 +42,7 @@ function requireString(row: Record<string, unknown>, field: string, resource: st
  *  tolerable gap, not a corrupt row (unlike the required-field discipline). A
  *  non-string wire value is treated as absent (null), not silently stringified —
  *  "tolerable gap" semantics, never a silent reshape of unexpected data. */
-function optionalString(row: Record<string, unknown>, field: string): string | null {
+export function optionalString(row: Record<string, unknown>, field: string): string | null {
   const value = row[field];
   if (typeof value !== 'string') return null;
   return value.length === 0 ? null : value;
@@ -80,7 +80,8 @@ export function parseMeasures(raw: unknown): CbsMeasure[] {
     }
     const decimals = decimalsRaw === null || decimalsRaw === undefined ? 0 : decimalsRaw;
     const description = optionalString(row, 'Description') ?? '';
-    return { code, title, unit, decimals, description };
+    const dataType = optionalString(row, 'DataType') ?? '';
+    return { code, title, unit, decimals, description, dataType };
   });
 }
 

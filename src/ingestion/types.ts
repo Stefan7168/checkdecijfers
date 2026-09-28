@@ -21,7 +21,15 @@ export type FailureStage =
    * first). The sync aborts without writing; the fresher baseline stays.
    * Requires migration 022 (extends the failure_stage CHECK constraint).
    */
-  | 'rebaseline_conflict';
+  | 'rebaseline_conflict'
+  /**
+   * Breadth step 2: syncTable was asked to whole-table sync a table registered
+   * with `ingest_mode = 'slice_cache'` (src/ingestion/slice-cache.ts). Refused
+   * before any fetch, never a quarantine — the table is fine, the caller is
+   * wrong. Requires migration 037 (extends the failure_stage CHECK constraint;
+   * a slice-cache table cannot exist without 037 either).
+   */
+  | 'ingest_mode';
 
 export interface Correction {
   measure: string;

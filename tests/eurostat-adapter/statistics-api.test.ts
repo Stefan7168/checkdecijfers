@@ -264,6 +264,13 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     expect(() => buildRequestUrl('une_rt_m', { measures: ['X'] })).toThrow(/measures/);
   });
 
+  it('buildRequestUrl refuses dimensionIn and periodIn (CBS-only slice fields) instead of silently ignoring them', () => {
+    expect(() => buildRequestUrl('une_rt_m', { dimensionIn: { geo: ['NL'] } })).toThrow(/dimensionIn/);
+    expect(() =>
+      buildRequestUrl('une_rt_m', { periodIn: { dimension: 'time', codes: ['2020'] } }),
+    ).toThrow(/periodIn/);
+  });
+
   it('a stubbed unfiltered ("no slice") request over the cap throws, but the SAME table with a slice — whose URL the ' +
     'server would filter on — resolves to a small response: the threshold now judges the (server-)filtered size',
     async () => {

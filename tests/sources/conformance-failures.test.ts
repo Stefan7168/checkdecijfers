@@ -105,7 +105,8 @@ function baseTable(): FakeTable {
         { name: 'Perioden', kind: 'TimeDimension' },
         { name: 'RegioS', kind: 'GeoDimension' },
       ],
-      measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '' }],
+      measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+      modified: null,
     },
     codes: {
       Perioden: [code('2023JJ00', 'Definitief'), code('2024JJ00', 'Voorlopig')],

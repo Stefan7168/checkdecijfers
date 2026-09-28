@@ -37,6 +37,7 @@ import { loadAuditRecord, reconstructionReport } from '../../src/answer/audit/in
 import { createPendingRequest, getPendingRequest } from '../../src/ingestion/onboarding-store.ts';
 import { onboardedKey } from '../../src/ingestion/onboarding-vocab.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
+import { fetchSlice, registerSchemaOnly } from '../../src/ingestion/slice-cache.ts';
 import { alreadyIngested, runOnboardingJob, type OnboardingJobDeps } from '../../src/ingestion/onboarding.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import {
@@ -138,6 +139,31 @@ describe('table eviction — scope and mechanics (synthetic tables)', () => {
       for (const id of ['STALE01', 'FRESH01', 'PINNED1']) {
         expect(await artifactCounts(db, id)).toEqual(FULL);
       }
+    } finally {
+      await close();
+    }
+  });
+
+  it('evicts a slice-cache table with slice_fetches rows cleanly (batch FK cascades, no FK error)', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(loadFixtureDocs(join(FIXTURES, '83625NED')));
+      const reg = await registerSchemaOnly(db, source, '83625NED');
+      if (!reg.ok) throw new Error(`setup: ${reg.summary}`);
+      const fetched = await fetchSlice(db, source, '83625NED', {
+        measures: ['M001534'],
+        members: { RegioS: ['NL01'] },
+        periods: ['2024JJ00', '2025JJ00'],
+      });
+      if (!fetched.ok) throw new Error(`setup: ${fetched.summary}`);
+      await db.query('update cbs_tables set created_at = $2 where id = $1', ['83625NED', daysAgo(ON_DEMAND_TTL_DAYS + 5)]);
+
+      const summary = await runTableEviction({ db, now: new Date(), apply: true });
+
+      expect(summary.tables.map((t) => t.id)).toEqual(['83625NED']);
+      expect(await artifactCounts(db, '83625NED')).toEqual(GONE);
+      const sliceFetches = await db.query('select count(*)::int as n from slice_fetches where table_id = $1', ['83625NED']);
+      expect(Number(sliceFetches.rows[0]!.n)).toBe(0);
     } finally {
       await close();
     }

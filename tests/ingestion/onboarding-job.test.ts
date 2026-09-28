@@ -897,7 +897,8 @@ describe('runOnboardingJob — fit gate: candidate fallback (WP27 stage C)', () 
               tableId: KW_ONLY,
               title: 'Kwartaalcijfers zonder jaartotalen',
               dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
-              measures: [{ code: 'M0001', title: 'Iets per kwartaal', unit: 'aantal', decimals: 0, description: '' }],
+              measures: [{ code: 'M0001', title: 'Iets per kwartaal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+              modified: null,
             }
           : base.fetchTableSchema(tableId),
       fetchCodeList: async (tableId, dimension) =>

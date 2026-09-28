@@ -94,6 +94,12 @@ export interface ResolvedQuery {
     title: string;
     version: number;
     lastSyncAt: string | null;
+    /** Breadth step 2, Task 5b (migration 037): 'slice_cache' tables are
+     * answered cell-by-cell against slice_fetches (run.ts) — last_sync_at is
+     * always NULL for them. Read off the same `select *` row as everything
+     * else, so a database without migration 037 (no column) reads 'full'
+     * with no probe and no extra statement. */
+    ingestMode: 'full' | 'slice_cache';
     updateCadence: string | null;
     slice: CbsSlice | null;
     periodSemantics: Record<string, string> | null;
@@ -199,6 +205,7 @@ interface TableRow {
   status: 'active' | 'needs_review';
   needsReviewReason: string | null;
   lastSyncAt: string | null;
+  ingestMode: 'full' | 'slice_cache';
   /** #196 (session 73): free-text registry cadence, threaded to the result. */
   updateCadence: string | null;
   expectedDimensions: { name: string; kind: string }[];
@@ -221,6 +228,7 @@ async function fetchTable(db: Db, tableId: string): Promise<TableRow | null> {
     status: row.status as TableRow['status'],
     needsReviewReason: (row.needs_review_reason as string | null) ?? null,
     lastSyncAt: row.last_sync_at == null ? null : new Date(row.last_sync_at as string | Date).toISOString(),
+    ingestMode: row.ingest_mode === 'slice_cache' ? 'slice_cache' : 'full',
     updateCadence: (row.update_cadence as string | null) ?? null,
     expectedDimensions: parseJsonb(row.expected_dimensions, []),
     defaultCoordinates: parseJsonb(row.default_coordinates, {}),
@@ -797,6 +805,7 @@ export async function resolveIntent(
           title: table.title,
           version: table.version,
           lastSyncAt: table.lastSyncAt,
+          ingestMode: table.ingestMode,
           updateCadence: table.updateCadence,
           slice,
           periodSemantics: table.periodSemantics,

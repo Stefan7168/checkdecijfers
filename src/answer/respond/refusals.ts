@@ -1111,7 +1111,12 @@ function buildNeedsClarificationAsClarification(refusal: QueryRefusal): {
 
 function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
   const kindWording: Record<
-    'invalid_intent' | 'table_not_registered' | 'no_data' | 'derivation_failed' | 'internal_inconsistency',
+    | 'invalid_intent'
+    | 'table_not_registered'
+    | 'no_data'
+    | 'derivation_failed'
+    | 'internal_inconsistency'
+    | 'not_fetched',
     string
   > = {
     invalid_intent: 'Ik kon deze vraag niet omzetten in een geldige zoekopdracht op onze data.',
@@ -1119,6 +1124,10 @@ function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
     no_data: 'Ik kon voor deze combinatie geen cijfer vinden in onze data, terwijl dat wel verwacht werd — dit vraagt een controle aan onze kant.',
     derivation_failed: 'Ik kon de gevraagde berekening niet betrouwbaar uitvoeren op deze cijfers.',
     internal_inconsistency: 'Ik zag een inconsistentie in onze data die eerst gecontroleerd moet worden.',
+    // Breadth step 2, Task 5: a slice-cache coordinate nobody ever fetched —
+    // should never reach a reader (ensureSlice always fetches first, once
+    // wired in), so this wording is for the owner-alert audit trail only.
+    not_fetched: 'Deze cijfers zijn nog niet bij ons opgehaald — dit vraagt een controle aan onze kant.',
   };
   const kindWordingEn: Record<keyof typeof kindWording, string> = {
     invalid_intent: "I couldn't turn this question into a valid query on our data.",
@@ -1127,6 +1136,7 @@ function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
       "I couldn't find a figure for this combination in our data, even though one was expected — this needs checking on our side.",
     derivation_failed: "I couldn't reliably perform the requested calculation on these figures.",
     internal_inconsistency: 'I saw an inconsistency in our data that needs to be checked first.',
+    not_fetched: "These figures haven't been fetched yet — this needs checking on our side.",
   };
   const kind = refusal.refusal.kind as keyof typeof kindWording;
   const body = `${kindWording[kind]} Ik geef liever geen antwoord dan een onbetrouwbaar antwoord.`;
@@ -1192,6 +1202,7 @@ export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
     case 'no_data':
     case 'derivation_failed':
     case 'internal_inconsistency':
+    case 'not_fetched':
       return { kind: 'refusal', refusal: buildInternalRefusal(refusal) };
     default: {
       const _exhaustive: never = refusal.refusal.kind;

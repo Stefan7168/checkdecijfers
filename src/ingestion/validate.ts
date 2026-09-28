@@ -116,6 +116,34 @@ export function checkRowPlausibility(
     }
   }
 
+  const duplicates = checkDuplicateCells(rows);
+  if (!duplicates.ok) return duplicates;
+
+  const measureCodesPresent = new Set(rows.map((r) => r.measure));
+  const missingMeasures = Object.keys(registryUnits).filter((code) => !measureCodesPresent.has(code));
+  if (missingMeasures.length > 0) {
+    return {
+      ok: false,
+      stage: 'row_plausibility',
+      summary: `No rows at all were fetched for measure code(s): ${missingMeasures.join(', ')}.`,
+    };
+  }
+
+  const nullsAndStrings = checkNullsAndStrings(rows);
+  if (!nullsAndStrings.ok) return nullsAndStrings;
+
+  return { ok: true };
+}
+
+// The row_plausibility pieces that do not depend on the registry's row-count
+// history or on every registered measure being present — shared, not copied,
+// by checkRowPlausibility above (whole-table sync) and the slice cache
+// (src/ingestion/slice-cache.ts, breadth step 2 Task 4), where a narrow
+// per-question slice legitimately carries only some measures and has no
+// "previous row count" to compare against. Extracted verbatim: same
+// summaries, same order, so checkRowPlausibility's behaviour is unchanged.
+
+function checkDuplicateCells(rows: CbsObservationRow[]): StageResult {
   // Duplicate cells (same measure + full coordinates twice) would corrupt the
   // upsert; an overlapping or double-fetched page must fail here, loudly.
   const seenKeys = new Set<string>();
@@ -140,16 +168,10 @@ export function checkRowPlausibility(
     };
   }
 
-  const measureCodesPresent = new Set(rows.map((r) => r.measure));
-  const missingMeasures = Object.keys(registryUnits).filter((code) => !measureCodesPresent.has(code));
-  if (missingMeasures.length > 0) {
-    return {
-      ok: false,
-      stage: 'row_plausibility',
-      summary: `No rows at all were fetched for measure code(s): ${missingMeasures.join(', ')}.`,
-    };
-  }
+  return { ok: true };
+}
 
+function checkNullsAndStrings(rows: CbsObservationRow[]): StageResult {
   // Null-with-CBS-reason rows (ValueAttribute other than 'None' on a null
   // Value) are valid rows, not failures (docs/05). Only null values that
   // carry NO reason (ValueAttribute 'None') are a data-quality problem.
@@ -193,6 +215,20 @@ export function checkRowPlausibility(
   }
 
   return { ok: true };
+}
+
+/**
+ * row_plausibility for a slice-cache fetch: duplicate cells, reason-less
+ * nulls and string values, in that order — exactly checkRowPlausibility's
+ * own checks minus the empty-fetch refusal, the row-count tolerance and the
+ * every-measure-present rule (a slice may legitimately return 0 rows or only
+ * some measures: a requested cell CBS does not publish is a recorded "no
+ * cell", not an error).
+ */
+export function checkSliceRowPlausibility(rows: CbsObservationRow[]): StageResult {
+  const duplicates = checkDuplicateCells(rows);
+  if (!duplicates.ok) return duplicates;
+  return checkNullsAndStrings(rows);
 }
 
 // ---------------------------------------------------------------------------

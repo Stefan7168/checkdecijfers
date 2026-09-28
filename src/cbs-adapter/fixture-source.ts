@@ -14,6 +14,7 @@ import type {
   CbsTableSchema,
 } from './types.ts';
 import {
+  optionalString,
   parseCatalogPage,
   parseCodes,
   parseDimensions,
@@ -133,6 +134,29 @@ function matchesMeasures(measure: string, measures?: string[]): boolean {
   return measures.includes(measure);
 }
 
+/** breadth step 2: several allowed codes per dimension — an empty array for a
+ * dimension adds no restriction (matches sliceToFilter's "adds nothing"). */
+function matchesDimensionIn(
+  coordinates: Record<string, string>,
+  dimensionIn?: Record<string, string[]>,
+): boolean {
+  if (!dimensionIn) return true;
+  return Object.entries(dimensionIn).every(([dim, codes]) => {
+    if (codes.length === 0) return true;
+    return codes.includes(coordinates[dim] ?? '');
+  });
+}
+
+/** breadth step 2: exact period codes — an empty `codes` array adds no
+ * restriction (matches sliceToFilter's "adds nothing"). */
+function matchesPeriodIn(
+  coordinates: Record<string, string>,
+  periodIn?: { dimension: string; codes: string[] },
+): boolean {
+  if (!periodIn || periodIn.codes.length === 0) return true;
+  return periodIn.codes.includes(coordinates[periodIn.dimension] ?? '');
+}
+
 /** Applies a CbsSlice client-side, with the same matching semantics as sliceToFilter. */
 function matchesSlice(row: CbsObservationRow, slice?: CbsSlice): boolean {
   if (!slice) return true;
@@ -140,7 +164,9 @@ function matchesSlice(row: CbsObservationRow, slice?: CbsSlice): boolean {
     matchesEquals(row.coordinates, slice.dimensionEquals) &&
     matchesPrefixes(row.coordinates, slice.dimensionPrefixes) &&
     matchesPeriodFloor(row.coordinates, slice.periodFloor) &&
-    matchesMeasures(row.measure, slice.measures)
+    matchesMeasures(row.measure, slice.measures) &&
+    matchesDimensionIn(row.coordinates, slice.dimensionIn) &&
+    matchesPeriodIn(row.coordinates, slice.periodIn)
   );
 }
 
@@ -194,6 +220,9 @@ export class FixtureSource implements CbsSource {
       title: props.Title,
       dimensions: parseDimensions(docs.dimensions),
       measures: parseMeasures(docs.measureCodes),
+      // breadth step 2, Task 3: mirrors odata-v4.ts — the captured
+      // properties.json carries CBS's own 'Modified' timestamp too.
+      modified: optionalString(docs.properties as Record<string, unknown>, 'Modified'),
     };
   }
 

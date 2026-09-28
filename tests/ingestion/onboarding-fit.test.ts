@@ -99,9 +99,11 @@ describe('serializeMeasureList / buildMeasureFitRequest — metadata only (R1), 
         unit: 'x 1 000',
         decimals: 1,
         description: 'Het totale aantal bijstandsuitkeringen aan het eind van de periode.',
+        dataType: '',
       },
-      { code: '90210', title: 'Bijstandsuitkeringen tot de AOW-leeftijd', unit: 'x 1 000', decimals: 1, description: '' },
+      { code: '90210', title: 'Bijstandsuitkeringen tot de AOW-leeftijd', unit: 'x 1 000', decimals: 1, description: '', dataType: '' },
     ],
+    modified: null,
   };
 
   it('carries the full question, the table identity, and every measure (code, unit, title, description)', () => {
@@ -167,7 +169,7 @@ describe('A3 deliverability pre-checks — deterministic, against the REAL fixtu
 
   it('a table without any time dimension fails (a) — no Perioden means no period resolution', () => {
     expect(
-      hasOnlyTimeDimensions({ tableId: 'X', title: 'x', dimensions: [], measures: [] }),
+      hasOnlyTimeDimensions({ tableId: 'X', title: 'x', dimensions: [], measures: [], modified: null }),
     ).toBe(false);
   });
 

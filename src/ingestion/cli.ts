@@ -125,7 +125,31 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   // onboarded table — a live drift risk the design doc's own §8 gap analysis
   // flagged. The seed auto-registration above still runs first unconditionally
   // so a brand-new database still bootstraps from nothing.
-  const targetIds = args.all ? (await db.query('select id from cbs_tables')).rows.map((r) => String(r.id)) : args.tableIds;
+  // Breadth step 2: `--all` skips slice-cache tables (migration 037's
+  // ingest_mode) — fetchSlice fills them per question; syncTable would refuse
+  // each one and turn every cron run red. Probed, because a database without
+  // 037 has no such column (and then no slice-cache tables either). An
+  // explicit id still reaches syncTable, which refuses it loudly.
+  let targetIds = args.tableIds;
+  if (args.all) {
+    const hasIngestMode =
+      (
+        await db.query(
+          `select 1 from information_schema.columns where table_name = 'cbs_tables' and column_name = 'ingest_mode'`,
+        )
+      ).rows.length > 0;
+    const rows = (
+      await db.query(hasIngestMode ? 'select id, ingest_mode from cbs_tables' : 'select id from cbs_tables')
+    ).rows;
+    const sliceCache = rows.filter((r) => r.ingest_mode === 'slice_cache').map((r) => String(r.id));
+    if (sliceCache.length > 0) {
+      console.log(
+        `Skipped ${sliceCache.length} slice-cache table(s) (filled per question, never whole-table synced): ` +
+          `${sliceCache.join(', ')}.`,
+      );
+    }
+    targetIds = rows.filter((r) => r.ingest_mode !== 'slice_cache').map((r) => String(r.id));
+  }
 
   // #23: at most one owner-alert email for this whole run, listing every
   // affected table — never one email per table (see alerts.ts's
