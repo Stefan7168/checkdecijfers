@@ -16,13 +16,26 @@
 // menu (Task 2's TableParseSchema — numeric measures, offered breakdown
 // dimensions with their (possibly pre-filtered) members, available period
 // grains, whether the table has regions) and may only ever choose FROM that
-// menu. `measureCode` must be a real measure code or 'geen'; every offered
-// breakdown dimension gets exactly one choice — a real, OFFERED member code,
-// 'niet_genoemd' (the question says nothing about that dimension), or
-// 'anders' (the question names something in that dimension that is not in
-// the offered list — most often because the pre-filter cut it, never because
-// the model may repair it into a guess). Anything else throws
-// TableParseValidationError — never a partial result (principle c).
+// menu for measure and breakdowns. `measureCode` must be a real measure code
+// or 'geen'; every offered breakdown dimension gets exactly one choice — a
+// real, OFFERED member code, 'niet_genoemd' (the question says nothing about
+// that dimension), or 'anders' (the question names something in that
+// dimension that is not in the offered list — most often because the
+// pre-filter cut it, never because the model may repair it into a guess).
+// Anything else throws TableParseValidationError — never a partial result
+// (principle c).
+//
+// Regions and the period are the deliberate EXCEPTION to "choose from a
+// supplied list": the model must ALWAYS report every place and the exact
+// period precision the question names, verbatim, even when the table cannot
+// serve them (fix round 1, task review, CRITICAL/IMPORTANT) — the code
+// decides servability, never the model by silently omitting what the reader
+// asked. A named place on a region-less table throws the distinct
+// `TableParseRegionUnavailableError` subclass (never silently dropped, which
+// would read as a national-total answer to a question about one place); a
+// named period precision the table doesn't publish sets
+// `periodGrainUnavailable` (a refusal SIGNAL, not a throw — see
+// `requiredGrain`).
 import { z } from 'zod';
 import type { LlmClient, LlmRequest } from '../llm/client.ts';
 import { oneOfToAnyOf } from '../llm/json-schema.ts';
@@ -78,6 +91,20 @@ export class TableParseValidationError extends Error {
     super(message);
     this.name = 'TableParseValidationError';
     this.outputText = outputText;
+  }
+}
+
+/** Fix round 1 (task review, CRITICAL): a distinct subclass for the one
+ * throw that is NOT "the model produced garbage" but "the reader named a
+ * real place on a table that has no region/geo-like dimension at all" — the
+ * exact shape of a silent wrong-population answer (principle c) if it were
+ * ever swallowed. Step 5 catches this subclass specifically to refuse with a
+ * precise "this table has no regions" message, distinct from every other
+ * (structurally malformed) TableParseValidationError. */
+export class TableParseRegionUnavailableError extends TableParseValidationError {
+  constructor(message: string, outputText: string) {
+    super(message, outputText);
+    this.name = 'TableParseRegionUnavailableError';
   }
 }
 
@@ -180,9 +207,13 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
  * menu (`input`, from Task 2's buildTableParseSchema). Throws
  * TableParseValidationError — never a partial result — on invalid JSON, a
  * schema violation, confidence outside 0..1, an unknown/invented measure
- * code, an unknown/missing/duplicated breakdown dimension, a member code not
- * in that dimension's OFFERED list (including a real member the pre-filter
- * cut), or region terms on a table with no region/geo-like dimension.
+ * code, an unknown/missing/duplicated breakdown dimension, or a member code
+ * not in that dimension's OFFERED list (including a real member the
+ * pre-filter cut). Throws the distinct TableParseRegionUnavailableError
+ * subclass specifically for region terms on a table with no region/geo-like
+ * dimension — the reader named a real place this table cannot serve, so
+ * step 5 refuses with a precise message rather than a generic malformed-
+ * output one.
  */
 export function validateTableParseOutput(
   outputText: string,
@@ -283,8 +314,14 @@ export function validateTableParseOutput(
   }
 
   // --- regions: only meaningful when the table has any ---------------------
+  // Fix round 1 (task review, CRITICAL): the prompt now tells the model to
+  // ALWAYS list every place the reader names, even on a region-less table —
+  // so this is no longer "the model misbehaved", it is "the reader asked
+  // about a region this table cannot serve". A distinct error subclass lets
+  // step 5 refuse with a precise message instead of a generic malformed-
+  // output error.
   if (!input.hasRegions && data.regions.length > 0) {
-    throw new TableParseValidationError(
+    throw new TableParseRegionUnavailableError(
       `table-parse named region(s) (${data.regions.map((r) => r.name).join(', ')}) on table ` +
         `'${input.tableId}', which has no region/geo-like dimension`,
       outputText,
@@ -312,7 +349,7 @@ export function validateTableParseOutput(
 // buildMeasureFitSystemPrompt's structure and tone.
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `Je bent een parseer-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN CBS-tabel: de beschikbare maten, de aangeboden uitsplitsingen (met hun leden), de beschikbare periode-precisies en of de tabel regio's kent. Vertaal de vraag naar een keuze uit UITSLUITEND deze lijsten. Verzin nooit een code, een lid, een dimensienaam of een regio die niet is aangeboden.
+const SYSTEM_PROMPT = `Je bent een parseer-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN CBS-tabel: de beschikbare maten, de aangeboden uitsplitsingen (met hun leden), de beschikbare periode-precisies en of de tabel regio's kent. Voor maat en uitsplitsingen kies je UITSLUITEND uit deze lijsten — verzin nooit een code, een lid of een dimensienaam die niet is aangeboden. Regio's en de gevraagde periode geef je altijd zoals de vraag ze zelf noemt (zie REGIO'S en PERIODE) — dat is GEEN keuze uit een aangeboden lijst.
 
 MAAT
 - Kies precies één measureCode, LETTERLIJK overgenomen uit de matenlijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'.
@@ -327,10 +364,20 @@ Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met ex
 Elke aangeboden dimensie komt precies één keer voor in je antwoord.
 
 REGIO'S
-Alleen wanneer de tabel regio's kent, mag je regio's noemen: plaatsnamen precies zoals de gebruiker ze schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag). Nooit een CBS-code — codes horen alleen bij maten en leden. Kent de tabel geen regio's, dan blijft dit veld leeg: verzin nooit een regio-uitsplitsing die er niet is.
+Noem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een CBS-code — codes horen alleen bij maten en leden.
 
 PERIODE
-Geef de periode in het gevraagde format: een genoemd jaar, kwartaal of maand; een jaarbereik; expliciete datumgrenzen; "sinds"/"vanaf" met een open einde; "de afgelopen N jaar/kwartalen/maanden"; "nu vergeleken met N geleden"; een verandering binnen een genoemd jaar; "vorige maand/vorig kwartaal/vorig jaar"; 'latest' alleen bij een expliciet heden-signaal ("nu", "op dit moment", tegenwoordige tijd); of 'none' wanneer de vraag geen periodesignaal bevat. Je kent de datum van vandaag niet — reken relatieve periodes nooit zelf om naar een absoluut jaar.
+Geef de periode ALTIJD exact met de precisie die de vraag zelf noemt — OOK wanneer die precisie niet voorkomt in de lijst "Beschikbare periode-precisies". Pas de gevraagde periode nooit aan naar een precisie die wel beschikbaar is (bijvoorbeeld een genoemd kwartaal afronden op een jaar, omdat alleen jaren beschikbaar zijn) — de code bepaalt zelf of en hoe die precisie beantwoord kan worden. Voorbeelden van het format:
+- Genoemd jaar → {"kind":"year","year":JJJJ}; genoemd kwartaal → {"kind":"quarter","year":JJJJ,"quarter":1..4}; genoemde maand → {"kind":"month","year":JJJJ,"month":1..12}.
+- "van JJJJ tot en met JJJJ" (hele jaren) → {"kind":"year_range","fromYear":...,"toYear":...}.
+- Expliciete dag- of maandgrenzen ("van 1 januari 2022 tot en met 31 december 2022") → {"kind":"date_range","from":{...},"to":{...},"toInclusive":...}: kopieer dag, maand en jaar precies zoals geschreven (dag null wanneer er geen dag genoemd wordt); toInclusive is true bij "tot en met"/"t/m"; bij een kale "tot" is toInclusive true wanneer de grens alleen een maand noemt, en false wanneer de grens een dag noemt.
+- "sinds JJJJ"/"vanaf JJJJ" zonder genoemd einde → {"kind":"since","year":JJJJ,"quarter":null,"month":null}; een genoemde startmaand of -kwartaal vult month/quarter in plaats van null.
+- "de afgelopen/laatste N jaar/kwartalen/maanden" met N van 2 of meer → {"kind":"last_n","unit":"year"|"quarter"|"month","n":N}; het enkelvoud ("het afgelopen jaar", "de afgelopen maand") is juist {"kind":"relative","unit":...,"offset":-1}.
+- "nu vergeleken met N {eenheid} geleden" → {"kind":"now_vs_ago","unit":...,"amount":N}.
+- "groeide/steeg/daalde ... in JJJJ, met hoeveel" → {"kind":"change_over_year","year":JJJJ}.
+- "vorige maand"/"vorig kwartaal"/"vorig jaar" → {"kind":"relative","unit":...,"offset":-1}: offset is een negatief getal, -1 is de vorige periode.
+- 'latest' alleen bij een expliciet heden-signaal ("nu", "op dit moment", tegenwoordige tijd); 'none' wanneer de vraag helemaal geen periodesignaal bevat.
+Je kent de datum van vandaag niet — reken relatieve periodes nooit zelf om naar een absoluut jaar.
 
 OVERIG
 - derivation: 'none' voor een gewone opvraging, 'difference' voor een expliciete veranderingsvraag met bedrag, 'max' voor een vraag naar het hoogste/meeste, 'series' voor een ontwikkeling over een periode.
@@ -347,6 +394,11 @@ export function buildTableParseSystemPrompt(): string {
 /** Per-measure description budget in the prompt — mirrors onboarding-fit
  * .ts's DESCRIPTION_MAX / the measure-fit condense approach. */
 const DESCRIPTION_MAX = 240;
+
+/** Fix round 1 (task review, MINOR): a legend for the grain codes shown in
+ * "Beschikbare periode-precisies" — the model otherwise sees bare CBS grain
+ * codes with no stated meaning. */
+const GRAIN_LABEL: Record<PeriodGrain, string> = { JJ: 'jaar', KW: 'kwartaal', MM: 'maand' };
 
 function condense(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim();
@@ -377,7 +429,10 @@ export function serializeTableParseInput(question: string, input: TableParseSche
     return `- dimensie=${b.name} | titel: ${b.title}${truncNote}\n${body}`;
   });
 
-  const grains = input.periodGrains.length > 0 ? input.periodGrains.join(', ') : '(geen)';
+  const grains =
+    input.periodGrains.length > 0
+      ? input.periodGrains.map((g) => `${g} (${GRAIN_LABEL[g]})`).join(', ')
+      : '(geen)';
   const regionsLine = input.hasRegions
     ? "Regio's: deze tabel kent regio's."
     : "Regio's: deze tabel kent geen regio's.";

@@ -22,6 +22,7 @@ import {
   tableParseJsonSchema,
   validateTableParseOutput,
   TableParseValidationError,
+  TableParseRegionUnavailableError,
   TABLE_PARSE_MEASURE_NONE,
   TABLE_PARSE_NOT_NAMED,
   TABLE_PARSE_OTHER,
@@ -111,6 +112,44 @@ describe('buildTableParseSystemPrompt', () => {
     expect(prompt).toContain(TABLE_PARSE_NOT_NAMED);
     expect(prompt).toContain(TABLE_PARSE_OTHER);
   });
+
+  // Fix round 1 (task review, CRITICAL): the prompt must tell the model to
+  // ALWAYS list every place the reader names, as written, with its kind,
+  // even when the table has no regions — never silently drop it (which
+  // would read as a national-total answer to a question about one place).
+  it('instructs the model to always name every place the reader mentions, even on a region-less table', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('Noem ALTIJD elke plaats die de vraag noemt');
+    expect(prompt).toContain("OOK wanneer deze tabel helemaal geen regio's kent");
+    expect(prompt).toContain('Verzin nooit een plaats die de vraag niet noemt');
+    expect(prompt).toContain('gebruik nooit een CBS-code');
+  });
+
+  // Fix round 1 (task review, IMPORTANT): the prompt must tell the model to
+  // report the period exactly as the question names it, regardless of the
+  // table's own available precisions — never round a quarter up to a year
+  // just because only years are offered.
+  it('instructs the model to always report the period exactly as asked, regardless of the available precisions', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('Geef de periode ALTIJD exact met de precisie die de vraag zelf noemt');
+    expect(prompt).toContain('OOK wanneer die precisie niet voorkomt in de lijst');
+    expect(prompt).toContain('Pas de gevraagde periode nooit aan naar een precisie die wel beschikbaar is');
+  });
+
+  // Fix round 1 (task review, MINOR): concise Dutch guidance/examples for
+  // every period kind, equivalent to (not copied from) the curated intent
+  // prompt's own period rules (src/answer/intent/prompt.ts).
+  it('spells out concrete examples for every period kind (relative offset sign, last_n vs relative, date_range toInclusive, since/year_range boundaries)', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('"kind":"relative"');
+    expect(prompt).toContain('offset is een negatief getal, -1 is de vorige periode');
+    expect(prompt).toContain('"kind":"last_n"');
+    expect(prompt).toContain('het enkelvoud');
+    expect(prompt).toContain('"kind":"date_range"');
+    expect(prompt).toContain('toInclusive');
+    expect(prompt).toContain('"kind":"since"');
+    expect(prompt).toContain('"kind":"year_range"');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -146,6 +185,20 @@ describe('serializeTableParseInput', () => {
     expect(input.hasRegions).toBe(true);
     const text = serializeTableParseInput('Hoeveel inwoners heeft Nederland?', input);
     expect(text).toContain("kent regio's");
+  });
+
+  // Fix round 1 (task review, MINOR): a legend for the bare grain codes.
+  it('adds a Dutch legend for the grain codes (JJ = jaar, KW = kwartaal, MM = maand)', () => {
+    const input = landbouwInput();
+    const text = serializeTableParseInput(LANDBOUW_QUESTION, input);
+    expect(text).toContain('JJ (jaar)');
+
+    const { schema, codeLists } = loadFixture('80590ned');
+    const mixed = buildTableParseSchema(schema, codeLists, 'Hoeveel personen waren er?');
+    const mixedText = serializeTableParseInput('Hoeveel personen waren er?', mixed);
+    expect(mixedText).toContain('JJ (jaar)');
+    expect(mixedText).toContain('KW (kwartaal)');
+    expect(mixedText).toContain('MM (maand)');
   });
 });
 
@@ -313,14 +366,77 @@ describe('validateTableParseOutput — breakdown allowlist', () => {
     });
     expect(() => validateTableParseOutput(json, input)).not.toThrow();
   });
+
+  // Fix round 1 (task review, MINOR regression): a real member code that
+  // belongs to a DIFFERENT offered dimension on the same table must still
+  // throw — the allowlist is per-dimension, not table-wide.
+  it('a real member code that belongs to a DIFFERENT dimension throws', () => {
+    const input = caribischInput();
+    const persoonskenmerkenCodes = input.breakdowns.find((b) => b.name === 'Persoonskenmerken')!.members.map(
+      (m) => m.code,
+    );
+    const caribischCodes = input.breakdowns.find((b) => b.name === 'CaribischNederland')!.members.map(
+      (m) => m.code,
+    );
+    const borrowed = persoonskenmerkenCodes.find((c) => !caribischCodes.includes(c));
+    expect(borrowed).toBeDefined();
+    const json = validJson(input, {
+      breakdowns: [
+        { dimension: 'CaribischNederland', choice: borrowed! },
+        { dimension: 'Persoonskenmerken', choice: TABLE_PARSE_NOT_NAMED },
+      ],
+    });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+  });
+
+  // Fix round 1 (task review, MINOR regression): the allowlist compares
+  // LITERAL strings — a case-variant of a valid literal/code is not the same
+  // string and must throw, never be normalized/repaired.
+  it('case-variant literals/codes throw rather than being normalized', () => {
+    const input = caribischInput();
+    const jsonCapitalOther = validJson(input, {
+      breakdowns: [
+        { dimension: 'CaribischNederland', choice: 'Anders' },
+        { dimension: 'Persoonskenmerken', choice: TABLE_PARSE_NOT_NAMED },
+      ],
+    });
+    expect(() => validateTableParseOutput(jsonCapitalOther, input)).toThrow(TableParseValidationError);
+
+    const jsonCapitalMeasure = validJson(input, { measureCode: 'Geen' });
+    expect(() => validateTableParseOutput(jsonCapitalMeasure, input)).toThrow(TableParseValidationError);
+
+    const lowerMeasureCode = validJson(landbouwInput(), { measureCode: 'd003040' });
+    expect(() => validateTableParseOutput(lowerMeasureCode, landbouwInput())).toThrow(TableParseValidationError);
+  });
 });
 
 describe('validateTableParseOutput — regions', () => {
-  it('region terms on a table with no region/geo-like dimension throw', () => {
+  it('region terms on a table with no region/geo-like dimension throw the distinct TableParseRegionUnavailableError subclass', () => {
     const input = landbouwInput();
     expect(input.hasRegions).toBe(false);
     const json = validJson(input, { regions: [{ name: 'Utrecht', kind: 'onbekend' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    // The subclass IS a TableParseValidationError (never a partial result
+    // either way), but step 5 must be able to tell the two apart.
     expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    try {
+      validateTableParseOutput(json, input);
+      throw new Error('unreachable');
+    } catch (error) {
+      expect(error).toBeInstanceOf(TableParseRegionUnavailableError);
+      expect((error as Error).name).toBe('TableParseRegionUnavailableError');
+    }
+  });
+
+  it('an ordinary malformed-output error is NOT the region-unavailable subclass', () => {
+    const input = landbouwInput();
+    try {
+      validateTableParseOutput(validJson(input, { measureCode: 'INVENTED' }), input);
+      throw new Error('unreachable');
+    } catch (error) {
+      expect(error).toBeInstanceOf(TableParseValidationError);
+      expect(error).not.toBeInstanceOf(TableParseRegionUnavailableError);
+    }
   });
 
   it('an empty regions array is always fine, even on a region-less table', () => {
