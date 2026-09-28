@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:07.120Z",
+ "fetchedAt": "2026-09-28T18:39:24.405Z",
  "schema": {
   "tableId": "85004NED",
   "title": "Hernieuwbare energie; zonnestroom, windenergie, RES-regio",
@@ -27,7 +27,8 @@
     "unit": "megawatt(piek)",
     "decimals": 0,
     "description": "Het vermogen dat op 31 december van het verslagjaar in gebruik is. Voor windenergie is de eenheid megawatt, MW. Voor zonnestroom is de eenheid megawattpiek, MWp.\r\n \r\nHet elektrisch vermogen is de hoeveelheid elektriciteit die per tijdseenheid kan worden opgewekt bij normaal gebruik van alle beschikbare installaties die elektriciteit produceren.\r\n\r\nVoor zonnestroom betreft dit het paneelvermogen. Naast het paneelvermogen is het voor zonnestroom ook mogelijk om te kijken naar het vermogen van de omvormers, of het vermogen van  hele systeem (gedefinieerd als minimum van de omvormer en de panelen).  Verwijzingen naar tabellen met gegevens over het vermogen volgens deze definitie staan in de algemene toelichting bij deze tabel.\r\n",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": []
    },
    {
     "code": "M002195",
@@ -35,7 +36,8 @@
     "unit": "mln kWh",
     "decimals": 0,
     "description": "Bruto productie (niet-genormaliseerd):\r\nDaadwerkelijke (gemeten) hernieuwbare elektriciteitsproductie in een verslagperiode, niet gecorrigeerd voor weersomstandigheden.\r\n",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": []
    },
    {
     "code": "M002194",
@@ -43,7 +45,8 @@
     "unit": "mln kWh",
     "decimals": 0,
     "description": "Bruto productie (genormaliseerd):\r\nDe genormaliseerde elektriciteitsproductie is uitgerekend volgens definities uit de EU-Richtlijn Hernieuwbare Energie, dit is alleen voor windenergie van toepassing. Het doel is de productie te corrigeren voor veranderingen in weersomstandigheden, en daarmee de  fluctuaties in het windaanbod te neutraliseren. De genormaliseerde productie voor alle windenergie in Nederland in een bepaald verslagjaar wordt als volgt berekend: het gemiddelde van de capaciteit aan het begin en einde van een verslagjaar vermenigvuldigd met de gemiddelde productie per eenheid capaciteit in de afgelopen vijf jaar. Vanaf verslagjaar 2021 wordt deze berekening apart gedaan voor wind op land en wind op zee. Zie voor een rekenvoorbeeld Protocol Monitoring Hernieuwbare Energie RVO CBS\r\n",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": []
    }
   ],
   "modified": "2026-06-19T00:00:00+02:00"

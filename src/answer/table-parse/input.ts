@@ -57,6 +57,12 @@ export interface TableParseMeasure {
   title: string;
   unit: string;
   description: string;
+  /** CBS's own MeasureGroups titles, root -> leaf, verbatim, carried straight
+   * from CbsMeasure.groupPath (breadth step 4b, Task 1/2). `[]` when CBS has
+   * no group for this measure. Distinguishes measures that otherwise share a
+   * bare title (measured: 80590ned's four "Niet-seizoengecorrigeerd"
+   * measures) — see parse.ts's measureFingerprint and prompt line. */
+  groupPath: string[];
 }
 
 export interface TableParseBreakdown {
@@ -200,7 +206,7 @@ export function buildTableParseSchema(
 ): TableParseSchema {
   const measures: TableParseMeasure[] = schema.measures
     .filter((m) => m.dataType !== 'String')
-    .map((m) => ({ code: m.code, title: m.title, unit: m.unit, description: m.description }));
+    .map((m) => ({ code: m.code, title: m.title, unit: m.unit, description: m.description, groupPath: m.groupPath }));
 
   if (measures.length === 0) {
     throw new TableParseIneligibleTableError(schema.tableId, 'has no numeric measure');

@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:08.449Z",
+ "fetchedAt": "2026-09-28T18:39:25.581Z",
  "schema": {
   "tableId": "82883NED",
   "title": "Watergebruik binnen de Nederlandse economie; Milieurekeningen",
@@ -22,7 +22,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Drinkwater en industriewater samengenomen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Leidingwater"
+    ]
    },
    {
     "code": "M000687",
@@ -30,7 +33,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Water van drinkwaterkwaliteit ontvangen en geproduceerd door de drinkwaterbedrijven. Dit is gezuiverd grond- of oppervlaktewater dat door een buizen of waterleidingennet wordt getransporteerd.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Leidingwater"
+    ]
    },
    {
     "code": "M001599",
@@ -38,7 +44,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Industriewater is leidingwater met een mindere of betere kwaliteit (in het geval van gedemineraliseerd water) dan drinkwater.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Leidingwater"
+    ]
    },
    {
     "code": "M008179",
@@ -46,7 +55,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van industriewater voor koelingsdoeleinden.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Leidingwater"
+    ]
    },
    {
     "code": "M008178",
@@ -54,7 +66,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van industriewater voor andere doeleinden dan koeling.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Leidingwater"
+    ]
    },
    {
     "code": "M006369_2",
@@ -62,7 +77,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van water dat uit de ondergrond wordt opgepompt of naar boven komt. Dit kan zoet, maar ook brak of zout zijn.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Grondwater"
+    ]
    },
    {
     "code": "M006370",
@@ -70,7 +88,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van grondwater voor koelingsdoeleinden.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Grondwater"
+    ]
    },
    {
     "code": "M006511",
@@ -78,7 +99,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van grondwater voor andere doeleinden dan koeling.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Grondwater"
+    ]
    },
    {
     "code": "M006372_2",
@@ -86,7 +110,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van water van binnenwateren zoals rivieren, meren, kanalen (met uitzondering van grondwater), overgangswater, kustwateren en, voor zover het de chemische toestand betreft, ook territoriale wateren (o.a. de zee).",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M000255",
@@ -94,7 +121,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zoet oppervlaktewater zoals rivieren en meren.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M008174",
@@ -102,7 +132,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zoet oppervlaktewater voor koelingsdoeleinden.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M008175",
@@ -110,7 +143,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zoet oppervlaktewater voor andere doeleinden dan koeling.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M000359",
@@ -118,7 +154,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zout oppervlaktewater zoals de zee.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M008176",
@@ -126,7 +165,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zout oppervlaktewater voor koelingsdoeleinden.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    },
    {
     "code": "M008177",
@@ -134,7 +176,10 @@
     "unit": "mln m3",
     "decimals": 1,
     "description": "Gebruik van zout oppervlaktewater voor andere doeleinden dan koeling.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Oppervlaktewater"
+    ]
    }
   ],
   "modified": "2026-08-28T00:00:00+02:00"

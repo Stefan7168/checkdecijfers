@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:23:57.725Z",
+ "fetchedAt": "2026-09-28T18:39:15.695Z",
  "schema": {
   "tableId": "03759ned",
   "title": "Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio",
@@ -37,7 +37,8 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "Bevolking:\r\nDe inwoners van een bepaald gebied.\r\nIn de bevolkingsaantallen zijn uitsluitend personen begrepen die zijn opgenomen in het bevolkingsregister van een Nederlandse gemeente. In principe wordt iedereen die voor onbepaalde tijd in Nederland woont, opgenomen in het bevolkingsregister van de woongemeente. \r\nPersonen die tot de bevolking van Nederland behoren, maar voor wie geen vaste woonplaats valt aan te wijzen, zijn vanaf 1 oktober 1994 opgenomen in het bevolkingsregister van de gemeente 's-Gravenhage. Tot die tijd werden deze personen ingeschreven in het centraal persoonsregister. Het centraal persoonsregister werd bijgehouden door de toenmalige Rijksinspectie van de bevolkingsregisters.\r\nIn de bevolkingsregisters zijn niet opgenomen de in Nederland wonende personen waarvoor uitzonderingsregels gelden met betrekking tot opneming in de bevolkingsregisters (bijvoorbeeld diplomaten en NAVO militairen) en personen die niet legaal in Nederland verblijven.\r\n\r\n",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": []
    },
    {
     "code": "M000365",
@@ -45,7 +46,8 @@
     "unit": "aantal",
     "decimals": 1,
     "description": "De helft van een bevolking op 1 januari van een bepaald jaar plus de helft van die bevolking op 31 december van dat jaar.\r\n\r\nBevolking:\r\nDe inwoners van een bepaald gebied.\r\nIn de bevolkingsaantallen zijn uitsluitend personen begrepen die zijn opgenomen in het bevolkingsregister van een Nederlandse gemeente. In principe wordt iedereen die voor onbepaalde tijd in Nederland woont, opgenomen in het bevolkingsregister van de woongemeente. \r\nPersonen die tot de bevolking van Nederland behoren, maar voor wie geen vaste woonplaats valt aan te wijzen, zijn vanaf 1 oktober 1994 opgenomen in het bevolkingsregister van de gemeente 's-Gravenhage. Tot die tijd werden deze personen ingeschreven in het centraal persoonsregister. Het centraal persoonsregister werd bijgehouden door de toenmalige Rijksinspectie van de bevolkingsregisters.\r\nIn de bevolkingsregisters zijn niet opgenomen de in Nederland wonende personen waarvoor uitzonderingsregels gelden met betrekking tot opneming in de bevolkingsregisters (bijvoorbeeld diplomaten en NAVO militairen) en personen die niet legaal in Nederland verblijven.\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    }
   ],
   "modified": "2026-06-23T00:00:00+02:00"

@@ -68,8 +68,19 @@ export interface LabelledCase {
   question: string;
   note?: string;
   expect: {
-    /** A real measure code, 'geen', or LABEL_AMBIGUOUS_MEASURE. */
-    measureCode: string;
+    /** A real measure code, 'geen', or LABEL_AMBIGUOUS_MEASURE. Exactly one
+     * of `measureCode`/`acceptableMeasureCodes` is present on any given
+     * case (breadth step 4b, Task 2) — never both, never neither. */
+    measureCode?: string;
+    /** Present INSTEAD OF `measureCode` when several measures are equally
+     * faithful reads of the question and the answer just needs to name
+     * which one it used (breadth step 4b, Task 2 — e.g. 80590ned's
+     * seasonally-adjusted and non-adjusted unemployed measures of the same
+     * CBS measure group, when the question doesn't say which it wants). The
+     * eval scores a pick anywhere in this set as correct. Every listed code
+     * must be a real, offered measure on the table (checked by the
+     * integrity test). */
+    acceptableMeasureCodes?: string[];
     /** Required with LABEL_AMBIGUOUS_MEASURE: the offered measures the
      * model cannot tell apart (any pick among them must throw). */
     ambiguousMeasures?: string[];
@@ -90,6 +101,29 @@ export function expectedErrorClass(c: LabelledCase): string | null {
   if (c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE) return 'TableParseAmbiguousMeasureError';
   if (c.expect.outcome === 'region_unavailable') return 'TableParseRegionUnavailableError';
   return null;
+}
+
+/** The single measure code to use when building CANNED "the model chose
+ * this" output for a non-ambiguous case: the case's own `measureCode`, or
+ * the first of `acceptableMeasureCodes` when the case uses that form instead
+ * — either representative is equally correct per the label, so validating
+ * with one of them is enough to prove the label matches the real
+ * validator/breakdowns/period rules (breadth step 4b, Task 2). */
+export function representativeMeasureCode(c: LabelledCase): string {
+  if (c.expect.acceptableMeasureCodes !== undefined) {
+    return c.expect.acceptableMeasureCodes[0]!;
+  }
+  return c.expect.measureCode!;
+}
+
+/** Whether a scored case's ACTUAL measure pick matches its label: exact
+ * equality against `measureCode`, or membership in `acceptableMeasureCodes`
+ * when the case uses that form instead (breadth step 4b, Task 2). */
+export function measureMatchesLabel(c: LabelledCase, gotMeasure: string): boolean {
+  if (c.expect.acceptableMeasureCodes !== undefined) {
+    return c.expect.acceptableMeasureCodes.includes(gotMeasure);
+  }
+  return gotMeasure === c.expect.measureCode;
 }
 
 export interface LabelledSet {
@@ -243,8 +277,11 @@ async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase
       return { ...scored, pass: false, problems };
     }
     const gotMeasure = result.measureCode ?? 'geen';
-    if (gotMeasure !== c.expect.measureCode) {
-      problems.push(`measure: expected ${c.expect.measureCode}, got ${gotMeasure}`);
+    if (!measureMatchesLabel(c, gotMeasure)) {
+      const expected = c.expect.acceptableMeasureCodes
+        ? `one of [${c.expect.acceptableMeasureCodes.join(', ')}]`
+        : c.expect.measureCode;
+      problems.push(`measure: expected ${expected}, got ${gotMeasure}`);
     }
     for (const [dim, expected] of Object.entries(c.expect.breakdowns)) {
       const got = choiceLabel(result.breakdowns[dim]);

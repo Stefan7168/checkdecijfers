@@ -34,6 +34,7 @@ import {
   validateTableParseOutput,
   TableParseAmbiguousMeasureError,
   TableParseRegionUnavailableError,
+  TABLE_PARSE_SCHEMA_VERSION,
 } from '../../../src/answer/table-parse/parse.ts';
 import {
   buildDryRunRows,
@@ -41,6 +42,7 @@ import {
   expectedErrorClass,
   loadLabelledSet,
   loadTableFixture,
+  representativeMeasureCode,
   summarizeDryRun,
   LABEL_AMBIGUOUS_MEASURE,
   type LabelledCase,
@@ -95,7 +97,7 @@ function samplePeriod(kind: string): Record<string, unknown> {
 /** The label, written as the model output it expects. */
 function cannedFromLabel(c: LabelledCase, input: TableParseSchema, measureCode: string): string {
   return JSON.stringify({
-    version: 1,
+    version: TABLE_PARSE_SCHEMA_VERSION,
     measureCode,
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: c.expect.breakdowns[b.name] })),
     period: samplePeriod(c.expect.periodKind),
@@ -153,7 +155,18 @@ describe('tableparse-labelled-set.json — integrity', () => {
         }
       } else {
         expect(c.expect.ambiguousMeasures).toBeUndefined();
-        if (c.expect.measureCode !== 'geen') expect(measureCodes).toContain(c.expect.measureCode);
+        if (c.expect.acceptableMeasureCodes !== undefined) {
+          // acceptableMeasureCodes REPLACES measureCode — a case has exactly
+          // one of the two (breadth step 4b, Task 2).
+          expect(c.expect.measureCode).toBeUndefined();
+          expect(c.expect.acceptableMeasureCodes.length).toBeGreaterThanOrEqual(2);
+          for (const code of c.expect.acceptableMeasureCodes) {
+            expect(measureCodes).toContain(code);
+          }
+        } else {
+          expect(c.expect.measureCode).toBeDefined();
+          if (c.expect.measureCode !== 'geen') expect(measureCodes).toContain(c.expect.measureCode);
+        }
       }
 
       // --- breakdowns: exactly the offered dimensions, once each ---------
@@ -187,7 +200,7 @@ describe('tableparse-labelled-set.json — integrity', () => {
       // --- the label, run through the real validator --------------------
       // (An 'ambiguous' label is checked above, measure by measure.)
       if (c.expect.measureCode !== LABEL_AMBIGUOUS_MEASURE) {
-        const canned = cannedFromLabel(c, input, c.expect.measureCode);
+        const canned = cannedFromLabel(c, input, representativeMeasureCode(c));
         if (c.expect.outcome === 'region_unavailable') {
           expect(() => validateTableParseOutput(canned, input)).toThrow(TableParseRegionUnavailableError);
         } else {
@@ -218,8 +231,25 @@ describe('tableparse-labelled-set.json — integrity', () => {
     const nototalCases = set.cases.filter((c) => c.id.startsWith('nototal-'));
 
     const ambiguousCount = set.cases.filter((c) => c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE).length;
+    const acceptableMeasuresCount = set.cases.filter((c) => c.expect.acceptableMeasureCodes !== undefined).length;
     const regionUnavailableCount = set.cases.filter((c) => c.expect.outcome === 'region_unavailable').length;
-    expect(ambiguousCount).toBeGreaterThanOrEqual(1);
+    // Breadth step 4b, Task 2: the ambiguous-measure category's real-world
+    // minimum was RELAXED from >=1 to >=0, on measured evidence, not a
+    // relaxed rule — adding CBS's own measure group to the guard's
+    // fingerprint (parse.ts's measureFingerprint) resolved the only
+    // same-(title,unit,description) measure set that existed anywhere across
+    // the 10 re-fetched fixture tables (80590ned's four
+    // "Niet-seizoengecorrigeerd"/"x 1000"/empty-description measures — see
+    // 'ambiguous-arbeid-werklozen's own note). None of the 8 eligible tables
+    // has a real ambiguous-measure case left. The F4 guard itself is still
+    // exercised directly (and still throws on a truly identical pair) by a
+    // synthetic case in tests/answer/table-parse/parse.test.ts — this
+    // minimum is about the REAL-WORLD labelled set, not about whether the
+    // guard still works.
+    expect(ambiguousCount).toBeGreaterThanOrEqual(0);
+    // The acceptableMeasureCodes form (new in breadth step 4b) needs at
+    // least one real exercise too, or the mechanism itself is untested here.
+    expect(acceptableMeasuresCount).toBeGreaterThanOrEqual(1);
     expect(regionUnavailableCount).toBeGreaterThanOrEqual(1);
     expect(geenCount).toBeGreaterThanOrEqual(4);
     expect(andersCount).toBeGreaterThanOrEqual(3);

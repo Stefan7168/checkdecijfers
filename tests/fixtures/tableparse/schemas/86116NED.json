@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:09.982Z",
+ "fetchedAt": "2026-09-28T18:39:27.265Z",
  "schema": {
   "tableId": "86116NED",
   "title": "ICT-gebruik bij kleine bedrijven; bedrijfstak en bedrijfsgrootte, 2025",
@@ -22,7 +22,10 @@
     "unit": "% van werkzame personen",
     "decimals": 0,
     "description": "Werkzame personen met internettoegang voor werkdoeleinden.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT"
+    ]
    },
    {
     "code": "M000783",
@@ -30,7 +33,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot bedrijfs-e-mail.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT",
+     "Toegang tot ICT-systeem van buitenaf",
+     "Biedt toegang tot"
+    ]
    },
    {
     "code": "M000787",
@@ -38,7 +46,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot documenten van het bedrijf (zoals bestanden, spreadsheets, presentaties, plaatjes, enz.).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT",
+     "Toegang tot ICT-systeem van buitenaf",
+     "Biedt toegang tot"
+    ]
    },
    {
     "code": "M007862",
@@ -46,7 +59,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met werknemers die buiten de bedrijfsvestiging toegang hebben tot bedrijfsapplicaties of –software zoals klantbeheersoftware, databasesoftware, enz.?",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT",
+     "Toegang tot ICT-systeem van buitenaf",
+     "Biedt toegang tot"
+    ]
    },
    {
     "code": "M000776",
@@ -54,7 +72,10 @@
     "unit": "% van werkzame personen",
     "decimals": 0,
     "description": "Werkzame personen die buiten de bedrijfsvestiging toegang hebben tot bestanden of software van het bedrijf (dus meer dan alleen e-mail).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT"
+    ]
    },
    {
     "code": "M000775",
@@ -62,7 +83,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met medewerkers die buiten de bedrijfsvestiging toegang hebben tot bestanden of software van het bedrijf (dus meer dan alleen e-mail).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Personeel en ICT"
+    ]
    },
    {
     "code": "M004746_2",
@@ -70,7 +94,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een internetaansluiting van het type ADSL, VDSL, SDSL en dergelijke, of een andere hoogwaardige vaste verbinding zoals glasvezel of kabel (A/S/V)DSL: (Asymmetric/Symmetric/Very-high-bitrate) Digital Subscriber Line",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding"
+    ]
    },
    {
     "code": "A050073",
@@ -78,7 +106,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding",
+     "Internet, snelheid snelste verbinding"
+    ]
    },
    {
     "code": "A045890",
@@ -86,7 +119,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding",
+     "Internet, snelheid snelste verbinding"
+    ]
    },
    {
     "code": "A050070",
@@ -94,7 +132,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding",
+     "Internet, snelheid snelste verbinding"
+    ]
    },
    {
     "code": "A050071",
@@ -102,7 +145,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding",
+     "Internet, snelheid snelste verbinding"
+    ]
    },
    {
     "code": "A050072",
@@ -110,7 +158,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Vaste internetverbinding",
+     "Internet, snelheid snelste verbinding"
+    ]
    },
    {
     "code": "M000448_2",
@@ -118,7 +171,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die een eigen website hebben",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app"
+    ]
    },
    {
     "code": "D000457",
@@ -126,7 +183,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een website waarop beschrijvingen van goederen/diensten of prijslijsten staan",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "D000674",
@@ -134,7 +196,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een website die de mogelijkheid biedt om online te bestellen, te boeken of te reserveren.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "D000722",
@@ -142,7 +209,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een website die klanten de mogelijkheid biedt zelf hun product (goederen of diensten) te ontwerpen of aan te passen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "D000459",
@@ -150,7 +222,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een website die de mogelijkheid biedt een bestelling online te volgen, of met informatie over de status van een bestelling",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "D000611",
@@ -158,7 +235,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven met een website met klantspecifieke informatie voor reguliere bezoekers",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "M007948",
@@ -166,7 +248,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Mogelijkheid met de klantenservice te chatten, waarbij een virtuele chatbot of een echt persoon de klant te woord staat",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "M007949",
@@ -174,7 +261,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Vermelding van openstaande vacatures of online sollicitaties",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "M007950",
@@ -182,7 +274,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Onderdelen van de website die in ten minste twee talen gegeven worden",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app",
+     "Website bevat"
+    ]
    },
    {
     "code": "M007951",
@@ -190,7 +287,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die een mobiele app via website bieden, bijvoorbeeld voor loyaliteitsprogramma, e‐commerce or klantenservice.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app"
+    ]
    },
    {
     "code": "M008199",
@@ -198,7 +299,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven wiens website of app een platformfunctie heeft. Met platformfunctie wordt bedoeld dat de website of app bemiddelt (of biedt ondersteuning) bij de uitwisseling van goederen, diensten of informatie tussen andere personen, bedrijven of organisaties. Het bedrijf is hierbij niet (of gedeeltelijk) de eigenaar van de goederen, diensten of informatie, maar wel de bemiddelaar.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Bedrijven met website of app"
+    ]
    },
    {
     "code": "M000753",
@@ -206,7 +311,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die ten minste één van de volgende typen sociale media gebruiken: sociale netwerken, blogs of microblogs, sites die multimedia delen om kennis te delen. Bedrijven die deze sociale media uitsluitend gebruiken om advertenties te plaatsen, vallen hier niet onder.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Sociale media"
+    ]
    },
    {
     "code": "D000755",
@@ -214,7 +323,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Sociale netwerken zoals Facebook, LinkedIn",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Sociale media",
+     "Type sociale media"
+    ]
    },
    {
     "code": "D000474",
@@ -222,7 +336,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Blogs of microblogs zoals X (voormalig Twitter) of Bluesky",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Sociale media",
+     "Type sociale media"
+    ]
    },
    {
     "code": "M000652",
@@ -230,7 +349,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Websites die multimedia (filmpjes, foto's) delen zoals YouTube, Snapchat, TikTok, Flickr, Pinterest of Instagram",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Toegang en gebruik internet",
+     "Sociale media",
+     "Type sociale media"
+    ]
    },
    {
     "code": "M001192",
@@ -238,7 +362,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die betaalde clouddiensten gebruiken",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten"
+    ]
    },
    {
     "code": "M000518",
@@ -246,7 +373,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "E-mail als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "D000664",
@@ -254,7 +385,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Office software, zoals tekstverwerkers, spreadsheetprogramma’s als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M001651",
@@ -262,7 +397,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Opslag (hosting) van databases van het bedrijf als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M000458",
@@ -270,7 +409,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bestanden opslaan als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M000760",
@@ -278,7 +421,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Software voor boekhouding of financieel beheer als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M000525",
@@ -286,7 +433,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Software om Enterprise Resource Planning (ERP) te beheren als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "D000484",
@@ -294,7 +445,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Software om informatie over klanten te beheren (ook wel Customer Relationship Management of CRM software) als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M001616",
@@ -302,7 +457,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Veiligheidssoftware, zoals antivirussoftware, network acces control (als clouddienst)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M001705",
@@ -310,7 +469,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Rekenkracht om software te draaien als clouddienst",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "M000815",
@@ -318,7 +481,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Rekenplatform om hostomgeving te gebruiken voor ontwikkeling, testing of uitrollen van applicaties zoals herbruikbare softwaremodules of application programming interfaces (API's) (als clouddienst)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Clouddiensten",
+     "Soort clouddienst gebruikt"
+    ]
    },
    {
     "code": "D007286",
@@ -326,7 +493,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt ten minste één van de acht gevraagde AI-technologieën",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence"
+    ]
    },
    {
     "code": "D007931",
@@ -334,7 +504,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die een analyse van geschreven taal uitvoeren.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007787",
@@ -342,7 +516,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die gesproken taal omzetten in machinaal leesbare vorm.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007932",
@@ -350,7 +528,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die gesproken of geschreven taal genereren.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "M008327",
@@ -358,7 +540,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die afbeeldingen, video's of geluid genereren.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007933",
@@ -366,7 +552,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die objecten of personen identificeren op basis van afbeeldingen (beeldherkenning, beeldbewerking).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007793",
@@ -374,7 +564,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt machine learning (zoals deeplearningmethodieken) voor data-analytics die nog niet hierboven genoemd zijn.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007792",
@@ -382,7 +576,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die verschillende werkstromen automatiseren of helpen bij het nemen van beslissingen (bijvoorbeeld op AI-gebaseerde software voor robotgestuurde procesautomatisering).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D007791",
@@ -390,7 +588,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt technologieën die fysieke beweging van machines mogelijk maken door middel van autonoom genomen beslissingen op basis van observatie van de omgeving (bijvoorbeeld autonome robots, zelfrijdende voertuigen, autonome drones).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "Welke AI-technologieën"
+    ]
    },
    {
     "code": "D006101",
@@ -398,7 +600,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor marketing of verkoop. Bijvoorbeeld: a) chatbots op basis van natuurlijke taalverwerking voor klantondersteuning; b) klantprofilering, prijsoptimalisatie, gepersonaliseerde marketingaanbiedingen, marktanalyse op basis van machine learning; c) autonome robots voor orderverwerking.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D007801",
@@ -406,7 +612,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor productie- of serviceprocessen. Bijvoorbeeld: a) voorspellend onderhoud op basis van machine learning; b) tools om producten te classificeren of defecten in producten op te sporen op basis van computervisie (computer vision); c) autonome drones voor productietoezicht, beveiligings- of inspectietaken; d) assemblagewerkzaamheden uitgevoerd door bijvoorbeeld autonome robots.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D008050",
@@ -414,7 +624,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor organisatie van administratieve processen in het bedrijf of voor bestuurstaken. Bijvoorbeeld: a) zakelijke virtuele assistenten op basis van machine learning of natuurlijke taalverwerking; b) data‐analyse of strategische besluitvorming op basis van machine learning, bijvoorbeeld risicobeoordeling op basis van machine learning; c) conversie van spraak naar tekst op basis van spraakherkenning voor het opstellen van documenten; d) geautomatiseerde planning of planning op basis van machine learning; e) personeelsmanagement gebaseerd op machine learning of natuurlijke taalverwerking, o.a. voorselectie van kandidaten, profilering van medewerkers of prestatieanalyse; f) vertaling van documenten op basis van AI",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D006213",
@@ -422,7 +636,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor logistiek. Bijvoorbeeld: a) autonome robots voor pick‐and‐pack‐oplossingen in magazijnen; b) routeoptimalisatie op basis van machine learning.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D006638",
@@ -430,7 +648,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor ICT-beveiliging. Bijvoorbeeld: a) gezichtsherkenning op basis van computervisie voor authenticatie van ICT‐gebruikers; b) detectie en preventie van cyberaanvallen op basis van bijvoorbeeld machine learning.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D008051",
@@ -438,7 +660,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor boekhouding, controle of financieel beheer die helpen bij het nemen van financiële beslissingen.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D008052",
@@ -446,7 +672,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt software of systemen op basis van AI voor activiteiten op het gebied van onderzoek en ontwikkeling of innovatie (m.u.v. onderzoek op AI.)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-technologie gebruikt voor"
+    ]
    },
    {
     "code": "D006843",
@@ -454,7 +684,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft de gebruikte AI-software of -systemen ontwikkeld door eigen werknemers.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-software ontwikkeld door"
+    ]
    },
    {
     "code": "D006971",
@@ -462,7 +696,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft de gebruikte AI-software of -systemen verkregen als commerciële software of systemen en die aangepast door eigen medewerkers.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-software ontwikkeld door"
+    ]
    },
    {
     "code": "D007048",
@@ -470,7 +708,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft de gebruikte AI-software of -systemen verkregen als open-source software of systemen en die aangepast door eigen medewerkers",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-software ontwikkeld door"
+    ]
    },
    {
     "code": "D007067",
@@ -478,7 +720,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft de gebruikte AI-software of -systemen als commerciële software of gebruiksklare systemen aangeschaft, inclusief voorbereiden waar het al in een gekocht artikel of systeem was verwerkt.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-software ontwikkeld door"
+    ]
    },
    {
     "code": "D006835_2",
@@ -486,7 +732,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft de gebruikte AI-software of -systemen laten ontwikkelen of aanpassen door ingehuurde externe leveranciers.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI-software ontwikkeld door"
+    ]
    },
    {
     "code": "M007802_2",
@@ -494,7 +744,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft ooit overwogen om software of systemen op basis van AI te gebruiken.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen"
+    ]
    },
    {
     "code": "D007936",
@@ -502,7 +756,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten zijn te hoog",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007937",
@@ -510,7 +769,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Gebrek aan relevante ervaring in bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007938",
@@ -518,7 +782,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Incompatibiliteit met bestaande apparatuur, software of systemen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007939",
@@ -526,7 +795,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Moeilijkheden met beschikbaarheid of kwaliteit van de benodigde gegevens",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007940",
@@ -534,7 +808,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bezorgdheid over schending van gegevensbescherming en privacy",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007941",
@@ -542,7 +821,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Onduidelijkheid over de juridische gevolgen zoals aansprakelijkheid bij schade veroorzaakt bij gebruik van AI",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007942",
@@ -550,7 +834,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Ethische overwegingen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D007943",
@@ -558,7 +847,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "AI-technologieën zijn niet nuttig voor de onderneming",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "Artificial intelligence",
+     "AI overwogen",
+     "Redenen om AI niet te gebruiken"
+    ]
    },
    {
     "code": "D000436",
@@ -566,7 +860,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gebruik van antivirussoftware betreft zowel gratis als betaalde software.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000453",
@@ -574,7 +872,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Wachtwoorden die ten minste acht gemengde karakters hebben, die veranderd moeten worden na een bepaalde periode en/of naar aanleiding van bijvoorbeeld een ICT-veiligheidsincident, en die versleuteld worden verstuurd en opgeslagen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000473",
@@ -582,7 +884,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Identificatie en authenticatie van gebruikers worden via biometrische methoden vastgesteld, zoals een vingerafdruk, de stem of het gezicht.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000438",
@@ -590,7 +896,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om identificatie en authenticatie van gebruikers via software of hardware-tokens om toegang te krijgen tot de ICT-systemen (oftewel twee- of multifactorauthenticatie), bijvoorbeeld via smartcards, USB-beveiligingssleutels of mobiele telefoons (eenmalige inlogcodes via SMS of app).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D006715",
@@ -598,7 +908,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om versleutelingstechnieken (encryptie) van data, documenten of e-mails. In 2017 werd encryptie nog opgedeeld in encryptie van opslagen en verstuurde data; vanaf 2018 is het samengevoegd.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000552",
@@ -606,7 +920,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om het op een andere fysieke locatie bewaren van (reserve)gegevens (offsite data-backup). Opslag in de cloud telt ook mee.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000655",
@@ -614,7 +932,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Alleen apparaten die voldoen aan bepaalde eisen krijgen toegang tot het bedrijfsnetwerk, bijvoorbeeld alleen apparaten die de laatste update van een besturingssysteem hebben geïnstalleerd.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000856",
@@ -622,7 +944,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om het gebruik van een Virtual Private Network (VPN) bij internetgebruik buiten het eigen bedrijf. Een VPN zorgt ervoor dat alle internetverkeer tussen de gebruiker en de VPN-server wordt versleuteld. Daardoor kan het verkeer niet worden afgeluisterd, en kan de inhoud van bezochte websites niet worden gemanipuleerd door kwaadwillenden (bijvoorbeeld man-in-the-middle-aanvallen).",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000623",
@@ -630,7 +956,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Logbestanden opslaan om incidenten achteraf te analyseren",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000635",
@@ -638,7 +968,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om methodes om de ICT-veiligheid in het bedrijf te kunnen beoordelen, zoals de veiligheidsmaatregelen laten controleren door derden, of tests uitvoeren. Voorbeelden zijn: penetration testing (pen test), red teaming, ethisch hacken, back-up systemen testen of gesimuleerde ICT-veiligheidsincidenten zoals phishing-emails versturen. Dergelijke tests worden uitgevoerd om op een veilige manier kwetsbaarheden in ICT-systemen op te sporen.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000741",
@@ -646,7 +980,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Periodiek beoordelen wat de kans is dat het bedrijf wordt getroffen door een incident, en wat daarvan de mogelijke gevolgen zouden zijn",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D008137",
@@ -654,7 +992,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om het gebruik van een monitoringsysteem om verdachte activiteiten te detecteren (bijvoorbeeld inbraakdetectie‐ of preventiesystemen die het gedrag van gebruikers of apparaten, netwerkverkeer monitoren). Sluit antivirussoftware, standaard firewalloplossing opgenomen in het besturingssysteem van personal computers en routers uit.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Gebruikte ICT-veiligheidsmaatregelen"
+    ]
    },
    {
     "code": "D000857",
@@ -662,7 +1004,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Vrijwillige training of het aanbieden van intern beschikbare informatie (bijvoorbeeld informatie op het intranet)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Training personeel ICT-veiligheid"
+    ]
    },
    {
     "code": "D000827",
@@ -670,7 +1016,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Verplichte trainingen of cursussen of het verplicht bekijken van documenten of instructiefilmpjes",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Training personeel ICT-veiligheid"
+    ]
    },
    {
     "code": "D007830",
@@ -678,7 +1028,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Met een contract (bijvoorbeeld een arbeidscontract)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Training personeel ICT-veiligheid"
+    ]
    },
    {
     "code": "M007877",
@@ -686,7 +1040,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf heeft in 2024 één (of meer) cyberincident(en) door een aanval van buiten geoefend.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid"
+    ]
    },
    {
     "code": "D003491",
@@ -694,7 +1051,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Documenten over ICT-veiligheid en datavertrouwelijkheid hebben betrekking op training in ICT-gebruik, ICT-veiligheidsmaatregelen, de evaluatie van ICT-veiligheidsmaatregelen, schema’s om ICT-veiligheidsdocumenten te updaten, enz.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Documentatie van ICT-veiligheid"
+    ]
    },
    {
     "code": "D000406",
@@ -702,7 +1063,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Documentatie van ICT-veiligheid",
+     "Meest recente review"
+    ]
    },
    {
     "code": "D004640",
@@ -710,7 +1076,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Documentatie van ICT-veiligheid",
+     "Meest recente review"
+    ]
    },
    {
     "code": "D002625",
@@ -718,7 +1089,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Documentatie van ICT-veiligheid",
+     "Meest recente review"
+    ]
    },
    {
     "code": "M002029",
@@ -726,7 +1102,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Uitvoering ICT-veiligheidswerkzaamheden"
+    ]
    },
    {
     "code": "M001622",
@@ -734,7 +1114,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Uitvoering ICT-veiligheidswerkzaamheden"
+    ]
    },
    {
     "code": "M001623",
@@ -742,7 +1126,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Uitvoering ICT-veiligheidswerkzaamheden"
+    ]
    },
    {
     "code": "M000659",
@@ -750,7 +1138,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Uitvoering ICT-veiligheidswerkzaamheden"
+    ]
    },
    {
     "code": "M008329",
@@ -758,7 +1150,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Phishing‐ of spoofing‐aanval (oplichting via link in e‐mail, telefoongesprek of sms)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "M008330",
@@ -766,7 +1163,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "(D)DoS‐aanval waarbij een website of server wordt overspoeld met een reeks bots, of een botnet waardoor de website of server overbelast en onbereikbaar wordt.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "M008331",
@@ -774,7 +1176,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Datalek of datamanipulatie (gegevens liggen op straat)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "M008332",
@@ -782,7 +1189,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Gehackt socialemedia-account (accounts zijn gecompromitteerd)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "M008333",
@@ -790,7 +1202,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "BEC‐fraude (Business E‐mail Compromise). Een vorm van phishing waarbij een gehackt email adres wordt gebruikt om om geld of gevoelige bedrijfsinformatie te bemachtigen.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "M008334",
@@ -798,7 +1215,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Andere (cyber)incidenten",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Type ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "D005204_1",
@@ -806,7 +1228,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven waarbij één of meerdere onbedoelde ICT-veiligheidsincidenten zijn voorgevallen in 2024, zoals incidenten door onopzettelijk toedoen van eigen personeel of incidenten door een hardware of systeemfout.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "D000569_1",
@@ -814,7 +1240,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven waarbij in 2024 één of meerdere ICT-veiligheidsincidenten veroorzaakt door een aanval van buitenaf zijn voorgevallen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "D000800_1",
@@ -822,7 +1252,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven waarbij één of meerdere ICT-veiligheidsincidenten zoals een storing in hardware of software zijn opgetreden in 2024. Een aanval door kwaadwillenden valt hier niet onder.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met interne oorzaak"
+    ]
    },
    {
     "code": "D000824_1",
@@ -830,7 +1265,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Vernietiging of verminking van data als gevolg van ICT-gerelateerde veiligheidsincidenten (bijv. een storing in hardware of software)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met interne oorzaak"
+    ]
    },
    {
     "code": "D000678_1",
@@ -838,7 +1278,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Onthulling van vertrouwelijke digitale gegevens door onopzettelijk toedoen van eigen personeel",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met interne oorzaak"
+    ]
    },
    {
     "code": "D000799_1",
@@ -846,7 +1291,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Uitval van ICT-diensten als gevolg van een aanval van buitenaf, bijvoorbeeld DoS (Denial of Service) of ransomware-aanvallen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met externe oorzaak"
+    ]
    },
    {
     "code": "D000825_1",
@@ -854,7 +1304,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Vernietiging of verminking van data als gevolg van infectie met kwaadaardige software of ongeoorloofde elektronische toegang",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met externe oorzaak"
+    ]
    },
    {
     "code": "D000677_1",
@@ -862,7 +1317,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Onthulling vertrouwelijke digitale gegevens door inbraak, pharming of phishing",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Optreden van ICT-veiligheidsincidenten",
+     "Soort incident met externe oorzaak"
+    ]
    },
    {
     "code": "D006100_1",
@@ -870,7 +1330,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die kosten hebben gehad voor één of meerdere ICT-veiligheidsincidenten in 2024 veroorzaakt door onopzettelijk toedoen van eigen personeel.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "D000614_1",
@@ -878,7 +1342,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die in 2024 kosten hebben gehad door één of meerdere ICT-veiligheidsincidenten veroorzaakt door een aanval van buitenaf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten"
+    ]
    },
    {
     "code": "D000800_2",
@@ -886,7 +1354,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door uitval van ICT-diensten als gevolg van ICT-gerelateerde veiligheidsincidenten, zoals een storing in hardware of software",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort intern incident"
+    ]
    },
    {
     "code": "D000824_2",
@@ -894,7 +1367,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door vernietiging of verminking van data als gevolg van ICT-gerelateerde veiligheidsincidenten, zoals een storing in hardware of software storing in hardware of software",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort intern incident"
+    ]
    },
    {
     "code": "D000678_2",
@@ -902,7 +1380,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door onthulling van vertrouwelijke digitale gegevens door onopzettelijk toedoen van eigen personeel.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort intern incident"
+    ]
    },
    {
     "code": "D000799_2",
@@ -910,7 +1393,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door uitval van ICT-diensten als gevolg van een aanval van buitenaf, bijvoorbeeld DoS (Denial of Service) of ransomware-aanvallen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort extern incident"
+    ]
    },
    {
     "code": "D000825_2",
@@ -918,7 +1406,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door vernietiging of verminking van data als gevolg van infectie met kwaadaardige software of door ongeoorloofde elektronische toegang",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort extern incident"
+    ]
    },
    {
     "code": "D000677_2",
@@ -926,7 +1419,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Kosten door onthulling van vertrouwelijke digitale gegevens door inbraak, pharming of phishing",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Kosten ICT-veiligheidsincidenten",
+     "Kosten gehad naar soort extern incident"
+    ]
    },
    {
     "code": "M007871",
@@ -934,7 +1432,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijf heeft in 2024 een ransomware-aanval gehad.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Ransomware-aanval door cybercriminelen"
+    ]
    },
    {
     "code": "M008195",
@@ -942,7 +1444,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Ransomware-aanval waarbij bestanden of ICT‐systemen van het bedrijf door cybercriminelen door middel van encryptie geblokkeerd zijn om alleen na betaling van losgeld weer vrij te geven",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Ransomware-aanval door cybercriminelen",
+     "Soort ransomware-aanval gehad"
+    ]
    },
    {
     "code": "M008335",
@@ -950,7 +1457,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Ransomware-aanval waarbij bestanden met informatie (bedrijfsinformatie, klanten- of personeelsgegeven) gestolen zijn met als doel het bedrijf te dwingen een afpersbedrag te betalen om te voorkomen dat de informatie openbaar gemaakt wordt.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Ransomware-aanval door cybercriminelen",
+     "Soort ransomware-aanval gehad"
+    ]
    },
    {
     "code": "D005800",
@@ -958,7 +1470,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijf verzekerd voor ICT-veiligheidsincidenten",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid"
+    ]
    },
    {
     "code": "M001477",
@@ -966,7 +1481,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die bekend zijn met het Digital Trust Center (DTC) en/of één van de daaraan verbonden samenwerkingsverbanden op het gebied van cyberweerbaarheid",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Informatiebronnen cyberdreiging",
+     "Digital Trust Center"
+    ]
    },
    {
     "code": "M002396",
@@ -974,7 +1494,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die bekend zijn met het DTC en de DTC-website als bron van informatie gebruiken om het bedrijf meer cyberweerbaar te maken",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Informatiebronnen cyberdreiging",
+     "Digital Trust Center"
+    ]
    },
    {
     "code": "D005386",
@@ -982,7 +1507,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die actief op zoek zijn naar meldingen over cyberdreigingen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT-veiligheid",
+     "Informatiebronnen cyberdreiging"
+    ]
    },
    {
     "code": "M002310_2",
@@ -990,7 +1519,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die in 2024 orders ontvingen voor goederen/diensten via website of app",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps"
+    ]
    },
    {
     "code": "M008201_1",
@@ -998,7 +1531,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van fysieke goederen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M008202_1",
@@ -1006,7 +1544,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van digitaal geleverde goederen of diensten. Bijvoorbeeld e‐books, software als downloads, streamingdiensten voor films of muziek, clouddiensten, telecommunicatiediensten, of een dienst voor het maken of onderhouden van websites.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M008203_1",
@@ -1014,7 +1557,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop van diensten die niet digitaal worden geleverd. Bijvoorbeeld accommodatie, reizen, onderhouds‐ of reparatiediensten.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M000610_1",
@@ -1022,7 +1570,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers in Nederland",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "M000608_1",
@@ -1030,7 +1583,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers in andere EU-landen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "M000609_1",
@@ -1038,7 +1596,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop aan afnemers buiten de EU",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "D000846",
@@ -1046,7 +1609,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop via website/apps van het eigen bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar eigenaar van website of app"
+    ]
    },
    {
     "code": "M005595_1",
@@ -1054,7 +1622,12 @@
     "unit": "% van omzet via website/app",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via website/apps behaald uit de verkoop via website/apps van een ander bedrijf, oftewel een online platform (voorbeelden: booking.com, bol.com, thuisbezorgd.nl, kieskeurig.nl, werkspot.nl)",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Omzet naar eigenaar van website of app"
+    ]
    },
    {
     "code": "D000074_1",
@@ -1062,7 +1635,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000068_1",
@@ -1070,7 +1648,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000070_1",
@@ -1078,7 +1661,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000072_1",
@@ -1086,7 +1674,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000069_1",
@@ -1094,7 +1687,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000071_1",
@@ -1102,7 +1700,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "D000073_1",
@@ -1110,7 +1713,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die verkopen via een website/app en waarvan de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via website of apps",
+     "Verdeling van omzet via website of apps"
+    ]
    },
    {
     "code": "M000811_2",
@@ -1118,7 +1726,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die in 2024 gebruikmaakten van websites, apps en/of EDI om goederen en/of diensten te verkopen. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce"
+    ]
    },
    {
     "code": "D000074_2",
@@ -1126,7 +1738,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000068_2",
@@ -1134,7 +1751,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000070_2",
@@ -1142,7 +1764,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000072_2",
@@ -1150,7 +1777,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000069_2",
@@ -1158,7 +1790,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000071_2",
@@ -1166,7 +1803,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D000073_2",
@@ -1174,7 +1816,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via websites, apps en/of EDI en waarbij de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via e-commerce",
+     "Verdeling van omzet"
+    ]
    },
    {
     "code": "D007783",
@@ -1182,7 +1829,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via online platforms",
+     "Aantal platforms gebruikt"
+    ]
    },
    {
     "code": "D007784",
@@ -1190,7 +1842,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via online platforms",
+     "Aantal platforms gebruikt"
+    ]
    },
    {
     "code": "D007785",
@@ -1198,7 +1855,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via online platforms",
+     "Aantal platforms gebruikt"
+    ]
    },
    {
     "code": "M007861",
@@ -1206,7 +1868,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Percentage van bedrijven met meer dan twee online platformen in 2024, waarbij meer dan drie kwart van de omzet via online platformen uit slechts één platform kwam",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via online platforms"
+    ]
    },
    {
     "code": "M007982",
@@ -1214,7 +1880,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die in 2024 aan één of meer online platform(en) hebben betaald voor het gebruik van hun bemiddelingsdiensten",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via online platforms"
+    ]
    },
    {
     "code": "M000812_2",
@@ -1222,7 +1892,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Bedrijven die in 2024 orders voor goederen/diensten ontvingen via EDI",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI"
+    ]
    },
    {
     "code": "M008201_2",
@@ -1230,7 +1904,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van fysieke goederen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M008202_2",
@@ -1238,7 +1917,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van digitaal geleverde goederen of diensten. Bijvoorbeeld e‐books, software als downloads, streamingdiensten voor films of muziek, clouddiensten, telecommunicatiediensten, een dienst voor het maken of onderhouden van websites",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M008203_2",
@@ -1246,7 +1930,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop van diensten die niet digitaal worden geleverd. Bijvoorbeeld accommodatie, reizen, onderhouds‐ of reparatiediensten.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar type goederen/diensten"
+    ]
    },
    {
     "code": "M000610_2",
@@ -1254,7 +1943,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers in Nederland",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "M000608_2",
@@ -1262,7 +1956,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers in andere EU-landen",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "M000609_2",
@@ -1270,7 +1969,12 @@
     "unit": "% van omzet via EDI",
     "decimals": 0,
     "description": "Gemiddelde percentage van de omzet via EDI behaald uit de verkoop aan afnemers buiten de EU",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Omzet naar regio"
+    ]
    },
    {
     "code": "D000074_3",
@@ -1278,7 +1982,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet minder is dan 1% maar meer dan 0% van de totale omzet van het bedrijf. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000068_3",
@@ -1286,7 +1995,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 1% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000070_3",
@@ -1294,7 +2008,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 2% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000072_3",
@@ -1302,7 +2021,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 5% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000069_3",
@@ -1310,7 +2034,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 10% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000071_3",
@@ -1318,7 +2047,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 25% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "D000073_3",
@@ -1326,7 +2060,12 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het gaat om bedrijven die verkopen via EDI en waarbij de waarde van die omzet 50% of meer bedraagt van de totale omzet van het bedrijf in 2024. Met EDI wordt hier bedoeld: het zenden of ontvangen van informatie in een afgesproken format dat automatische verwerking mogelijk maakt, bijvoorbeeld EDIFACT, XML, UBL, XBRL.",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "E-commerce in 2024",
+     "Verkoop via EDI",
+     "Verdeling van omzet via EDI"
+    ]
    },
    {
     "code": "M008337",
@@ -1334,7 +2073,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het bedrijf gebruikt ICT-systemen of -oplossingen om het energieverbruik te verminderen, het gebruikte materiaal te verminderen, of het gebruik van gerecyclede materialen te vergroten",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT en het milieu"
+    ]
    },
    {
     "code": "D000822",
@@ -1342,7 +2084,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "ICT-systemen of -oplossingen om het energieverbruik te verminderen. Voorbeelden: geautomatiseerd systeem dat de energie‐efficiëntie van machines verbetert, slimme thermostaat om het energieverbruik te monitoren, controleren en optimaliseren, slimme verlichtingssystemen, bewakings‐ of controlesysteem op afstand om het energieverbruik te beheren, systemen om afwijkend verbruik, spanningspieken of andere non‐conformiteiten te detecteren",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT en het milieu",
+     "Soort gebruikte ICT-oplossingen"
+    ]
    },
    {
     "code": "M008339",
@@ -1350,7 +2096,11 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "ICT-systemen of -oplossingen om  het gebruikte materiaal (inclusief verbruiksartikelen) te verminderen of het gebruik van gerecyclede materialen te vergroten. Voorbeelden: computerondersteund ontwerp dat het materiaalgebruik optimaliseert, 3D‐printen voor materiaalefficiëntie, monitoringsystemen ter ondersteuning van voorspellend onderhoud van bedrijfsmiddelen, stroomsensor om het waterverbruik te verminderen en ERP‐systemen voor het minimaliseren van overvoorraden en het verminderen van materiaalverspilling",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT en het milieu",
+     "Soort gebruikte ICT-oplossingen"
+    ]
    },
    {
     "code": "M008340",
@@ -1358,7 +2108,10 @@
     "unit": "% van bedrijven",
     "decimals": 0,
     "description": "Het percentage bedrijven dat de impact van hun ICT-systemen of -oplossingen op het energie- en/of materiaalverbruik monitort of kwantificeert. Voorbeelden: vergelijken van het energieverbruik, de hoeveelheid productieafval en de energiefactuur met en zonder ICT-systemen of -oplossingen op het energie- en/of materiaalverbruik",
-    "dataType": "Integer"
+    "dataType": "Integer",
+    "groupPath": [
+     "ICT en het milieu"
+    ]
    }
   ],
   "modified": "2025-12-12T06:30:00+01:00"

@@ -15,6 +15,7 @@ import { findGrandTotal, resolveBreakdowns, type BreakdownDimension } from '../.
 import {
   validateTableParseOutput,
   TABLE_PARSE_NOT_NAMED,
+  TABLE_PARSE_SCHEMA_VERSION,
   type TableParseResult,
 } from '../../../src/answer/table-parse/parse.ts';
 import { namedFromParse } from '../../../src/answer/table-parse/bridge.ts';
@@ -200,7 +201,7 @@ describe('namedFromParse', () => {
 
 function cannedJson(input: TableParseSchema, measureCode: string, choices: Record<string, string> = {}): string {
   return JSON.stringify({
-    version: 1,
+    version: TABLE_PARSE_SCHEMA_VERSION,
     measureCode,
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: choices[b.name] ?? TABLE_PARSE_NOT_NAMED })),
     period: { kind: 'year', year: 2019 },

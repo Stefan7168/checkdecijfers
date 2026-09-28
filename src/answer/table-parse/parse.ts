@@ -66,12 +66,17 @@ import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from '.
 export const TABLE_PARSE_MODEL = 'claude-haiku-4-5';
 
 /** Documentation constant — the re-record is forced by the prompt BYTES
- * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION). */
-export const TABLE_PARSE_PROMPT_VERSION = 1;
+ * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION).
+ * Bumped to 2 (breadth step 4b, Task 2): the prompt now describes measure
+ * groups and shows a `groep:` line per measure. */
+export const TABLE_PARSE_PROMPT_VERSION = 2;
 
 /** Bumped whenever the output contract shape changes (forces a fixture
- * re-record) — mirrors MEASURE_FIT_SCHEMA_VERSION. */
-export const TABLE_PARSE_SCHEMA_VERSION = 1;
+ * re-record) — mirrors MEASURE_FIT_SCHEMA_VERSION. Bumped to 2 alongside
+ * TABLE_PARSE_PROMPT_VERSION (breadth step 4b, Task 2) — the output schema's
+ * `version` literal below moves with it, so a fixture recorded against the
+ * old (ungrouped) prompt is rejected rather than silently accepted. */
+export const TABLE_PARSE_SCHEMA_VERSION = 2;
 
 /** The literal the model answers when no measure in the table answers the
  * question. Kept out of the measure allowlist check by construction. */
@@ -243,11 +248,27 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
   }
 }
 
-/** What the model sees of a measure — the serialization's own title, unit
- * and condensed description. Two offered measures with the same fingerprint
- * are indistinguishable to the model (final-review F4). */
+/** The unit exactly as the prompt displays it (serializeTableParseInput's own
+ * "eenheid=" fallback) — used by the fingerprint below so two measures that
+ * both show as "onbekend" (both '') are correctly treated as sharing a unit,
+ * not compared on the raw (possibly different) underlying string. */
+function displayUnit(m: TableParseMeasure): string {
+  return m.unit || 'onbekend';
+}
+
+/** What the model sees of a measure — its group path (breadth step 4b, Task
+ * 2), the serialization's own title, displayed unit and condensed
+ * description. Two offered measures with the same fingerprint are
+ * indistinguishable to the model (final-review F4): CBS's own measure group
+ * is part of that judgment now, since it is part of what the prompt shows —
+ * measured against the live 80590ned fixture, its four
+ * "Niet-seizoengecorrigeerd" / "x 1000" / empty-description measures each
+ * sit in a DIFFERENT CBS measure group ("Beroepsbevolking", "Werkzame
+ * beroepsbevolking", "Werkloze beroepsbevolking", "Niet-beroepsbevolking"),
+ * so they are no longer indistinguishable once the group is part of the
+ * fingerprint. */
 function measureFingerprint(m: TableParseMeasure): string {
-  return JSON.stringify([m.title, m.unit, condense(m.description)]);
+  return JSON.stringify([m.groupPath, m.title, displayUnit(m), condense(m.description)]);
 }
 
 /** Only a member whose CODE carries a CBS region prefix counts as a place
@@ -506,6 +527,7 @@ MAAT
 - Kies precies één measureCode, LETTERLIJK overgenomen uit de matenlijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'.
 - Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment ("hoeveel zijn er"), een in- of uitstroom of verandering ("hoeveel kwamen erbij"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet, beantwoordt de vraag NIET.
 - Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt.
+- Maten kunnen gegroepeerd zijn (zie "groep:" bij de maat); de groep vertelt bij welke populatie of grootheid de maat hoort — twee maten met dezelfde titel in een verschillende groep meten dus iets anders.
 
 UITSPLITSINGEN
 Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:
@@ -542,7 +564,7 @@ OVERIG
 - derivation: 'none' voor een gewone opvraging, 'difference' voor een expliciete veranderingsvraag met bedrag, 'max' voor een vraag naar het hoogste/meeste, 'series' voor een ontwikkeling over een periode.
 - confidence is een getal tussen 0 en 1 en moet eerlijk zijn: hoog alleen bij een duidelijke, ondubbelzinnige match tussen de vraag en je keuzes.
 - reading: één korte Nederlandse zin die je keuzes samenvat.
-- version is altijd 1.
+- version is altijd 2.
 
 Antwoord uitsluitend met JSON volgens het opgegeven schema.`;
 
@@ -573,8 +595,9 @@ export function serializeTableParseInput(question: string, input: TableParseSche
   const measureLines = input.measures.map((m, i) => {
     const blurb = condense(m.description);
     return (
-      `${i + 1}. measureCode=${m.code} | eenheid=${m.unit || 'onbekend'}\n` +
+      `${i + 1}. measureCode=${m.code} | eenheid=${displayUnit(m)}\n` +
       `   titel: ${m.title}` +
+      (m.groupPath.length > 0 ? `\n   groep: ${m.groupPath.join(' › ')}` : '') +
       (blurb ? `\n   omschrijving: ${blurb}` : '')
     );
   });

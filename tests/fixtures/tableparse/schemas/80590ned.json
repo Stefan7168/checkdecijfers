@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:27:01.886Z",
+ "fetchedAt": "2026-09-28T18:39:30.307Z",
  "schema": {
   "tableId": "80590ned",
   "title": "Arbeidsdeelname en werkloosheid per maand ",
@@ -27,7 +27,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Beroepsbevolking"
+    ]
    },
    {
     "code": "D002308",
@@ -35,7 +38,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Beroepsbevolking"
+    ]
    },
    {
     "code": "3000795_2",
@@ -43,7 +49,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkzame beroepsbevolking"
+    ]
    },
    {
     "code": "D006409",
@@ -51,7 +60,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkzame beroepsbevolking"
+    ]
    },
    {
     "code": "3000800_2",
@@ -59,7 +71,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkloze beroepsbevolking"
+    ]
    },
    {
     "code": "D001875",
@@ -67,7 +82,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkloze beroepsbevolking"
+    ]
    },
    {
     "code": "M001906_2",
@@ -75,7 +93,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkloosheidspercentage"
+    ]
    },
    {
     "code": "M004210",
@@ -83,7 +104,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werkloosheidspercentage"
+    ]
    },
    {
     "code": "3000810_2",
@@ -91,7 +115,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Niet-beroepsbevolking"
+    ]
    },
    {
     "code": "D006394",
@@ -99,7 +126,10 @@
     "unit": "x 1000",
     "decimals": 0,
     "description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Niet-beroepsbevolking"
+    ]
    },
    {
     "code": "M001731_2",
@@ -107,7 +137,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Bruto arbeidsparticipatie"
+    ]
    },
    {
     "code": "M006335",
@@ -115,7 +148,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "Het aandeel van de seizoengecorrigeerde (werkzame en werkloze) beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Bruto arbeidsparticipatie"
+    ]
    },
    {
     "code": "M001796_2",
@@ -123,7 +159,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Netto arbeidsparticipatie"
+    ]
    },
    {
     "code": "M005036",
@@ -131,7 +170,10 @@
     "unit": "%",
     "decimals": 1,
     "description": "Het aandeel van de seizoengecorrigeerde werkzame beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Netto arbeidsparticipatie"
+    ]
    }
   ],
   "modified": "2026-09-17T06:30:00+02:00"

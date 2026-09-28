@@ -27,6 +27,7 @@ import {
   TABLE_PARSE_MEASURE_NONE,
   TABLE_PARSE_NOT_NAMED,
   TABLE_PARSE_OTHER,
+  TABLE_PARSE_SCHEMA_VERSION,
 } from '../../../src/answer/table-parse/parse.ts';
 import { requestHash } from '../../../src/answer/llm/client.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../../src/answer/llm/client.ts';
@@ -73,7 +74,7 @@ function regionlessZeroMembersInput(): TableParseSchema {
 
 function validJson(input: TableParseSchema, overrides: Record<string, unknown> = {}): string {
   const base = {
-    version: 1,
+    version: TABLE_PARSE_SCHEMA_VERSION,
     measureCode: input.measures[0]!.code,
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: TABLE_PARSE_NOT_NAMED })),
     period: { kind: 'year', year: 2023 },
@@ -115,6 +116,19 @@ describe('buildTableParseSystemPrompt', () => {
     expect(prompt).toContain(TABLE_PARSE_MEASURE_NONE);
     expect(prompt).toContain(TABLE_PARSE_NOT_NAMED);
     expect(prompt).toContain(TABLE_PARSE_OTHER);
+  });
+
+  // Breadth step 4b, Task 2 (controller ruling): the prompt must tell the
+  // model that measures are grouped, what the group means, and that two
+  // measures sharing a title in different groups measure different things —
+  // exactly what lets it use the new "groep:" line to break a tie it
+  // otherwise couldn't (e.g. 80590ned's four "Niet-seizoengecorrigeerd"
+  // measures).
+  it('explains that measures are grouped and that a shared title in a different group means a different thing', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('gegroepeerd');
+    expect(prompt).toContain('groep');
+    expect(prompt).toMatch(/dezelfde titel.*verschillende groep.*iets anders/);
   });
 
   // Fix round 1 (task review, CRITICAL): the prompt must tell the model to
@@ -203,6 +217,23 @@ describe('serializeTableParseInput', () => {
     expect(mixedText).toContain('JJ (jaar)');
     expect(mixedText).toContain('KW (kwartaal)');
     expect(mixedText).toContain('MM (maand)');
+  });
+
+  // Breadth step 4b, Task 2: the "groep:" line shows CBS's own measure group
+  // (root › … › leaf), and is OMITTED entirely for a measure with no group —
+  // never a "groep: " line with nothing after it.
+  it('shows "groep: <root>" for a grouped measure, and omits the line for an ungrouped one', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const input = buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen waren er?');
+    const text = serializeTableParseInput('Hoeveel werklozen waren er?', input);
+    expect(text).toContain('measureCode=D002308');
+    expect(text).toContain('groep: Beroepsbevolking');
+    expect(text).toContain('groep: Werkloze beroepsbevolking');
+
+    const ungrouped = landbouwInput();
+    expect(ungrouped.measures.every((m) => m.groupPath.length === 0)).toBe(true);
+    const ungroupedText = serializeTableParseInput(LANDBOUW_QUESTION, ungrouped);
+    expect(ungroupedText).not.toContain('groep:');
   });
 });
 
@@ -488,6 +519,21 @@ describe('validateTableParseOutput — confidence, JSON, schema', () => {
   it('an extra, unrecognized field throws (strictObject)', () => {
     const input = landbouwInput();
     expect(() => validateTableParseOutput(validJson(input, { extra: 'nope' }), input)).toThrow(
+      TableParseValidationError,
+    );
+  });
+
+  // Breadth step 4b, Task 2: version bumped to 2 (the prompt now shows
+  // measure groups) — a fixture recorded against the OLD (ungrouped) prompt
+  // must never be silently accepted as if it answered the new one.
+  it(`accepts the current version literal (${TABLE_PARSE_SCHEMA_VERSION})`, () => {
+    const input = landbouwInput();
+    expect(() => validateTableParseOutput(validJson(input, { version: TABLE_PARSE_SCHEMA_VERSION }), input)).not.toThrow();
+  });
+
+  it('rejects the previous version literal (1)', () => {
+    const input = landbouwInput();
+    expect(() => validateTableParseOutput(validJson(input, { version: 1 }), input)).toThrow(
       TableParseValidationError,
     );
   });
@@ -844,25 +890,37 @@ describe("validateTableParseOutput — 'geen' short-circuits the region checks (
 describe('validateTableParseOutput — indistinguishable measures (F4)', () => {
   // 80590ned: four measures share title "Niet-seizoengecorrigeerd", unit
   // "x 1000" and an empty description (3000790_2, 3000795_2, 3000800_2,
-  // 3000810_2) — nothing the model sees tells them apart.
+  // 3000810_2). Before groupPath existed, NOTHING the model saw told them
+  // apart. Breadth step 4b, Task 2, measured against the live-refreshed
+  // fixture: CBS itself files each of the four under a DIFFERENT measure
+  // group ("Beroepsbevolking", "Werkzame beroepsbevolking", "Werkloze
+  // beroepsbevolking", "Niet-beroepsbevolking") — so the group, now part of
+  // the fingerprint, resolves what used to be a real ambiguity. Checked
+  // across all 10 fixture tables (extract-tableparse-schemas re-run): this
+  // was the ONLY set of same-(title, unit, description) measures anywhere in
+  // the fixtures, and it is fully resolved by group — none of the 8 eligible
+  // tables has a real ambiguous-measure case left (see
+  // benchmark/tableparse-labelled-set.json's own note on
+  // 'ambiguous-arbeid-werklozen').
   function arbeidInput(): TableParseSchema {
     const { schema, codeLists } = loadFixture('80590ned');
     return buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen waren er in 2021 (niet seizoengecorrigeerd)?');
   }
 
-  it('fixture fact: the four x 1000 non-adjusted measures are identical in title, unit and description', () => {
+  it('fixture fact: the four x 1000 non-adjusted measures share title/unit/description but now carry DISTINCT groups', () => {
     const input = arbeidInput();
     const group = input.measures.filter((m) => ['3000790_2', '3000795_2', '3000800_2', '3000810_2'].includes(m.code));
     expect(group).toHaveLength(4);
     expect(new Set(group.map((m) => `${m.title}|${m.unit}|${m.description}`)).size).toBe(1);
+    expect(new Set(group.map((m) => JSON.stringify(m.groupPath))).size).toBe(4);
   });
 
-  it('choosing one of several indistinguishable measures throws TableParseAmbiguousMeasureError', () => {
+  it('groupPath now distinguishes them: choosing any one of the four no longer throws', () => {
     const input = arbeidInput();
-    const json = jsonWith(input, {}, { measureCode: '3000790_2' });
-    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseAmbiguousMeasureError);
-    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
-    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+    for (const code of ['3000790_2', '3000795_2', '3000800_2', '3000810_2']) {
+      const json = jsonWith(input, {}, { measureCode: code });
+      expect(validateTableParseOutput(json, input).measureCode).toBe(code);
+    }
   });
 
   it('a measure whose description sets it apart is accepted (M006335)', () => {
@@ -875,6 +933,83 @@ describe('validateTableParseOutput — indistinguishable measures (F4)', () => {
     const input = arbeidInput();
     const json = jsonWith(input, {}, { measureCode: TABLE_PARSE_MEASURE_NONE });
     expect(validateTableParseOutput(json, input).measureCode).toBeNull();
+  });
+
+  // Synthetic: the guard must still fire when two offered measures are
+  // TRULY identical — same group, title, unit AND description — since no
+  // real fixture table currently has that shape (see the fixture-fact test
+  // above). This is what proves the guard itself was widened to include
+  // groupPath, not silently disabled.
+  it('two measures with the SAME group, title, unit and description still throw (synthetic)', () => {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN03',
+      title: 'Synthetische tabel met twee identieke maten',
+      dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
+      measures: [
+        {
+          code: 'M1',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+        {
+          code: 'M2',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+      ],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const input = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const json = jsonWith(input, {}, { measureCode: 'M1' });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseAmbiguousMeasureError);
+  });
+
+  // Synthetic counterpart, isolated from any real-fixture drift: same
+  // title/unit/description but a DIFFERENT group does not throw.
+  it('two measures with the SAME title/unit/description but a DIFFERENT group do not throw', () => {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN04',
+      title: 'Synthetische tabel met twee gelijke maten in verschillende groepen',
+      dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
+      measures: [
+        {
+          code: 'M1',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+        {
+          code: 'M2',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep B'],
+        },
+      ],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const input = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const json = jsonWith(input, {}, { measureCode: 'M1' });
+    expect(validateTableParseOutput(json, input).measureCode).toBe('M1');
   });
 });
 

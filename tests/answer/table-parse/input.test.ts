@@ -62,7 +62,7 @@ describe('buildTableParseSchema — measure filtering', () => {
     ]);
     const result = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
     expect(result.measures).toEqual([
-      { code: 'M1', title: 'Aantal', unit: 'x 1', description: 'een telling' },
+      { code: 'M1', title: 'Aantal', unit: 'x 1', description: 'een telling', groupPath: [] },
     ]);
   });
 
@@ -92,6 +92,22 @@ describe('buildTableParseSchema — measure filtering', () => {
     expect(() => buildTableParseSchema(schema, withoutTime, 'irrelevante vraag')).toThrow(
       TableParseIneligibleTableError,
     );
+  });
+
+  // Breadth step 4b, Task 2 — groupPath is carried straight from CbsMeasure
+  // through to TableParseMeasure. 80590ned's own measures are grouped
+  // (measured against the live-refreshed fixture): D002308
+  // "Seizoengecorrigeerd" sits in group "Beroepsbevolking", its sibling
+  // D006409 (same title, same unit, same description) sits in
+  // "Werkzame beroepsbevolking" — a DIFFERENT group.
+  it('carries a real CBS measure group path through from the fixture', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const result = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const d002308 = result.measures.find((m) => m.code === 'D002308');
+    const d006409 = result.measures.find((m) => m.code === 'D006409');
+    expect(d002308?.groupPath).toEqual(['Beroepsbevolking']);
+    expect(d006409?.groupPath).toEqual(['Werkzame beroepsbevolking']);
+    expect(d002308?.title).toBe(d006409?.title);
   });
 });
 
