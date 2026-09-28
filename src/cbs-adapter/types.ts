@@ -43,6 +43,25 @@ export interface CbsMeasure {
    * servable (breadth step 2 constraints: text measures like `code`, `naam`,
    * `omschrijving` are excluded from ingestion). */
   dataType: string;
+  /**
+   * CBS's own MeasureGroups titles, root -> leaf, verbatim (breadth step 4b,
+   * Task 1). Resolved from the measure's `MeasureGroupId` by walking
+   * `MeasureGroups`' `ParentId` chain up to the root. `[]` when CBS has no
+   * group for the measure, or the table publishes no `MeasureGroups` at all,
+   * or a `MeasureGroupId` points at a group CBS never listed (the walk stops
+   * at whatever was resolved so far — never guessed, principle c). A
+   * `ParentId` cycle stops at the first repeated id rather than looping
+   * forever. Distinguishes measures that otherwise share a bare title (e.g.
+   * every "Seizoengecorrigeerd" measure in a table like 80590ned) by the
+   * group CBS files them under — see src/answer/table-parse for the prompt
+   * line this feeds. NOT part of the schema fingerprint (fingerprint.ts
+   * hashes measure CODES only) and NEVER persisted: `unitsFromMeasures`
+   * (src/ingestion/pipeline.ts) copies named fields only, so `groupPath`
+   * never reaches `cbs_tables.units` or any other stored registry state —
+   * it is carried in memory for the current parse/prompt-build only. The
+   * Eurostat adapter (no measure-groups concept) always sets `[]`.
+   */
+  groupPath: string[];
 }
 
 export interface CbsTableSchema {

@@ -105,7 +105,7 @@ function baseTable(): FakeTable {
         { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
         { name: 'RegioS', kind: 'GeoDimension', title: "Regio's" },
       ],
-      measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+      measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '', groupPath: [] }],
       modified: null,
     },
     codes: {

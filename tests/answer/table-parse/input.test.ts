@@ -57,8 +57,8 @@ describe('buildTableParseSchema — measure filtering', () => {
 
   it('excludes a String-typed measure, keeps the numeric one', () => {
     const { schema, codeLists } = syntheticSchema([
-      { code: 'M1', title: 'Aantal', unit: 'x 1', decimals: 0, description: 'een telling', dataType: 'Double' },
-      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String' },
+      { code: 'M1', title: 'Aantal', unit: 'x 1', decimals: 0, description: 'een telling', dataType: 'Double', groupPath: [] },
+      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String', groupPath: [] },
     ]);
     const result = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
     expect(result.measures).toEqual([
@@ -68,7 +68,7 @@ describe('buildTableParseSchema — measure filtering', () => {
 
   it('throws when a table has no numeric measure at all (never offered)', () => {
     const { schema, codeLists } = syntheticSchema([
-      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String' },
+      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String', groupPath: [] },
     ]);
     expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow(
       TableParseIneligibleTableError,

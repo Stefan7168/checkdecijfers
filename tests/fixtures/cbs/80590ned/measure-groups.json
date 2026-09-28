@@ -1,0 +1,47 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80590ned/$metadata#MeasureGroups",
+ "value": [
+  {
+   "Id": "3000790_1",
+   "Index": 3,
+   "Title": "Beroepsbevolking",
+   "ParentId": null
+  },
+  {
+   "Id": "3000795_1",
+   "Index": 6,
+   "Title": "Werkzame beroepsbevolking",
+   "ParentId": null
+  },
+  {
+   "Id": "3000800_1",
+   "Index": 9,
+   "Title": "Werkloze beroepsbevolking",
+   "ParentId": null
+  },
+  {
+   "Id": "M001906_1",
+   "Index": 12,
+   "Title": "Werkloosheidspercentage",
+   "ParentId": null
+  },
+  {
+   "Id": "3000810_1",
+   "Index": 15,
+   "Title": "Niet-beroepsbevolking",
+   "ParentId": null
+  },
+  {
+   "Id": "M001731_1",
+   "Index": 18,
+   "Title": "Bruto arbeidsparticipatie",
+   "ParentId": null
+  },
+  {
+   "Id": "M001796_1",
+   "Index": 21,
+   "Title": "Netto arbeidsparticipatie",
+   "ParentId": null
+  }
+ ]
+}

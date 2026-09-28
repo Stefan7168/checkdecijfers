@@ -22,7 +22,7 @@ const NATIONAL_ONLY_SCHEMA: CbsTableSchema = {
   tableId: 'X',
   title: 'X',
   dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
-  measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+  measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '', groupPath: [] }],
   modified: null,
 };
 
@@ -33,7 +33,7 @@ const GEO_SCHEMA: CbsTableSchema = {
     { name: 'RegioS', kind: 'GeoDimension', title: "Regio's" },
     { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
   ],
-  measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+  measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '', groupPath: [] }],
   modified: null,
 };
 
@@ -105,7 +105,7 @@ describe('estimateSlice — over the cap', () => {
       tableId: 'Z',
       title: 'Z',
       dimensions: [{ name: 'SomeDim', kind: 'Dimension', title: 'SomeDim' }],
-      measures: [{ code: 'M1', title: 'M1', unit: 'x', decimals: 0, description: '', dataType: '' }],
+      measures: [{ code: 'M1', title: 'M1', unit: 'x', decimals: 0, description: '', dataType: '', groupPath: [] }],
       modified: null,
     };
     const codeLists = { SomeDim: Array.from({ length: 200_000 }, (_, i) => code(`c${i}`)) };

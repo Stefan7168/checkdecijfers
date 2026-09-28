@@ -930,7 +930,7 @@ describe('validateTableParseOutput — only region-coded members count as places
         { name: 'Geboorteland', kind: 'Dimension', title: 'Geboorteland' },
         { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
       ],
-      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long' }],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
       modified: null,
     };
     const codeLists: Record<string, CbsCode[]> = {

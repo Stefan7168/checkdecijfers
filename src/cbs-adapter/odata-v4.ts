@@ -16,6 +16,7 @@ import {
   parseCatalogPage,
   parseCodes,
   parseDimensions,
+  parseMeasureGroups,
   parseMeasures,
   parseObservationsPage,
 } from './parse-v4.ts';
@@ -105,11 +106,45 @@ export class ODataV4Source implements CbsSource {
     );
   }
 
+  /**
+   * Fetches a metadata document, but normalizes an HTTP 404 to "no rows"
+   * (`{ value: [] }`) instead of throwing — for `MeasureGroups`, which many
+   * CBS tables simply don't publish (breadth step 4b, Task 1). Any OTHER
+   * failure (after retries) behaves exactly like `fetchJson`: it throws.
+   */
+  private async fetchJsonOptional(url: string): Promise<unknown> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (res.ok) return await res.json();
+        if (res.status === 404) return { value: [] };
+        lastError = new Error(
+          `CBS OData request failed: ${res.status} ${res.statusText} for ${url}`,
+        );
+      } catch (err) {
+        lastError = err;
+      }
+      if (attempt < FETCH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+      }
+    }
+    throw new Error(
+      `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`,
+    );
+  }
+
   async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
-    const [properties, dimensionsRaw, measuresRaw] = await Promise.all([
+    const [properties, dimensionsRaw, measuresRaw, measureGroupsRaw] = await Promise.all([
       this.fetchJson(`${BASE}/${tableId}/Properties`),
       this.fetchJson(`${BASE}/${tableId}/Dimensions`),
       this.fetchJson(`${BASE}/${tableId}/MeasureCodes`),
+      // breadth step 4b, Task 1: a 404 (table publishes no MeasureGroups) or
+      // an empty list both mean "no groups" — every measure's groupPath is
+      // []; any other failure still throws like the metadata fetches above.
+      this.fetchJsonOptional(`${BASE}/${tableId}/MeasureGroups`),
     ]);
     const props = properties as { Title?: unknown };
     if (typeof props.Title !== 'string') {
@@ -119,7 +154,7 @@ export class ODataV4Source implements CbsSource {
       tableId,
       title: props.Title,
       dimensions: parseDimensions(dimensionsRaw),
-      measures: parseMeasures(measuresRaw),
+      measures: parseMeasures(measuresRaw, parseMeasureGroups(measureGroupsRaw)),
       // breadth step 2, Task 3: the same Properties document already fetched
       // above for Title carries CBS's own 'Modified' timestamp.
       modified: optionalString(properties as Record<string, unknown>, 'Modified'),
