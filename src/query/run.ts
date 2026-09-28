@@ -157,21 +157,6 @@ async function earliestAvailablePeriod(
   return res.rows[0] ? (res.rows[0].period_code as string) : null;
 }
 
-/** Breadth step 2, Task 5: whether `tableId` is a `slice_cache` table —
- * probes for migration 037's `ingest_mode` column first (same
- * information_schema pattern as src/ingestion/eviction.ts's
- * assertLifecycleColumns and src/chart/edits-store.ts's own deploy-order
- * probe) so a database the migration has not yet reached behaves exactly as
- * today: every table reads as the implicit 'full' it has always been. */
-async function isSliceCacheTable(db: Db, tableId: string): Promise<boolean> {
-  const columnCheck = await db.query(
-    `select 1 from information_schema.columns where table_name = 'cbs_tables' and column_name = 'ingest_mode'`,
-  );
-  if (columnCheck.rows.length === 0) return false;
-  const result = await db.query('select ingest_mode from cbs_tables where id = $1', [tableId]);
-  return result.rows[0]?.ingest_mode === 'slice_cache';
-}
-
 /** One `slice_fetches` row, parsed: its normalized request filter — the same
  * `{measures, members, periods}` shape `src/ingestion/slice-cache.ts`'s
  * `SliceRequest` stores — and when CBS last confirmed it (Task 5b). */
@@ -310,9 +295,9 @@ function dateSliceCacheCells(
  * no_data (a loud gap we will not paper over). Slice refusals were already
  * handled in resolve.
  *
- * Breadth step 2, Task 5: for a `slice_cache` table (probed — a pre-037
- * database or a `full` table skips this branch entirely and keeps today's
- * exact behaviour) a missing coordinate gets its OWN diagnosis, split around
+ * Breadth step 2, Task 5: for a `slice_cache` table (per the registry row
+ * resolveIntent loaded — a pre-037 database or a `full` table skips this
+ * branch entirely and keeps today's exact behaviour) a missing coordinate gets its OWN diagnosis, split around
  * the freshness check rather than entirely before or after it:
  *  - OUTSIDE every fetched slice's filter -> `not_fetched` (its own
  *    internal/owner-alert kind), checked BEFORE freshness (fix round 1,
@@ -354,7 +339,12 @@ async function diagnoseMissing(
   // "freshest fetched" IS a real freshness fact for that slice — so it still
   // goes through freshness -> not_published below, exactly like a full table.
   //
-  // Narrow eviction race (finding 6): isSliceCacheTable and
+  // Final-review fix 3: slice-cache-ness comes from the registry row
+  // resolveIntent already loaded (`select *`, so a database migration 037
+  // has not reached reads every table as the implicit 'full' — no
+  // information_schema probe on every missing-cell diagnosis).
+  //
+  // Narrow eviction race (finding 6): resolveIntent's registry read and
   // insideAnyFetchedSlice are two separate statements; a table evicted
   // between them (cbs_tables + its slice_fetches rows deleted, same
   // FK-cascade eviction.ts already relies on) reads as `not_fetched` here
@@ -362,7 +352,7 @@ async function diagnoseMissing(
   // full table racing the same eviction — an accepted, narrow misdiagnosis
   // (same class of race the #196 comments elsewhere in this file describe),
   // not fixed here.
-  const isSliceCache = await isSliceCacheTable(db, q.tableId);
+  const isSliceCache = q.table.ingestMode === 'slice_cache';
   if (isSliceCache && !(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
     return refuse(
       q.intent,
@@ -618,7 +608,10 @@ export async function runQuery(
   // Breadth step 2, fix round 1 of Task 5b: a slice_cache table's dates live
   // in slice_fetches (checked_at), so for it — and only it — the same
   // statement also aggregates every slice_fetches row of the table (an
-  // uncorrelated scalar subquery, evaluated once). Cells and the dates that
+  // uncorrelated scalar subquery, evaluated once — narrowed to the slices
+  // whose filter names the served measure, the only ones sliceCovers can
+  // ever accept, so an answer never scans every slice of the table; final-
+  // review fix 6). Cells and the dates that
   // vouch for them are then one snapshot: a concurrent refetch that revises a
   // cell and bumps checked_at can never lend its new date to the old value.
   // For a full table `sliceSnapshotColumn` is '' and the statement is
@@ -627,7 +620,8 @@ export async function runQuery(
     q.table.ingestMode === 'slice_cache'
       ? `,
             (select json_agg(json_build_object('filter', sf.filter, 'checked_at', sf.checked_at))
-               from slice_fetches sf where sf.table_id = $1) as slice_fetches_snapshot`
+               from slice_fetches sf
+              where sf.table_id = $1 and jsonb_exists(sf.filter -> 'measures', $2)) as slice_fetches_snapshot`
       : '';
   const result = await db.query(
     `select o.region_code, o.period_code, o.value, o.unit, o.decimals, o.status, o.value_attribute,

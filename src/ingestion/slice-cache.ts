@@ -113,11 +113,12 @@ export async function registerSchemaOnly(
   }
 
   const schema = await source.fetchTableSchema(tableId);
-  const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
 
   // Controller ruling, fix round 1: a slice-cache table's ONLY freshness
   // signal is CBS's own 'Modified' date — a source that cannot state one
   // cannot be schema-only registered at all, checked before anything else.
+  // Final-review fix 5: this and the no_time_dimension refusal below need
+  // only the schema, so they run BEFORE the (per-dimension) code-list fetch.
   if (schema.modified == null || schema.modified.trim().length === 0) {
     return {
       ok: false,
@@ -140,6 +141,7 @@ export async function registerSchemaOnly(
     };
   }
 
+  const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
   const periodCodes: CbsCode[] = codeLists[periodDim.name] ?? [];
   if (periodCodes.length === 0) {
     return {
@@ -320,8 +322,10 @@ export type SchemaCheckResult =
 /** Fetches CBS's current schema for a slice-cache table (one properties
  * request — `knownSchema`, when given, skips even that: the caller already
  * has it) and decides, against the given registry snapshot, whether a
- * refresh is needed — running the SAME schema_fingerprint check either way
- * (a redesign CBS did not announce via Modified must still fail loudly), and
+ * refresh is needed — running the SAME schema_fingerprint and
+ * unit_consistency checks either way (a redesign or unit change CBS did not
+ * announce via Modified must still fail loudly, and one it did announce must
+ * never be applied), refusing a Modified OLDER than the registry's, and
  * fetching current code lists only when a refresh IS needed. Pure: no DB
  * writes, no batch bookkeeping — a caller on failure records its own batch
  * (fetchSlice already has one open; ensureSlice opens its own).
@@ -369,6 +373,24 @@ export async function checkSliceSchema(
     };
   }
   const storedModified = registry.schemaCbsModified?.getTime() ?? null;
+  // Final-review fix 4: CBS serving an OLDER 'Modified' than the one we
+  // already hold (a lagging mirror, a rollback) is an unexpected CBS state —
+  // refused loudly (principle c), never stored under either date: recording
+  // the later date would claim these cells came from a CBS version this
+  // response is not, and the earlier one would move the registry backwards.
+  // A fetch failure, not suspect data: no quarantine, nothing written.
+  if (storedModified !== null && fetchedModified < storedModified) {
+    return {
+      ok: false,
+      stage: 'fetch',
+      summary:
+        `CBS reported table "${tableId}" as last modified ${schema.modified}, OLDER than the ` +
+        `${registry.schemaCbsModified!.toISOString()} we already hold — a lagging or rolled-back CBS response. ` +
+        `Nothing is fetched or stored until CBS reports a current date again.`,
+      quarantine: false,
+      fingerprint: null,
+    };
+  }
   const refresh = storedModified === null || fetchedModified > storedModified;
 
   const numericMeasures = schema.measures.filter((m) => m.dataType !== 'String');
@@ -383,6 +405,16 @@ export async function checkSliceSchema(
   );
   if (!stage1.ok) {
     return { ok: false, stage: stage1.stage, summary: stage1.summary, quarantine: true, fingerprint };
+  }
+
+  // Final-review fix 2: the unit/decimals check lives HERE, next to the
+  // fingerprint check, so every path that may go on to apply a refresh
+  // (fetchSlice inline, ensureSlice's standalone pre-check) runs it BEFORE
+  // applySchemaRefresh rewrites the stored units — a refresh can never
+  // launder a unit change into the registry the check compares against.
+  const unitCheck = checkUnitConsistency(numericMeasures, registry.units);
+  if (!unitCheck.ok) {
+    return { ok: false, stage: unitCheck.stage, summary: unitCheck.summary, quarantine: true, fingerprint };
   }
 
   let codeLists: Record<string, CbsCode[]> | null = null;
@@ -445,17 +477,18 @@ export async function applySchemaRefresh(
  *    schema_fingerprint (quarantines), row_plausibility's duplicate /
  *    reason-less-null / string-value pieces, period_parsing (R11: every cell's
  *    status comes from its period, never guessed), dimension_mapping against
- *    the stored labels without accepting new codes (quarantines),
- *    unit_consistency against the stored units (quarantines), and finally
- *    every row must lie inside the requested coordinates.
+ *    the stored labels without accepting new codes (quarantines), and finally
+ *    every row must lie inside the requested coordinates. (unit_consistency
+ *    against the stored units — quarantines — and the refusal of a CBS
+ *    Modified OLDER than the registry's run earlier, in checkSliceSchema.)
  * 4. Store, in ONE transaction under the per-table advisory lock syncTable,
  *    eviction and resolveIntent share: optional schema refresh, the
  *    observations upsert (syncTable's own staging + upsert helpers), the batch
  *    marked succeeded, and the `slice_fetches` row upserted (its `checked_at`
  *    set to now — the date the query layer shows for this slice's cells;
  *    `cbs_tables.last_sync_at` is never written). Cells inside the
- *    request that CBS no longer returns are marked retained (#154) against
- *    the previous fetch of this same slice — never the whole table's unseen
+ *    request that CBS no longer returns are marked retained (#154), each
+ *    dated by its own last-writing batch — never the whole table's unseen
  *    cells — and `last_row_count` is never touched: a slice is not a full
  *    sync.
  *
@@ -619,18 +652,10 @@ export async function fetchSlice(
   const check = await checkSliceSchema(source, tableId, registry, opts?.schema);
   if (!check.ok) return fail(check.stage, check.summary, check.quarantine, null, check.fingerprint);
   const { schema, numericMeasures, fingerprint, codeLists } = check;
-
-  // check.ok guarantees schema.modified parsed to a readable instant.
-  const fetchedModified = toTime(schema.modified)!;
-  const storedModified = registry.schemaCbsModified?.getTime() ?? null;
-  // CBS serving an OLDER 'Modified' than the one we already hold (a lagging
-  // mirror, a rollback) never moves anything backwards: no refresh (decided
-  // by checkSliceSchema above), and the slice is recorded as current as of
-  // the later of the two dates.
-  const sliceCbsModified =
-    storedModified !== null && storedModified > fetchedModified
-      ? registry.schemaCbsModified!.toISOString()
-      : schema.modified;
+  // check.ok guarantees CBS's Modified is readable and NOT older than the
+  // registry's (an older one is refused by checkSliceSchema — final-review
+  // fix 4), so the slice is recorded as of exactly the version it came from.
+  const sliceCbsModified = schema.modified;
 
   const observationRows: CbsObservationRow[] = [];
   try {
@@ -678,8 +703,8 @@ export async function fetchSlice(
   );
   if (!stage4.ok) return fail(stage4.stage, stage4.summary, true, rowCount, fingerprint);
 
-  const stage5 = checkUnitConsistency(numericMeasures, registry.units);
-  if (!stage5.ok) return fail(stage5.stage, stage5.summary, true, rowCount, fingerprint);
+  // unit_consistency already ran inside checkSliceSchema above (final-review
+  // fix 2: shared with ensureSlice's pre-check, before any refresh).
 
   // Slice-specific: CBS must return only what was asked for. A row outside
   // the requested coordinates means the server-side filter misbehaved; storing
@@ -753,28 +778,26 @@ export async function fetchSlice(
       const corrections = await diffCorrections(tx, tableId);
 
       // #154, scoped to this request: a cell inside the requested
-      // coordinates that CBS no longer returns is kept but marked retained,
-      // dated by the previous fetch of this exact slice — the provable prior
-      // that last confirmed it. No previous fetch of this filter_key → no
-      // provable prior → nothing is marked (a cell stored by an overlapping
-      // slice is not claimed by this one's history). A cell that reappears
-      // is cleared by the upsert below.
-      const prior = await tx.query('select batch_id from slice_fetches where table_id = $1 and filter_key = $2', [
-        tableId,
-        filterKey,
-      ]);
-      const priorBatchId = prior.rows[0]?.batch_id == null ? null : Number(prior.rows[0].batch_id);
-      if (priorBatchId !== null) {
-        const geoDim = schema.dimensions.find((d) => d.kind === 'GeoDimension');
-        const dimsIn: Record<string, string[]> = {};
-        for (const dim of nonTimeDims) if (dim !== geoDim?.name) dimsIn[dim] = request.members[dim]!;
-        await markUnseenCellsRetained(tx, tableId, priorBatchId, {
-          measures: request.measures,
-          periods: request.periods,
-          regionCodes: geoDim ? request.members[geoDim.name]! : null,
-          dimsIn,
-        });
-      }
+      // coordinates that CBS no longer returns is kept but marked retained —
+      // ALWAYS, whether or not this exact filter_key was fetched before
+      // (final-review fix 1). The query layer dates a present cell by the
+      // latest checked_at of ANY covering slice, so an unmarked cell a NEW
+      // overlapping slice just failed to get back would be served as
+      // confirmed by this fetch (R4). Its last-seen batch is the cell's OWN
+      // batch_id (null prior -> `o.batch_id`): the batch that really returned
+      // its stored value — never later than CBS's last confirmation, so the
+      // date can only err older. Only still-unmarked cells are touched (the
+      // date never creeps forward); a cell that reappears is cleared by the
+      // upsert below.
+      const geoDim = schema.dimensions.find((d) => d.kind === 'GeoDimension');
+      const dimsIn: Record<string, string[]> = {};
+      for (const dim of nonTimeDims) if (dim !== geoDim?.name) dimsIn[dim] = request.members[dim]!;
+      await markUnseenCellsRetained(tx, tableId, null, {
+        measures: request.measures,
+        periods: request.periods,
+        regionCodes: geoDim ? request.members[geoDim.name]! : null,
+        dimsIn,
+      });
       const { rowsInserted, rowsUpdated } = await upsertStagedObservations(tx, tableId, batchId);
       const rowsUnchanged = staged.length - rowsInserted - rowsUpdated;
 
@@ -897,16 +920,24 @@ export async function ensureSlice(
   // cache hit below confirms the slice AS OF (never the later now() of the
   // bump itself, which would over-claim by the length of this call).
   const checkTakenAt = new Date().toISOString();
-  const check = await checkSliceSchema(source, tableId, registry);
-  if (!check.ok) {
+  // ensureSlice's own failures (no fetchSlice batch exists yet) get their own
+  // failed batch row, same bookkeeping as fetchSlice's.
+  const failOwn = async (
+    stage: FailureStage,
+    summary: string,
+    quarantine: boolean,
+    fingerprint: string | null,
+  ): Promise<SliceFetchResult> => {
     const batchInsert = await db.query(
       `insert into ingestion_batches (table_id, outcome) values ($1, 'running') returning id`,
       [tableId],
     );
     const batchId = Number(batchInsert.rows[0]!.id);
-    await failBatch(db, batchId, tableId, check.stage, check.summary, null, check.fingerprint, check.quarantine);
-    return { ok: false, stage: check.stage, summary: check.summary };
-  }
+    await failBatch(db, batchId, tableId, stage, summary, null, fingerprint, quarantine);
+    return { ok: false, stage, summary };
+  };
+  const check = await checkSliceSchema(source, tableId, registry);
+  if (!check.ok) return failOwn(check.stage, check.summary, check.quarantine, check.fingerprint);
 
   const codeLists = check.codeLists;
   if (check.refresh && codeLists) {
@@ -953,6 +984,21 @@ export async function ensureSlice(
     // just above, to be no newer than what this row already recorded.
     const stale = rowModifiedTime !== null && schemaModifiedTime !== null && rowModifiedTime < schemaModifiedTime;
     const cbsModifiedTime = toTime(check.schema.modified);
+    // Final-review fix 4, per slice: CBS's Modified OLDER than the version
+    // this slice was already stored under (a lagging mirror) must never read
+    // as "unchanged" and re-confirm it — refused like the registry-level case
+    // checkSliceSchema already refuses: stage 'fetch', no quarantine, nothing
+    // written beyond the failed batch.
+    if (cbsModifiedTime !== null && rowModifiedTime !== null && cbsModifiedTime < rowModifiedTime) {
+      return failOwn(
+        'fetch',
+        `CBS reported table "${tableId}" as last modified ${String(check.schema.modified)}, OLDER than the ` +
+          `${new Date(rowModifiedTime).toISOString()} this slice was stored under — a lagging or rolled-back ` +
+          `CBS response. Nothing is fetched, stored or re-confirmed until CBS reports a current date again.`,
+        false,
+        null,
+      );
+    }
     const cbsNewer = rowModifiedTime === null || cbsModifiedTime === null || cbsModifiedTime > rowModifiedTime;
     if (!stale && !cbsNewer) {
       // Task 5b: CBS's Modified, fetched just above, says nothing changed

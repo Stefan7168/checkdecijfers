@@ -226,10 +226,12 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     const docs = await loadDocs('83625NED');
     const corrupt = structuredClone(docs);
     delete (corrupt.properties as Record<string, unknown>).Modified;
-    const source = new FixtureSource(corrupt);
+    const { source, counter } = counting(new FixtureSource(corrupt));
 
     const result = await registerSchemaOnly(db, source, '83625NED');
 
+    // Final-review fix 5: refused on the schema alone, before any code-list fetch.
+    expect(counter.calls).toBe(1);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
     expect(result.reason).toBe('no_cbs_modified');
@@ -248,10 +250,12 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     for (const dim of dims.value) {
       if (dim.Identifier === 'Perioden') dim.Kind = 'Dimension';
     }
-    const source = new FixtureSource(corrupt);
+    const { source, counter } = counting(new FixtureSource(corrupt));
 
     const result = await registerSchemaOnly(db, source, '83625NED');
 
+    // Final-review fix 5: refused on the schema alone, before any code-list fetch.
+    expect(counter.calls).toBe(1);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
     expect(result.reason).toBe('no_time_dimension');
@@ -849,7 +853,7 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
       return rows[0]!.last_seen_batch_id == null ? null : Number(rows[0]!.last_seen_batch_id);
     }
 
-    it('a cell CBS stops returning is kept and marked retained against the previous fetch; reappearance clears it', async () => {
+    it('a cell CBS stops returning is kept and marked retained, dated by its own batch; reappearance clears it', async () => {
       const docs = await registered('83625NED');
       const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
       if (!first.ok) throw new Error('unreachable');
@@ -871,7 +875,7 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
       expect(await lastSeen('NL01', '2025JJ00')).toBeNull();
     });
 
-    it('never marks cells outside the request, nor without a previous fetch of the same slice', async () => {
+    it('marks a cell a NEW overlapping slice omits, dated by its OWN batch — and never cells outside the request', async () => {
       const docs = await registered('83625NED');
       // An unrelated slice (other period) and a wider slice both store cells.
       const other = await fetchSlice(db, new FixtureSource(docs), '83625NED', {
@@ -880,21 +884,28 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
         periods: ['2023JJ00'],
       });
       expect(other.ok).toBe(true);
-      expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+      const wideFirst = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+      if (!wideFirst.ok) throw new Error('unreachable');
 
       // A NEW, narrower slice (no previous fetch of its own key) that CBS
-      // answers without NL01 2025JJ00: no provable prior -> nothing marked.
+      // answers without NL01 2025JJ00. Final-review fix 1: it IS marked
+      // retained — otherwise the query layer would date it by this slice's
+      // fresh checked_at, a confirmation CBS never gave — and dated by the
+      // batch that really returned its stored value (the wide slice's), never
+      // by this fetch.
       const narrow: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2025JJ00'] };
       const gone = without(without(docs, 'NL01', '2025JJ00'), 'NL01', '2023JJ00');
-      expect(await fetchSlice(db, new FixtureSource(gone), '83625NED', narrow)).toMatchObject({ ok: true, rowsStored: 0 });
-      expect(await lastSeen('NL01', '2025JJ00')).toBeNull();
+      const narrowResult = await fetchSlice(db, new FixtureSource(gone), '83625NED', narrow);
+      expect(narrowResult).toMatchObject({ ok: true, rowsStored: 0 });
+      expect(await lastSeen('NL01', '2025JJ00')).toBe(wideFirst.batchId);
+      // NL01 2023JJ00, also absent from these docs but outside this request, stays unmarked.
+      expect(await lastSeen('NL01', '2023JJ00')).toBeNull();
 
-      // Re-fetching the wide slice from the same docs marks ONLY its own
-      // absent cell — NL01 2023JJ00, also absent from these docs but outside
-      // this request, stays unmarked.
+      // Re-fetching the wide slice from the same docs never creeps the date
+      // forward, and still leaves NL01 2023JJ00 (outside it) alone.
       const wide = await fetchSlice(db, new FixtureSource(gone), '83625NED', HOUSE_PRICES);
       expect(wide).toMatchObject({ ok: true, rowsStored: 3 });
-      expect(await lastSeen('NL01', '2025JJ00')).not.toBeNull();
+      expect(await lastSeen('NL01', '2025JJ00')).toBe(wideFirst.batchId);
       expect(await lastSeen('NL01', '2023JJ00')).toBeNull();
     });
 
@@ -943,20 +954,38 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
     expect(await observationRows('83625NED')).toHaveLength(0);
   });
 
-  it('CBS serving an OLDER Modified: no refresh, schema_cbs_modified never moves back, slice recorded as of the later date', async () => {
+  it('CBS serving an OLDER Modified (a lagging mirror) -> refused as a fetch failure: nothing written, no quarantine', async () => {
     const docs = await registered('83625NED');
     const before = await cbsTablesRow('83625NED');
+    const labelsBefore = await labelCount('83625NED');
     const older = structuredClone(docs);
     (older.properties as Record<string, unknown>).Modified = '2025-01-01T00:00:00+01:00';
+    const { source, counter } = counting(new FixtureSource(older));
 
-    const result = await fetchSlice(db, new FixtureSource(older), '83625NED', HOUSE_PRICES);
+    const result = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
 
-    expect(result).toMatchObject({ ok: true, rowsStored: 4 });
+    expect(result).toMatchObject({ ok: false, stage: 'fetch' });
+    if (result.ok) throw new Error('unreachable');
+    expect(result.summary).toContain('OLDER');
+    expect(counter.slices).toEqual([]); // no observations fetched
     const after = await cbsTablesRow('83625NED');
+    expect(after.status).toBe('active');
     expect(after.schema_cbs_modified).toEqual(before.schema_cbs_modified);
     expect(after.version).toEqual(before.version);
-    const recorded = new Date((await sliceFetchRows('83625NED'))[0]!.cbs_modified as string).getTime();
-    expect(recorded).toBe(new Date('2026-02-17T00:00:00+01:00').getTime());
+    expect(await labelCount('83625NED')).toBe(labelsBefore);
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+    const batches = (await db.query('select outcome, failure_stage from ingestion_batches where table_id = $1', ['83625NED'])).rows;
+    expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'fetch' }]);
+
+    // ensureSlice refuses the same way — and never treats an older Modified
+    // as "unchanged" to re-confirm an already-stored slice.
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    const sliceBefore = (await sliceFetchRows('83625NED'))[0]!;
+    const viaEnsure = await ensureSlice(db, new FixtureSource(older), '83625NED', HOUSE_PRICES);
+    expect(viaEnsure).toMatchObject({ ok: false, stage: 'fetch' });
+    expect((await sliceFetchRows('83625NED'))[0]!.checked_at).toEqual(sliceBefore.checked_at);
+    expect((await cbsTablesRow('83625NED')).status).toBe('active');
   });
 
   it('syncTable refuses a slice-cache table before fetching anything, recorded, without quarantine', async () => {
@@ -1073,42 +1102,48 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     expect(counter.calls).toBe(4);
   });
 
-  it('treats a stored slice as stale when a DIFFERENT slice already advanced schema_cbs_modified, even with NO further CBS movement of its own (isolates the stale clause from cbsNewer)', async () => {
+  it('treats a stored slice as stale when a DIFFERENT slice advanced schema_cbs_modified after its own CBS check (isolates the stale clause from cbsNewer)', async () => {
     const docs = await registered('83625NED');
     const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
     if (!first.ok) throw new Error('unreachable');
+    const sliceBefore = (await sliceFetchRows('83625NED'))[0]!;
 
-    const newer = newerWithExtraPeriod(docs);
-    // A known coordinate (already in the stored labels, so it passes
-    // fetchSlice's pre-network validation even before any refresh) fetched
-    // directly against the NEWER docs — a DIFFERENT slice that sees the
-    // newer Modified first and advances the table's schema_cbs_modified.
-    // HOUSE_PRICES's own slice_fetches row (from `first`, above) still
-    // carries the OLD cbs_modified it was fetched under.
+    // A DIFFERENT slice sees a newer CBS Modified and advances the table's
+    // schema_cbs_modified right AFTER ensureSlice's own CBS check (which saw
+    // the OLD docs, equal to HOUSE_PRICES's stored cbs_modified, so
+    // `cbsNewer` is false on its own) and before it reads its slice row.
+    // Only the `stale` clause (this row's cbs_modified is older than the
+    // table's CURRENT schema_cbs_modified) can then prevent a cache hit.
+    // (Final-review fix 4 made the old way of isolating this — calling with
+    // docs OLDER than the registry — a refused lagging-mirror response, so
+    // the advance now happens mid-call, the only way the clause is reachable
+    // on its own.)
     const otherRequest: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2024JJ00'] };
-    const other = await fetchSlice(db, new FixtureSource(newer), '83625NED', otherRequest);
-    expect(other.ok).toBe(true);
-
-    // Fix round 1 (finding 3): the ORIGINAL, OLD-Modified docs here — NOT
-    // `newer` — so CBS's current Modified (as ensureSlice sees it) is
-    // EQUAL to HOUSE_PRICES's own stored cbs_modified, making `cbsNewer`
-    // false on its own. Only the `stale` clause (this row's cbs_modified is
-    // older than the table's CURRENT schema_cbs_modified, which `other`
-    // already advanced) can explain a refetch here — the previous version of
-    // this test used `newer` for BOTH slices, which made `cbsNewer` true on
-    // its own and never actually exercised the `stale` clause at all.
+    let advanced = false;
+    const racing: Db = {
+      async query(text, params) {
+        if (!advanced && text.includes('select cbs_modified, batch_id, row_count from slice_fetches')) {
+          advanced = true;
+          const other = await fetchSlice(db, new FixtureSource(newerWithExtraPeriod(docs)), '83625NED', otherRequest);
+          expect(other.ok).toBe(true);
+        }
+        return db.query(text, params);
+      },
+      withTransaction: (fn) => db.withTransaction(fn),
+    };
     const { source, counter } = counting(new FixtureSource(docs));
-    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+    const result = await ensureSlice(racing, source, '83625NED', HOUSE_PRICES);
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error('unreachable');
-    expect(result.cached).toBeFalsy();
-    expect(counter.slices.length).toBe(1); // refetched, not served stale
-    // No refresh attempted here (schema_cbs_modified is already current from
-    // `other`'s fetch, and the OLD docs' Modified is not newer than that) —
-    // one schema call (the freshness check) + one observations call, no
-    // fetchCodeList call.
-    expect(counter.calls).toBe(2);
+    expect(advanced).toBe(true);
+    expect(result.cached).toBeFalsy(); // never a cache hit on a superseded slice
+    // The refetch then sees CBS's (old) Modified is older than the registry
+    // now holds and refuses it as a lagging response — nothing re-confirmed,
+    // no observations fetched.
+    expect(result).toMatchObject({ ok: false, stage: 'fetch' });
+    expect(counter.slices).toEqual([]);
+    const sliceAfter = (await sliceFetchRows('83625NED')).find((r) => r.filter_key === first.filterKey)!;
+    expect(sliceAfter.checked_at).toEqual(sliceBefore.checked_at);
+    expect(sliceAfter.batch_id).toEqual(sliceBefore.batch_id);
   });
 
   it("defers straight to fetchSlice's own refusal, with no network call, for an unregistered table", async () => {
@@ -1133,6 +1168,33 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     if (result.ok) throw new Error('unreachable');
     expect(result.summary).toContain('quarantined');
     expect(counter.calls).toBe(0);
+  });
+
+  it('final-review fix 2 — a unit/decimals change on a Modified-triggered refresh -> unit_consistency + quarantine, nothing written (the refresh never rewrites units first)', async () => {
+    const docs = await registered('83625NED');
+    const before = await cbsTablesRow('83625NED');
+    const labelsBefore = await labelCount('83625NED');
+    const changed = newerWithExtraPeriod(docs);
+    const measure = (changed.measureCodes as { value: Record<string, unknown>[] }).value[0]!;
+    measure.Decimals = 1;
+    const { source, counter } = counting(new FixtureSource(changed));
+
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'unit_consistency' });
+    expect(counter.slices).toEqual([]); // no observations fetched
+    const after = await cbsTablesRow('83625NED');
+    expect(after.status).toBe('needs_review');
+    expect(after.units).toEqual(before.units);
+    expect(after.schema_cbs_modified).toEqual(before.schema_cbs_modified);
+    expect(after.version).toEqual(before.version);
+    expect(await labelCount('83625NED')).toBe(labelsBefore);
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+    const batches = (
+      await db.query('select outcome, failure_stage from ingestion_batches where table_id = $1', ['83625NED'])
+    ).rows;
+    expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'unit_consistency' }]);
   });
 
   it("fix round 1 (finding 5) — ensureSlice's OWN schema check fails (fingerprint mismatch): its own failed batch row + quarantine, nothing stored", async () => {

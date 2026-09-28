@@ -211,6 +211,37 @@ describe('answering from a slice_cache table (breadth step 2, Task 5b)', () => {
     expect(series.registry?.lastSyncAt).toBe(T2);
   });
 
+  it('final-review fix 1: a cell stored by slice B that a NEW overlapping slice A omits is NOT dated by A\'s checked_at (retained, dated by its own batch)', async () => {
+    const batchB = await fetchAt(slice(['NL01'], ['2025JJ00']), T1);
+    await db.query('update ingestion_batches set finished_at = $2 where id = $1', [batchB, T0]);
+
+    // Slice A — never fetched before, overlapping B's cell — comes back from
+    // CBS without NL01 2025JJ00 (withdrawn), confirmed at T2.
+    const withoutCell = structuredClone(docs);
+    const page = withoutCell.observationPages[0] as { value: Record<string, unknown>[] };
+    page.value = page.value.filter((r) => !(r.RegioS === 'NL01' && r.Perioden === '2025JJ00'));
+    await fetchAt(slice(['NL01', 'GM0363'], ['2025JJ00']), T2, withoutCell);
+
+    const result = served(await runQuery(db, intent(['NL01'], ['2025JJ00'])));
+    expect(result.attribution.syncedAt).not.toBe(T2);
+    expect(result.attribution.syncedAt).toBe(T0); // batch B's own finish time
+
+    // The neighbour A did return is dated by A's confirmation.
+    expect(served(await runQuery(db, intent(['GM0363'], ['2025JJ00']))).attribution.syncedAt).toBe(T2);
+  });
+
+  it('final-review fix 6: a slice whose filter does not name the served measure never covers it', async () => {
+    await fetchAt(slice(['NL01'], ['2024JJ00']), T1);
+    await db.query(
+      `update slice_fetches set filter = jsonb_set(filter, '{measures}', '["M999999"]'::jsonb) where table_id = $1`,
+      [TABLE],
+    );
+    const outcome = await runQuery(db, intent(['NL01'], ['2024JJ00']));
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.kind).toBe('internal_inconsistency');
+  });
+
   it('a served cell no slice_fetches row accounts for -> internal_inconsistency, never an answer', async () => {
     await fetchAt(slice(['NL01'], ['2024JJ00', '2025JJ00']), T1);
     // The stored filter no longer names 2024JJ00: its cell is still in

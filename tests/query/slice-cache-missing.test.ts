@@ -90,6 +90,23 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     expect(outcome.refusal.kind).toBe('not_published');
   });
 
+  it('final-review fix 3: the missing-cell diagnosis never probes information_schema (slice-cache-ness comes from the loaded registry row)', async () => {
+    const log: string[] = [];
+    const wrap = (d: Db): Db => ({
+      query: (text, params) => {
+        log.push(text);
+        return d.query(text, params);
+      },
+      withTransaction: (fn) => d.withTransaction((tx) => fn(wrap(tx))),
+    });
+    const logging = wrap(db);
+    for (const period of ['1995JJ00', '2020JJ00']) {
+      const outcome = await runQuery(logging, houseIntent(period));
+      expect(outcome.ok).toBe(false);
+    }
+    expect(log.some((sql) => sql.includes('information_schema'))).toBe(false);
+  });
+
   it('(b) outside every fetched slice, and NEWER than the freshest fetched cell -> not_fetched, never the misleading freshness refusal', async () => {
     // 2020JJ00 was never named in any slice_fetches filter, AND it is newer
     // than 2015JJ00 (the freshest — and only — period this db ever fetched).
@@ -154,13 +171,13 @@ describe("a full-ingest table's not_published stays exactly as today (ruling: un
     expect(outcome.ok).toBe(false);
     if (outcome.ok) throw new Error('unreachable');
     // ingest_mode defaults to 'full' for registerTables/syncTable (migration
-    // 037's own default) — isSliceCacheTable must read false here and never
+    // 037's own default) — the slice-cache branch (q.table.ingestMode) must read false here and never
     // route through insideAnyFetchedSlice at all.
     expect(outcome.refusal.kind).toBe('not_published');
   });
 });
 
-describe('a pre-migration-037 database behaves exactly as today (probe absent -> full-table diagnosis unchanged)', () => {
+describe('a pre-migration-037 database behaves exactly as today (no ingest_mode column -> full-table diagnosis unchanged)', () => {
   let db: Db;
   let close: () => Promise<void>;
 
@@ -174,7 +191,7 @@ describe('a pre-migration-037 database behaves exactly as today (probe absent ->
     if (sync.outcome !== 'succeeded') throw new Error(`sync failed: ${sync.failureSummary}`);
     // Simulate a database migration 037 has not yet reached: drop its columns
     // (slice_fetches itself is untouched — nothing here reads it once the
-    // probe fails). isSliceCacheTable must tolerate this, not error.
+    // ingest_mode column is absent). The registry read (select *) must tolerate this, not error.
     await db.query('alter table cbs_tables drop column ingest_mode, drop column schema_cbs_modified');
   }, 60_000);
 
