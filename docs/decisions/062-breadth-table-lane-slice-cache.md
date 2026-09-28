@@ -4,7 +4,7 @@
 ([#335](../open-questions.md), [brief](../session-briefs/2026-09-28-sanity-check.md)) chose breadth as the next priority;
 the owner approved the design ("Yes, write the plan (Recommended)"). Design:
 [superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md](../superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md).
-**Steps 2 (slice cache) and 3 (breakdown resolver) built** — see "As built — step 2" and "As built — step 3". Steps 4–6 not built.
+**Steps 2 (slice cache), 3 (breakdown resolver) and 4 (table-scoped parser, hermetic) built** — see the "As built" sections. Step 4's recording + calibration run and steps 5–6 not done.
 
 **Relates to:** ADR [003](003-cbs-access-layer.md) (bulk ingestion, principle b), ADRs [025](025-cbs-catalog-table-discovery.md)/
 [026](026-on-demand-fetch-job-architecture.md)/[027](027-finder-shape-fit-gate.md) (today's on-demand onboarding, which
@@ -85,6 +85,32 @@ on-demand onboarding only delivers time-only tables (7% of current tables), cost
 - Process: subagent-driven development — 3 tasks, each reviewed; final opus review "with fixes" (0 Critical, 3
   Important: the suffix false positive, unchecked `named`, no report of the caller's dimensions) — all fixed in one wave
   and re-reviewed. Step-5 design items from this step are added to [#336](../open-questions.md).
+
+## As built — step 4 (session 139, 2026-09-29, branch `breadth-step-4`)
+
+- `src/answer/table-parse/` (not wired; no live LLM call yet — the recording + calibration run is owner-supervised after
+  2026-10-01, estimated ~90k input tokens on the cheap tier over the 34 labelled cases):
+  - `input.ts` — pure builder from `CbsTableSchema` + code lists: numeric measures only; step 3's classes decide which
+    dimensions are offered (breakdowns only); lists over 40 members are pre-filtered deterministically (the grand total
+    + members sharing a ≥ 4-letter word or a number with the question, CBS order, marked "shortened"); refuses tables
+    with no time dimension / no numeric measure / a missing code list (`TableParseIneligibleTableError`).
+  - `parse.ts` — static Dutch prompt, zod output (measure or `geen`; per breakdown a member, `niet_genoemd` or `anders`;
+    the curated period spec, region terms, region scope and derivation; one confidence), and a hard-allowlist validator:
+    anything outside the offered lists throws. Places always go in `regions`; on a table without regions a place is
+    accepted only when it matches a region-coded member of a breakdown (exactly one match → that member or `anders`;
+    look-alikes such as Groningen province / energy region → `anders`), else `TableParseRegionUnavailableError`.
+    Measures that look identical to the model → `TableParseAmbiguousMeasureError`. A period precision the table lacks
+    is flagged (`periodGrainUnavailable`), never adapted. `anders` = "not exactly one offered member" (not listed,
+    several fit, or asks across members) → a question, never the total. Returns `{result, audit}`.
+  - `bridge.ts` — parse → step 3's `named`: `anders` → ask that dimension; `geen` must be refused before; an explicit
+    pick of the grand total is left to the resolver so it is disclosed as a stated default.
+- `benchmark/tableparse-labelled-set.json` (34 cases over 8 real tables) + `scripts/tableparse-eval.ts`
+  (`--dry-run` zero spend; `--replay`; `--record` refuses unless `TABLEPARSE_RECORD_OK=1`). Metadata-only fixtures in
+  `tests/fixtures/tableparse/schemas/`. The curated parser is byte-identical (only `export` added to three schemas).
+- Process: subagent-driven development, 4 tasks, each reviewed (opus on the prompt/validator); the Task 3 review found
+  the prompt told the model to drop place names on tables without regions (a silent national answer) — fixed; the final
+  opus review ("with fixes", 0 Critical) led to one fix wave + a small follow-up (look-alike places, region-coded
+  members only). Items to settle before the recording run and in step 5: [#339](../open-questions.md).
 
 ## Trade-offs and open points (step 5)
 
