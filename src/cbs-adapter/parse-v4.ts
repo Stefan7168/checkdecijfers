@@ -79,7 +79,9 @@ export interface CbsMeasureGroup {
 
 /** Parses MeasureGroups: [{ Id, Title, ParentId }]. `[]` when the table
  *  publishes none (an HTTP 404 or an empty list both normalize to this by
- *  the time they reach here — see odata-v4.ts / fixture-source.ts). */
+ *  the time they reach here — see odata-v4.ts / fixture-source.ts). Throws
+ *  on a malformed document; the live adapter catches that and degrades to
+ *  "groups unavailable" (final-review I2), the fixture source does not. */
 export function parseMeasureGroups(raw: unknown): CbsMeasureGroup[] {
   const rows = asValueArray(raw, 'MeasureGroups');
   return rows.map((entry) => {
@@ -95,9 +97,11 @@ export function parseMeasureGroups(raw: unknown): CbsMeasureGroup[] {
 
 /**
  * Resolves one measure's `MeasureGroupId` into a root -> leaf title path by
- * walking `ParentId` up to the root. Never throws (principle c: a missing
- * or cyclic reference is a CBS-side data quirk to degrade past, not a
- * corrupt row to reject) —
+ * walking `ParentId` up to the root. Real CBS groups do nest (measured:
+ * 86116NED has 2- and 3-level paths, e.g. "Personeel en ICT › Toegang tot
+ * ICT-systeem van buitenaf › Biedt toegang tot"; 80590ned's do not). Never
+ * throws (principle c: a missing or cyclic reference is a CBS-side data
+ * quirk to degrade past, not a corrupt row to reject) —
  * - no `groupId` (measure has no group) -> `[]`.
  * - `groupId` not found in `groupsById` -> `[]` (the walk stops before it
  *   resolves anything).

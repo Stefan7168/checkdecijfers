@@ -160,7 +160,9 @@ function sharesWord(title: string, qWords: Set<string>): boolean {
  * Task 3, controller ruling — is a REGION-CODED member (REGION_MEMBER_CODE)
  * whose place key (memberPlaceKey) is named in the question
  * (placeKeyNamedInQuestion), in CBS order, the combined (deduped) list capped
- * at MEMBER_PROMPT_CAP. The place-aware rule catches what the generic word
+ * at MEMBER_PROMPT_CAP — place matches claim cap slots before word matches
+ * (final-review minor), so the cap never cuts a place the reader named. The
+ * place-aware rule catches what the generic word
  * rule alone misses: an alias ("Den Haag" names the "'s-Gravenhage" member —
  * "haag" shares no word with "gravenhage") and every look-alike member a
  * bare place name refers to (e.g. "Groningen" on 85004NED names all three of
@@ -190,30 +192,34 @@ function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): 
   const total = findGrandTotal(allMembers);
   const qWords = questionWords(question);
   const normalizedQuestionForPlaces = normalizeQuestionForPlaceMatch(question);
-  const selected: BreakdownMember[] = [];
-  const selectedCodes = new Set<string>();
-  if (total) {
-    selected.push(total);
-    selectedCodes.add(total.code);
-  }
 
+  // Final-review minor (breadth step 4b fix wave): place matches claim cap
+  // slots BEFORE word matches, so a look-alike place member (which F1's
+  // several-members-match rule downstream must see) is never cut by the cap
+  // just because many word matches precede it in CBS order.
+  const placeMatches: BreakdownMember[] = [];
+  const wordMatches: BreakdownMember[] = [];
   for (const member of allMembers) {
-    if (selected.length >= MEMBER_PROMPT_CAP) break;
-    if (selectedCodes.has(member.code)) continue;
-    const wordMatch = sharesWord(member.title, qWords);
+    if (total && member.code === total.code) continue;
     const placeMatch =
       REGION_MEMBER_CODE.test(member.code) &&
       placeKeyNamedInQuestion(normalizedQuestionForPlaces, memberPlaceKey(member.title));
-    if (wordMatch || placeMatch) {
-      selected.push(member);
-      selectedCodes.add(member.code);
-    }
+    if (placeMatch) placeMatches.push(member);
+    else if (sharesWord(member.title, qWords)) wordMatches.push(member);
   }
+  const room = MEMBER_PROMPT_CAP - (total ? 1 : 0);
+  const chosenCodes = new Set([...placeMatches, ...wordMatches].slice(0, room).map((m) => m.code));
+
+  // The offered list itself stays in CBS order, the grand total first.
+  const selected: BreakdownMember[] = [
+    ...(total ? [total] : []),
+    ...allMembers.filter((m) => chosenCodes.has(m.code) && !(total && m.code === total.code)),
+  ];
 
   return {
     name: dim.name,
     title,
-    members: selected.slice(0, MEMBER_PROMPT_CAP),
+    members: selected,
     truncated: true,
     totalMembers: allMembers.length,
   };

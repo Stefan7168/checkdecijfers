@@ -2,9 +2,10 @@
 // no database involved. Exercises src/cbs-adapter/fixture-source.ts, which
 // replays the raw v4 responses through the same parsing code the live adapter
 // uses (docs/cbs-adapter/types.ts header comment).
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
-import type { CbsObservationRow } from '../../src/cbs-adapter/types.ts';
+import type { CbsObservationRow, CbsTableSchema } from '../../src/cbs-adapter/types.ts';
 import { FixtureSource, loadFixtureDocs, type FixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { ODataV4Source } from '../../src/cbs-adapter/odata-v4.ts';
 import { parseMeasureGroups, parseMeasures } from '../../src/cbs-adapter/parse-v4.ts';
@@ -147,9 +148,25 @@ describe('adapter parsing (real captured wire data)', () => {
       expect(units['D002308']).not.toHaveProperty('groupPath');
     });
 
-    // No real 80590ned group nests (measured live 2026-09-29: all 7 groups have
-    // ParentId null) — a synthetic MeasureGroups/MeasureCodes pair covers the
-    // multi-level resolution the brief requires (root -> leaf ordering).
+    // 80590ned's own groups do not nest (measured live 2026-09-29: all 7 have
+    // ParentId null), but real nested groups DO exist elsewhere — the
+    // committed 86116NED table-parse fixture (written by the same adapter via
+    // scripts/extract-tableparse-schemas) carries 2- and 3-level paths,
+    // pinned by the real-data test below. The synthetic pair here isolates
+    // the root -> leaf ordering itself.
+    it('real nested groups: the committed 86116NED table-parse fixture carries 2- and 3-level group paths, root -> leaf', () => {
+      const fixture = JSON.parse(
+        readFileSync(fileURLToPath(new URL('../fixtures/tableparse/schemas/86116NED.json', import.meta.url)), 'utf8'),
+      ) as { schema: CbsTableSchema };
+      const byCode = new Map(fixture.schema.measures.map((m) => [m.code, m]));
+      expect(byCode.get('M004746_2')?.groupPath).toEqual(['Toegang en gebruik internet', 'Vaste internetverbinding']);
+      expect(byCode.get('M000783')?.groupPath).toEqual([
+        'Personeel en ICT',
+        'Toegang tot ICT-systeem van buitenaf',
+        'Biedt toegang tot',
+      ]);
+    });
+
     it('parseMeasureGroups + parseMeasures resolves a two-level group path root -> leaf', () => {
       const groupsRaw = {
         value: [

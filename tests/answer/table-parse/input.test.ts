@@ -302,6 +302,51 @@ describe('buildTableParseSchema — place-aware pre-filter addition (Task 3)', (
     expect(dim.members).toEqual([{ code: 'GM0518', title: "'s-Gravenhage (GM)" }]);
   });
 
+  // Final-review minor: a look-alike place must never be cut by the cap.
+  // Synthetic: a grand total first, then 45 members that all share the word
+  // "inkomen" with the question, then the one place member — CBS order would
+  // fill the cap with word matches before ever reaching the place. Place
+  // matches now claim cap slots BEFORE word matches; the final list is still
+  // CBS order with the total first.
+  it('a place match is never cut by the cap: place matches fill it before word matches (final list still CBS order, total first)', () => {
+    const wordMatches: CbsCode[] = Array.from({ length: 45 }, (_, i) => ({
+      code: `K${String(i + 1).padStart(4, '0')}`,
+      title: `Inkomen klasse ${i + 1}`,
+      dimensionGroup: null,
+      status: null,
+      index: i + 2,
+    }));
+    const codeLists: Record<string, CbsCode[]> = {
+      Regio: [
+        { code: 'T001019', title: 'Totaal', dimensionGroup: null, status: null, index: 1 },
+        ...wordMatches,
+        { code: 'PV26', title: 'Utrecht (PV)', dimensionGroup: null, status: null, index: 47 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const schema: CbsTableSchema = {
+      tableId: 'SYN08',
+      title: 'Synthetische tabel naar regio en inkomen',
+      dimensions: [
+        { name: 'Regio', kind: 'Dimension', title: 'Regio' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen met inkomen woonden er in Utrecht in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Regio')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toHaveLength(MEMBER_PROMPT_CAP);
+    expect(codes[0]).toBe('T001019');
+    expect(codes).toContain('PV26');
+    // CBS order after the total: the place (index 47) comes last, after the
+    // 38 word matches that still fit (K0001..K0038).
+    expect(codes[codes.length - 1]).toBe('PV26');
+    expect(codes.slice(1, -1)).toEqual(wordMatches.slice(0, MEMBER_PROMPT_CAP - 2).map((c) => c.code));
+  });
+
   it('non-region-coded members are never added by the place-aware rule, even sharing the exact place name', () => {
     const { schema, codeLists } = denHaagPreFilterSchema();
     const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen woonden er in Den Haag in 2020?');
