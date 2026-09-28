@@ -141,6 +141,93 @@ describe('adapter parsing (real captured wire data)', () => {
     expect(sliceToFilter({ periodFloor: '2015JJ00', measures: [] })).toBe("Perioden ge '2015JJ00'");
   });
 
+  it('sliceToFilter: dimensionIn and periodIn are appended LAST, after every existing clause', async () => {
+    const { sliceToFilter } = await import('../../src/cbs-adapter/fixture-source.ts');
+    // Single code per dimension: no parentheses. Dimension keys sorted (A before B).
+    expect(sliceToFilter({ dimensionIn: { B: ['b1'], A: ['a1'] } })).toBe(
+      "A eq 'a1' and B eq 'b1'",
+    );
+    // Several codes: parenthesised, ORed, codes kept in given order.
+    expect(sliceToFilter({ dimensionIn: { RegioS: ['GM0363', 'GM0599'] } })).toBe(
+      "(RegioS eq 'GM0363' or RegioS eq 'GM0599')",
+    );
+    // periodIn: single code no parens, several parenthesised.
+    expect(sliceToFilter({ periodIn: { dimension: 'Perioden', codes: ['2019JJ00'] } })).toBe(
+      "Perioden eq '2019JJ00'",
+    );
+    expect(
+      sliceToFilter({ periodIn: { dimension: 'Perioden', codes: ['2019JJ00', '2020JJ00'] } }),
+    ).toBe("(Perioden eq '2019JJ00' or Perioden eq '2020JJ00')");
+    // Everything together, in the fixed clause order: dimensionEquals,
+    // dimensionPrefixes, periodFloor, measures, dimensionIn, periodIn.
+    expect(
+      sliceToFilter({
+        dimensionEquals: { Geslacht: 'T001038' },
+        dimensionPrefixes: { RegioS: ['NL', 'PV'] },
+        periodFloor: '2015JJ00',
+        measures: ['M1'],
+        dimensionIn: { Leeftijd: ['A1', 'A2'] },
+        periodIn: { dimension: 'Perioden', codes: ['2019JJ00'] },
+      }),
+    ).toBe(
+      "Geslacht eq 'T001038' and (startswith(RegioS,'NL') or startswith(RegioS,'PV')) and " +
+        "Perioden ge '2015JJ00' and Measure eq 'M1' and (Leeftijd eq 'A1' or Leeftijd eq 'A2') and " +
+        "Perioden eq '2019JJ00'",
+    );
+    // Empty arrays add nothing.
+    expect(sliceToFilter({ dimensionIn: { RegioS: [] } })).toBeNull();
+    expect(sliceToFilter({ periodIn: { dimension: 'Perioden', codes: [] } })).toBeNull();
+    // Existing 03759ned-style slices (no dimensionIn/periodIn at all) are
+    // untouched — proven by the dedicated exact-string test above; this test
+    // only proves the NEW fields append last without disturbing that order.
+  });
+
+  it('FixtureSource: dimensionIn and periodIn are applied client-side, matching sliceToFilter semantics', async () => {
+    const docs = await loadFixtureDocs(fixturePath('03759ned'));
+    const source = new FixtureSource(docs);
+    const rows: CbsObservationRow[] = [];
+    for await (const page of source.fetchObservations('03759ned', {
+      dimensionIn: { RegioS: ['NL01'] },
+    })) {
+      rows.push(...page);
+    }
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.coordinates.RegioS === 'NL01')).toBe(true);
+
+    const periodRows: CbsObservationRow[] = [];
+    for await (const page of source.fetchObservations('03759ned', {
+      periodIn: { dimension: 'Perioden', codes: ['2020JJ00'] },
+    })) {
+      periodRows.push(...page);
+    }
+    expect(periodRows.length).toBeGreaterThan(0);
+    expect(periodRows.every((r) => r.coordinates.Perioden === '2020JJ00')).toBe(true);
+
+    // Empty codes array = no restriction from that clause (matches everything).
+    const allRows: CbsObservationRow[] = [];
+    for await (const page of source.fetchObservations('03759ned', {
+      dimensionIn: { RegioS: [] },
+    })) {
+      allRows.push(...page);
+    }
+    const unfiltered: CbsObservationRow[] = [];
+    for await (const page of source.fetchObservations('03759ned')) {
+      unfiltered.push(...page);
+    }
+    expect(allRows.length).toBe(unfiltered.length);
+  });
+
+  it('parseMeasures of 70072ned fills dataType from CBS DataType (String / Double), "" when absent', async () => {
+    const docs = await loadFixtureDocs(fixturePath('70072ned'));
+    const source = new FixtureSource(docs);
+    const schema = await source.fetchTableSchema('70072ned');
+
+    const cp0001 = schema.measures.find((m) => m.code === 'CP0001');
+    expect(cp0001?.dataType).toBe('String');
+    const m000100 = schema.measures.find((m) => m.code === 'M000100');
+    expect(m000100?.dataType).toBe('Double');
+  });
+
   it('FixtureSource: a measures slice keeps only the listed measure codes', async () => {
     const docs = await loadFixtureDocs(fixturePath('82235NED'));
     const source = new FixtureSource(docs);

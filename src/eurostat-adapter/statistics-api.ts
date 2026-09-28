@@ -178,6 +178,18 @@ export function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined)
     );
   }
 
+  if (slice.dimensionIn && Object.keys(slice.dimensionIn).length > 0) {
+    throw new Error(
+      'Eurostat adapter: CbsSlice.dimensionIn is a CBS-only member list and is not supported for Eurostat datasets.',
+    );
+  }
+
+  if (slice.periodIn && slice.periodIn.codes.length > 0) {
+    throw new Error(
+      'Eurostat adapter: CbsSlice.periodIn is a CBS-only period list and is not supported for Eurostat datasets.',
+    );
+  }
+
   const params: Array<[string, string]> = [];
   if (slice.dimensionEquals) {
     for (const [dim, code] of Object.entries(slice.dimensionEquals)) {

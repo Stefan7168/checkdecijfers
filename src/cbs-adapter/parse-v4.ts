@@ -80,7 +80,8 @@ export function parseMeasures(raw: unknown): CbsMeasure[] {
     }
     const decimals = decimalsRaw === null || decimalsRaw === undefined ? 0 : decimalsRaw;
     const description = optionalString(row, 'Description') ?? '';
-    return { code, title, unit, decimals, description };
+    const dataType = optionalString(row, 'DataType') ?? '';
+    return { code, title, unit, decimals, description, dataType };
   });
 }
 

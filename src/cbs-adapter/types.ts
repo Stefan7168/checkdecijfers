@@ -24,6 +24,11 @@ export interface CbsMeasure {
    * (#115 lever b). NEVER rewritten — CBS's own words or nothing (principle a,
    * R10 spirit). */
   description: string;
+  /** CBS 'DataType' from MeasureCodes ('Double' | 'Long' | 'String' | …); ''
+   * when CBS omits it. A text measure carries 'String' — never registered as
+   * servable (breadth step 2 constraints: text measures like `code`, `naam`,
+   * `omschrijving` are excluded from ingestion). */
+  dataType: string;
 }
 
 export interface CbsTableSchema {
@@ -73,6 +78,18 @@ export interface CbsSlice {
    * longer quarantines it, while a change to a listed code still fails loudly.
    * CBS-only: the Eurostat adapter refuses it. */
   measures?: string[];
+  /** Several allowed codes per dimension (breadth step 2): `(Dim eq 'a' or
+   * Dim eq 'b')`, ANDed with everything else, appended AFTER every existing
+   * clause so every already-registered slice's filter string is unchanged.
+   * An empty array for a dimension adds no clause (never "match nothing").
+   * CBS-only: the Eurostat adapter refuses it. */
+  dimensionIn?: Record<string, string[]>;
+  /** Exact period codes (breadth step 2): `(Perioden eq 'x' or …)`, appended
+   * LAST (after `dimensionIn`). `dimension` is the table's own TimeDimension
+   * name (usually 'Perioden'), passed by the caller — this type has no way to
+   * know it on its own. An empty `codes` array adds no clause. CBS-only: the
+   * Eurostat adapter refuses it. */
+  periodIn?: { dimension: string; codes: string[] };
 }
 
 /**

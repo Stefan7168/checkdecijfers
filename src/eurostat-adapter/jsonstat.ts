@@ -536,6 +536,10 @@ export function parseJsonStatDataset(
       unit: unitLabel,
       decimals: maxDecimals(observedByUnit.get(unitCode) ?? []),
       description: '',
+      // JSON-stat carries no per-measure DataType field (Eurostat's own
+      // observations are always numeric, D6) — no source truth to carry, so
+      // '' like every other absent-field default (breadth step 2 brief).
+      dataType: '',
     });
   }
 

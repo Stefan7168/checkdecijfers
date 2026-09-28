@@ -99,8 +99,9 @@ describe('serializeMeasureList / buildMeasureFitRequest — metadata only (R1), 
         unit: 'x 1 000',
         decimals: 1,
         description: 'Het totale aantal bijstandsuitkeringen aan het eind van de periode.',
+        dataType: '',
       },
-      { code: '90210', title: 'Bijstandsuitkeringen tot de AOW-leeftijd', unit: 'x 1 000', decimals: 1, description: '' },
+      { code: '90210', title: 'Bijstandsuitkeringen tot de AOW-leeftijd', unit: 'x 1 000', decimals: 1, description: '', dataType: '' },
     ],
   };
 

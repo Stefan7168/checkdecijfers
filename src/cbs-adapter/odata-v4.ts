@@ -39,6 +39,14 @@ const CATALOG_SELECT = 'Identifier,Title,Description,Status,DatasetType,Language
  * - periodFloor: `Perioden ge 'code'` (lexicographic on CBS period codes).
  * - measures: `Measure eq 'code'`, ORed, parenthesised when more than one,
  *   appended LAST so slices without it keep their exact filter string.
+ * - dimensionIn (breadth step 2): `Dim eq 'code'`, ORed per dimension
+ *   (parenthesised when more than one code), dimension keys visited in
+ *   SORTED order for a deterministic string, ANDed with everything else,
+ *   appended AFTER measures.
+ * - periodIn (breadth step 2): `Dim eq 'code'` (dimension = periodIn.dimension),
+ *   ORed, parenthesised when more than one code, appended LAST of all —
+ *   so every slice that predates dimensionIn/periodIn keeps its exact
+ *   filter string (the 03759ned exact-string test pins this).
  * Returns null when the slice is absent or empty (no $filter needed).
  */
 export function sliceToFilter(slice?: CbsSlice): string | null {
@@ -56,6 +64,18 @@ export function sliceToFilter(slice?: CbsSlice): string | null {
   if (measures.length > 0) {
     const ors = measures.map((m) => `Measure eq '${m}'`).join(' or ');
     parts.push(measures.length > 1 ? `(${ors})` : ors);
+  }
+  const dimensionIn = slice.dimensionIn ?? {};
+  for (const dim of Object.keys(dimensionIn).sort()) {
+    const codes = dimensionIn[dim] ?? [];
+    if (codes.length === 0) continue;
+    const ors = codes.map((c) => `${dim} eq '${c}'`).join(' or ');
+    parts.push(codes.length > 1 ? `(${ors})` : ors);
+  }
+  if (slice.periodIn && slice.periodIn.codes.length > 0) {
+    const { dimension, codes } = slice.periodIn;
+    const ors = codes.map((c) => `${dimension} eq '${c}'`).join(' or ');
+    parts.push(codes.length > 1 ? `(${ors})` : ors);
   }
   return parts.length ? parts.join(' and ') : null;
 }
