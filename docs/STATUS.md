@@ -21,7 +21,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-28 local, session 138 — owner present; verify against `git log` / Actions runs
 before trusting this). Previous kickoff: [session-briefs/2026-09-28-session-138-kickoff.md](session-briefs/2026-09-28-session-138-kickoff.md).**
 
-- **`main` is live and green**: last push `5b06152e` (Part 1 code `65c9cbb1..4e2804ca` + docs), CI 36384113836 green incl. deploy, prod 200.
+- **`main` is live and green**: breadth step 2 merged `19edcaee` (CI 36430678653 green incl. deploy, prod 200). Earlier: `5b06152e` (Part 1 code `65c9cbb1..4e2804ca` + docs), CI 36384113836 green incl. deploy, prod 200.
 - **CBS is back** ([#329](open-questions.md) resolved 2026-09-28): both data APIs answer 200.
 - **Regional statistics, Part 1 BUILT (session 138, ADR [061](decisions/061-regional-statistics-70072ned.md))** — owner picked
   12 figures from `70072ned` (density, WOZ value, % owner-occupied, % hbo/wo, cars per 1,000, distance to station, growth,
