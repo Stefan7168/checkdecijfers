@@ -4,7 +4,7 @@
 ([#335](../../open-questions.md), [brief](../../session-briefs/2026-09-28-sanity-check.md)) chose breadth as the next
 priority, the owner answered "Yes, write the plan (Recommended)" on the plain-English design (find the table → pick the
 slice from CBS's own breakdowns, total by default → fetch just those numbers, check, store, answer in the same chat →
-normal price). **ADR:** [062](../../decisions/062-breadth-table-lane-slice-cache.md). **Step 1 ✅ measured, step 2 ✅ built (session 138).** Supersedes, when live, the 100-credit e-mail flow of
+normal price). **ADR:** [062](../../decisions/062-breadth-table-lane-slice-cache.md). **Step 1 ✅ measured, step 2 ✅ built (session 138), step 3 ✅ built (session 139).** Supersedes, when live, the 100-credit e-mail flow of
 ADR [026](../../decisions/026-on-demand-fetch-job-architecture.md) as the default path.
 
 ## 1. The goal in one sentence
