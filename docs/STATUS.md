@@ -32,7 +32,8 @@ before trusting this). Previous kickoff: [session-briefs/2026-09-28-session-138-
   Household income excluded (CBS's v4 feed reuses its code). Residuals: [#334](open-questions.md).
 - **⚑ OWNER SANITY CHECK (session 138, [#335](open-questions.md), [brief](session-briefs/2026-09-28-sanity-check.md)): NEXT PRIORITY IS
   NOW BREADTH — make any CBS table answerable quickly** (the on-demand fetch as the normal path). Measured: no external users
-  yet, 21 of 4,858 CBS tables loaded. Design in progress. Regional statistics Part 2 below is **PARKED** on branch
+  yet, 21 of 4,858 CBS tables loaded (1,277 current). **Design APPROVED** —
+  [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md); next = its step 1 (measure all 1,277 tables, zero spend). Regional statistics Part 2 below is **PARKED** on branch
   `regional-stats-part2` (built + reviewed; only the paid re-record, merge and prod load remain).
 - **(Parked) regional statistics Part 2** (after the spend roof resets **2026-10-01**, owner present): write its plan,
   add the 12 canonical figures + `REGIONAL_KEYS` + English labels + a scatter partner per figure, re-record the
