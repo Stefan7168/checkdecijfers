@@ -1160,3 +1160,55 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'schema_fingerprint' }]);
   });
 });
+
+describe('slice_fetches.checked_at — when CBS last confirmed a slice (breadth step 2, Task 5b)', () => {
+  const OLD = '2020-01-01T00:00:00.000Z';
+
+  async function sliceTimes(tableId: string) {
+    const rows = (
+      await db.query('select checked_at, fetched_at from slice_fetches where table_id = $1', [tableId])
+    ).rows;
+    expect(rows).toHaveLength(1);
+    return {
+      checkedAt: new Date(rows[0]!.checked_at as string | Date).toISOString(),
+      fetchedAt: new Date(rows[0]!.fetched_at as string | Date).toISOString(),
+    };
+  }
+
+  async function backdate(tableId: string) {
+    await db.query('update slice_fetches set checked_at = $2, fetched_at = $2 where table_id = $1', [tableId, OLD]);
+  }
+
+  it('is set by the first fetchSlice and moved forward by a refetch of the same slice', async () => {
+    const docs = await registered('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    const first = await sliceTimes('83625NED');
+    expect(first.checkedAt > OLD).toBe(true);
+
+    await backdate('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    const after = await sliceTimes('83625NED');
+    expect(after.checkedAt > OLD).toBe(true);
+    expect(after.fetchedAt > OLD).toBe(true);
+  });
+
+  it('an ensureSlice cache hit moves checked_at forward (CBS confirmed it unchanged) but not fetched_at', async () => {
+    const docs = await registered('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    await backdate('83625NED');
+
+    const result = await ensureSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+    expect(result).toMatchObject({ ok: true, cached: true });
+
+    const after = await sliceTimes('83625NED');
+    expect(after.checkedAt > OLD).toBe(true);
+    expect(after.fetchedAt).toBe(OLD); // nothing was fetched
+  });
+
+  it('a slice fetch never writes cbs_tables.last_sync_at (stale-sync, onboarding and coverage keep ignoring slice tables)', async () => {
+    const docs = await registered('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    expect((await ensureSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    expect((await cbsTablesRow('83625NED')).last_sync_at).toBeNull();
+  });
+});

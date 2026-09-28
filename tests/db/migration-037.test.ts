@@ -182,6 +182,33 @@ describe('slice_fetches table — enforces unique(table_id, filter_key) and casc
     });
   });
 
+  it('slice_fetches.checked_at (Task 5b) defaults to now() and is NOT NULL', async () => {
+    await withDb(async (db) => {
+      await db.query(
+        `insert into cbs_tables (id, title, platform, expected_dimensions)
+         values ('99999TST', 'Testtabel', 'v4', '[]'::jsonb)`,
+      );
+      await db.query(
+        `insert into slice_fetches (table_id, filter_key, filter, row_count)
+         values ('99999TST', 'key1', '{"dim":"value"}'::jsonb, 1)`,
+      );
+      const { rows } = await db.query(
+        `select checked_at, checked_at = fetched_at as same from slice_fetches where table_id = '99999TST'`,
+      );
+      expect(rows[0]!.checked_at).not.toBeNull();
+      // Both default to now() in the same statement: a fresh row is
+      // confirmed at the moment it was fetched.
+      expect(rows[0]!.same).toBe(true);
+
+      await expect(
+        db.query(
+          `insert into slice_fetches (table_id, filter_key, filter, row_count, checked_at)
+           values ('99999TST', 'key2', '{"dim":"value"}'::jsonb, 1, null)`,
+        ),
+      ).rejects.toThrow(/checked_at/);
+    });
+  });
+
   it('slice_fetches allows multiple records for the same table with different filter_keys', async () => {
     await withDb(async (db) => {
       // Insert a test table

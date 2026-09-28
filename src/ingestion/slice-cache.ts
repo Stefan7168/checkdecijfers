@@ -451,7 +451,9 @@ export async function applySchemaRefresh(
  * 4. Store, in ONE transaction under the per-table advisory lock syncTable,
  *    eviction and resolveIntent share: optional schema refresh, the
  *    observations upsert (syncTable's own staging + upsert helpers), the batch
- *    marked succeeded, and the `slice_fetches` row upserted. Cells inside the
+ *    marked succeeded, and the `slice_fetches` row upserted (its `checked_at`
+ *    set to now — the date the query layer shows for this slice's cells;
+ *    `cbs_tables.last_sync_at` is never written). Cells inside the
  *    request that CBS no longer returns are marked retained (#154) against
  *    the previous fetch of this same slice — never the whole table's unseen
  *    cells — and `last_row_count` is never touched: a slice is not a full
@@ -803,7 +805,8 @@ export async function fetchSlice(
            cbs_modified = excluded.cbs_modified,
            row_count = excluded.row_count,
            batch_id = excluded.batch_id,
-           fetched_at = now()`,
+           fetched_at = now(),
+           checked_at = now()`,
         [tableId, filterKey, filterKey, sliceCbsModified, staged.length, batchId],
       );
       return null;
@@ -829,7 +832,9 @@ export async function fetchSlice(
  * `{ ok: true, cached: true, … }` without any observation fetch when
  * `slice_fetches` already holds this exact request (`filter_key`) and CBS's
  * current `Modified` says nothing changed — one cheap properties request
- * either way, never a full observations fetch on a cache hit. Otherwise
+ * either way, never a full observations fetch on a cache hit. A cache hit
+ * moves that row's `checked_at` to now (CBS just confirmed the slice
+ * unchanged), so answers from it are dated by this confirmation. Otherwise
  * behaves exactly like `fetchSlice` (and, for a table that is not an active
  * slice-cache table, defers to it immediately with no extra network call, so
  * it gives the exact same refusal wording for "not registered" / "full
@@ -945,6 +950,15 @@ export async function ensureSlice(
     const cbsModifiedTime = toTime(check.schema.modified);
     const cbsNewer = rowModifiedTime === null || cbsModifiedTime === null || cbsModifiedTime > rowModifiedTime;
     if (!stale && !cbsNewer) {
+      // Task 5b: CBS's Modified, fetched just above, says nothing changed
+      // since this slice was stored — its cells are re-confirmed NOW. Only
+      // checked_at moves (fetched_at stays: nothing was fetched); the query
+      // layer dates this slice's cells by it. cbs_tables.last_sync_at is
+      // never written here (one slice must not re-date another's cells).
+      await db.query('update slice_fetches set checked_at = now() where table_id = $1 and filter_key = $2', [
+        tableId,
+        filterKey,
+      ]);
       const batch = (
         await db.query('select rows_missing from ingestion_batches where id = $1', [sliceRow.batch_id])
       ).rows[0];

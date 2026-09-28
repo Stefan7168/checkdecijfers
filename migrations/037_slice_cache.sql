@@ -25,6 +25,13 @@ create table slice_fetches (
   -- cbs_tables — without the cascade that delete would hit this FK.
   batch_id bigint references ingestion_batches(id) on delete cascade,
   fetched_at timestamptz not null default now(),
+  -- when CBS last CONFIRMED this slice: set on every successful fetch (insert
+  -- and refetch) and moved forward by an ensureSlice cache hit (CBS Modified
+  -- unchanged = these cells re-confirmed now). The query layer dates each
+  -- served cell of a slice-cache table by the LATEST checked_at among the
+  -- fetches covering it — cbs_tables.last_sync_at stays NULL for these tables,
+  -- since one slice's fetch must never re-date another slice's cells (R4).
+  checked_at timestamptz not null default now(),
   unique (table_id, filter_key)
 );
 

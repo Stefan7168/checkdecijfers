@@ -106,17 +106,29 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     expect(outcome.refusal.message.toLowerCase()).toContain('ensureslice');
   });
 
-  // Fix round 1 (minor finding 2): a slice-cache table cannot yet be
-  // SERVED through runQuery at all — cbs_tables.last_sync_at stays null for
-  // a slice_cache table (neither registerSchemaOnly nor fetchSlice sets it),
-  // and run.ts's own consistency guard refuses ANY result with
-  // internal_inconsistency when that is null. A test asserting
-  // `runQuery(...).ok === true` for a served coordinate (e.g. 2015JJ00,
-  // which IS inside a fetched slice with a real cell) was written and
-  // removed during Task 5 for exactly this reason — restored here as a
-  // marker so Task 5b (dating semantics for slice-cache tables) turns it
-  // real instead of the gap going unrecorded.
-  it.todo('answering from slice-cache tables — breadth step 2 Task 5b (dating semantics)');
+  // Fix round 1 (minor finding 2) left an it.todo here: a slice-cache table
+  // could not be SERVED at all (cbs_tables.last_sync_at stays null for it and
+  // run.ts refused any such result). Task 5b replaced that refusal with the
+  // real invariant (every served cell covered by a slice_fetches row, dated by
+  // its latest checked_at) — the full dating semantics are pinned in
+  // tests/query/slice-cache-answer.test.ts; this is the served counterpart of
+  // (a)/(b) on the same fixture state.
+  it('(c) a coordinate inside a fetched slice WITH a cell -> served, dated by that slice\'s checked_at', async () => {
+    const outcome = await runQuery(db, houseIntent('2015JJ00'));
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error('unreachable');
+    expect(outcome.cells).toHaveLength(1);
+    expect(outcome.cells[0]!.periodCode).toBe('2015JJ00');
+    expect(outcome.cells[0]!.value).not.toBeNull();
+    const checkedAt = (
+      await db.query('select checked_at from slice_fetches where table_id = $1 and filter @> $2::jsonb', [
+        '83625NED',
+        JSON.stringify({ periods: ['2015JJ00'] }),
+      ])
+    ).rows[0]!.checked_at as string | Date;
+    expect(outcome.attribution.syncedAt).toBe(new Date(checkedAt).toISOString());
+  });
 });
 
 describe("a full-ingest table's not_published stays exactly as today (ruling: unchanged for ingest_mode = 'full')", () => {

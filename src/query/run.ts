@@ -167,36 +167,101 @@ async function isSliceCacheTable(db: Db, tableId: string): Promise<boolean> {
   return result.rows[0]?.ingest_mode === 'slice_cache';
 }
 
+/** One `slice_fetches` row, parsed: its normalized request filter — the same
+ * `{measures, members, periods}` shape `src/ingestion/slice-cache.ts`'s
+ * `SliceRequest` stores — and when CBS last confirmed it (Task 5b). */
+interface FetchedSlice {
+  filter: { measures: string[]; members: Record<string, string[]>; periods: string[] };
+  checkedAt: string;
+}
+
+/** Breadth step 2: every `slice_fetches` row of a slice_cache table. Only
+ * ever called for a table whose `ingest_mode` is 'slice_cache' — migration
+ * 037 is then known to be present. */
+async function loadFetchedSlices(db: Db, tableId: string): Promise<FetchedSlice[]> {
+  const { rows } = await db.query('select filter, checked_at from slice_fetches where table_id = $1', [tableId]);
+  return rows.map((row) => {
+    const filter = (typeof row.filter === 'string' ? JSON.parse(row.filter) : row.filter) as {
+      measures?: string[];
+      members?: Record<string, string[]>;
+      periods?: string[];
+    };
+    return {
+      filter: { measures: filter.measures ?? [], members: filter.members ?? {}, periods: filter.periods ?? [] },
+      checkedAt: new Date(row.checked_at as string | Date).toISOString(),
+    };
+  });
+}
+
+/** Breadth step 2: THE coverage rule — does this fetched slice's filter
+ * contain the coordinate (q.measure, `periodCode`, `regionCode` on the geo
+ * dimension, every q.dims member)? The one copy of this logic: both the
+ * missing-cell diagnosis (Task 5) and the served-cell dating (Task 5b) use it. */
+function sliceCovers(slice: FetchedSlice, q: ResolvedQuery, regionCode: string, periodCode: string): boolean {
+  const { measures, members, periods } = slice.filter;
+  if (!measures.includes(q.measure)) return false;
+  if (!periods.includes(periodCode)) return false;
+  if (q.geoDimension && !(members[q.geoDimension] ?? []).includes(regionCode)) return false;
+  return Object.entries(q.dims).every(([dim, value]) => (members[dim] ?? []).includes(value));
+}
+
 /** Breadth step 2, Task 5: does ANY `slice_fetches` row for this table cover
- * `regionCode`/`missingPeriod` at `q.measure`/`q.dims`? Parses each row's
- * `filter` — the same normalized `{measures, members, periods}` shape
- * `src/ingestion/slice-cache.ts`'s `SliceRequest` stores — rather than
- * re-deriving membership from `observations` (a slice with zero returned
- * rows, e.g. every cell `Impossible`, must still count as "fetched"). */
+ * `regionCode`/`missingPeriod` at `q.measure`/`q.dims`? Reads the stored
+ * filters rather than re-deriving membership from `observations` (a slice
+ * with zero returned rows, e.g. every cell `Impossible`, must still count as
+ * "fetched"). */
 async function insideAnyFetchedSlice(
   db: Db,
   q: ResolvedQuery,
   regionCode: string,
   missingPeriod: string,
 ): Promise<boolean> {
-  const { rows } = await db.query('select filter from slice_fetches where table_id = $1', [q.tableId]);
-  for (const row of rows) {
-    const filter = (typeof row.filter === 'string' ? JSON.parse(row.filter) : row.filter) as {
-      measures?: string[];
-      members?: Record<string, string[]>;
-      periods?: string[];
-    };
-    const measures = filter.measures ?? [];
-    const periods = filter.periods ?? [];
-    const members = filter.members ?? {};
-    if (!measures.includes(q.measure)) continue;
-    if (!periods.includes(missingPeriod)) continue;
-    if (q.geoDimension && !(members[q.geoDimension] ?? []).includes(regionCode)) continue;
-    const dimsMatch = Object.entries(q.dims).every(([dim, value]) => (members[dim] ?? []).includes(value));
-    if (!dimsMatch) continue;
-    return true;
+  const slices = await loadFetchedSlices(db, q.tableId);
+  return slices.some((slice) => sliceCovers(slice, q, regionCode, missingPeriod));
+}
+
+/** Breadth step 2, Task 5b: the dates of an answer from a slice_cache table,
+ * whose cbs_tables.last_sync_at is always NULL (one slice's fetch must never
+ * re-date another slice's cells, R4). Per served cell:
+ *  - it MUST be covered by at least one `slice_fetches` row — a cell nothing
+ *    accounts for is never served (`uncovered` -> internal_inconsistency);
+ *  - a present cell is dated by the LATEST `checked_at` among the fetches
+ *    covering it (the last time CBS confirmed it);
+ *  - a RETAINED cell (#154, last_seen_batch_id set) keeps the finished_at of
+ *    the batch that last confirmed it, exactly as for a full table.
+ * `syncedAt` = the oldest cell date (the #154 rule); `lastSyncAt` = the latest
+ * covering confirmation, the registry fact checkStaleness compares against so
+ * its "niet opnieuw bevestigd" clause reads correctly. */
+async function dateSliceCacheCells(
+  db: Db,
+  q: ResolvedQuery,
+  served: { regionCode: string; periodCode: string; row: ObservationRow }[],
+): Promise<
+  | { ok: true; syncedAt: string; lastSyncAt: string }
+  | { ok: false; uncovered: { regionCode: string; periodCode: string } | null }
+> {
+  const slices = await loadFetchedSlices(db, q.tableId);
+  let syncedAt: string | null = null;
+  let lastSyncAt: string | null = null;
+  for (const { regionCode, periodCode, row } of served) {
+    let confirmedAt: string | null = null;
+    for (const slice of slices) {
+      if (sliceCovers(slice, q, regionCode, periodCode) && (confirmedAt === null || slice.checkedAt > confirmedAt)) {
+        confirmedAt = slice.checkedAt;
+      }
+    }
+    if (confirmedAt === null) return { ok: false, uncovered: { regionCode, periodCode } };
+    const cellDate =
+      row.last_seen_batch_id != null && row.retained_finished_at != null
+        ? new Date(row.retained_finished_at as string | Date).toISOString()
+        : confirmedAt;
+    if (syncedAt === null || cellDate < syncedAt) syncedAt = cellDate;
+    if (lastSyncAt === null || confirmedAt > lastSyncAt) lastSyncAt = confirmedAt;
   }
-  return false;
+  // No served cell at all: nothing to date — never reached by a real result
+  // (every shape serves at least one cell), refused rather than guessed.
+  if (syncedAt === null || lastSyncAt === null) return { ok: false, uncovered: null };
+  return { ok: true, syncedAt, lastSyncAt };
 }
 
 /** Why is a requested cell missing? Ordered diagnosis producing the refusal
@@ -778,8 +843,37 @@ export async function runQuery(
   if (units.size > 1) {
     return refuse(intent, 'internal_inconsistency', `cells of measure "${q.measure}" carry mixed units (${[...units].join(', ')}) — suspected ingestion corruption, refusing to serve`);
   }
-  if (q.table.lastSyncAt === null) {
-    return refuse(intent, 'internal_inconsistency', `table "${q.tableId}" has observations but no recorded sync time — registry inconsistency, refusing to serve`);
+  // The dates this answer carries (R4). A full table: cbs_tables.last_sync_at,
+  // which must exist. A slice_cache table (breadth step 2, Task 5b): its
+  // last_sync_at is always NULL by design, so the real invariant replaces that
+  // check — every served cell covered by a slice_fetches row, each dated by
+  // its latest CBS confirmation (dateSliceCacheCells). Never the table date,
+  // even if one were somehow set: that would re-date other slices' cells.
+  let dating: { syncedAt: string; lastSyncAt: string };
+  if (q.table.ingestMode === 'slice_cache') {
+    const served: { regionCode: string; periodCode: string; row: ObservationRow }[] = [];
+    for (const periodCode of q.periodCodes) {
+      for (const regionCode of servedRegionCodes) {
+        served.push({ regionCode, periodCode, row: byCoordinate.get(`${regionCode}|${periodCode}`)! });
+      }
+    }
+    // Narrow race, fails closed: an eviction committing between the cell
+    // fetch above and this read leaves no slice_fetches rows -> refused as
+    // internal_inconsistency rather than served undated.
+    const dated = await dateSliceCacheCells(db, q, served);
+    if (!dated.ok) {
+      const what = dated.uncovered
+        ? `the served cell ${q.measure}${dated.uncovered.regionCode ? ` for region ${dated.uncovered.regionCode}` : ''} ` +
+          `at period ${dated.uncovered.periodCode} (dims ${JSON.stringify(q.dims)}) is covered by no slice_fetches row`
+        : 'the result has no served cell to date';
+      return refuse(intent, 'internal_inconsistency', `table "${q.tableId}" is slice-cached and ${what} — refusing to serve a cell no fetch accounts for`);
+    }
+    dating = dated;
+  } else {
+    if (q.table.lastSyncAt === null) {
+      return refuse(intent, 'internal_inconsistency', `table "${q.tableId}" has observations but no recorded sync time — registry inconsistency, refusing to serve`);
+    }
+    dating = { syncedAt: q.table.lastSyncAt, lastSyncAt: q.table.lastSyncAt };
   }
 
   // --- Derivations: registered functions only (R5) ----------------------------
@@ -899,11 +993,15 @@ export async function runQuery(
   // fetch (LEFT JOIN ingestion_batches on last_seen_batch_id) — no second
   // statement, no second snapshot, so an eviction landing after the fetch can
   // no longer hide the older date behind a "batch row gone" null.
-  let effectiveSyncedAt = q.table.lastSyncAt;
-  for (const row of byCoordinate.values()) {
-    if (row.last_seen_batch_id == null || row.retained_finished_at == null) continue;
-    const iso = new Date(row.retained_finished_at as string | Date).toISOString();
-    if (iso < effectiveSyncedAt) effectiveSyncedAt = iso;
+  // Breadth step 2, Task 5b: a slice_cache table's cell dates (retained ones
+  // included) were already resolved per cell by dateSliceCacheCells above.
+  let effectiveSyncedAt = dating.syncedAt;
+  if (q.table.ingestMode !== 'slice_cache') {
+    for (const row of byCoordinate.values()) {
+      if (row.last_seen_batch_id == null || row.retained_finished_at == null) continue;
+      const iso = new Date(row.retained_finished_at as string | Date).toISOString();
+      if (iso < effectiveSyncedAt) effectiveSyncedAt = iso;
+    }
   }
 
   const attribution: Attribution = {
@@ -962,7 +1060,10 @@ export async function runQuery(
     attribution,
     // #196 (session 73): the registry facts the staleness check needs, from the
     // row this query resolved against — read once, never re-read after the fetch.
-    registry: { updateCadence: q.table.updateCadence, lastSyncAt: q.table.lastSyncAt },
+    // Task 5b: for a slice_cache table, lastSyncAt is the latest CBS
+    // confirmation covering this answer's cells (never cbs_tables.last_sync_at,
+    // which stays NULL for it); for a full table it IS last_sync_at, unchanged.
+    registry: { updateCadence: q.table.updateCadence, lastSyncAt: dating.lastSyncAt },
     // WP26 mechanism B: the intent we ACTUALLY ran — identical to the caller's
     // object unless a safelisted axis was defaulted, in which case R8 must show
     // the resolved coordinate, not the under-specified ask.
