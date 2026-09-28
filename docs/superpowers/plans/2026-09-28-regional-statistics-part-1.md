@@ -359,6 +359,63 @@ git commit -m "feat(ingestion): measure allow-list scopes units, served rows and
 
 ---
 
+### Task 3a: Status from CBS's period notes (tables with no machine-readable period status)
+
+*Added during execution (2026-09-28): Task 3 found that `70072ned` publishes `Status: null` for all 32 periods. CBS
+states status in prose instead — the table note says "De cijfers in deze tabel zijn definitief tenzij is aangegeven in
+de toelichting bij 'perioden' of 'onderwerp' dat ze voorlopig of nader voorlopig zijn", and each period's
+`Description` lists topics under "Uitkomsten zijn voorlopig over:" / "Uitkomsten zijn nader voorlopig over:". R11 needs
+a status per cell, so this task adds a strict, fail-closed reader of those notes, used via the existing #251 per-cell
+status hook (`CbsObservationRow.status`).*
+
+**Files:**
+- Modify: `src/cbs-adapter/types.ts` (`CbsCode`: optional `description`) and `src/cbs-adapter/parse-v4.ts` (`parseCodes` fills it)
+- Create: `src/ingestion/period-note-status.ts`
+- Modify: `src/ingestion/registry-seed.ts` (`Phase0Table.periodNoteStatus?` field + doc comment ONLY — the 70072ned config is Task 3's)
+- Modify: `src/ingestion/pipeline.ts` (`syncTable`: apply per-cell statuses before stage 3) and `src/ingestion/validate.ts` (`checkPeriodParsing`: a statusless period passes only when every row in it carries a per-cell status)
+- Test: `tests/ingestion/period-note-status.test.ts` (new, pure) and `tests/ingestion/ingestion.test.ts` (pipeline test in the ADR 061 describe)
+
+**Interfaces:**
+- Produces: `CbsCode.description?: string` (present only when CBS's `Description` is non-empty after trim — so every existing parsed-code equality stays unchanged); `Phase0Table.periodNoteStatus?: PeriodNoteStatusConfig`; from `period-note-status.ts`:
+  ```ts
+  export interface PeriodNoteStatusConfig {
+    /** normalizeHeading(heading) → the served measure codes that heading covers ([] = a known heading covering none of ours). */
+    headings: Record<string, string[]>;
+  }
+  export function normalizeHeading(line: string): string;
+  export type PeriodNoteParse =
+    | { ok: true; statusOf(periodCode: string, measure: string): 'Definitief' | 'Voorlopig' | 'NaderVoorlopig' }
+    | { ok: false; summary: string };
+  export function parsePeriodNotes(periodCodes: CbsCode[], config: PeriodNoteStatusConfig, servedCodes: string[]): PeriodNoteParse;
+  ```
+
+Rules `parsePeriodNotes` must enforce (each a loud `{ ok: false, summary }` naming the period and the offending text — principle (c)):
+1. Section headers, compared after `trim().toLowerCase()`: `uitkomsten zijn voorlopig over:` → `Voorlopig`, `uitkomsten zijn nader voorlopig over:` → `NaderVoorlopig`. Any other line ending in `:` is an unknown section → fail.
+2. A non-empty line before the first section header → fail (unrecognised note structure).
+3. Each non-empty line inside a section is a heading; `normalizeHeading` = trim, strip leading `-` and whitespace, strip trailing `;` / `.`, collapse internal whitespace to one space, lowercase. A heading not in `config.headings` → fail ("CBS names a topic we have not reviewed: …; add it to the 70072ned periodNoteStatus map after checking whether it covers a served figure").
+4. The same served measure covered by both sections in one period → fail.
+5. A config entry naming a code not in `servedCodes` → fail (config error), checked once up front.
+6. A period with a non-null machine `status` → fail ("CBS now publishes a machine-readable status for <period>; remove the periodNoteStatus config and use it").
+7. Otherwise `statusOf(period, measure)` = the section status if a heading of that period covers the measure, else `'Definitief'` (CBS's stated default). Periods with empty/absent descriptions → every measure `'Definitief'`.
+
+Pipeline wiring (`syncTable`, after the allow-list filtering and before stage 3): look up `SEED_TABLES.find((t) => t.id === tableId)?.periodNoteStatus` (same lookup style as `excludeMeasures`). When set: run `parsePeriodNotes(codeLists[periodDimName], config, servedMeasures.map((m) => m.code))`; on `ok: false` fail the batch at stage `'period_parsing'` with its summary (quarantine = true, same return shape as the other stage failures); on `ok: true` set `row.status = statusOf(row.coordinates[periodDimName], row.measure)` on every observation row. Additionally, for a table with this config, fail at `'period_parsing'` if any served measure's CBS description (the `description` in `servedMeasures`) contains `voorlopig` (case-insensitive) — a topic note CBS says can also mark figures provisional; we do not read those, so we refuse rather than mislabel. Tables without the config: byte-identical (no row gets `status`).
+
+`checkPeriodParsing`: keep every existing check; change only the statusless rule — a period with `status == null` is acceptable iff every row of that period has a non-empty `row.status`. Keep the existing summary text for the failing case.
+
+- [ ] **Step 1: Write failing pure tests** in `tests/ingestion/period-note-status.test.ts` — one per rule 1–7, built from small in-test `CbsCode[]` arrays (no fixture), including: the real 2025 note text (below) giving `Voorlopig` for `X092783`, `D000025`, `M000200_2`, `M003039`, `X033647` and `Definitief` for `M000100`; old-style lines `- uitkeringsontvangers;` and `- afval van huishoudens.` normalising to `uitkeringsontvangers` / `afval van huishoudens`; `\r\n` line endings.
+  Real 2025 text: `"Uitkomsten zijn voorlopig over:\r\nNabijheid voorzieningen\r\nBedrijfsvestigingen\r\nWonen - Gemiddelde WOZ waarde van woningen\r\nSociale zekerheid\r\nOnderwijs naar schoolregio\r\nOnderwijs naar woonregio - Leerlingen\r\n\r\nUitkomsten zijn nader voorlopig over:\r\nWonen - Voorraad woningen\r\nMilieu en bodemgebruik - Afval van huishoudens\r\n"` with a test config mapping `nabijheid voorzieningen`→`['X092783','D000025']`, `bedrijfsvestigingen`→`['M000200_2']`, `wonen - gemiddelde woz waarde van woningen`→`['M003039']`, `sociale zekerheid`→`['X033647']`, `wonen - voorraad woningen`→`['1014800']`, and `onderwijs naar schoolregio`, `onderwijs naar woonregio - leerlingen`, `milieu en bodemgebruik - afval van huishoudens` → `[]` (then `1014800` is `NaderVoorlopig`).
+- [ ] **Step 2: Run** `npx vitest run tests/ingestion/period-note-status.test.ts` — FAIL (module missing).
+- [ ] **Step 3: Implement** `period-note-status.ts`, `CbsCode.description`, `parseCodes` (only set when non-empty), the `Phase0Table.periodNoteStatus` field.
+- [ ] **Step 4: Validation + regression tests.** The pipeline wiring is exercised end-to-end in Task 3 against the real `70072ned` fixture (the only seed entry with a `periodNoteStatus` config; `syncTable` reads the config from `SEED_TABLES`, so no synthetic table can carry it). Here add, in `tests/ingestion/ingestion.test.ts` (ADR 061 describe) or a `checkPeriodParsing` unit test next to existing validate tests: (a) `checkPeriodParsing` with a statusless period whose rows ALL carry `status` → `{ ok: true }`; the same with one row lacking `status` → fails with the existing "carry no publication status" summary; (b) a table WITHOUT the config still fails `period_parsing` on a statusless period exactly as before — clone the `82235NED` docs, set one Perioden code's `Status` to `null`, register + sync with `table('82235NED')`, expect `failureStage === 'period_parsing'` and the existing summary.
+- [ ] **Step 5: Implement** the pipeline wiring and the `checkPeriodParsing` change; run `npx vitest run tests/ingestion/period-note-status.test.ts`, `npx vitest run tests/ingestion/ingestion.test.ts`, `npx vitest run tests/ingestion`, `npx tsc --noEmit` — all PASS.
+- [ ] **Step 6: Commit**
+  ```bash
+  git add src/cbs-adapter/types.ts src/cbs-adapter/parse-v4.ts src/ingestion/period-note-status.ts src/ingestion/registry-seed.ts src/ingestion/pipeline.ts src/ingestion/validate.ts tests/ingestion/period-note-status.test.ts tests/ingestion/ingestion.test.ts
+  git commit -m "feat(ingestion): per-cell status from CBS period notes for tables without a machine status (ADR 061, R11)"
+  ```
+
+---
+
 ### Task 3: `70072ned` in the seed set, registry defaults and a hermetic fixture
 
 **Files:**
@@ -407,6 +464,30 @@ git commit -m "feat(ingestion): measure allow-list scopes units, served rows and
     },
     updateCadence: 'irregular, per topic (CBS: "Onregelmatig"); most figures yearly',
     servesTasks: [],
+    // Task 3a: CBS publishes no machine status for any period of this table;
+    // statuses come from its period notes. Every heading CBS used in any of
+    // the 32 periods (checked 2026-09-28), mapped to the served codes it
+    // covers ([] = reviewed, covers none of ours). An unmapped heading fails
+    // the sync — review it, never default it.
+    periodNoteStatus: {
+      headings: {
+        'bedrijfsvestigingen': ['M000200_2'],
+        'nabijheid voorzieningen': ['X092783', 'D000025'],
+        'sociale zekerheid': ['X033647'],
+        'uitkeringsontvangers': ['X033647'],
+        'wonen - gemiddelde woz waarde van woningen': ['M003039'],
+        'wonen - voorraad woningen': ['1014800'],
+        'inkomen en vermogen': [],
+        'milieu en bodemgebruik - afval van huishoudens': [],
+        'afval van huishoudens': [],
+        'banen van werknemers': [],
+        'onderwijs naar schoolregio': [],
+        'onderwijs naar woonregio - gediplomeerden': [],
+        'onderwijs naar woonregio - leerlingen': [],
+        "gediplomeerden naar woongemeente (schooljaar 2021/'22)": [],
+        "leerlingen/studenten naar woongemeente (schooljaar 2022/'23)": [],
+      },
+    },
   },
 ```
 
@@ -465,6 +546,23 @@ Expected: `70072ned: <N> observation rows, <k> page(s) [sliced] [capture-slice]`
     expect(Number(await cell('M003039'))).toBe(518);
     expect(Number(await cell('A018943_2'))).toBe(287);
     expect(Number(await cell('X092783'))).toBe(2.8);
+
+    // Task 3a: statuses read from CBS's period notes (R11).
+    const status = async (measure: string, period: string) =>
+      (
+        await db.query(
+          `select status from observations where table_id = '70072ned' and measure = $1
+             and region_code = 'GM0363' and period_code = $2`,
+          [measure, period],
+        )
+      ).rows[0]?.status;
+    expect(await status('M003039', '2024JJ00')).toBe('NaderVoorlopig');
+    expect(await status('M003039', '2025JJ00')).toBe('Voorlopig');
+    expect(await status('X033647', '2024JJ00')).toBe('NaderVoorlopig');
+    expect(await status('X092783', '2025JJ00')).toBe('Voorlopig');
+    expect(await status('M000200_2', '2026JJ00')).toBe('Voorlopig');
+    expect(await status('M000100', '2025JJ00')).toBe('Definitief');
+    expect(await status('A018943_2', '2025JJ00')).toBe('Definitief');
   });
 ```
 
