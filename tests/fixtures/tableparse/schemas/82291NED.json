@@ -1,0 +1,417 @@
+{
+ "fetchedAt": "2026-09-28T16:27:00.502Z",
+ "schema": {
+  "tableId": "82291NED",
+  "title": "Caribisch NL: gezondheid en aandoeningen; persoonskenmerken",
+  "dimensions": [
+   {
+    "name": "CaribischNederland",
+    "kind": "Dimension",
+    "title": "Caribisch Nederland"
+   },
+   {
+    "name": "Marges",
+    "kind": "Dimension",
+    "title": "Marges"
+   },
+   {
+    "name": "Persoonskenmerken",
+    "kind": "Dimension",
+    "title": "Persoonskenmerken"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "D005390",
+    "title": "Zeer goed/goed",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met antwoordcategorie 'zeer goed' of 'goed' op de vraag naar de algemene gezondheid.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D000109",
+    "title": "Minder dan goed",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'gaat wel', 'slecht' of 'zeer\r\nslecht' op de vraag naar de algemene gezondheid.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "M005476_2",
+    "title": "Suikerziekte totaal",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u suikerziekte?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "A026144",
+    "title": "Suikerziekte type 1",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u suikerziekte? En met 'ja' op twee vervolgvragen: Gebruikt u hiervoor op dit moment insuline? én Bent u insuline gaan gebruiken binnen 6 maanden nadat bij u suikerziekte was vastgesteld?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "A026145",
+    "title": "Suikerziekte type 2",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u suikerziekte? en niet behorend tot de suikerziekte type1 personen.\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005213",
+    "title": "Aandoeningen van de nek of schouder",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van nek of schouder?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005351",
+    "title": "Astma, chronische bronchitis, CARA",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van astma of COPD, hieronder valt ook chronische bronchitis, longemfyseem?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D008020",
+    "title": "Chikungunya",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden chikungunya gehad?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005372",
+    "title": "Chronisch eczeem",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van chronisch eczeem?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005373",
+    "title": "Chronische gewrichtsontsteking",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van chronische gewrichtsontsteking, bijvoorbeeld ontstekingsreuma, chronische reuma of reumatoïde artritis?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005378",
+    "title": "Darmstoornissen langer dan 3 maanden",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van ernstige of hardnekkige darmstoornissen?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005385",
+    "title": "Duizeligheid met vallen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van duizeligheid met vallen?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005396",
+    "title": "Gewrichtsslijtage van heupen of knieën",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van gewrichtsslijtage van heupen of knieën, bijvoorbeeld artrose of slijtagereuma?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005402",
+    "title": "Hoge bloeddruk",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van hoge bloeddruk?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005424",
+    "title": "Knokkelkoorts",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van knokkelkoorts?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005435",
+    "title": "Migraine of ernstige hoofdpijn",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van migraine of regelmatig ernstige hoofdpijn?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005444",
+    "title": "Onvrijwillig urineverlies, incontinentie",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van onvrijwillig urineverlies, ook wel incontinentie genoemd?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005470",
+    "title": "Rugaandoening",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van de rug?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005487",
+    "title": "Vernauwing bloedvaten in buik of benen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van vernauwing van de bloedvaten in de buik of de benen, geen spataderen?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D008021",
+    "title": "Zika",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden het zikavirus gehad?\r\nIn de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psoriasis mee. ",
+    "dataType": "Double"
+   },
+   {
+    "code": "D005448",
+    "title": "Overige aandoeningen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u in de afgelopen 12 maanden last gehad van nog een andere langdurige ziekte of aandoening?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "M005361",
+    "title": "Beroerte, hersenbloeding, herseninfarct",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u ooit een beroerte, hersenbloeding of herseninfarct gehad?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "M005401",
+    "title": "Hartinfarct",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u ooit een hartinfarct of hartaanval gehad?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "M005400",
+    "title": "Hartaandoening",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u ooit een andere ernstige hartaandoening gehad, zoals hartfalen of angina pectoris. Dit laatste wordt ook wel hartkramp genoemd?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "M005422",
+    "title": "Kanker",
+    "unit": "%",
+    "decimals": 1,
+    "description": "% personen met de antwoordcategorie 'ja' op de vraag: \r\nHeeft u ooit een vorm van kanker gehad?\r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001530",
+    "title": "% geen langdurige aandoeningen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "Het percentage personen dat geen van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: \r\n-Ernstige of hardnekkige aandoening van nek of schouder\r\n-Astma of COPD\r\n-Chikungunya\r\n-Chronisch eczeem\r\n-Chronische gewrichtsontsteking\r\n-Ernstige of hardnekkige darmstoornissen\r\n-Duizeligheid met vallen\r\n-Gewrichtsslijtage van heupen of knieën \r\n-Hoge bloeddruk\r\n-Knokkelkoorts\r\n-Migraine of ernstige hoofdpijn\r\n-Onvrijwillig urineverlies, incontinentie\r\n-Ernstige of hardnekkige aandoening van de rug\r\n-Vernauwing van de bloedvaten in de buik of de benen\r\n-Zikavirus\r\nIn de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psoriasis mee. \r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001406",
+    "title": "% 1 langdurige aandoening",
+    "unit": "%",
+    "decimals": 1,
+    "description": "Het percentage personen dat één van de volgende aandoeningen heeft of in\r\nde laatste 12 maanden heeft gehad:\r\n-Ernstige of hardnekkige aandoening van nek of schouder\r\n-Astma of COPD\r\n-Chikungunya\r\n-Chronisch eczeem\r\n-Chronische gewrichtsontsteking\r\n-Ernstige of hardnekkige darmstoornissen\r\n-Duizeligheid met vallen\r\n-Gewrichtsslijtage van heupen of knieën \r\n-Hoge bloeddruk\r\n-Knokkelkoorts\r\n-Migraine of ernstige hoofdpijn\r\n-Onvrijwillig urineverlies, incontinentie\r\n-Ernstige of hardnekkige aandoening van de rug\r\n-Vernauwing van de bloedvaten in de buik of de benen\r\n-Zika\r\nIn de cijfers over 2013 en over 2017/2018 zijn chikungunya en zika niet meegenomen. In de cijfers over 2013 telde psoriasis mee. \r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D001448",
+    "title": "% 2 langdurige aandoeningen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "Het percentage personen dat twee van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad:\r\n-Ernstige of hardnekkige aandoening van nek of schouder\r\n-Astma of COPD\r\n-Chikungunya\r\n-Chronisch eczeem\r\n-Chronische gewrichtsontsteking\r\n-Ernstige of hardnekkige darmstoornissen\r\n-Duizeligheid met vallen\r\n-Gewrichtsslijtage van heupen of knieën \r\n-Hoge bloeddruk\r\n-Knokkelkoorts\r\n-Migraine of ernstige hoofdpijn\r\n-Onvrijwillig urineverlies, incontinentie\r\n-Ernstige of hardnekkige aandoening van de rug\r\n-Vernauwing van de bloedvaten in de buik of de benen\r\n- Zikavirus\r\nIn de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psoriasis mee. \r\n",
+    "dataType": "Double"
+   },
+   {
+    "code": "D008022",
+    "title": "% 3 of meer langdurige aandoeningen",
+    "unit": "%",
+    "decimals": 1,
+    "description": "Het percentage personen dat drie of meer van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad:\r\n-Ernstige of hardnekkige aandoening van nek of schouder\r\n-Astma of COPD\r\n-Chikungunya\r\n-Chronisch eczeem\r\n-Chronische gewrichtsontsteking\r\n-Ernstige of hardnekkige darmstoornissen\r\n-Duizeligheid met vallen\r\n-Gewrichtsslijtage van heupen of knieën \r\n-Hoge bloeddruk\r\n-Knokkelkoorts\r\n-Migraine of ernstige hoofdpijn\r\n-Onvrijwillig urineverlies, incontinentie\r\n-Ernstige of hardnekkige aandoening van de rug\r\n-Vernauwing van de bloedvaten in de buik of de benen\r\n- Zikavirus\r\nIn de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psoriasis mee. \r\n",
+    "dataType": "Double"
+   }
+  ],
+  "modified": "2022-12-15T02:00:00+01:00"
+ },
+ "codeLists": {
+  "CaribischNederland": [
+   {
+    "code": "CN01",
+    "title": "Caribisch Nederland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Caribisch Nederland is de benaming van de Nederlandse eilanden Bonaire, Sint-\r\nEustatius en Saba.\r\n"
+   },
+   {
+    "code": "GM9001",
+    "title": "Bonaire",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "Bonaire is sinds 10 oktober 2010 een \"bijzondere gemeente” van Nederland. Met deze nieuwe status als \"bijzondere gemeente\" is Bonaire officieel erkend als openbaar lichaam van Nederland. Dit is geregeld in de Wet Openbare lichamen BES."
+   },
+   {
+    "code": "GM9002",
+    "title": "Sint-Eustatius",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3,
+    "description": "Sint-Eustatius is sinds 10 oktober 2010 een \"bijzondere gemeente” van Nederland. Met deze nieuwe status als \"bijzondere gemeente\" is Sint-Eustatius officieel erkend als openbaar lichaam van Nederland. Dit is geregeld in de Wet Openbare lichamen BES."
+   },
+   {
+    "code": "GM9003",
+    "title": "Saba",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4,
+    "description": "Saba is sinds 10 oktober 2010 een \"bijzondere gemeente” van Nederland. Met deze nieuwe status als \"bijzondere gemeente\" is Saba officieel erkend als openbaar lichaam van Nederland. Dit is geregeld in de Wet Openbare lichamen BES."
+   }
+  ],
+  "Marges": [
+   {
+    "code": "MW00000",
+    "title": "Waarde",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "B000150",
+    "title": "Betrouwbaarheidsmarge",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2,
+    "description": "De percentages zijn gebaseerd op een steekproef, en zullen daardoor niet precies gelijk zijn aan de werkelijke waarde zoals die in de bevolking voorkomt. De betrouwbaarheidsmarge geeft een indruk van de nauwkeurigheid van de gevonden schatting. Deze marge is onder meer afhankelijk van de steekproefomvang; de schatting is nauwkeuriger naarmate deze marge kleiner is.\r\nDe schatting plus en min de betrouwbaarheidsmarge levert de grenzen van het 95% betrouwbaarheidsinterval. Dit betrouwbaarheidsinterval geeft met een nauwkeurigheid van 95% aan tussen welke waarden het werkelijke percentage waarschijnlijk zal zitten.\r\n"
+   }
+  ],
+  "Persoonskenmerken": [
+   {
+    "code": "T009002",
+    "title": "Totaal personen",
+    "dimensionGroup": "1",
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "3000",
+    "title": "Geslacht: mannen",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "4000",
+    "title": "Geslacht: vrouwen",
+    "dimensionGroup": "2",
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "53050",
+    "title": "Leeftijd: 15 tot 25 jaar",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "53310",
+    "title": "Leeftijd: 25 tot 45 jaar",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "53715",
+    "title": "Leeftijd: 45 tot 65 jaar",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "80200",
+    "title": "Leeftijd: 65 jaar of ouder",
+    "dimensionGroup": "3",
+    "status": null,
+    "index": 7
+   },
+   {
+    "code": "2018700",
+    "title": "Onderwijsniveau: Laag",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 8,
+    "description": "Het hoogstbehaald onderwijsniveau is laag onderwijs. \r\nDit omvat onderwijs op het niveau van basisonderwijs, het vmbo, de eerste 3 leerjaren van havo/vwo en de entreeopleiding, de voormalige assistentenopleiding (mbo1)."
+   },
+   {
+    "code": "2018740",
+    "title": "Onderwijsniveau: Middelbaar",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 9,
+    "description": "Het hoogstbehaald onderwijsniveau is middelbaar onderwijs. \r\nDit omvat de bovenbouw van havo/vwo, de basisberoepsopleiding (mbo2), de vakopleiding (mbo3) en de middenkader- en specialistenopleidingen (mbo4)."
+   },
+   {
+    "code": "2018790",
+    "title": "Onderwijsniveau: Hoog",
+    "dimensionGroup": "4",
+    "status": null,
+    "index": 10,
+    "description": "Het hoogstbehaald onderwijsniveau is hoog onderwijs. \r\nDit omvat onderwijs op het niveau van hbo of wo."
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017/2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2,
+    "description": "De Omnibusenquête is in de maanden oktober en november 2017 uitgevoerd op Bonaire, en in de periode januari t/m maart 2018 op Saba en Sint-Eustatius."
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 3,
+    "description": "Voorlopige cijfers"
+   }
+  ]
+ }
+}

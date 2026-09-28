@@ -23,6 +23,12 @@ const MAX_BYTES_WARN = 1 * 1024 * 1024; // 1 MB — keep, but report the size
 
 // Exact as-published table IDs, casing preserved (catalog quirk #1). Chosen
 // for shape variety — see task-1-brief.md for the reason each is on the list.
+// Fix round 1 (controller ruling, task-1-report.md): `83052NED` and
+// `86116NED` have no TimeDimension at all — kept on purpose as "must refuse"
+// cases for Task 2's builder, not shape drift. `82291NED` and `80590ned`
+// added as the ELIGIBLE counterparts: a genuine Marges case with a real
+// TimeDimension + machine period status (unlike 83052NED's), and a
+// no-grand-total `Leeftijd` dimension on a table with monthly periods.
 const TABLE_IDS = [
   '03759ned',
   '85669NED',
@@ -32,6 +38,8 @@ const TABLE_IDS = [
   '85004NED',
   '82883NED',
   '86116NED',
+  '82291NED',
+  '80590ned',
 ];
 
 async function main() {
