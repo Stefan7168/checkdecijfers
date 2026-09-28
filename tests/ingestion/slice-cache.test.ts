@@ -1211,4 +1211,46 @@ describe('slice_fetches.checked_at — when CBS last confirmed a slice (breadth 
     expect((await ensureSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
     expect((await cbsTablesRow('83625NED')).last_sync_at).toBeNull();
   });
+
+  it('fix round 1: a cache hit does NOT confirm a slice CBS superseded between the check and the bump', async () => {
+    const docs = await registered('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    await backdate('83625NED');
+
+    // A refresh (another slice seeing a newer CBS Modified) commits right
+    // before the bump statement runs — after ensureSlice's staleness check.
+    const racing: Db = {
+      async query(text, params) {
+        if (text.includes('update slice_fetches set checked_at')) {
+          await db.query(
+            `update cbs_tables set schema_cbs_modified = schema_cbs_modified + interval '1 day' where id = '83625NED'`,
+          );
+        }
+        return db.query(text, params);
+      },
+      withTransaction: (fn) => db.withTransaction(fn),
+    };
+    const result = await ensureSlice(racing, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+    expect(result).toMatchObject({ ok: true, cached: true });
+
+    expect((await sliceTimes('83625NED')).checkedAt).toBe(OLD); // not confirmed
+  });
+
+  it('fix round 1: a cache hit stamps the time of the CBS check and never moves checked_at backwards', async () => {
+    const docs = await registered('83625NED');
+    expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+    await backdate('83625NED');
+    const beforeCall = new Date().toISOString();
+    expect(await ensureSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).toMatchObject({ cached: true });
+    const stamped = (await sliceTimes('83625NED')).checkedAt;
+    expect(stamped >= beforeCall).toBe(true);
+    expect(stamped <= new Date().toISOString()).toBe(true);
+
+    // A later checked_at (a concurrent refetch) is kept by the next hit.
+    const FUTURE = '2099-01-01T00:00:00.000Z';
+    await db.query("update slice_fetches set checked_at = $1 where table_id = '83625NED'", [FUTURE]);
+    expect(await ensureSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).toMatchObject({ cached: true });
+    expect((await sliceTimes('83625NED')).checkedAt).toBe(FUTURE);
+  });
 });
+

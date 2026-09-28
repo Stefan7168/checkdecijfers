@@ -94,6 +94,11 @@ interface ObservationRow {
    * last confirmed it (ingestion_batches, LEFT-JOINed — same snapshot); null
    * for a cell present in the latest sync. */
   retained_finished_at: unknown;
+  /** Breadth step 2, fix round 1 of Task 5b: slice_cache tables ONLY — every
+   * slice_fetches row of the table ({filter, checked_at}), aggregated INTO the
+   * cell fetch so the cells and the dates that vouch for them come from ONE
+   * statement, one snapshot (the #196 discipline). Absent for a full table. */
+  slice_fetches_snapshot?: unknown;
 }
 
 /** Freshest period we hold for these exact coordinates (open-questions #37:
@@ -175,22 +180,39 @@ interface FetchedSlice {
   checkedAt: string;
 }
 
-/** Breadth step 2: every `slice_fetches` row of a slice_cache table. Only
- * ever called for a table whose `ingest_mode` is 'slice_cache' — migration
- * 037 is then known to be present. */
+/** Breadth step 2: one `slice_fetches` row ({filter, checked_at}) parsed —
+ * shared by the separate read below and the single-snapshot aggregate the
+ * slice-cache cell fetch carries (runQuery). */
+function parseFetchedSlice(row: { filter: unknown; checked_at: unknown }): FetchedSlice {
+  const filter = (typeof row.filter === 'string' ? JSON.parse(row.filter) : row.filter) as {
+    measures?: string[];
+    members?: Record<string, string[]>;
+    periods?: string[];
+  };
+  return {
+    filter: { measures: filter.measures ?? [], members: filter.members ?? {}, periods: filter.periods ?? [] },
+    checkedAt: new Date(row.checked_at as string | Date).toISOString(),
+  };
+}
+
+/** Breadth step 2: every `slice_fetches` row of a slice_cache table, as its
+ * own statement — used only by the missing-cell diagnosis (a refusal path,
+ * which dates nothing). Only ever called for a table whose `ingest_mode` is
+ * 'slice_cache' — migration 037 is then known to be present. */
 async function loadFetchedSlices(db: Db, tableId: string): Promise<FetchedSlice[]> {
   const { rows } = await db.query('select filter, checked_at from slice_fetches where table_id = $1', [tableId]);
-  return rows.map((row) => {
-    const filter = (typeof row.filter === 'string' ? JSON.parse(row.filter) : row.filter) as {
-      measures?: string[];
-      members?: Record<string, string[]>;
-      periods?: string[];
-    };
-    return {
-      filter: { measures: filter.measures ?? [], members: filter.members ?? {}, periods: filter.periods ?? [] },
-      checkedAt: new Date(row.checked_at as string | Date).toISOString(),
-    };
-  });
+  return rows.map((row) => parseFetchedSlice({ filter: row.filter, checked_at: row.checked_at }));
+}
+
+/** Breadth step 2, fix round 1 of Task 5b: the slice_fetches rows the
+ * slice-cache cell fetch aggregated into its own result (same statement, same
+ * snapshot as the cells). Every row carries the same aggregate; null (no
+ * slice_fetches row at all) reads as no slice. */
+function slicesFromSnapshot(rows: ObservationRow[]): FetchedSlice[] {
+  const raw = rows[0]?.slice_fetches_snapshot;
+  if (raw == null) return [];
+  const list = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { filter: unknown; checked_at: unknown }[];
+  return list.map(parseFetchedSlice);
 }
 
 /** Breadth step 2: THE coverage rule — does this fetched slice's filter
@@ -228,21 +250,25 @@ async function insideAnyFetchedSlice(
  *  - a present cell is dated by the LATEST `checked_at` among the fetches
  *    covering it (the last time CBS confirmed it);
  *  - a RETAINED cell (#154, last_seen_batch_id set) keeps the finished_at of
- *    the batch that last confirmed it, exactly as for a full table.
+ *    the batch that last confirmed it, exactly as for a full table — and
+ *    refuses if that batch has no finished_at (never re-dated forward).
+ * `slices` MUST come from the same statement as the cells
+ * (slicesFromSnapshot): read separately, a concurrent refetch revising a cell
+ * and bumping checked_at in between would date the OLD value "now" (R4). Pure,
+ * no database access.
  * `syncedAt` = the oldest cell date (the #154 rule); `lastSyncAt` = the latest
  * covering confirmation, the registry fact checkStaleness compares against so
  * its "niet opnieuw bevestigd" clause reads correctly. */
-async function dateSliceCacheCells(
-  db: Db,
+function dateSliceCacheCells(
   q: ResolvedQuery,
+  slices: FetchedSlice[],
   served: { regionCode: string; periodCode: string; row: ObservationRow }[],
-): Promise<
-  | { ok: true; syncedAt: string; lastSyncAt: string }
-  | { ok: false; uncovered: { regionCode: string; periodCode: string } | null }
-> {
-  const slices = await loadFetchedSlices(db, q.tableId);
+): { ok: true; syncedAt: string; lastSyncAt: string } | { ok: false; reason: string } {
   let syncedAt: string | null = null;
   let lastSyncAt: string | null = null;
+  const describe = (regionCode: string, periodCode: string) =>
+    `the served cell ${q.measure}${regionCode ? ` for region ${regionCode}` : ''} at period ${periodCode} ` +
+    `(dims ${JSON.stringify(q.dims)})`;
   for (const { regionCode, periodCode, row } of served) {
     let confirmedAt: string | null = null;
     for (const slice of slices) {
@@ -250,17 +276,31 @@ async function dateSliceCacheCells(
         confirmedAt = slice.checkedAt;
       }
     }
-    if (confirmedAt === null) return { ok: false, uncovered: { regionCode, periodCode } };
-    const cellDate =
-      row.last_seen_batch_id != null && row.retained_finished_at != null
-        ? new Date(row.retained_finished_at as string | Date).toISOString()
-        : confirmedAt;
+    if (confirmedAt === null) {
+      return { ok: false, reason: `${describe(regionCode, periodCode)} is covered by no slice_fetches row` };
+    }
+    let cellDate = confirmedAt;
+    if (row.last_seen_batch_id != null) {
+      // Fix round 1 (minor 3): a RETAINED cell whose confirming batch has no
+      // finished_at (row gone / never finished) has no provable date — never
+      // fall back to the slice's newer checked_at, which would claim CBS
+      // re-confirmed a cell it stopped returning.
+      if (row.retained_finished_at == null) {
+        return {
+          ok: false,
+          reason:
+            `${describe(regionCode, periodCode)} is retained (last seen in batch ${String(row.last_seen_batch_id)}) ` +
+            'but that batch has no finish time to date it by',
+        };
+      }
+      cellDate = new Date(row.retained_finished_at as string | Date).toISOString();
+    }
     if (syncedAt === null || cellDate < syncedAt) syncedAt = cellDate;
     if (lastSyncAt === null || confirmedAt > lastSyncAt) lastSyncAt = confirmedAt;
   }
   // No served cell at all: nothing to date — never reached by a real result
   // (every shape serves at least one cell), refused rather than guessed.
-  if (syncedAt === null || lastSyncAt === null) return { ok: false, uncovered: null };
+  if (syncedAt === null || lastSyncAt === null) return { ok: false, reason: 'the result has no served cell to date' };
   return { ok: true, syncedAt, lastSyncAt };
 }
 
@@ -574,11 +614,26 @@ export async function runQuery(
   // answer with raw period codes in its sentence and a too-new "gesynchroniseerd
   // op" date for a retained cell. LEFT-JOINed here they are read together with
   // the cells they describe, and a served turn pays two statements fewer (#173).
+  //
+  // Breadth step 2, fix round 1 of Task 5b: a slice_cache table's dates live
+  // in slice_fetches (checked_at), so for it — and only it — the same
+  // statement also aggregates every slice_fetches row of the table (an
+  // uncorrelated scalar subquery, evaluated once). Cells and the dates that
+  // vouch for them are then one snapshot: a concurrent refetch that revises a
+  // cell and bumps checked_at can never lend its new date to the old value.
+  // For a full table `sliceSnapshotColumn` is '' and the statement is
+  // byte-identical to before.
+  const sliceSnapshotColumn =
+    q.table.ingestMode === 'slice_cache'
+      ? `,
+            (select json_agg(json_build_object('filter', sf.filter, 'checked_at', sf.checked_at))
+               from slice_fetches sf where sf.table_id = $1) as slice_fetches_snapshot`
+      : '';
   const result = await db.query(
     `select o.region_code, o.period_code, o.value, o.unit, o.decimals, o.status, o.value_attribute,
             o.batch_id, o.last_seen_batch_id,
             dl.label as period_label,
-            ib.finished_at as retained_finished_at
+            ib.finished_at as retained_finished_at${sliceSnapshotColumn}
      from observations o
      left join dimension_labels dl
        on dl.table_id = o.table_id and dl.dimension = $6 and dl.code = o.period_code
@@ -857,16 +912,11 @@ export async function runQuery(
         served.push({ regionCode, periodCode, row: byCoordinate.get(`${regionCode}|${periodCode}`)! });
       }
     }
-    // Narrow race, fails closed: an eviction committing between the cell
-    // fetch above and this read leaves no slice_fetches rows -> refused as
-    // internal_inconsistency rather than served undated.
-    const dated = await dateSliceCacheCells(db, q, served);
+    // Same snapshot as the cells (fix round 1): the slices came WITH the cell
+    // fetch above, never from a later statement.
+    const dated = dateSliceCacheCells(q, slicesFromSnapshot(result.rows as unknown as ObservationRow[]), served);
     if (!dated.ok) {
-      const what = dated.uncovered
-        ? `the served cell ${q.measure}${dated.uncovered.regionCode ? ` for region ${dated.uncovered.regionCode}` : ''} ` +
-          `at period ${dated.uncovered.periodCode} (dims ${JSON.stringify(q.dims)}) is covered by no slice_fetches row`
-        : 'the result has no served cell to date';
-      return refuse(intent, 'internal_inconsistency', `table "${q.tableId}" is slice-cached and ${what} — refusing to serve a cell no fetch accounts for`);
+      return refuse(intent, 'internal_inconsistency', `table "${q.tableId}" is slice-cached and ${dated.reason} — refusing to serve a cell whose CBS confirmation cannot be accounted for`);
     }
     dating = dated;
   } else {

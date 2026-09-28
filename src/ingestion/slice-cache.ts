@@ -833,8 +833,9 @@ export async function fetchSlice(
  * `slice_fetches` already holds this exact request (`filter_key`) and CBS's
  * current `Modified` says nothing changed — one cheap properties request
  * either way, never a full observations fetch on a cache hit. A cache hit
- * moves that row's `checked_at` to now (CBS just confirmed the slice
- * unchanged), so answers from it are dated by this confirmation. Otherwise
+ * moves that row's `checked_at` to the time of this CBS check (CBS just
+ * confirmed the slice unchanged) — unless a refresh landed in between and
+ * superseded it — so answers from it are dated by this confirmation. Otherwise
  * behaves exactly like `fetchSlice` (and, for a table that is not an active
  * slice-cache table, defers to it immediately with no extra network call, so
  * it gives the exact same refusal wording for "not registered" / "full
@@ -892,6 +893,10 @@ export async function ensureSlice(
   }
   const registry = parseSliceRegistry(registryRow);
 
+  // Fix round 1 of Task 5b: the moment CBS's Modified was asked for — what a
+  // cache hit below confirms the slice AS OF (never the later now() of the
+  // bump itself, which would over-claim by the length of this call).
+  const checkTakenAt = new Date().toISOString();
   const check = await checkSliceSchema(source, tableId, registry);
   if (!check.ok) {
     const batchInsert = await db.query(
@@ -951,14 +956,21 @@ export async function ensureSlice(
     const cbsNewer = rowModifiedTime === null || cbsModifiedTime === null || cbsModifiedTime > rowModifiedTime;
     if (!stale && !cbsNewer) {
       // Task 5b: CBS's Modified, fetched just above, says nothing changed
-      // since this slice was stored — its cells are re-confirmed NOW. Only
-      // checked_at moves (fetched_at stays: nothing was fetched); the query
-      // layer dates this slice's cells by it. cbs_tables.last_sync_at is
-      // never written here (one slice must not re-date another's cells).
-      await db.query('update slice_fetches set checked_at = now() where table_id = $1 and filter_key = $2', [
-        tableId,
-        filterKey,
-      ]);
+      // since this slice was stored — its cells are re-confirmed as of the
+      // check. Only checked_at moves (fetched_at stays: nothing was fetched);
+      // the query layer dates this slice's cells by it. cbs_tables.last_sync_at
+      // is never written here (one slice must not re-date another's cells).
+      // Fix round 1 (minor 2): this runs outside the per-table lock, so it is
+      // CONDITIONAL — a refresh committed since the staleness check above (a
+      // newer schema_cbs_modified this row has not caught up with) means CBS
+      // has superseded the slice, and it must not be confirmed. greatest()
+      // keeps a concurrent refetch's later checked_at from moving backwards.
+      await db.query(
+        `update slice_fetches set checked_at = greatest(checked_at, $3::timestamptz)
+          where table_id = $1 and filter_key = $2
+            and cbs_modified >= (select schema_cbs_modified from cbs_tables where id = $1)`,
+        [tableId, filterKey, checkTakenAt],
+      );
       const batch = (
         await db.query('select rows_missing from ingestion_batches where id = $1', [sliceRow.batch_id])
       ).rows[0];

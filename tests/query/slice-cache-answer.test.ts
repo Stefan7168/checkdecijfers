@@ -82,6 +82,31 @@ function served(outcome: QueryOutcome) {
   return outcome;
 }
 
+/** A Db that logs every statement and lets a test act right AFTER the cell
+ * fetch (the one statement reading `from observations o`) — to interleave a
+ * "concurrent" write between it and anything runQuery reads later, or to
+ * reshape what that statement returned. */
+function intercepting(
+  inner: Db,
+  hooks: {
+    log?: string[];
+    afterCellFetch?: () => Promise<void>;
+    reshapeCellFetch?: (rows: Record<string, unknown>[]) => Record<string, unknown>[];
+  },
+): Db {
+  const wrap = (d: Db): Db => ({
+    async query(text, params) {
+      hooks.log?.push(text);
+      const result = await d.query(text, params);
+      if (!text.includes('from observations o')) return result;
+      await hooks.afterCellFetch?.();
+      return hooks.reshapeCellFetch ? { rows: hooks.reshapeCellFetch(result.rows) } : result;
+    },
+    withTransaction: (fn) => d.withTransaction((tx) => fn(wrap(tx))),
+  });
+  return wrap(inner);
+}
+
 async function lastSyncAt(): Promise<unknown> {
   return (await db.query('select last_sync_at from cbs_tables where id = $1', [TABLE])).rows[0]!.last_sync_at;
 }
@@ -216,5 +241,71 @@ describe('answering from a slice_cache table (breadth step 2, Task 5b)', () => {
     expect(outcome.ok).toBe(false);
     if (outcome.ok) throw new Error('unreachable');
     expect(outcome.refusal.kind).toBe('internal_inconsistency');
+  });
+
+  it('fix round 1: cells and their slice dates come from ONE statement (one snapshot)', async () => {
+    await fetchAt(slice(['NL01'], ['2024JJ00']), T1);
+    const log: string[] = [];
+    served(await runQuery(intercepting(db, { log }), intent(['NL01'], ['2024JJ00'])));
+
+    const readingSlices = log.filter((sql) => sql.includes('slice_fetches'));
+    expect(readingSlices).toHaveLength(1);
+    expect(readingSlices[0]).toContain('from observations o');
+  });
+
+  it('fix round 1: a refetch that revises the cell and bumps checked_at right after the cell read never dates the OLD value "now" (R4)', async () => {
+    await fetchAt(slice(['NL01'], ['2024JJ00']), T1);
+    const before = (
+      await db.query(
+        `select value from observations where table_id = $1 and region_code = 'NL01' and period_code = '2024JJ00'`,
+        [TABLE],
+      )
+    ).rows[0]!.value;
+
+    const outcome = await runQuery(
+      intercepting(db, {
+        // A "concurrent" fetchSlice commits between the cell read and any
+        // later read: the cell is revised and the slice re-confirmed at T3.
+        afterCellFetch: async () => {
+          await db.query(
+            `update observations set value = value + 1 where table_id = $1 and region_code = 'NL01' and period_code = '2024JJ00'`,
+            [TABLE],
+          );
+          await db.query('update slice_fetches set checked_at = $2 where table_id = $1', [TABLE, T3]);
+        },
+      }),
+      intent(['NL01'], ['2024JJ00']),
+    );
+
+    const result = served(outcome);
+    expect(result.cells[0]!.value).toBe(Number(before)); // the value read...
+    expect(result.attribution.syncedAt).toBe(T1); // ...with the date that vouched for IT
+    expect(result.registry?.lastSyncAt).toBe(T1);
+  });
+
+  it('fix round 1: a retained cell whose confirming batch has no finish time -> internal_inconsistency, never re-dated forward', async () => {
+    const req = slice(['NL01'], ['2024JJ00', '2025JJ00']);
+    await fetchAt(req, T0);
+    const withoutCell = structuredClone(docs);
+    const page = withoutCell.observationPages[0] as { value: Record<string, unknown>[] };
+    page.value = page.value.filter((r) => !(r.RegioS === 'NL01' && r.Perioden === '2025JJ00'));
+    await fetchAt(req, T2, withoutCell);
+
+    // The LEFT JOIN on the confirming batch comes back empty (batch row gone
+    // or never finished) — simulated on the statement's own result.
+    const outcome = await runQuery(
+      intercepting(db, {
+        reshapeCellFetch: (rows) =>
+          rows.map((r) => (r.last_seen_batch_id == null ? r : { ...r, retained_finished_at: null })),
+      }),
+      intent(['NL01'], ['2025JJ00']),
+    );
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.kind).toBe('internal_inconsistency');
+    expect(outcome.refusal.message).toContain('retained');
+
+    // The non-retained neighbour still answers, dated by the slice (T2).
+    expect(served(await runQuery(db, intent(['NL01'], ['2024JJ00']))).attribution.syncedAt).toBe(T2);
   });
 });
