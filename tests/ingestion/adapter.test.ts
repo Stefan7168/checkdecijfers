@@ -106,6 +106,8 @@ describe('adapter parsing (real captured wire data)', () => {
       for (const m of schema.measures) {
         expect(m.groupPath).toEqual([]);
       }
+      // No captured file = "no groups", not "groups unavailable" (I2).
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
     });
 
     // Pinned BEFORE this task's change existed (computed from the fixture with
@@ -655,12 +657,87 @@ describe('ODataV4Source.fetchTableSchema — MeasureGroups (breadth step 4b, Tas
     }
   });
 
-  it('a non-404 failure fetching MeasureGroups behaves like the other metadata fetches (throws)', async () => {
+  // Final-review I2 (breadth step 4b fix wave): MeasureGroups is
+  // BEST-EFFORT. Groups are never stored (they only feed the table-scoped
+  // parser's prompt), so a MeasureGroups outage must never fail a production
+  // sync — the schema resolves with every groupPath [] and the in-memory
+  // measureGroupsUnavailable flag, which buildTableParseSchema refuses.
+  function stubWithGroups(groups: () => { ok: boolean; status: number; statusText: string; json: () => Promise<unknown> }) {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
       if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
       if (url.endsWith('/MeasureCodes')) return { ok: true, status: 200, statusText: 'OK', json: async () => measuresResponse };
-      if (url.endsWith('/MeasureGroups')) return { ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) };
+      if (url.endsWith('/MeasureGroups')) return groups();
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('a 500 on MeasureGroups (after the normal retries) resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    const fetchMock = stubWithGroups(() => ({ ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+      expect(schema.title).toBe('Test tabel');
+      // the normal retries still ran (3 attempts) before degrading
+      expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/MeasureGroups'))).toHaveLength(3);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }, 15_000); // 3 retries with backoff (RETRY_BACKOFF_MS), like the equivalent Eurostat test
+
+  it('a malformed MeasureGroups row (missing Title) resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [{ Id: 'G1', ParentId: null }] }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a MeasureGroups body that is not a value array resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ unexpected: true }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a 404 on MeasureGroups ("this table has no groups") sets NO unavailable flag', async () => {
+    stubWithGroups(() => ({ ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a successful MeasureGroups fetch sets NO unavailable flag', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [{ Id: 'G1', Title: 'Beroepsbevolking', ParentId: null }] }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual(['Beroepsbevolking']);
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a failure on a REQUIRED metadata fetch (MeasureCodes 500) still throws — only MeasureGroups is best-effort', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) };
+      if (url.endsWith('/MeasureGroups')) return { ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [] }) };
       throw new Error(`unexpected hermetic-stub request: ${url}`);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -669,5 +746,5 @@ describe('ODataV4Source.fetchTableSchema — MeasureGroups (breadth step 4b, Tas
     } finally {
       vi.unstubAllGlobals();
     }
-  }, 15_000); // 3 retries with backoff (RETRY_BACKOFF_MS), like the equivalent Eurostat test
+  }, 15_000);
 });

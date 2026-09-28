@@ -94,6 +94,29 @@ describe('buildTableParseSchema — measure filtering', () => {
     );
   });
 
+  // Final-review I2 (breadth step 4b fix wave): the adapter degrades a
+  // MeasureGroups failure to every groupPath [] + measureGroupsUnavailable
+  // (so an ingestion sync never fails over data it never stores). The
+  // table-scoped parser must NOT then offer the table as if it had no groups
+  // — the group is what tells same-titled measures apart — so a flagged
+  // schema is ineligible until CBS recovers.
+  it('throws TableParseIneligibleTableError for a schema flagged measureGroupsUnavailable', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const flagged = { ...schema, measures: schema.measures.map((m) => ({ ...m, groupPath: [] })), measureGroupsUnavailable: true };
+    expect(() => buildTableParseSchema(flagged, codeLists, 'Hoeveel werklozen waren er in maart 2024?')).toThrow(
+      TableParseIneligibleTableError,
+    );
+    expect(() => buildTableParseSchema(flagged, codeLists, 'Hoeveel werklozen waren er in maart 2024?')).toThrow(
+      /measure groups/,
+    );
+  });
+
+  it('a schema with measureGroupsUnavailable false (or absent) is built as usual', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    expect(() => buildTableParseSchema({ ...schema, measureGroupsUnavailable: false }, codeLists, 'Hoeveel werklozen?')).not.toThrow();
+    expect(() => buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen?')).not.toThrow();
+  });
+
   // Breadth step 4b, Task 2 — groupPath is carried straight from CbsMeasure
   // through to TableParseMeasure. 80590ned's own measures are grouped
   // (measured against the live-refreshed fixture): D002308

@@ -86,6 +86,19 @@ export interface CbsTableSchema {
    * never omit the field.
    */
   modified: string | null;
+  /**
+   * Final-review I2 (breadth step 4b fix wave): `true` ONLY when the v4
+   * adapter could not fetch (a non-404 failure after its normal retries) or
+   * parse the table's MeasureGroups — every measure's `groupPath` is then
+   * `[]` for that reason, not because CBS has no groups. Absent otherwise
+   * (including the 404 "this table publishes no groups" case, and every
+   * FixtureSource / Eurostat schema). In memory only, never stored;
+   * ingestion never reads it — groups are never persisted, so they must
+   * never fail a sync. buildTableParseSchema (src/answer/table-parse)
+   * refuses a flagged table, since the group is what tells same-titled
+   * measures apart in its prompt.
+   */
+  measureGroupsUnavailable?: boolean;
 }
 
 export interface CbsCode {

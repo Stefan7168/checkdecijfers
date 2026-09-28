@@ -222,8 +222,10 @@ function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): 
 /**
  * Builds the table-scoped parser's input from raw CBS metadata. Throws
  * TableParseIneligibleTableError when the table has no numeric measure, no
- * TimeDimension at all, or a dimension without a code-list entry — each
- * means this table can never be answered through the table-scoped path and
+ * TimeDimension at all, a dimension without a code-list entry, or its
+ * measure groups flagged unavailable by the adapter (final-review I2; the
+ * one transient reason — the table is refused until CBS recovers) — each
+ * means this table cannot be answered through the table-scoped path and
  * must never be offered to a reader question (measured refuse cases:
  * 83052NED's `Perioden` is kind `Dimension`, not `TimeDimension`; 86116NED
  * has no Perioden dimension whatsoever).
@@ -233,6 +235,15 @@ export function buildTableParseSchema(
   codeLists: Record<string, CbsCode[]>,
   question: string,
 ): TableParseSchema {
+  // Final-review I2: the adapter could not fetch/parse this table's
+  // MeasureGroups, so every groupPath is [] for a transient reason — offering
+  // the table anyway would silently drop the group that tells same-titled
+  // measures apart (80590ned's "Seizoengecorrigeerd" x7). Refuse until CBS
+  // recovers.
+  if (schema.measureGroupsUnavailable === true) {
+    throw new TableParseIneligibleTableError(schema.tableId, 'has its measure groups temporarily unavailable');
+  }
+
   const measures: TableParseMeasure[] = schema.measures
     .filter((m) => m.dataType !== 'String')
     .map((m) => ({ code: m.code, title: m.title, unit: m.unit, description: m.description, groupPath: m.groupPath }));
