@@ -1,7 +1,7 @@
 # Regional statistics: twelve figures per municipality and province from `70072ned`
 
-**Status:** DRAFT, session 138 (2026-09-28). Owner picked the 12-figure set in chat (question box, "12 figures
-(Recommended)"). Design GO pending. **Row:** build-plan "Regional statistics → region questions"; touches
+**Status:** design APPROVED by the owner, session 138 (2026-09-28): picked the 12-figure set ("12 figures
+(Recommended)"), then "Go, build step 1 now" on the plain-English summary. Part 2 waits for 2026-10-01 + the owner. **Row:** build-plan "Regional statistics → region questions"; touches
 [#333](../../open-questions.md)(6). **ADR:** 061 (written with the build).
 
 ## 1. What the reader gets
