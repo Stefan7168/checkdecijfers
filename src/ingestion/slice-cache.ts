@@ -25,7 +25,13 @@ export type SchemaOnlyResult =
   | { ok: true; tableId: string; numericMeasures: string[]; alreadyRegistered: boolean }
   | {
       ok: false;
-      reason: 'no_time_dimension' | 'no_machine_period_status' | 'no_numeric_measures' | 'registered_as_full';
+      reason:
+        | 'no_time_dimension'
+        | 'no_periods'
+        | 'no_machine_period_status'
+        | 'no_numeric_measures'
+        | 'no_cbs_modified'
+        | 'registered_as_full';
       summary: string;
     };
 
@@ -46,14 +52,22 @@ function parseJsonbUnits(value: unknown): Record<string, unknown> {
  * cannot safely serve:
  * - `no_time_dimension`: the schema has no `TimeDimension` — a slice cache
  *   is fetched and evicted per period, so there must be one to key on.
- * - `no_machine_period_status`: every fetched Perioden code has `status:
- *   null`. ADR 061's period-note PROSE reader (src/ingestion/
- *   period-note-status.ts) is reviewed per table (a curated
+ * - `no_periods`: the time dimension's own code list came back empty — no
+ *   period exists to key a slice on (distinct from the ALL-NULL case below,
+ *   which has periods but no machine status on any of them).
+ * - `no_machine_period_status`: the time dimension has periods, but every
+ *   one carries `status: null`. ADR 061's period-note PROSE reader
+ *   (src/ingestion/period-note-status.ts) is reviewed per table (a curated
  *   `Phase0Table.periodNoteStatus` config) — schema-only registration is
  *   generic and un-curated, so it never guesses a status from prose.
  * - `no_numeric_measures`: every measure's CBS `DataType` is `'String'` —
  *   text measures (`code`, `naam`, `omschrijving`-shaped) are never
  *   registered as servable (breadth step 2 constraints).
+ * - `no_cbs_modified`: CBS's own 'Modified' date on the table (`schema.
+ *   modified`) is null or empty. A slice cache's ONLY staleness signal is
+ *   "did CBS's Modified move since we last fetched this slice" — a table
+ *   whose source can never state that can never be told apart from stale,
+ *   so it is refused at registration rather than silently served forever.
  *
  * Idempotent: already `slice_cache` -> `{ ok: true, alreadyRegistered: true
  * }`, no writes. Already `full` -> `registered_as_full` — the whole-table
@@ -78,11 +92,25 @@ export async function registerSchemaOnly(
       };
     }
     const units = parseJsonbUnits(row.units);
-    return { ok: true, tableId, numericMeasures: Object.keys(units), alreadyRegistered: true };
+    return { ok: true, tableId, numericMeasures: Object.keys(units).sort(), alreadyRegistered: true };
   }
 
   const schema = await source.fetchTableSchema(tableId);
   const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+
+  // Controller ruling, fix round 1: a slice-cache table's ONLY freshness
+  // signal is CBS's own 'Modified' date — a source that cannot state one
+  // cannot be schema-only registered at all, checked before anything else.
+  if (schema.modified == null || schema.modified.trim().length === 0) {
+    return {
+      ok: false,
+      reason: 'no_cbs_modified',
+      summary:
+        `Table "${tableId}" has no CBS 'Modified' date on its Properties document — without it ` +
+        `we could never tell when the stored slices go stale, so this table cannot be ` +
+        `schema-only registered.`,
+    };
+  }
 
   const periodDim = schema.dimensions.find((d) => d.kind === 'TimeDimension');
   if (!periodDim) {
@@ -96,14 +124,23 @@ export async function registerSchemaOnly(
   }
 
   const periodCodes: CbsCode[] = codeLists[periodDim.name] ?? [];
-  if (periodCodes.length > 0 && periodCodes.every((c) => c.status === null)) {
+  if (periodCodes.length === 0) {
+    return {
+      ok: false,
+      reason: 'no_periods',
+      summary:
+        `Table "${tableId}"'s "${periodDim.name}" code list came back empty — there is no ` +
+        `period to key a slice cache on, so this table cannot be registered this way.`,
+    };
+  }
+  if (periodCodes.every((c) => c.status === null)) {
     return {
       ok: false,
       reason: 'no_machine_period_status',
       summary:
-        `Table "${tableId}"'s Perioden code list has no machine Status on any period (every ` +
-        `code is null). ADR 061's period-note prose reader is curated per table, not a generic ` +
-        `fallback — refusing rather than guessing a publication status from free text.`,
+        `Table "${tableId}"'s "${periodDim.name}" code list has no machine Status on any ` +
+        `period (every code is null). ADR 061's period-note prose reader is curated per table, ` +
+        `not a generic fallback — refusing rather than guessing a publication status from free text.`,
     };
   }
 
@@ -143,7 +180,8 @@ export async function registerSchemaOnly(
         fingerprint,
         false,
         sourceKey,
-        schema.modified ?? null,
+        // Guaranteed non-null/non-empty by the no_cbs_modified refusal above.
+        schema.modified,
       ],
     );
 
@@ -153,7 +191,7 @@ export async function registerSchemaOnly(
   return {
     ok: true,
     tableId,
-    numericMeasures: numericMeasures.map((m) => m.code),
+    numericMeasures: numericMeasures.map((m) => m.code).sort(),
     alreadyRegistered: false,
   };
 }

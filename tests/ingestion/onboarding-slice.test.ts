@@ -23,6 +23,7 @@ const NATIONAL_ONLY_SCHEMA: CbsTableSchema = {
   title: 'X',
   dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
   measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+  modified: null,
 };
 
 const GEO_SCHEMA: CbsTableSchema = {
@@ -33,6 +34,7 @@ const GEO_SCHEMA: CbsTableSchema = {
     { name: 'Perioden', kind: 'TimeDimension' },
   ],
   measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
+  modified: null,
 };
 
 describe('cardinalityProduct', () => {
@@ -104,6 +106,7 @@ describe('estimateSlice — over the cap', () => {
       title: 'Z',
       dimensions: [{ name: 'SomeDim', kind: 'Dimension' }],
       measures: [{ code: 'M1', title: 'M1', unit: 'x', decimals: 0, description: '', dataType: '' }],
+      modified: null,
     };
     const codeLists = { SomeDim: Array.from({ length: 200_000 }, (_, i) => code(`c${i}`)) };
     const est = estimateSlice(measureOnly, codeLists, ONBOARDING_MAX_CELLS + 1);

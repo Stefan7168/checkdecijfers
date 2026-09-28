@@ -40,13 +40,19 @@ export interface CbsTableSchema {
   /**
    * CBS 'Modified' ISO timestamp from the table's own Properties document
    * (breadth step 2, Task 3: `registerSchemaOnly` stores it as
-   * `cbs_tables.schema_cbs_modified`, the staleness signal a later re-fetch
-   * compares against). The v4 adapter and `FixtureSource` fill it from the
-   * Properties document they already fetch; optional because it predates
-   * Eurostat's own `CbsTableSchema` construction (jsonstat.ts), which has no
-   * equivalent in a JSON-stat dataset response and passes `null` explicitly.
+   * `cbs_tables.schema_cbs_modified` — a slice-cache table's ONLY freshness
+   * signal, since it has no `syncTable` row-plausibility history to lean on.
+   * REQUIRED, not optional (fix round 1, controller ruling): a source with
+   * no way to say "this changed" cannot be schema-only registered at all —
+   * `registerSchemaOnly` refuses (`no_cbs_modified`) rather than register a
+   * table it can never detect staleness for. The v4 adapter and
+   * `FixtureSource` fill it from the Properties document they already
+   * fetch; the Eurostat adapter (jsonstat.ts) fills it from JSON-stat's own
+   * `updated` field when present, `null` otherwise — every `CbsSource`
+   * implementation, real or test double, must state one or the other,
+   * never omit the field.
    */
-  modified?: string | null;
+  modified: string | null;
 }
 
 export interface CbsCode {

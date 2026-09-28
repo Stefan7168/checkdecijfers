@@ -137,6 +137,47 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     expect(Object.keys(units).sort()).toEqual(expectedNumeric.sort());
   });
 
+  it('registers a MIXED table (70072ned, machine period status fixed): units cover only numeric measures', async () => {
+    // 70072ned is refused elsewhere for having no machine period status at
+    // all (see the next test) — here every Perioden code is given a real
+    // Status so registration can proceed, isolating the actual thing this
+    // test checks: a table with BOTH numeric and text measures must register
+    // with units/fingerprint scoped to the numeric ones only, never the text
+    // ones (breadth step 2 constraints: text measures are never servable).
+    const docs = await loadDocs('70072ned');
+    const fixed = structuredClone(docs);
+    const periods = (fixed.codes as Record<string, { value: { Status: string | null }[] }>)['Perioden']!;
+    for (const p of periods.value) p.Status = 'Definitief';
+    const source = new FixtureSource(fixed);
+
+    const schema = await source.fetchTableSchema('70072ned');
+    const numericCodes = schema.measures.filter((m) => m.dataType !== 'String').map((m) => m.code).sort();
+    const stringCodes = schema.measures.filter((m) => m.dataType === 'String').map((m) => m.code);
+    const allCodes = schema.measures.map((m) => m.code).sort();
+    // Sanity pin on the real fixture content this test relies on being
+    // genuinely mixed (not hardcoded into the assertions below, which all
+    // derive from `schema.measures` itself).
+    expect(schema.measures.length).toBe(248);
+    expect(numericCodes.length).toBe(208);
+    expect(stringCodes.length).toBe(40);
+
+    const result = await registerSchemaOnly(db, source, '70072ned');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.numericMeasures).toEqual(numericCodes);
+
+    const row = await cbsTablesRow('70072ned');
+    const units = parseJsonb<Record<string, unknown>>(row.units);
+    expect(Object.keys(units).sort()).toEqual(numericCodes);
+    for (const code of stringCodes) expect(units[code]).toBeUndefined(); // none of the 40 String codes
+
+    const expectedFingerprint = computeFingerprint(schema.dimensions, numericCodes);
+    expect(row.schema_fingerprint).toBe(expectedFingerprint);
+    const allCodesFingerprint = computeFingerprint(schema.dimensions, allCodes);
+    expect(row.schema_fingerprint).not.toBe(allCodesFingerprint);
+  });
+
   it('refuses 70072ned: every Perioden code has status null (no machine period status)', async () => {
     const docs = await loadDocs('70072ned');
     const source = new FixtureSource(docs);
@@ -152,6 +193,44 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     const rows = await db.query('select id from cbs_tables where id = $1', ['70072ned']);
     expect(rows.rows.length).toBe(0); // refusal writes nothing
     expect(await labelCount('70072ned')).toBe(0);
+  });
+
+  it('refuses a table whose TimeDimension code list came back empty (no periods)', async () => {
+    const docs = await loadDocs('83625NED');
+    const corrupt = structuredClone(docs);
+    (corrupt.codes as Record<string, unknown>)['Perioden'] = { value: [] };
+    const source = new FixtureSource(corrupt);
+
+    const result = await registerSchemaOnly(db, source, '83625NED');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toBe('no_periods');
+    expect(result.summary).toContain('83625NED');
+    expect(result.summary).toContain('Perioden'); // names the actual time-dimension name
+
+    const rows = await db.query('select id from cbs_tables where id = $1', ['83625NED']);
+    expect(rows.rows.length).toBe(0);
+    expect(await labelCount('83625NED')).toBe(0);
+  });
+
+  it('refuses a table whose Properties document has no CBS Modified date', async () => {
+    const docs = await loadDocs('83625NED');
+    const corrupt = structuredClone(docs);
+    delete (corrupt.properties as Record<string, unknown>).Modified;
+    const source = new FixtureSource(corrupt);
+
+    const result = await registerSchemaOnly(db, source, '83625NED');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toBe('no_cbs_modified');
+    expect(result.summary).toContain('83625NED');
+    expect(result.summary.toLowerCase()).toContain('modified');
+
+    const rows = await db.query('select id from cbs_tables where id = $1', ['83625NED']);
+    expect(rows.rows.length).toBe(0);
+    expect(await labelCount('83625NED')).toBe(0);
   });
 
   it('refuses a table with no TimeDimension', async () => {
