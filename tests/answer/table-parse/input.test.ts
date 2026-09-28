@@ -57,18 +57,18 @@ describe('buildTableParseSchema — measure filtering', () => {
 
   it('excludes a String-typed measure, keeps the numeric one', () => {
     const { schema, codeLists } = syntheticSchema([
-      { code: 'M1', title: 'Aantal', unit: 'x 1', decimals: 0, description: 'een telling', dataType: 'Double' },
-      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String' },
+      { code: 'M1', title: 'Aantal', unit: 'x 1', decimals: 0, description: 'een telling', dataType: 'Double', groupPath: [] },
+      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String', groupPath: [] },
     ]);
     const result = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
     expect(result.measures).toEqual([
-      { code: 'M1', title: 'Aantal', unit: 'x 1', description: 'een telling' },
+      { code: 'M1', title: 'Aantal', unit: 'x 1', description: 'een telling', groupPath: [] },
     ]);
   });
 
   it('throws when a table has no numeric measure at all (never offered)', () => {
     const { schema, codeLists } = syntheticSchema([
-      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String' },
+      { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String', groupPath: [] },
     ]);
     expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow(
       TableParseIneligibleTableError,
@@ -92,6 +92,45 @@ describe('buildTableParseSchema — measure filtering', () => {
     expect(() => buildTableParseSchema(schema, withoutTime, 'irrelevante vraag')).toThrow(
       TableParseIneligibleTableError,
     );
+  });
+
+  // Final-review I2 (breadth step 4b fix wave): the adapter degrades a
+  // MeasureGroups failure to every groupPath [] + measureGroupsUnavailable
+  // (so an ingestion sync never fails over data it never stores). The
+  // table-scoped parser must NOT then offer the table as if it had no groups
+  // — the group is what tells same-titled measures apart — so a flagged
+  // schema is ineligible until CBS recovers.
+  it('throws TableParseIneligibleTableError for a schema flagged measureGroupsUnavailable', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const flagged = { ...schema, measures: schema.measures.map((m) => ({ ...m, groupPath: [] })), measureGroupsUnavailable: true };
+    expect(() => buildTableParseSchema(flagged, codeLists, 'Hoeveel werklozen waren er in maart 2024?')).toThrow(
+      TableParseIneligibleTableError,
+    );
+    expect(() => buildTableParseSchema(flagged, codeLists, 'Hoeveel werklozen waren er in maart 2024?')).toThrow(
+      /measure groups/,
+    );
+  });
+
+  it('a schema with measureGroupsUnavailable false (or absent) is built as usual', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    expect(() => buildTableParseSchema({ ...schema, measureGroupsUnavailable: false }, codeLists, 'Hoeveel werklozen?')).not.toThrow();
+    expect(() => buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen?')).not.toThrow();
+  });
+
+  // Breadth step 4b, Task 2 — groupPath is carried straight from CbsMeasure
+  // through to TableParseMeasure. 80590ned's own measures are grouped
+  // (measured against the live-refreshed fixture): D002308
+  // "Seizoengecorrigeerd" sits in group "Beroepsbevolking", its sibling
+  // D006409 (same title, same unit, same description) sits in
+  // "Werkzame beroepsbevolking" — a DIFFERENT group.
+  it('carries a real CBS measure group path through from the fixture', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const result = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const d002308 = result.measures.find((m) => m.code === 'D002308');
+    const d006409 = result.measures.find((m) => m.code === 'D006409');
+    expect(d002308?.groupPath).toEqual(['Beroepsbevolking']);
+    expect(d006409?.groupPath).toEqual(['Werkzame beroepsbevolking']);
+    expect(d002308?.title).toBe(d006409?.title);
   });
 });
 
@@ -171,6 +210,148 @@ describe('buildTableParseSchema — member pre-filter', () => {
     expect(dim.members.length).toBeGreaterThan(0);
     expect(dim.members.length).toBeLessThanOrEqual(MEMBER_PROMPT_CAP);
     expect(dim.members.some((m) => m.title.toLowerCase().includes('groningen'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breadth step 4b, Task 3 — the pre-filter's place-aware addition rule: a
+// truncated dimension also offers every REGION-CODED member whose place key
+// occurs in the (normalized) question as a whole word/sequence, merged with
+// the generic word-rule selection, CBS order, total first, deduped, capped at
+// MEMBER_PROMPT_CAP.
+// ---------------------------------------------------------------------------
+
+describe('buildTableParseSchema — place-aware pre-filter addition (Task 3)', () => {
+  it('85004NED: "Groningen (PV)" (CBS-style title) offers all three look-alike Groningen members', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in Groningen (PV) in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+  });
+
+  it('85004NED: "provincie Groningen" (leading Dutch kind word) offers all three look-alike Groningen members', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in provincie Groningen in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+  });
+
+  it('85004NED: a bare "Groningen" offers all three look-alike Groningen members, in CBS (index) order', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in Groningen in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+    // CBS order: PV20 (index 2) before ES01 (index 15) before ET0101 (index 46).
+    expect(codes.indexOf('PV20')).toBeLessThan(codes.indexOf('ES01'));
+    expect(codes.indexOf('ES01')).toBeLessThan(codes.indexOf('ET0101'));
+  });
+
+  // Synthetic dimension (>40 members, so the pre-filter truncates it), mirroring
+  // 85004NED's own low region-coded ratio (12.5%, under the 0.8 geo_like
+  // threshold) so it stays classified as an ordinary 'breakdown' dimension.
+  // Isolates the case the generic word rule alone cannot reach: "Den Haag"
+  // shares no word with "'s-Gravenhage" ("haag" vs "gravenhage"), so only the
+  // alias-aware place rule adds the member.
+  function denHaagPreFilterSchema(): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
+    const filler: CbsCode[] = Array.from({ length: 44 }, (_, i) => ({
+      code: `F${String(i + 1).padStart(4, '0')}`,
+      title: `Fictieve plek ${i + 1}`,
+      dimensionGroup: null,
+      status: null,
+      index: i + 1,
+    }));
+    const codeLists: Record<string, CbsCode[]> = {
+      Woonplaats: [
+        ...filler,
+        { code: 'GM0518', title: "'s-Gravenhage (GM)", dimensionGroup: null, status: null, index: 45 },
+        // Same place name, but a NON-region code — must never be added by
+        // the place-aware rule (it is also not a word-rule match: nothing in
+        // the question shares a word with "'s-Gravenhage").
+        { code: 'F0045', title: "'s-Gravenhage", dimensionGroup: null, status: null, index: 46 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const schema: CbsTableSchema = {
+      tableId: 'SYN07',
+      title: 'Synthetische tabel naar woonplaats',
+      dimensions: [
+        { name: 'Woonplaats', kind: 'Dimension', title: 'Woonplaats' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    return { schema, codeLists };
+  }
+
+  it('a truncated dimension offers a region-coded member the generic word rule alone would miss ("Den Haag" -> \'s-Gravenhage via alias)', () => {
+    const { schema, codeLists } = denHaagPreFilterSchema();
+    expect(codeLists.Woonplaats!.length).toBeGreaterThan(MEMBER_PROMPT_CAP);
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen woonden er in Den Haag in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Woonplaats')!;
+    expect(dim.truncated).toBe(true);
+    // The generic word rule alone matches nothing here — "haag" (4 letters,
+    // kept) shares no word with any offered title, including "'s-Gravenhage"
+    // ("gravenhage").
+    expect(questionWords('Hoeveel personen woonden er in Den Haag in 2020?').has('gravenhage')).toBe(false);
+    expect(dim.members).toEqual([{ code: 'GM0518', title: "'s-Gravenhage (GM)" }]);
+  });
+
+  // Final-review minor: a look-alike place must never be cut by the cap.
+  // Synthetic: a grand total first, then 45 members that all share the word
+  // "inkomen" with the question, then the one place member — CBS order would
+  // fill the cap with word matches before ever reaching the place. Place
+  // matches now claim cap slots BEFORE word matches; the final list is still
+  // CBS order with the total first.
+  it('a place match is never cut by the cap: place matches fill it before word matches (final list still CBS order, total first)', () => {
+    const wordMatches: CbsCode[] = Array.from({ length: 45 }, (_, i) => ({
+      code: `K${String(i + 1).padStart(4, '0')}`,
+      title: `Inkomen klasse ${i + 1}`,
+      dimensionGroup: null,
+      status: null,
+      index: i + 2,
+    }));
+    const codeLists: Record<string, CbsCode[]> = {
+      Regio: [
+        { code: 'T001019', title: 'Totaal', dimensionGroup: null, status: null, index: 1 },
+        ...wordMatches,
+        { code: 'PV26', title: 'Utrecht (PV)', dimensionGroup: null, status: null, index: 47 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const schema: CbsTableSchema = {
+      tableId: 'SYN08',
+      title: 'Synthetische tabel naar regio en inkomen',
+      dimensions: [
+        { name: 'Regio', kind: 'Dimension', title: 'Regio' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen met inkomen woonden er in Utrecht in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Regio')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toHaveLength(MEMBER_PROMPT_CAP);
+    expect(codes[0]).toBe('T001019');
+    expect(codes).toContain('PV26');
+    // CBS order after the total: the place (index 47) comes last, after the
+    // 38 word matches that still fit (K0001..K0038).
+    expect(codes[codes.length - 1]).toBe('PV26');
+    expect(codes.slice(1, -1)).toEqual(wordMatches.slice(0, MEMBER_PROMPT_CAP - 2).map((c) => c.code));
+  });
+
+  it('non-region-coded members are never added by the place-aware rule, even sharing the exact place name', () => {
+    const { schema, codeLists } = denHaagPreFilterSchema();
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen woonden er in Den Haag in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Woonplaats')!;
+    expect(dim.members.some((m) => m.code === 'F0045')).toBe(false);
   });
 });
 

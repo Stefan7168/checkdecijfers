@@ -69,9 +69,73 @@ export function parseDimensions(raw: unknown): CbsDimension[] {
   });
 }
 
-/** Parses MeasureCodes: [{ Identifier, Title, Unit, Decimals }]. Decimals may be null — defaults to 0. */
-export function parseMeasures(raw: unknown): CbsMeasure[] {
+/** One CBS MeasureGroups row: `{ Id, Title, ParentId }` (Description/Index
+ *  exist on the wire but are not needed to resolve a groupPath). */
+export interface CbsMeasureGroup {
+  id: string;
+  title: string;
+  parentId: string | null;
+}
+
+/** Parses MeasureGroups: [{ Id, Title, ParentId }]. `[]` when the table
+ *  publishes none (an HTTP 404 or an empty list both normalize to this by
+ *  the time they reach here — see odata-v4.ts / fixture-source.ts). Throws
+ *  on a malformed document; the live adapter catches that and degrades to
+ *  "groups unavailable" (final-review I2), the fixture source does not. */
+export function parseMeasureGroups(raw: unknown): CbsMeasureGroup[] {
+  const rows = asValueArray(raw, 'MeasureGroups');
+  return rows.map((entry) => {
+    const row = entry as Record<string, unknown>;
+    const id = requireString(row, 'Id', 'MeasureGroups');
+    const title = requireString(row, 'Title', 'MeasureGroups');
+    const parentIdRaw = row.ParentId;
+    const parentId =
+      parentIdRaw === null || parentIdRaw === undefined ? null : String(parentIdRaw);
+    return { id, title, parentId };
+  });
+}
+
+/**
+ * Resolves one measure's `MeasureGroupId` into a root -> leaf title path by
+ * walking `ParentId` up to the root. Real CBS groups do nest (measured:
+ * 86116NED has 2- and 3-level paths, e.g. "Personeel en ICT › Toegang tot
+ * ICT-systeem van buitenaf › Biedt toegang tot"; 80590ned's do not). Never
+ * throws (principle c: a missing or cyclic reference is a CBS-side data
+ * quirk to degrade past, not a corrupt row to reject) —
+ * - no `groupId` (measure has no group) -> `[]`.
+ * - `groupId` not found in `groupsById` -> `[]` (the walk stops before it
+ *   resolves anything).
+ * - an ancestor `ParentId` not found -> the path stops there (whatever was
+ *   resolved so far, root -> leaf).
+ * - a `ParentId` cycle -> stops at the first repeated id.
+ */
+function resolveGroupPath(
+  groupId: string | null,
+  groupsById: ReadonlyMap<string, CbsMeasureGroup>,
+): string[] {
+  if (groupId === null) return [];
+  const titles: string[] = [];
+  const seen = new Set<string>();
+  let current: string | null = groupId;
+  while (current !== null) {
+    if (seen.has(current)) break; // cycle guard: stop at the first repeat
+    seen.add(current);
+    const group = groupsById.get(current);
+    if (!group) break; // dangling reference: stop with whatever resolved so far
+    titles.unshift(group.title);
+    current = group.parentId;
+  }
+  return titles;
+}
+
+/** Parses MeasureCodes: [{ Identifier, Title, Unit, Decimals, MeasureGroupId? }].
+ *  Decimals may be null — defaults to 0. `groups` (breadth step 4b, Task 1) —
+ *  the table's own parsed MeasureGroups, used to resolve each measure's
+ *  `MeasureGroupId` into a root -> leaf `groupPath`; defaults to `[]` (every
+ *  measure gets `groupPath: []`) so an existing bare call keeps working. */
+export function parseMeasures(raw: unknown, groups: CbsMeasureGroup[] = []): CbsMeasure[] {
   const rows = asValueArray(raw, 'MeasureCodes');
+  const groupsById = new Map(groups.map((g) => [g.id, g]));
   return rows.map((entry) => {
     const row = entry as Record<string, unknown>;
     const code = requireString(row, 'Identifier', 'MeasureCodes').trim();
@@ -86,7 +150,9 @@ export function parseMeasures(raw: unknown): CbsMeasure[] {
     const decimals = decimalsRaw === null || decimalsRaw === undefined ? 0 : decimalsRaw;
     const description = optionalString(row, 'Description') ?? '';
     const dataType = optionalString(row, 'DataType') ?? '';
-    return { code, title, unit, decimals, description, dataType };
+    const measureGroupId = optionalString(row, 'MeasureGroupId');
+    const groupPath = resolveGroupPath(measureGroupId, groupsById);
+    return { code, title, unit, decimals, description, dataType, groupPath };
   });
 }
 

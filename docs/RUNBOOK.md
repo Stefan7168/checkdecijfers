@@ -2496,3 +2496,21 @@ Only `select` statements; any DDL or write stays an owner-supervised, migration-
 `audit_answers.llm_calls` (jsonb per call: role, model, tokens), `credit_transactions` (reason), `chart_edits`,
 `dataset_turns`.
 
+
+## Table-parser recording run (breadth step 4 — owner-supervised, after 2026-10-01; added session 139, 2026-09-29)
+
+The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b") has never called the AI. Its first
+recording turns the 35 labelled questions (`benchmark/tableparse-labelled-set.json`) into replayable fixtures and a
+calibration report. Measured cost estimate: ~102k input tokens on the cheap tier (a few cents). Steps, owner present:
+
+1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 35 cases and prints the per-case prompt sizes.
+2. `TABLEPARSE_RECORD_OK=1 npm run tableparse:record` — the live run (needs `ANTHROPIC_API_KEY` in `.env`). Without the
+   variable the script refuses on purpose. Writes `tests/fixtures/llm/tableparse/*.json` and
+   `benchmark/tableparse-calibration-report.json`.
+3. `npm run tableparse:eval -- --replay` — free; must reproduce the same scores from the fixtures.
+4. Read the report: accuracy per case, confidence of right vs wrong picks (calibrate `DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold`,
+   #338), refusals by error class. Watch items from #339 (Caribisch Nederland kind; yearly adjusted question; pre-filter
+   flooding; places left out of `regions`).
+5. Commit fixtures + report, add a CI replay test, record the measured numbers in STATUS / ADR 062 / #338.
+
+Any later prompt or schema byte change orphans every fixture → re-run steps 2–5.

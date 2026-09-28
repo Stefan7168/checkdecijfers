@@ -34,6 +34,7 @@ import {
   validateTableParseOutput,
   TableParseAmbiguousMeasureError,
   TableParseRegionUnavailableError,
+  TABLE_PARSE_SCHEMA_VERSION,
 } from '../../../src/answer/table-parse/parse.ts';
 import {
   buildDryRunRows,
@@ -41,6 +42,8 @@ import {
   expectedErrorClass,
   loadLabelledSet,
   loadTableFixture,
+  measureMatchesLabel,
+  representativeMeasureCode,
   summarizeDryRun,
   LABEL_AMBIGUOUS_MEASURE,
   type LabelledCase,
@@ -95,7 +98,7 @@ function samplePeriod(kind: string): Record<string, unknown> {
 /** The label, written as the model output it expects. */
 function cannedFromLabel(c: LabelledCase, input: TableParseSchema, measureCode: string): string {
   return JSON.stringify({
-    version: 1,
+    version: TABLE_PARSE_SCHEMA_VERSION,
     measureCode,
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: c.expect.breakdowns[b.name] })),
     period: samplePeriod(c.expect.periodKind),
@@ -105,6 +108,12 @@ function cannedFromLabel(c: LabelledCase, input: TableParseSchema, measureCode: 
     confidence: 0.9,
     reading: 'label',
   });
+}
+
+/** Every measure code a (non-ambiguous) label scores as correct: all of
+ * `acceptableMeasureCodes`, or the single `measureCode`. */
+function labelMeasureCodes(c: LabelledCase): string[] {
+  return c.expect.acceptableMeasureCodes ?? [representativeMeasureCode(c)];
 }
 
 const set = loadLabelledSet();
@@ -153,7 +162,18 @@ describe('tableparse-labelled-set.json — integrity', () => {
         }
       } else {
         expect(c.expect.ambiguousMeasures).toBeUndefined();
-        if (c.expect.measureCode !== 'geen') expect(measureCodes).toContain(c.expect.measureCode);
+        if (c.expect.acceptableMeasureCodes !== undefined) {
+          // acceptableMeasureCodes REPLACES measureCode — a case has exactly
+          // one of the two (breadth step 4b, Task 2).
+          expect(c.expect.measureCode).toBeUndefined();
+          expect(c.expect.acceptableMeasureCodes.length).toBeGreaterThanOrEqual(2);
+          for (const code of c.expect.acceptableMeasureCodes) {
+            expect(measureCodes).toContain(code);
+          }
+        } else {
+          expect(c.expect.measureCode).toBeDefined();
+          if (c.expect.measureCode !== 'geen') expect(measureCodes).toContain(c.expect.measureCode);
+        }
       }
 
       // --- breakdowns: exactly the offered dimensions, once each ---------
@@ -186,16 +206,47 @@ describe('tableparse-labelled-set.json — integrity', () => {
 
       // --- the label, run through the real validator --------------------
       // (An 'ambiguous' label is checked above, measure by measure.)
+      // Final-review minor: EVERY acceptable code is run through the
+      // validator, not just the first — each one is scored as correct, so
+      // each one must be a pick the validator accepts for this label.
       if (c.expect.measureCode !== LABEL_AMBIGUOUS_MEASURE) {
-        const canned = cannedFromLabel(c, input, c.expect.measureCode);
-        if (c.expect.outcome === 'region_unavailable') {
-          expect(() => validateTableParseOutput(canned, input)).toThrow(TableParseRegionUnavailableError);
-        } else {
-          expect(() => validateTableParseOutput(canned, input)).not.toThrow();
+        for (const code of labelMeasureCodes(c)) {
+          const canned = cannedFromLabel(c, input, code);
+          if (c.expect.outcome === 'region_unavailable') {
+            expect(() => validateTableParseOutput(canned, input)).toThrow(TableParseRegionUnavailableError);
+          } else {
+            expect(() => validateTableParseOutput(canned, input)).not.toThrow();
+          }
         }
       }
     },
   );
+
+  // The acceptableMeasureCodes form has no real case left (final-review I3)
+  // — a synthetic one on the real 80590ned fixture keeps it exercised: every
+  // listed code must pass the validator for the label, and the eval must
+  // score any listed code (and only those) as correct.
+  it('acceptableMeasureCodes form (synthetic case): every listed code validates and scores as correct', () => {
+    const c: LabelledCase = {
+      id: 'synthetic-acceptable',
+      table: '80590ned',
+      question: 'Hoeveel werklozen waren er in maart 2024?',
+      expect: {
+        acceptableMeasureCodes: ['3000800_2', 'D001875'],
+        breakdowns: { Geslacht: 'niet_genoemd', Leeftijd: 'niet_genoemd' },
+        periodKind: 'month',
+        regions: [],
+      },
+    };
+    const { schema, codeLists } = loadTableFixture(c.table);
+    const input = buildTableParseSchema(schema, codeLists, c.question);
+    expect(labelMeasureCodes(c)).toEqual(['3000800_2', 'D001875']);
+    for (const code of labelMeasureCodes(c)) {
+      expect(() => validateTableParseOutput(cannedFromLabel(c, input, code), input)).not.toThrow();
+      expect(measureMatchesLabel(c, code)).toBe(true);
+    }
+    expect(measureMatchesLabel(c, 'D002308')).toBe(false);
+  });
 
   it('expectedErrorClass maps the two refusal label forms, and nothing else', () => {
     for (const c of set.cases) {
@@ -218,8 +269,30 @@ describe('tableparse-labelled-set.json — integrity', () => {
     const nototalCases = set.cases.filter((c) => c.id.startsWith('nototal-'));
 
     const ambiguousCount = set.cases.filter((c) => c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE).length;
+    const acceptableMeasuresCount = set.cases.filter((c) => c.expect.acceptableMeasureCodes !== undefined).length;
     const regionUnavailableCount = set.cases.filter((c) => c.expect.outcome === 'region_unavailable').length;
-    expect(ambiguousCount).toBeGreaterThanOrEqual(1);
+    // Breadth step 4b, Task 2: the ambiguous-measure category's real-world
+    // minimum was RELAXED from >=1 to >=0, on measured evidence, not a
+    // relaxed rule — adding CBS's own measure group to the guard's
+    // fingerprint (parse.ts's measureFingerprint) resolved the only
+    // same-(title,unit,description) measure set that existed anywhere across
+    // the 10 re-fetched fixture tables (80590ned's four
+    // "Niet-seizoengecorrigeerd"/"x 1000"/empty-description measures — see
+    // 'ambiguous-arbeid-werklozen's own note). None of the 8 eligible tables
+    // has a real ambiguous-measure case left. The F4 guard itself is still
+    // exercised directly (and still throws on a truly identical pair) by a
+    // synthetic case in tests/answer/table-parse/parse.test.ts — this
+    // minimum is about the REAL-WORLD labelled set, not about whether the
+    // guard still works.
+    expect(ambiguousCount).toBeGreaterThanOrEqual(0);
+    // The acceptableMeasureCodes form (new in breadth step 4b): RELAXED from
+    // >=1 to >=0 by final-review I3 (controller ruling) — its only real case
+    // ('acceptable-arbeid-werklozen-seizoen-of-niet', seasonally adjusted OR
+    // not) is now settled by the prompt's seasonal-adjustment default and
+    // became the single-code 'seizoen-default-arbeid-werklozen'. The form
+    // stays supported; the synthetic case below keeps the mechanism itself
+    // exercised.
+    expect(acceptableMeasuresCount).toBeGreaterThanOrEqual(0);
     expect(regionUnavailableCount).toBeGreaterThanOrEqual(1);
     expect(geenCount).toBeGreaterThanOrEqual(4);
     expect(andersCount).toBeGreaterThanOrEqual(3);

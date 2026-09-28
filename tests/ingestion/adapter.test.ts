@@ -2,13 +2,16 @@
 // no database involved. Exercises src/cbs-adapter/fixture-source.ts, which
 // replays the raw v4 responses through the same parsing code the live adapter
 // uses (docs/cbs-adapter/types.ts header comment).
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
-import type { CbsObservationRow } from '../../src/cbs-adapter/types.ts';
+import type { CbsObservationRow, CbsTableSchema } from '../../src/cbs-adapter/types.ts';
 import { FixtureSource, loadFixtureDocs, type FixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { ODataV4Source } from '../../src/cbs-adapter/odata-v4.ts';
+import { parseMeasureGroups, parseMeasures } from '../../src/cbs-adapter/parse-v4.ts';
 import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
 import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
+import { unitsFromMeasures } from '../../src/ingestion/pipeline.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -72,6 +75,165 @@ describe('adapter parsing (real captured wire data)', () => {
     // #115 lever b: the CBS 'Description' blurb is captured verbatim (it drives
     // the onboarded answer's real "Definitie:" line), not dropped on the floor.
     expect(measure?.description).toContain('Aantal aan het begin van de periode.');
+  });
+
+  // Breadth step 4b, Task 1: CBS's own MeasureGroups, resolved root -> leaf,
+  // distinguishes measures that share a title (e.g. every "Seizoengecorrigeerd"
+  // measure in 80590ned) by the group CBS files them under.
+  describe('measure groups (breadth step 4b, Task 1)', () => {
+    it('parseMeasures of 80590ned fills groupPath from MeasureGroups (D002308 -> ["Beroepsbevolking"])', async () => {
+      const docs = await loadFixtureDocs(fixturePath('80590ned'));
+      const source = new FixtureSource(docs);
+      const schema = await source.fetchTableSchema('80590ned');
+
+      const d002308 = schema.measures.find((m) => m.code === 'D002308');
+      expect(d002308?.title).toBe('Seizoengecorrigeerd');
+      expect(d002308?.groupPath).toEqual(['Beroepsbevolking']);
+
+      // Every measure in this fixture references a real MeasureGroupId
+      // (measured live 2026-09-29 — see index.json), so every one resolves
+      // to a non-empty, single-level path.
+      for (const m of schema.measures) {
+        expect(m.groupPath.length).toBe(1);
+      }
+    });
+
+    it('parseMeasures of 82235NED (fixture has no MeasureGroups file) leaves every measure groupPath empty', async () => {
+      const docs = await loadFixtureDocs(fixturePath('82235NED'));
+      const source = new FixtureSource(docs);
+      const schema = await source.fetchTableSchema('82235NED');
+
+      expect(schema.measures.length).toBeGreaterThan(0);
+      for (const m of schema.measures) {
+        expect(m.groupPath).toEqual([]);
+      }
+      // No captured file = "no groups", not "groups unavailable" (I2).
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
+    });
+
+    // Pinned BEFORE this task's change existed (computed from the fixture with
+    // the then-current parser): computeFingerprint hashes dimensions (name +
+    // kind) and measure CODES only (fingerprint.ts) — never measure objects —
+    // so adding CbsMeasure.groupPath must not move this value.
+    it('computeFingerprint of the 80590ned fixture schema is unchanged by adding CbsMeasure.groupPath', async () => {
+      const docs = await loadFixtureDocs(fixturePath('80590ned'));
+      const source = new FixtureSource(docs);
+      const schema = await source.fetchTableSchema('80590ned');
+
+      const fingerprint = computeFingerprint(
+        schema.dimensions,
+        schema.measures.map((m) => m.code),
+      );
+      expect(fingerprint).toBe('2f96d990d5d476dbee389907e5e069231ca60801ef533a5990b396417a9fc2b9');
+    });
+
+    // unitsFromMeasures (src/ingestion/pipeline.ts) copies named fields only
+    // (constraints.md: cbs_tables.units stays byte-identical) — groupPath must
+    // never leak into the stored registry units, even for a measure that has one.
+    it('unitsFromMeasures output is unchanged for a measure carrying a groupPath', async () => {
+      const docs = await loadFixtureDocs(fixturePath('80590ned'));
+      const source = new FixtureSource(docs);
+      const schema = await source.fetchTableSchema('80590ned');
+
+      const d002308 = schema.measures.find((m) => m.code === 'D002308')!;
+      expect(d002308.groupPath.length).toBeGreaterThan(0); // precondition: this measure DOES have a group path
+
+      const units = unitsFromMeasures(schema.measures);
+      expect(units['D002308']).toEqual({
+        unit: d002308.unit,
+        decimals: d002308.decimals,
+        title: d002308.title,
+        description: d002308.description,
+      });
+      expect(units['D002308']).not.toHaveProperty('groupPath');
+    });
+
+    // 80590ned's own groups do not nest (measured live 2026-09-29: all 7 have
+    // ParentId null), but real nested groups DO exist elsewhere — the
+    // committed 86116NED table-parse fixture (written by the same adapter via
+    // scripts/extract-tableparse-schemas) carries 2- and 3-level paths,
+    // pinned by the real-data test below. The synthetic pair here isolates
+    // the root -> leaf ordering itself.
+    it('real nested groups: the committed 86116NED table-parse fixture carries 2- and 3-level group paths, root -> leaf', () => {
+      const fixture = JSON.parse(
+        readFileSync(fileURLToPath(new URL('../fixtures/tableparse/schemas/86116NED.json', import.meta.url)), 'utf8'),
+      ) as { schema: CbsTableSchema };
+      const byCode = new Map(fixture.schema.measures.map((m) => [m.code, m]));
+      expect(byCode.get('M004746_2')?.groupPath).toEqual(['Toegang en gebruik internet', 'Vaste internetverbinding']);
+      expect(byCode.get('M000783')?.groupPath).toEqual([
+        'Personeel en ICT',
+        'Toegang tot ICT-systeem van buitenaf',
+        'Biedt toegang tot',
+      ]);
+    });
+
+    it('parseMeasureGroups + parseMeasures resolves a two-level group path root -> leaf', () => {
+      const groupsRaw = {
+        value: [
+          { Id: 'ROOT', Title: 'Arbeidsmarkt', ParentId: null },
+          { Id: 'LEAF', Title: 'Werkloze beroepsbevolking', ParentId: 'ROOT' },
+        ],
+      };
+      const measuresRaw = {
+        value: [
+          {
+            Identifier: 'M1',
+            Title: 'Seizoengecorrigeerd',
+            Unit: 'x 1000',
+            Decimals: 0,
+            MeasureGroupId: 'LEAF',
+          },
+        ],
+      };
+      const groups = parseMeasureGroups(groupsRaw);
+      const measures = parseMeasures(measuresRaw, groups);
+      expect(measures[0]?.groupPath).toEqual(['Arbeidsmarkt', 'Werkloze beroepsbevolking']);
+    });
+
+    it('a MeasureGroupId pointing at a missing group stops the path there ([]), never throws', () => {
+      const groupsRaw = { value: [] }; // MeasureGroupId references a group CBS never listed
+      const measuresRaw = {
+        value: [
+          { Identifier: 'M1', Title: 'Iets', Unit: 'aantal', Decimals: 0, MeasureGroupId: 'GHOST' },
+        ],
+      };
+      const groups = parseMeasureGroups(groupsRaw);
+      expect(() => parseMeasures(measuresRaw, groups)).not.toThrow();
+      const measures = parseMeasures(measuresRaw, groups);
+      expect(measures[0]?.groupPath).toEqual([]);
+    });
+
+    it('no MeasureGroupId on the measure at all -> groupPath []', () => {
+      const groupsRaw = { value: [{ Id: 'G1', Title: 'Iets', ParentId: null }] };
+      const measuresRaw = {
+        value: [{ Identifier: 'M1', Title: 'Iets', Unit: 'aantal', Decimals: 0 }],
+      };
+      const measures = parseMeasures(measuresRaw, parseMeasureGroups(groupsRaw));
+      expect(measures[0]?.groupPath).toEqual([]);
+    });
+
+    it('a ParentId cycle terminates instead of looping forever', () => {
+      // A and B point at each other — a CBS-side data error this parser must
+      // survive (loud-never-silent is for missing/ambiguous data, not for
+      // defending against an impossible-but-conceivable cyclic graph).
+      const groupsRaw = {
+        value: [
+          { Id: 'A', Title: 'Groep A', ParentId: 'B' },
+          { Id: 'B', Title: 'Groep B', ParentId: 'A' },
+        ],
+      };
+      const measuresRaw = {
+        value: [{ Identifier: 'M1', Title: 'Iets', Unit: 'aantal', Decimals: 0, MeasureGroupId: 'A' }],
+      };
+      const groups = parseMeasureGroups(groupsRaw);
+      let measures: ReturnType<typeof parseMeasures> = [];
+      expect(() => {
+        measures = parseMeasures(measuresRaw, groups);
+      }).not.toThrow();
+      // Terminates with SOME finite path (first repeat stops the walk) rather
+      // than hanging or growing unbounded.
+      expect(measures[0]?.groupPath.length).toBeLessThanOrEqual(2);
+    });
   });
 
   it('parseCodes of 82235NED codes-Perioden has 2024JJ00 with status, codes trimmed', async () => {
@@ -449,4 +611,157 @@ describe('fetchObservationCount (WP16 sub-part 2 §4)', () => {
       vi.unstubAllGlobals();
     }
   });
+});
+
+describe('ODataV4Source.fetchTableSchema — MeasureGroups (breadth step 4b, Task 1)', () => {
+  const propertiesResponse = { Title: 'Test tabel' };
+  const dimensionsResponse = {
+    value: [{ Identifier: 'Perioden', Title: 'Perioden', Kind: 'TimeDimension' }],
+  };
+  const measuresResponse = {
+    value: [{ Identifier: 'M1', Title: 'Seizoengecorrigeerd', Unit: 'x 1000', Decimals: 0, MeasureGroupId: 'G1' }],
+  };
+
+  it('fetches MeasureGroups alongside MeasureCodes and fills groupPath', async () => {
+    const groupsResponse = { value: [{ Id: 'G1', Title: 'Beroepsbevolking', ParentId: null }] };
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: true, status: 200, statusText: 'OK', json: async () => measuresResponse };
+      if (url.endsWith('/MeasureGroups')) return { ok: true, status: 200, statusText: 'OK', json: async () => groupsResponse };
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual(['Beroepsbevolking']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a 404 on MeasureGroups means no groups (every measure groupPath []), never a throw', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: true, status: 200, statusText: 'OK', json: async () => measuresResponse };
+      if (url.endsWith('/MeasureGroups')) return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) };
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('an empty MeasureGroups list means no groups (every measure groupPath [])', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: true, status: 200, statusText: 'OK', json: async () => measuresResponse };
+      if (url.endsWith('/MeasureGroups')) return { ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [] }) };
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // Final-review I2 (breadth step 4b fix wave): MeasureGroups is
+  // BEST-EFFORT. Groups are never stored (they only feed the table-scoped
+  // parser's prompt), so a MeasureGroups outage must never fail a production
+  // sync — the schema resolves with every groupPath [] and the in-memory
+  // measureGroupsUnavailable flag, which buildTableParseSchema refuses.
+  function stubWithGroups(groups: () => { ok: boolean; status: number; statusText: string; json: () => Promise<unknown> }) {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: true, status: 200, statusText: 'OK', json: async () => measuresResponse };
+      if (url.endsWith('/MeasureGroups')) return groups();
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('a 500 on MeasureGroups (after the normal retries) resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    const fetchMock = stubWithGroups(() => ({ ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+      expect(schema.title).toBe('Test tabel');
+      // the normal retries still ran (3 attempts) before degrading
+      expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/MeasureGroups'))).toHaveLength(3);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }, 15_000); // 3 retries with backoff (RETRY_BACKOFF_MS), like the equivalent Eurostat test
+
+  it('a malformed MeasureGroups row (missing Title) resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [{ Id: 'G1', ParentId: null }] }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a MeasureGroups body that is not a value array resolves the schema: every groupPath [] + measureGroupsUnavailable', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ unexpected: true }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema.measureGroupsUnavailable).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a 404 on MeasureGroups ("this table has no groups") sets NO unavailable flag', async () => {
+    stubWithGroups(() => ({ ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual([]);
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a successful MeasureGroups fetch sets NO unavailable flag', async () => {
+    stubWithGroups(() => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [{ Id: 'G1', Title: 'Beroepsbevolking', ParentId: null }] }) }));
+    try {
+      const schema = await new ODataV4Source().fetchTableSchema('TESTTABLE');
+      expect(schema.measures[0]?.groupPath).toEqual(['Beroepsbevolking']);
+      expect(schema).not.toHaveProperty('measureGroupsUnavailable');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a failure on a REQUIRED metadata fetch (MeasureCodes 500) still throws — only MeasureGroups is best-effort', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return { ok: true, status: 200, statusText: 'OK', json: async () => propertiesResponse };
+      if (url.endsWith('/Dimensions')) return { ok: true, status: 200, statusText: 'OK', json: async () => dimensionsResponse };
+      if (url.endsWith('/MeasureCodes')) return { ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) };
+      if (url.endsWith('/MeasureGroups')) return { ok: true, status: 200, statusText: 'OK', json: async () => ({ value: [] }) };
+      throw new Error(`unexpected hermetic-stub request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(new ODataV4Source().fetchTableSchema('TESTTABLE')).rejects.toThrow(/CBS OData request failed/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }, 15_000);
 });

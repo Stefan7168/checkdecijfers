@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:02.652Z",
+ "fetchedAt": "2026-09-28T18:39:20.846Z",
  "schema": {
   "tableId": "84521NED",
   "title": "Ziekenhuisopnamen; diagnose-indeling ISHMT, regio",
@@ -42,7 +42,8 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "Opnamen",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    },
    {
     "code": "M006162_2",
@@ -50,7 +51,8 @@
     "unit": "per 10 000 inwoners",
     "decimals": 1,
     "description": "Opnamen per 10 000 inwoners",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    }
   ],
   "modified": "2026-07-31T00:00:00+02:00"

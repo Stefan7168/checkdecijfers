@@ -389,12 +389,23 @@
       "id": "ambiguous-arbeid-werklozen",
       "table": "80590ned",
       "question": "Hoeveel werklozen waren er in 2021 (niet seizoengecorrigeerd)?",
-      "note": "Final-review F4: a count (x 1000) that is not seasonally adjusted can only be one of the four measures titled 'Niet-seizoengecorrigeerd' with unit 'x 1000' and an EMPTY description (3000790_2, 3000795_2, 3000800_2, 3000810_2) — the metadata the model sees gives no way to tell which one counts the unemployed. Whatever it picks among them, the validator must throw TableParseAmbiguousMeasureError (step 5 refuses/asks), never serve a coin-flip measure. Geslacht/Leeftijd not mentioned.",
+      "note": "Breadth step 4b, Task 2 (id kept for history; the guard no longer fires here — see below): a count (x 1000) that is not seasonally adjusted was ORIGINALLY one of four measures titled 'Niet-seizoengecorrigeerd' with unit 'x 1000' and an EMPTY description (3000790_2, 3000795_2, 3000800_2, 3000810_2), which the pre-groupPath metadata could not tell apart (TableParseAmbiguousMeasureError). Measured against the live-refreshed fixture (extract-tableparse-schemas re-run, breadth step 4b): CBS itself files each of the four under a DIFFERENT measure group (3000790_2 'Beroepsbevolking', 3000795_2 'Werkzame beroepsbevolking', 3000800_2 'Werkloze beroepsbevolking', 3000810_2 'Niet-beroepsbevolking') — group is now part of the guard's fingerprint (parse.ts's measureFingerprint), so the four are no longer indistinguishable. 'Werklozen' (unemployed) names exactly ONE group, 'Werkloze beroepsbevolking', whose non-adjusted member is 3000800_2 — an ordinary single-measure case now. Checked across all 10 re-fetched fixture tables: this was the only set of same-(title,unit,description) measures anywhere in the set, and it is now fully resolved by group — none of the 8 eligible tables has a real ambiguous-measure case left (tests/answer/table-parse/labelled-set.test.ts's 'ambiguousCount' minimum was relaxed to reflect this measured fact; the F4 guard itself is still pinned by a synthetic case in tests/answer/table-parse/parse.test.ts). Geslacht/Leeftijd not mentioned.",
       "expect": {
-        "measureCode": "ambiguous",
-        "ambiguousMeasures": ["3000790_2", "3000795_2", "3000800_2", "3000810_2"],
+        "measureCode": "3000800_2",
         "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
         "periodKind": "year",
+        "regions": []
+      }
+    },
+    {
+      "id": "seizoen-default-arbeid-werklozen",
+      "table": "80590ned",
+      "question": "Hoeveel werklozen waren er in maart 2024?",
+      "note": "Final-review I3 (breadth step 4b fix wave, controller ruling; was 'acceptable-arbeid-werklozen-seizoen-of-niet', which accepted either code): the question names the 'Werkloze beroepsbevolking' group ('werklozen') and a MONTH, but does not say whether it wants seasonally adjusted figures. The group offers both 3000800_2 (Niet-seizoengecorrigeerd) and D001875 (Seizoengecorrigeerd); the prompt now settles the default — a month or quarter question that does not say takes the 'Seizoengecorrigeerd' measure (the curated pipeline's default for werkloosheid, CBS's own headline practice) — so D001875 is the one correct pick. Geslacht/Leeftijd not mentioned.",
+      "expect": {
+        "measureCode": "D001875",
+        "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "month",
         "regions": []
       }
     },

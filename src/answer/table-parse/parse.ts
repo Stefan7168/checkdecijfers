@@ -55,7 +55,7 @@ import { oneOfToAnyOf } from '../llm/json-schema.ts';
 import { periodSpecSchema, regionScopeSchema, regionTermSchema } from '../intent/schema.ts';
 import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
-import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
+import { REGION_MEMBER_CODE, memberPlaceKey, placeKindAllowsCode, readerPlaceKey, readerPlaceKinds } from './places.ts';
 import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from './input.ts';
 
 /** Cheap tier (same reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL): a
@@ -66,12 +66,17 @@ import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from '.
 export const TABLE_PARSE_MODEL = 'claude-haiku-4-5';
 
 /** Documentation constant — the re-record is forced by the prompt BYTES
- * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION). */
-export const TABLE_PARSE_PROMPT_VERSION = 1;
+ * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION).
+ * Bumped to 2 (breadth step 4b, Task 2): the prompt now describes measure
+ * groups and shows a `groep:` line per measure. */
+export const TABLE_PARSE_PROMPT_VERSION = 2;
 
 /** Bumped whenever the output contract shape changes (forces a fixture
- * re-record) — mirrors MEASURE_FIT_SCHEMA_VERSION. */
-export const TABLE_PARSE_SCHEMA_VERSION = 1;
+ * re-record) — mirrors MEASURE_FIT_SCHEMA_VERSION. Bumped to 2 alongside
+ * TABLE_PARSE_PROMPT_VERSION (breadth step 4b, Task 2) — the output schema's
+ * `version` literal below moves with it, so a fixture recorded against the
+ * old (ungrouped) prompt is rejected rather than silently accepted. */
+export const TABLE_PARSE_SCHEMA_VERSION = 2;
 
 /** The literal the model answers when no measure in the table answers the
  * question. Kept out of the measure allowlist check by construction. */
@@ -243,29 +248,27 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
   }
 }
 
-/** What the model sees of a measure — the serialization's own title, unit
- * and condensed description. Two offered measures with the same fingerprint
- * are indistinguishable to the model (final-review F4). */
-function measureFingerprint(m: TableParseMeasure): string {
-  return JSON.stringify([m.title, m.unit, condense(m.description)]);
+/** The unit exactly as the prompt displays it (serializeTableParseInput's own
+ * "eenheid=" fallback) — used by the fingerprint below so two measures that
+ * both show as "onbekend" (both '') are correctly treated as sharing a unit,
+ * not compared on the raw (possibly different) underlying string. */
+function displayUnit(m: TableParseMeasure): string {
+  return m.unit || 'onbekend';
 }
 
-/** Only a member whose CODE carries a CBS region prefix counts as a place
- * for the region checks below (follow-up ruling): a birth-country-like
- * member titled "Nederland" but coded e.g. 1012600 is a population
- * characteristic, not the place Nederland. Measured on the committed
- * fixtures: 85004NED RegioS uses NL/PV/ES/ET codes, 82291NED
- * CaribischNederland uses CN/GM codes; LD/CR/WK/BU complete CBS's own region
- * code families (landsdeel, COROP, wijk, buurt). Deliberately local to this
- * validator — src/query/breakdowns.ts's geo-like classification is not
- * changed. */
-const REGION_MEMBER_CODE = /^(NL|PV|GM|LD|CR|WK|BU|CN|ES|ET)\d/;
-
-/** A member title reduced to the place name a reader would write: CBS's
- * trailing disambiguation dropped ("Groningen (PV)" → "Groningen"), then the
- * shared region-name normalization (src/sources/region-names.ts). */
-function memberPlaceKey(title: string): string {
-  return normalizeRegionName(baseLabel(title));
+/** What the model sees of a measure — its group path (breadth step 4b, Task
+ * 2), the serialization's own title, displayed unit and condensed
+ * description. Two offered measures with the same fingerprint are
+ * indistinguishable to the model (final-review F4): CBS's own measure group
+ * is part of that judgment now, since it is part of what the prompt shows —
+ * measured against the live 80590ned fixture, its four
+ * "Niet-seizoengecorrigeerd" / "x 1000" / empty-description measures each
+ * sit in a DIFFERENT CBS measure group ("Beroepsbevolking", "Werkzame
+ * beroepsbevolking", "Werkloze beroepsbevolking", "Niet-beroepsbevolking"),
+ * so they are no longer indistinguishable once the group is part of the
+ * fingerprint. */
+function measureFingerprint(m: TableParseMeasure): string {
+  return JSON.stringify([m.groupPath, m.title, displayUnit(m), condense(m.description)]);
 }
 
 /**
@@ -434,7 +437,10 @@ export function validateTableParseOutput(
  * about a place", and the code decides whether this table can serve it:
  *
  * - A region class (`regionScope`) cannot be served → region-unavailable.
- * - Each named place must match (memberPlaceKey) at least one OFFERED,
+ * - Each named place, keyed with `readerPlaceKey` (baseLabel, one leading
+ *   Dutch kind word stripped, then `normalizeRegionName` — so "Groningen
+ *   (PV)", "provincie Groningen" and "Den Haag" all key the same as their
+ *   matching member's `memberPlaceKey`), must match at least one OFFERED,
  *   REGION-CODED (REGION_MEMBER_CODE) member of some breakdown dimension
  *   (85004NED's RegioS, 82291NED's CaribischNederland), else →
  *   region-unavailable. A non-region-coded member with the same title (a
@@ -446,6 +452,18 @@ export function validateTableParseOutput(
  *   (follow-up ruling). 'niet_genoemd' or a non-matching member would
  *   silently answer about the total or a different place. Each of these is a
  *   plain TableParseValidationError (the output contradicts itself).
+ * - The reader's place KIND (final-review C1, breadth step 4b fix wave —
+ *   readerPlaceKinds: a leading kind word, a trailing "(PV)"/"(gemeente)"
+ *   suffix, or the model's own non-'onbekend' kind) is a code-prefix
+ *   constraint used ONLY to reject, after the kind-agnostic count above:
+ *   sources that disagree ("provincie Groningen" with kind 'gemeente'), a
+ *   known kind that NO matching member fits ("gemeente Utrecht" on 85004NED,
+ *   whose only Utrecht is the province PV26), or a picked matching member
+ *   whose code does not fit the kind → region-unavailable. The kind never
+ *   narrows several look-alike matches to one pick — 'anders' stays the only
+ *   answer there. A place silently answered with a different population
+ *   (the province figure for a municipality question) is the worst failure
+ *   this validator exists to stop.
  */
 function checkRegionsOnRegionlessTable(
   result: TableParseResult,
@@ -461,7 +479,16 @@ function checkRegionsOnRegionlessTable(
   }
 
   for (const region of result.regions) {
-    const key = normalizeRegionName(region.name);
+    const key = readerPlaceKey(region.name);
+    const kinds = readerPlaceKinds(region.name, region.kind);
+    if (kinds.length > 1) {
+      throw new TableParseRegionUnavailableError(
+        `table-parse named region '${region.name}' (kind '${region.kind}') on table '${input.tableId}' with ` +
+          `conflicting place kinds (${kinds.join(', ')}) — never resolved by picking one`,
+        outputText,
+      );
+    }
+    const kind = kinds[0] ?? null;
     const listing: { dim: TableParseBreakdown; matchCodes: string[] }[] = [];
     for (const dim of input.breakdowns) {
       const matchCodes = dim.members
@@ -476,10 +503,27 @@ function checkRegionsOnRegionlessTable(
         outputText,
       );
     }
+    if (kind !== null && !listing.some(({ matchCodes }) => matchCodes.some((code) => placeKindAllowsCode(kind, code)))) {
+      throw new TableParseRegionUnavailableError(
+        `table-parse named region '${region.name}' as a ${kind} on table '${input.tableId}', but no offered ` +
+          `region-coded member with that name is a ${kind} (matching: ` +
+          `${listing.flatMap(({ matchCodes }) => matchCodes).join(', ')})`,
+        outputText,
+      );
+    }
     for (const { dim, matchCodes } of listing) {
       const choice = result.breakdowns[dim.name]!;
       if (choice.kind === 'other') continue;
-      if (choice.kind === 'member' && matchCodes.length === 1 && choice.code === matchCodes[0]) continue;
+      if (choice.kind === 'member' && matchCodes.length === 1 && choice.code === matchCodes[0]) {
+        if (kind !== null && !placeKindAllowsCode(kind, choice.code)) {
+          throw new TableParseRegionUnavailableError(
+            `table-parse named region '${region.name}' as a ${kind}, but answered dimension '${dim.name}' with ` +
+              `member '${choice.code}', which is not a ${kind}`,
+            outputText,
+          );
+        }
+        continue;
+      }
       const got = choice.kind === 'member' ? `member '${choice.code}'` : `'${TABLE_PARSE_NOT_NAMED}'`;
       const required =
         matchCodes.length === 1
@@ -506,6 +550,8 @@ MAAT
 - Kies precies één measureCode, LETTERLIJK overgenomen uit de matenlijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'.
 - Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment ("hoeveel zijn er"), een in- of uitstroom of verandering ("hoeveel kwamen erbij"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet, beantwoordt de vraag NIET.
 - Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt.
+- Maten kunnen gegroepeerd zijn (zie "groep:" bij de maat); de groep vertelt bij welke populatie of grootheid de maat hoort — twee maten met dezelfde titel in een verschillende groep meten dus iets anders.
+- Zegt een vraag over een maand of kwartaal niet of ze seizoengecorrigeerde cijfers wil, en biedt de juiste groep zowel een seizoengecorrigeerde als een niet-seizoengecorrigeerde maat, kies dan de maat "Seizoengecorrigeerd". Zegt een vraag over een heel jaar niet dat ze seizoengecorrigeerde cijfers wil, kies dan nooit een seizoengecorrigeerde maat: seizoencorrectie bestaat alleen voor maand- en kwartaalcijfers.
 
 UITSPLITSINGEN
 Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:
@@ -542,7 +588,7 @@ OVERIG
 - derivation: 'none' voor een gewone opvraging, 'difference' voor een expliciete veranderingsvraag met bedrag, 'max' voor een vraag naar het hoogste/meeste, 'series' voor een ontwikkeling over een periode.
 - confidence is een getal tussen 0 en 1 en moet eerlijk zijn: hoog alleen bij een duidelijke, ondubbelzinnige match tussen de vraag en je keuzes.
 - reading: één korte Nederlandse zin die je keuzes samenvat.
-- version is altijd 1.
+- version is altijd 2.
 
 Antwoord uitsluitend met JSON volgens het opgegeven schema.`;
 
@@ -573,8 +619,9 @@ export function serializeTableParseInput(question: string, input: TableParseSche
   const measureLines = input.measures.map((m, i) => {
     const blurb = condense(m.description);
     return (
-      `${i + 1}. measureCode=${m.code} | eenheid=${m.unit || 'onbekend'}\n` +
+      `${i + 1}. measureCode=${m.code} | eenheid=${displayUnit(m)}\n` +
       `   titel: ${m.title}` +
+      (m.groupPath.length > 0 ? `\n   groep: ${m.groupPath.join(' › ')}` : '') +
       (blurb ? `\n   omschrijving: ${blurb}` : '')
     );
   });

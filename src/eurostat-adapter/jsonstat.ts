@@ -540,6 +540,9 @@ export function parseJsonStatDataset(
       // observations are always numeric, D6) — no source truth to carry, so
       // '' like every other absent-field default (breadth step 2 brief).
       dataType: '',
+      // Eurostat has no MeasureGroups concept (breadth step 4b, Task 1) —
+      // always [], never guessed.
+      groupPath: [],
     });
   }
 

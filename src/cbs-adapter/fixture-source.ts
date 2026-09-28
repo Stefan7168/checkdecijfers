@@ -18,6 +18,7 @@ import {
   parseCatalogPage,
   parseCodes,
   parseDimensions,
+  parseMeasureGroups,
   parseMeasures,
   parseObservationsPage,
 } from './parse-v4.ts';
@@ -37,6 +38,10 @@ export interface FixtureDocs {
   properties: unknown;
   dimensions: unknown;
   measureCodes: unknown;
+  /** Raw MeasureGroups document (breadth step 4b, Task 1), or `null` when the
+   *  captured fixture has none — a fixture without this file behaves like a
+   *  live 404: every measure's `groupPath` resolves to `[]`. */
+  measureGroups: unknown | null;
   codes: Record<string, unknown>;
   observationPages: unknown[];
   /** The manifest's recorded observation count (WP16 sub-part 2 §4) — the
@@ -66,6 +71,10 @@ export function loadFixtureDocs(dir: string): FixtureDocs {
       `Fixture manifest at '${indexPath}' is missing one of properties/dimensions/measure-codes`,
     );
   }
+  // breadth step 4b, Task 1: optional — most committed fixtures predate
+  // MeasureGroups and never captured it; absent means "no groups" (mirrors a
+  // live 404), not a corrupt manifest.
+  const measureGroupsFile = index.files['measure-groups'];
 
   const codes: Record<string, unknown> = {};
   for (const [key, fileName] of Object.entries(index.files)) {
@@ -80,6 +89,7 @@ export function loadFixtureDocs(dir: string): FixtureDocs {
     properties: readJson(propertiesFile),
     dimensions: readJson(dimensionsFile),
     measureCodes: readJson(measureCodesFile),
+    measureGroups: measureGroupsFile ? readJson(measureGroupsFile) : null,
     codes,
     observationPages,
     observationRows: typeof index.observationRows === 'number' ? index.observationRows : null,
@@ -215,11 +225,15 @@ export class FixtureSource implements CbsSource {
     if (typeof props.Title !== 'string') {
       throw new Error(`Fixture Properties for table '${tableId}' is missing Title`);
     }
+    // breadth step 4b, Task 1: mirrors odata-v4.ts's 404-tolerant fetch — a
+    // fixture with no captured MeasureGroups document parses as "no groups"
+    // (every measure's groupPath []), same as a live 404.
+    const groups = docs.measureGroups !== null ? parseMeasureGroups(docs.measureGroups) : [];
     return {
       tableId,
       title: props.Title,
       dimensions: parseDimensions(docs.dimensions),
-      measures: parseMeasures(docs.measureCodes),
+      measures: parseMeasures(docs.measureCodes, groups),
       // breadth step 2, Task 3: mirrors odata-v4.ts — the captured
       // properties.json carries CBS's own 'Modified' timestamp too.
       modified: optionalString(docs.properties as Record<string, unknown>, 'Modified'),

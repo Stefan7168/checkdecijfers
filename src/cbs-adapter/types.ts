@@ -43,6 +43,25 @@ export interface CbsMeasure {
    * servable (breadth step 2 constraints: text measures like `code`, `naam`,
    * `omschrijving` are excluded from ingestion). */
   dataType: string;
+  /**
+   * CBS's own MeasureGroups titles, root -> leaf, verbatim (breadth step 4b,
+   * Task 1). Resolved from the measure's `MeasureGroupId` by walking
+   * `MeasureGroups`' `ParentId` chain up to the root. `[]` when CBS has no
+   * group for the measure, or the table publishes no `MeasureGroups` at all,
+   * or a `MeasureGroupId` points at a group CBS never listed (the walk stops
+   * at whatever was resolved so far — never guessed, principle c). A
+   * `ParentId` cycle stops at the first repeated id rather than looping
+   * forever. Distinguishes measures that otherwise share a bare title (e.g.
+   * every "Seizoengecorrigeerd" measure in a table like 80590ned) by the
+   * group CBS files them under — see src/answer/table-parse for the prompt
+   * line this feeds. NOT part of the schema fingerprint (fingerprint.ts
+   * hashes measure CODES only) and NEVER persisted: `unitsFromMeasures`
+   * (src/ingestion/pipeline.ts) copies named fields only, so `groupPath`
+   * never reaches `cbs_tables.units` or any other stored registry state —
+   * it is carried in memory for the current parse/prompt-build only. The
+   * Eurostat adapter (no measure-groups concept) always sets `[]`.
+   */
+  groupPath: string[];
 }
 
 export interface CbsTableSchema {
@@ -67,6 +86,19 @@ export interface CbsTableSchema {
    * never omit the field.
    */
   modified: string | null;
+  /**
+   * Final-review I2 (breadth step 4b fix wave): `true` ONLY when the v4
+   * adapter could not fetch (a non-404 failure after its normal retries) or
+   * parse the table's MeasureGroups — every measure's `groupPath` is then
+   * `[]` for that reason, not because CBS has no groups. Absent otherwise
+   * (including the 404 "this table publishes no groups" case, and every
+   * FixtureSource / Eurostat schema). In memory only, never stored;
+   * ingestion never reads it — groups are never persisted, so they must
+   * never fail a sync. buildTableParseSchema (src/answer/table-parse)
+   * refuses a flagged table, since the group is what tells same-titled
+   * measures apart in its prompt.
+   */
+  measureGroupsUnavailable?: boolean;
 }
 
 export interface CbsCode {

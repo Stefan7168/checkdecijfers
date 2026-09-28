@@ -27,6 +27,7 @@ import {
   TABLE_PARSE_MEASURE_NONE,
   TABLE_PARSE_NOT_NAMED,
   TABLE_PARSE_OTHER,
+  TABLE_PARSE_SCHEMA_VERSION,
 } from '../../../src/answer/table-parse/parse.ts';
 import { requestHash } from '../../../src/answer/llm/client.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../../src/answer/llm/client.ts';
@@ -73,7 +74,7 @@ function regionlessZeroMembersInput(): TableParseSchema {
 
 function validJson(input: TableParseSchema, overrides: Record<string, unknown> = {}): string {
   const base = {
-    version: 1,
+    version: TABLE_PARSE_SCHEMA_VERSION,
     measureCode: input.measures[0]!.code,
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: TABLE_PARSE_NOT_NAMED })),
     period: { kind: 'year', year: 2023 },
@@ -115,6 +116,37 @@ describe('buildTableParseSystemPrompt', () => {
     expect(prompt).toContain(TABLE_PARSE_MEASURE_NONE);
     expect(prompt).toContain(TABLE_PARSE_NOT_NAMED);
     expect(prompt).toContain(TABLE_PARSE_OTHER);
+  });
+
+  // Breadth step 4b, Task 2 (controller ruling): the prompt must tell the
+  // model that measures are grouped, what the group means, and that two
+  // measures sharing a title in different groups measure different things —
+  // exactly what lets it use the new "groep:" line to break a tie it
+  // otherwise couldn't (e.g. 80590ned's four "Niet-seizoengecorrigeerd"
+  // measures).
+  it('explains that measures are grouped and that a shared title in a different group means a different thing', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('gegroepeerd');
+    expect(prompt).toContain('groep');
+    expect(prompt).toMatch(/dezelfde titel.*verschillende groep.*iets anders/);
+  });
+
+  // Final-review I3 (breadth step 4b fix wave, controller ruling): the
+  // seasonal-adjustment default is settled in the prompt BEFORE the
+  // recording run — a month/quarter question that does not say takes the
+  // group's "Seizoengecorrigeerd" measure (the curated pipeline's default for
+  // werkloosheid, CBS's own headline practice); a yearly question never takes
+  // an adjusted measure unless it asks for one (seasonal adjustment only
+  // exists below a year; a yearly question that EXPLICITLY asks for adjusted
+  // figures — labelled case 'total-arbeidsdeelname-generiek' — keeps its
+  // adjusted measure, and step 5's per-cell check refuses the missing
+  // yearly cell rather than the parser silently swapping in the unadjusted
+  // figure).
+  it('states the seasonal-adjustment default: month/quarter without a stated preference → "Seizoengecorrigeerd"; an unstated year never', () => {
+    const prompt = buildTableParseSystemPrompt();
+    const maat = prompt.slice(prompt.indexOf('MAAT\n'), prompt.indexOf('UITSPLITSINGEN\n'));
+    expect(maat).toMatch(/maand of kwartaal[^\n]*niet of ze seizoengecorrigeerde cijfers wil[^\n]*"Seizoengecorrigeerd"/);
+    expect(maat).toMatch(/heel jaar niet dat ze seizoengecorrigeerde cijfers wil[^\n]*nooit een seizoengecorrigeerde maat/);
   });
 
   // Fix round 1 (task review, CRITICAL): the prompt must tell the model to
@@ -203,6 +235,23 @@ describe('serializeTableParseInput', () => {
     expect(mixedText).toContain('JJ (jaar)');
     expect(mixedText).toContain('KW (kwartaal)');
     expect(mixedText).toContain('MM (maand)');
+  });
+
+  // Breadth step 4b, Task 2: the "groep:" line shows CBS's own measure group
+  // (root › … › leaf), and is OMITTED entirely for a measure with no group —
+  // never a "groep: " line with nothing after it.
+  it('shows "groep: <root>" for a grouped measure, and omits the line for an ungrouped one', () => {
+    const { schema, codeLists } = loadFixture('80590ned');
+    const input = buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen waren er?');
+    const text = serializeTableParseInput('Hoeveel werklozen waren er?', input);
+    expect(text).toContain('measureCode=D002308');
+    expect(text).toContain('groep: Beroepsbevolking');
+    expect(text).toContain('groep: Werkloze beroepsbevolking');
+
+    const ungrouped = landbouwInput();
+    expect(ungrouped.measures.every((m) => m.groupPath.length === 0)).toBe(true);
+    const ungroupedText = serializeTableParseInput(LANDBOUW_QUESTION, ungrouped);
+    expect(ungroupedText).not.toContain('groep:');
   });
 });
 
@@ -491,6 +540,21 @@ describe('validateTableParseOutput — confidence, JSON, schema', () => {
       TableParseValidationError,
     );
   });
+
+  // Breadth step 4b, Task 2: version bumped to 2 (the prompt now shows
+  // measure groups) — a fixture recorded against the OLD (ungrouped) prompt
+  // must never be silently accepted as if it answered the new one.
+  it(`accepts the current version literal (${TABLE_PARSE_SCHEMA_VERSION})`, () => {
+    const input = landbouwInput();
+    expect(() => validateTableParseOutput(validJson(input, { version: TABLE_PARSE_SCHEMA_VERSION }), input)).not.toThrow();
+  });
+
+  it('rejects the previous version literal (1)', () => {
+    const input = landbouwInput();
+    expect(() => validateTableParseOutput(validJson(input, { version: 1 }), input)).toThrow(
+      TableParseValidationError,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -756,11 +820,27 @@ describe('validateTableParseOutput — places on a region-coded breakdown dimens
     const { schema, codeLists } = loadFixture('82291NED');
     const question = 'Wat is het percentage volwassenen met hoge bloeddruk in Caribisch Nederland in 2021?';
     const input = buildTableParseSchema(schema, codeLists, question);
-    const ok = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'caribisch nederland', kind: 'landsdeel' }] });
+    const ok = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'caribisch nederland', kind: 'onbekend' }] });
     expect(validateTableParseOutput(ok, input).breakdowns['CaribischNederland']).toEqual({ kind: 'member', code: 'CN01' });
-    const bonaire = jsonWith(input, { CaribischNederland: 'GM9001' }, { regions: [{ name: 'Caribisch Nederland', kind: 'landsdeel' }] });
+    const bonaire = jsonWith(input, { CaribischNederland: 'GM9001' }, { regions: [{ name: 'Caribisch Nederland', kind: 'onbekend' }] });
     expect(() => validateTableParseOutput(bonaire, input)).toThrow(TableParseValidationError);
   });
+
+  // Final-review C1 ruling consequence: a stated kind maps to ONE CBS code
+  // family (landsdeel → LD, land → NL). CN01 is neither, so the model
+  // tagging "Caribisch Nederland" as a landsdeel or a land now refuses
+  // (region unavailable) rather than answering — the ruling's accepted cost
+  // ("extra refusals when a kind word is loose"), never a wrong population.
+  it.each(['landsdeel', 'land'])(
+    '82291NED: "Caribisch Nederland" stated as a %s refuses — CN01 is not an LD/NL code (C1 ruling)',
+    (kind) => {
+      const { schema, codeLists } = loadFixture('82291NED');
+      const question = 'Wat is het percentage volwassenen met hoge bloeddruk in Caribisch Nederland in 2021?';
+      const input = buildTableParseSchema(schema, codeLists, question);
+      const json = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'Caribisch Nederland', kind }] });
+      expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    },
+  );
 
   it('a table that DOES have regions is not subject to this check (regions are resolved against its geo dimension later)', () => {
     const { schema, codeLists } = loadFixture('03759ned');
@@ -844,25 +924,37 @@ describe("validateTableParseOutput — 'geen' short-circuits the region checks (
 describe('validateTableParseOutput — indistinguishable measures (F4)', () => {
   // 80590ned: four measures share title "Niet-seizoengecorrigeerd", unit
   // "x 1000" and an empty description (3000790_2, 3000795_2, 3000800_2,
-  // 3000810_2) — nothing the model sees tells them apart.
+  // 3000810_2). Before groupPath existed, NOTHING the model saw told them
+  // apart. Breadth step 4b, Task 2, measured against the live-refreshed
+  // fixture: CBS itself files each of the four under a DIFFERENT measure
+  // group ("Beroepsbevolking", "Werkzame beroepsbevolking", "Werkloze
+  // beroepsbevolking", "Niet-beroepsbevolking") — so the group, now part of
+  // the fingerprint, resolves what used to be a real ambiguity. Checked
+  // across all 10 fixture tables (extract-tableparse-schemas re-run): this
+  // was the ONLY set of same-(title, unit, description) measures anywhere in
+  // the fixtures, and it is fully resolved by group — none of the 8 eligible
+  // tables has a real ambiguous-measure case left (see
+  // benchmark/tableparse-labelled-set.json's own note on
+  // 'ambiguous-arbeid-werklozen').
   function arbeidInput(): TableParseSchema {
     const { schema, codeLists } = loadFixture('80590ned');
     return buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen waren er in 2021 (niet seizoengecorrigeerd)?');
   }
 
-  it('fixture fact: the four x 1000 non-adjusted measures are identical in title, unit and description', () => {
+  it('fixture fact: the four x 1000 non-adjusted measures share title/unit/description but now carry DISTINCT groups', () => {
     const input = arbeidInput();
     const group = input.measures.filter((m) => ['3000790_2', '3000795_2', '3000800_2', '3000810_2'].includes(m.code));
     expect(group).toHaveLength(4);
     expect(new Set(group.map((m) => `${m.title}|${m.unit}|${m.description}`)).size).toBe(1);
+    expect(new Set(group.map((m) => JSON.stringify(m.groupPath))).size).toBe(4);
   });
 
-  it('choosing one of several indistinguishable measures throws TableParseAmbiguousMeasureError', () => {
+  it('groupPath now distinguishes them: choosing any one of the four no longer throws', () => {
     const input = arbeidInput();
-    const json = jsonWith(input, {}, { measureCode: '3000790_2' });
-    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseAmbiguousMeasureError);
-    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
-    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+    for (const code of ['3000790_2', '3000795_2', '3000800_2', '3000810_2']) {
+      const json = jsonWith(input, {}, { measureCode: code });
+      expect(validateTableParseOutput(json, input).measureCode).toBe(code);
+    }
   });
 
   it('a measure whose description sets it apart is accepted (M006335)', () => {
@@ -875,6 +967,83 @@ describe('validateTableParseOutput — indistinguishable measures (F4)', () => {
     const input = arbeidInput();
     const json = jsonWith(input, {}, { measureCode: TABLE_PARSE_MEASURE_NONE });
     expect(validateTableParseOutput(json, input).measureCode).toBeNull();
+  });
+
+  // Synthetic: the guard must still fire when two offered measures are
+  // TRULY identical — same group, title, unit AND description — since no
+  // real fixture table currently has that shape (see the fixture-fact test
+  // above). This is what proves the guard itself was widened to include
+  // groupPath, not silently disabled.
+  it('two measures with the SAME group, title, unit and description still throw (synthetic)', () => {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN03',
+      title: 'Synthetische tabel met twee identieke maten',
+      dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
+      measures: [
+        {
+          code: 'M1',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+        {
+          code: 'M2',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+      ],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const input = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const json = jsonWith(input, {}, { measureCode: 'M1' });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseAmbiguousMeasureError);
+  });
+
+  // Synthetic counterpart, isolated from any real-fixture drift: same
+  // title/unit/description but a DIFFERENT group does not throw.
+  it('two measures with the SAME title/unit/description but a DIFFERENT group do not throw', () => {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN04',
+      title: 'Synthetische tabel met twee gelijke maten in verschillende groepen',
+      dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
+      measures: [
+        {
+          code: 'M1',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep A'],
+        },
+        {
+          code: 'M2',
+          title: 'Aantal',
+          unit: 'x 1',
+          decimals: 0,
+          description: 'een telling',
+          dataType: 'Double',
+          groupPath: ['Groep B'],
+        },
+      ],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const input = buildTableParseSchema(schema, codeLists, 'irrelevante vraag');
+    const json = jsonWith(input, {}, { measureCode: 'M1' });
+    expect(validateTableParseOutput(json, input).measureCode).toBe('M1');
   });
 });
 
@@ -930,7 +1099,7 @@ describe('validateTableParseOutput — only region-coded members count as places
         { name: 'Geboorteland', kind: 'Dimension', title: 'Geboorteland' },
         { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
       ],
-      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long' }],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
       modified: null,
     };
     const codeLists: Record<string, CbsCode[]> = {
@@ -969,5 +1138,167 @@ describe('validateTableParseOutput — only region-coded members count as places
     const input = geboortelandInput('Hoeveel in Nederland geboren mensen waren er in 2020?');
     const json = jsonWith(input, { Geboorteland: '1012600' }, { measureCode: 'M1' });
     expect(validateTableParseOutput(json, input).breakdowns['Geboorteland']).toEqual({ kind: 'member', code: '1012600' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breadth step 4b, Task 3 — reader-side place normalization (readerPlaceKey):
+// a reader typing a CBS-style title verbatim ("Groningen (PV)") or prefixing
+// a bare name with a Dutch kind word ("provincie Groningen") must key the
+// same as the matching member(s) — before this task, the validator keyed the
+// NAMED region with plain normalizeRegionName(region.name), so a trailing
+// parenthetical or a leading kind word left in the region.name made it key
+// DIFFERENTLY from every offered member and threw the (wrong)
+// TableParseRegionUnavailableError even though 85004NED plainly offers
+// matching members.
+// ---------------------------------------------------------------------------
+
+describe('validateTableParseOutput — reader-side place normalization (readerPlaceKey, Task 3)', () => {
+  it('"Groningen (PV)" (CBS-style title, parenthetical included) matches the same three offered members as bare "Groningen" — several match, so only \'anders\' passes', () => {
+    const input = groningenInput();
+    const named = [{ name: 'Groningen (PV)', kind: 'onbekend' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+
+    // Before this task: readerPlaceKey did not exist, the validator keyed on
+    // normalizeRegionName('Groningen (PV)') = "groningen (pv)", which matches
+    // NO offered member's memberPlaceKey ("groningen") — a
+    // TableParseRegionUnavailableError, even though the table plainly offers
+    // three matching members. That must no longer happen.
+    const niVsRegionUnavailable = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { regions: named });
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('"provincie Groningen" (leading Dutch kind word) matches the same three offered members as bare "Groningen"', () => {
+    const input = groningenInput();
+    const named = [{ name: 'provincie Groningen', kind: 'provincie' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+
+    const niVsRegionUnavailable = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { regions: named });
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  // 85004NED has no 's-Gravenhage member (its RegioS is PV/ES/ET-coded, not
+  // municipalities) — a small synthetic breakdown dimension, mirroring the
+  // 'geboorteland' synthetic table above, pins the "Den Haag" alias case
+  // against a single, unambiguous GM-coded match.
+  function denHaagInput(question: string): TableParseSchema {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN06',
+      title: 'Synthetische tabel naar woonplaats',
+      dimensions: [
+        { name: 'Woonplaats', kind: 'Dimension', title: 'Woonplaats' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      // Only 1 of 8 members is region-coded (12.5%, under the 0.8 geo-like
+      // threshold — mirrors 85004NED's own measured ratio), so this stays an
+      // ordinary 'breakdown' dimension, not 'geo_like'.
+      Woonplaats: [
+        { code: 'F0001', title: 'Fictieve plek A', dimensionGroup: null, status: null, index: 1 },
+        { code: 'F0002', title: 'Fictieve plek B', dimensionGroup: null, status: null, index: 2 },
+        { code: 'F0003', title: 'Fictieve plek C', dimensionGroup: null, status: null, index: 3 },
+        { code: 'F0004', title: 'Fictieve plek D', dimensionGroup: null, status: null, index: 4 },
+        { code: 'GM0518', title: "'s-Gravenhage (GM)", dimensionGroup: null, status: null, index: 5 },
+        { code: 'F0006', title: 'Fictieve plek E', dimensionGroup: null, status: null, index: 6 },
+        { code: 'F0007', title: 'Fictieve plek F', dimensionGroup: null, status: null, index: 7 },
+        { code: 'F0008', title: 'Fictieve plek G', dimensionGroup: null, status: null, index: 8 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    return buildTableParseSchema(schema, codeLists, question);
+  }
+
+  it('"Den Haag" matches the single offered \'s-Gravenhage (GM) member (alias substitution)', () => {
+    const input = denHaagInput('Hoeveel personen woonden er in Den Haag in 2020?');
+    expect(input.hasRegions).toBe(false);
+    const json = jsonWith(input, { Woonplaats: 'GM0518' }, { measureCode: 'M1', regions: [{ name: 'Den Haag', kind: 'gemeente' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['Woonplaats']).toEqual({ kind: 'member', code: 'GM0518' });
+  });
+
+  it('"Den Haag" with \'niet_genoemd\' on the matching dimension throws (would silently fall to the total)', () => {
+    const input = denHaagInput('Hoeveel personen woonden er in Den Haag in 2020?');
+    const json = jsonWith(input, { Woonplaats: TABLE_PARSE_NOT_NAMED }, { measureCode: 'M1', regions: [{ name: 'Den Haag', kind: 'gemeente' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review C1 (breadth step 4b fix wave): the reader's place KIND must
+// constrain, never be discarded. On 85004NED "Utrecht" matches exactly ONE
+// region-coded member — PV26 "Utrecht (PV)", the PROVINCE (there is no
+// Utrecht ES/ET look-alike; ET0902 "Foodvalley Utrecht (ET)" keys
+// differently). Before this fix readerPlaceKey dropped the kind word, so a
+// municipality question was silently answered with the province figure.
+// ---------------------------------------------------------------------------
+
+describe('validateTableParseOutput — the reader\'s place kind constrains the match (C1)', () => {
+  const UTRECHT_QUESTION = 'Hoeveel megawatt aan opgesteld vermogen was er in Utrecht in 2021?';
+
+  it('fixture facts: exactly one offered region-coded member keys as Utrecht, and it is the province PV26', () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const regioS = input.breakdowns.find((b) => b.name === 'RegioS')!;
+    const utrecht = regioS.members.filter((m) => /^(NL|PV|GM|LD|CR|WK|BU|CN|ES|ET)\d/.test(m.code) && /^utrecht( \(|$)/i.test(m.title));
+    expect(utrecht.map((m) => m.code)).toEqual(['PV26']);
+  });
+
+  it.each([
+    [{ name: 'gemeente Utrecht', kind: 'gemeente' }],
+    [{ name: 'Utrecht (gemeente)', kind: 'gemeente' }],
+    [{ name: 'regio Utrecht', kind: 'onbekend' }],
+    [{ name: 'Utrecht', kind: 'gemeente' }],
+  ])('rejects the province PV26 for %o — TableParseRegionUnavailableError, never the province figure', (region) => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    for (const choice of ['PV26', TABLE_PARSE_OTHER, TABLE_PARSE_NOT_NAMED]) {
+      const json = jsonWith(input, { RegioS: choice }, { regions: [region] });
+      expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    }
+  });
+
+  it("accepts PV26 for {name:'provincie Utrecht', kind:'provincie'} — the only match, and it is a province", () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const json = jsonWith(input, { RegioS: 'PV26' }, { regions: [{ name: 'provincie Utrecht', kind: 'provincie' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV26' });
+  });
+
+  it('accepts PV26 for a bare "Utrecht" with kind onbekend (no kind known → the kind-agnostic rule, as before)', () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const json = jsonWith(input, { RegioS: 'PV26' }, { regions: [{ name: 'Utrecht', kind: 'onbekend' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV26' });
+  });
+
+  it("look-alike Groningen stays 'anders' even with kind 'provincie' — a kind never narrows several look-alikes to one pick", () => {
+    const input = groningenInput();
+    const named = [{ name: 'Groningen', kind: 'provincie' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+    const pv20 = jsonWith(input, { RegioS: 'PV20' }, { regions: named });
+    expect(() => validateTableParseOutput(pv20, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(pv20, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it("\"Groningen (gemeente)\" on 85004NED: three look-alikes match, none is a municipality — region unavailable", () => {
+    const input = groningenInput();
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: [{ name: 'Groningen (gemeente)', kind: 'onbekend' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+
+  it.each([
+    [{ name: 'provincie Groningen', kind: 'gemeente' }],
+    [{ name: 'Utrecht (PV)', kind: 'gemeente' }],
+    [{ name: 'gemeente Utrecht (PV)', kind: 'onbekend' }],
+  ])('a kind conflict between the sources (%o) throws TableParseRegionUnavailableError', (region) => {
+    const question = region.name.includes('Groningen') ? GRONINGEN_QUESTION : UTRECHT_QUESTION;
+    const input = groningenInput(question);
+    const choice = region.name.includes('Groningen') ? TABLE_PARSE_OTHER : 'PV26';
+    const json = jsonWith(input, { RegioS: choice }, { regions: [region] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
   });
 });

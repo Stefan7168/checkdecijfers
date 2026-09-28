@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:03.388Z",
+ "fetchedAt": "2026-09-28T18:39:21.579Z",
  "schema": {
   "tableId": "85245NED",
   "title": "Motorvoertuigen actief; sloopvoertuigen, voertuigtype, brandstofsoort",
@@ -22,7 +22,8 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "Nederlandse voertuigen waarvan het kenteken/kentekenbewijs ongeldig is verklaard vanwege sloop. Dit is exclusief de sloop van geïmporteerde voertuigen bestemd voor demontage.",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": []
    },
    {
     "code": "A019276",
@@ -30,7 +31,10 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": [
+     "Brandstofsoort"
+    ]
    },
    {
     "code": "A019275",
@@ -38,7 +42,10 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": [
+     "Brandstofsoort"
+    ]
    },
    {
     "code": "A027841",
@@ -46,7 +53,10 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "LPG (Liquefied Petroleum Gas; vertaling: vloeibaar gemaakt gas)",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": [
+     "Brandstofsoort"
+    ]
    },
    {
     "code": "A041295",
@@ -54,7 +64,10 @@
     "unit": "aantal",
     "decimals": 0,
     "description": "Voertuigen die rijden op elektriciteit of waterstof. Ook zijn hierin de zogenaamde hybride-voertuigen opgenomen. Dit zijn voertuigen waarvan de motor wordt aangedreven door een combinatie van brandstoffen, bijvoorbeeld elektriciteit en benzine. Ook vallen hieronder de voertuigen waarvan de gebruikte brandstof onbekend is.",
-    "dataType": "Long"
+    "dataType": "Long",
+    "groupPath": [
+     "Brandstofsoort"
+    ]
    }
   ],
   "modified": "2026-02-13T00:00:00+01:00"

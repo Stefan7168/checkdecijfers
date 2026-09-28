@@ -12,8 +12,11 @@
   "properties": "properties.json",
   "dimensions": "dimensions.json",
   "measure-codes": "measure-codes.json",
+  "measure-groups": "measure-groups.json",
   "codes-Geslacht": "codes-Geslacht.json",
   "codes-Leeftijd": "codes-Leeftijd.json",
   "codes-Perioden": "codes-Perioden.json"
- }
+ },
+ "measureGroupsCapturedAt": "2026-09-29T00:00:00.000Z",
+ "measureGroupsSource": "https://datasets.cbs.nl/odata/v1/CBS/80590ned/MeasureGroups (breadth step 4b, Task 1; fetched live and trimmed to Id/Index/Title/ParentId — no ParentId is non-null in this table, so nesting is covered by a synthetic test instead)"
 }

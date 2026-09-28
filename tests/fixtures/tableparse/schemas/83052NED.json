@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-09-28T16:24:05.605Z",
+ "fetchedAt": "2026-09-28T18:39:22.742Z",
  "schema": {
   "tableId": "83052NED",
   "title": "Arbeidsongevallen werknemers; geslacht en leeftijd",
@@ -32,7 +32,8 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij zowel om arbeidsongevallen die leiden tot arbeidsverzuim als om arbeidsongevallen zonder verzuim op het werk. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    },
    {
     "code": "D001913",
@@ -40,7 +41,8 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen zonder verzuim op het werk. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    },
    {
     "code": "D001911",
@@ -48,7 +50,8 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen die leiden tot arbeidsverzuim van ten minste 1 dag. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    },
    {
     "code": "D001912",
@@ -56,7 +59,8 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Het betreft werknemers met één of meer arbeidsongevallen in de afgelopen 12 maanden. Het gaat hierbij om arbeidsongevallen die leiden tot arbeidsverzuim van ten minste 4 dagen. \r\n\r\nEen werknemer is een persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat.\r\n\r\nEen arbeidsongeval is een ongeval dat door of tijdens de uitoefening van betaalde arbeid (in loondienst of zelfstandig) plaatsvindt, met uitzondering van een ongeval dat plaatsvindt onderweg van of naar het werk.\r\n\r\nIn 2015 is de meting van arbeidsongevallen verbeterd. Er wordt een extra controle uitgevoerd of het arbeidsongeval in de afgelopen 12 maanden heeft plaats gevonden. Hierdoor valt het aandeel werknemers met een arbeidsongeval lager uit.\r\n\r\n\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": []
    },
    {
     "code": "D001763",
@@ -64,7 +68,10 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval met lichamelijk letsel bij het meest recente arbeidsongeval.\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werknemers; letsel van recentste ongeval"
+    ]
    },
    {
     "code": "D001743",
@@ -72,7 +79,10 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval met  geestelijk letsel bij het meest recente arbeidsongeval.\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werknemers; letsel van recentste ongeval"
+    ]
    },
    {
     "code": "D001992",
@@ -80,7 +90,10 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval waarbij het onderscheid tussen lichamelijk en geestelijk letsel niet is te maken bij het meest recente arbeidsongeval.\r\n\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werknemers; letsel van recentste ongeval"
+    ]
    },
    {
     "code": "D001762",
@@ -88,7 +101,10 @@
     "unit": "In % van alle werknemers",
     "decimals": 1,
     "description": "Geeft aan wat voor soort letsel is opgelopen als gevolg van het meest recente arbeidsongeval in de afgelopen 12 maanden. Er worden vier categorieën gehanteerd, namelijk:\r\n1. Lichamelijk letsel \r\n2. Geestelijk letsel \r\n3. Onderscheid niet te maken\r\n4. Letsel onbekend\r\n\r\nBij meerdere letsels gaat het om het meest ernstige letsel.\r\n\r\nCijfer betreft het percentage werknemers met een ongeval waarbij het letsel van het meest recente arbeidsongeval onbekend is.\r\n",
-    "dataType": "Double"
+    "dataType": "Double",
+    "groupPath": [
+     "Werknemers; letsel van recentste ongeval"
+    ]
    }
   ],
   "modified": "2026-04-15T06:30:00+02:00"

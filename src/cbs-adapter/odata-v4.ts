@@ -16,8 +16,10 @@ import {
   parseCatalogPage,
   parseCodes,
   parseDimensions,
+  parseMeasureGroups,
   parseMeasures,
   parseObservationsPage,
+  type CbsMeasureGroup,
 } from './parse-v4.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
@@ -81,6 +83,23 @@ export function sliceToFilter(slice?: CbsSlice): string | null {
   return parts.length ? parts.join(' and ') : null;
 }
 
+/** Sentinel for "MeasureGroups could not be fetched" (final-review I2). */
+const MEASURE_GROUPS_UNAVAILABLE = Symbol('measure-groups-unavailable');
+
+/** MeasureGroups parsed best-effort (final-review I2, breadth step 4b fix
+ * wave): `null` when the fetch failed (non-404, after retries) or the
+ * document does not parse — the caller then gives every measure groupPath
+ * [] and flags the schema `measureGroupsUnavailable`, instead of failing a
+ * sync over data that is never stored. */
+function parseMeasureGroupsBestEffort(raw: unknown): CbsMeasureGroup[] | null {
+  if (raw === MEASURE_GROUPS_UNAVAILABLE) return null;
+  try {
+    return parseMeasureGroups(raw);
+  } catch {
+    return null;
+  }
+}
+
 export class ODataV4Source implements CbsSource {
   private async fetchJson(url: string): Promise<unknown> {
     let lastError: unknown;
@@ -105,24 +124,67 @@ export class ODataV4Source implements CbsSource {
     );
   }
 
+  /**
+   * Fetches a metadata document, but normalizes an HTTP 404 to "no rows"
+   * (`{ value: [] }`) instead of throwing — for `MeasureGroups`, which many
+   * CBS tables simply don't publish (breadth step 4b, Task 1). Any OTHER
+   * failure (after retries) throws like `fetchJson`; fetchTableSchema is the
+   * one caller, and it catches that (final-review I2: MeasureGroups is
+   * best-effort).
+   */
+  private async fetchJsonOptional(url: string): Promise<unknown> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (res.ok) return await res.json();
+        if (res.status === 404) return { value: [] };
+        lastError = new Error(
+          `CBS OData request failed: ${res.status} ${res.statusText} for ${url}`,
+        );
+      } catch (err) {
+        lastError = err;
+      }
+      if (attempt < FETCH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+      }
+    }
+    throw new Error(
+      `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`,
+    );
+  }
+
   async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
-    const [properties, dimensionsRaw, measuresRaw] = await Promise.all([
+    const [properties, dimensionsRaw, measuresRaw, measureGroupsRaw] = await Promise.all([
       this.fetchJson(`${BASE}/${tableId}/Properties`),
       this.fetchJson(`${BASE}/${tableId}/Dimensions`),
       this.fetchJson(`${BASE}/${tableId}/MeasureCodes`),
+      // breadth step 4b, Task 1: a 404 (table publishes no MeasureGroups) or
+      // an empty list both mean "no groups" — every measure's groupPath is
+      // []. Final-review I2: any OTHER failure (after the normal retries) is
+      // caught here rather than failing the whole schema fetch — groups are
+      // never stored, so they must never fail an ingestion sync.
+      this.fetchJsonOptional(`${BASE}/${tableId}/MeasureGroups`).catch(() => MEASURE_GROUPS_UNAVAILABLE),
     ]);
     const props = properties as { Title?: unknown };
     if (typeof props.Title !== 'string') {
       throw new Error(`CBS Properties response for table '${tableId}' is missing Title`);
     }
+    const groups = parseMeasureGroupsBestEffort(measureGroupsRaw);
     return {
       tableId,
       title: props.Title,
       dimensions: parseDimensions(dimensionsRaw),
-      measures: parseMeasures(measuresRaw),
+      measures: parseMeasures(measuresRaw, groups ?? []),
       // breadth step 2, Task 3: the same Properties document already fetched
       // above for Title carries CBS's own 'Modified' timestamp.
       modified: optionalString(properties as Record<string, unknown>, 'Modified'),
+      // Final-review I2: present (true) only when MeasureGroups could not be
+      // fetched or parsed — every groupPath above is then []. Ingestion never
+      // reads it; buildTableParseSchema refuses a flagged table.
+      ...(groups === null ? { measureGroupsUnavailable: true } : {}),
     };
   }
 

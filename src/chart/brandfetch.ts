@@ -1,5 +1,6 @@
 // src/chart/brandfetch.ts — Brandfetch Brand API client (WP218 phase 3, Task
-// 1 of the phase-3 plan; research: .superpowers/sdd/brandfetch-research.md).
+// 1 of docs/superpowers/plans/2026-09-09-wp218-phase-3-brand-colours.md;
+// research: docs/session-briefs/2026-09-09-session-91-brandfetch-research.md).
 // Looks up a company's brand colours + fonts by domain so a user can seed
 // their saved chart style (src/chart/user-styles.ts, migration 028) from
 // their own company's brand instead of picking colours by hand. This file is
