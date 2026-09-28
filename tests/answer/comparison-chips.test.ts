@@ -183,6 +183,18 @@ const populationAllProvinces: StructuredIntent = {
   derivation: 'none',
 };
 
+// ADR 061 part 2 (spec D6) fix round 1: the SCATTER_PARTNERS-curated
+// population_density -> average_woz_value pairing, all 12 provinces, 2024
+// (70072ned carries all 12 regional figures for that period, per the
+// build-plan constraints).
+const populationDensityAllProvinces: StructuredIntent = {
+  schemaVersion: INTENT_SCHEMA_VERSION,
+  target: { kind: 'canonical', key: 'population_density' },
+  regionSet: { kind: 'all_provincies' },
+  period: { kind: 'codes', codes: ['2024JJ00'] },
+  derivation: 'none',
+};
+
 describe('buildAnswerChips — the comparison generators against the real fixture db + real dry-run', () => {
   it('sub-national single answer (Amsterdam 2024): the region comparison REPLACES the lone national chip and carries a resolved two-region intent', async () => {
     const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363']);
@@ -534,6 +546,24 @@ describe('buildAnswerChips — plotAgainst against the real fixture db + real dr
     // turn's own re-validation — minus its display-only English label, which
     // the trust boundary accepts and then strips (M5, validate-pending.ts).
     expect(pairOption!.labelEn).toBe('Plot against population density');
+    const { labelEn: _labelEn, ...withoutEnglish } = pairOption!;
+    expect(validateClickOptions([pairOption])).toEqual([withoutEnglish]);
+  });
+
+  // Fix round 1 (task review, Important finding): the brief's Step 2 item
+  // (b) was missing — a population_density all_provincies 2024 answer must
+  // offer its own SCATTER_PARTNERS-curated partner, average_woz_value,
+  // proven against the real fixture DB and dry-run exactly like the home
+  // price case above.
+  it('provinces 2024 population density answer offers the "Zet af tegen gemiddelde WOZ-waarde van woningen" chip, dry-run proven (>= SCATTER_MIN_PAIRS) — ADR 061 part 2 / spec D6 curated partner', async () => {
+    const result = await answered(populationDensityAllProvinces);
+    const chips = await buildAnswerChips(populationDensityAllProvinces, result, realCheck, ON);
+    expect(chips.suggestions).toContain('Zet af tegen gemiddelde WOZ-waarde van woningen');
+    const pairOption = chips.clickOptions.find((o) => o.id === 'pair-1');
+    expect(pairOption).toBeDefined();
+    expect(pairOption!.intent.pairWith).toEqual({ kind: 'canonical', key: 'average_woz_value' });
+    expect(pairOption!.labelEn).toBe('Plot against average WOZ value of homes');
+    // Same producer-side/click-time agreement pin as the home price case.
     const { labelEn: _labelEn, ...withoutEnglish } = pairOption!;
     expect(validateClickOptions([pairOption])).toEqual([withoutEnglish]);
   });
