@@ -1208,6 +1208,17 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
+## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEP 2 ✅ BUILT, STEPS 3–6 NEXT
+
+Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.md)) chose breadth over depth. Design:
+[spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
+- **Step 1 ✅** all 1,277 current tables measured (metadata only): reach ≈ 88%; 57% need no follow-up question.
+- **Step 2 ✅** slice cache (plan [step 2](superpowers/plans/2026-09-28-breadth-step-2-slice-cache.md)): `registerSchemaOnly`,
+  `fetchSlice`, `ensureSlice`, slice-cache answering with per-slice confirmation dates; migration 037 FILE-ONLY; not wired.
+- **Next:** step 3 breakdown resolver (totals + conventions + button question), step 4 table-scoped parser (small spend
+  after 2026-10-01), step 5 orchestration + chat progress (prerequisites [#336](open-questions.md); owner applies 037),
+  step 6 table-lane benchmark → flag flip.
+
 ## Regional statistics → region questions (owner pick 2026-09-26, session 134) — PART 1 ✅ BUILT (session 138), PART 2 BUILT ON BRANCH `regional-stats-part2` + PARKED (owner sanity check #335: breadth first)
 
 **Session 138 (2026-09-28):** CBS back; designed + Part 1 built (ADR [061](decisions/061-regional-statistics-70072ned.md),
