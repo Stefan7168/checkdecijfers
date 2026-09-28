@@ -1208,7 +1208,17 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
-## Regional statistics → region questions (owner pick 2026-09-26, session 134; NEXT, not yet designed)
+## Regional statistics → region questions (owner pick 2026-09-26, session 134) — PART 1 ✅ BUILT (session 138), PART 2 NEXT (after 2026-10-01, owner present)
+
+**Session 138 (2026-09-28):** CBS back; designed + Part 1 built (ADR [061](decisions/061-regional-statistics-70072ned.md),
+[spec](superpowers/specs/2026-09-28-regional-statistics-design.md), [plan](superpowers/plans/2026-09-28-regional-statistics-part-1.md)).
+Owner picked 12 figures from `70072ned`. Part 1 = data only: measure allow-list slice, status read from CBS's period notes
+(CBS publishes no machine status for this table), seed + fixture; proven by a full live-data sync into a throwaway DB
+(106,683 cells). **Part 2 (needs a plan):** the 12 `CANONICAL_MEASURES` + `REGIONAL_KEYS` + English labels + scatter
+partner map (spec D6/D7) + new intent-eval cases → re-record intent/clarify/followup fixtures (cheap tier) → merge +
+deploy → prod `sync 70072ned` + `registry:apply` (RUNBOOK "Regional statistics table") → live benchmark.
+
+*(Earlier notes, kept for history:)*
 
 **Update session 135 (2026-09-27): the parser step [#267](open-questions.md) is ✅ DONE** — region-class questions ("per
 provincie", "welke gemeente in Utrecht …") now reach ADR 054's region-set query (see ADR 054 "As-built: Task 9"). The

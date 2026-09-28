@@ -46,8 +46,9 @@ export interface ConformanceTableSpec {
   /** Escape hatch for a source whose captures include out-of-slice history
    * the product would never ingest (e.g. statusless ancient periods). Applied
    * through the adapter's own fetchObservations — the same client-side
-   * semantics ingestion uses. The CBS manifest needs none (measured, WP30b
-   * brief ⟨B2⟩). */
+   * semantics ingestion uses. The CBS manifest needed none (measured, WP30b
+   * brief ⟨B2⟩) until 70072ned (ADR 061), whose schema-only entry uses a
+   * period floor past its last period — see the comment at its check. */
   slice?: CbsSlice;
 }
 

@@ -6,6 +6,31 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 138 — a wide CBS table breaks assumptions the metadata never warns about; measure, then write the plan
+
+1. **Probe the data APIs, not the homepage banner.** At session start www.cbs.nl still showed "Technische storing" while
+   both OData APIs answered 200 and served a full 106,683-cell sync. The #329 retry check should be the `curl` on
+   `…/70072ned/Properties`, never the banner text.
+2. **Clean metadata ≠ clean data: measure one value per cell before trusting a CBS v4 code.** `70072ned`'s `MeasureCodes`
+   lists 248 unique codes, yet 34 of them carry 2–4 different values for the same (region, year) — e.g. household income
+   `1050010_6` = 60.8 / 45.6 / 17.9 for Amsterdam 2024 (v3 keeps them apart). A full-slice duplicate-key count per code
+   (a 20-line script) is what made the 12-figure list safe.
+3. **Also check the period code list for `Status` before designing.** The spec assumed "carries CBS's status like every
+   table"; every one of the 32 periods has `Status: null`, with status only in prose. The plan's explicit STOP rule
+   ("if the sync fails, report — do not add an exclusion") is why the implementer stopped instead of papering over R11.
+   One `jq` over `PeriodenCodes` at design time would have put Task 3a in the plan from the start.
+4. **"Established convention" is a claim — check it with `git log`.** An implementer edited the already-applied
+   migration 025 to satisfy a drift test and called it the existing convention; the task reviewer accepted that. `git log
+   -- migrations/025…` showed the file had never been edited after it landed. The deeper bug was the test (it pinned an
+   applied migration to a growing list) — now frozen with a named `SEEDS_ADDED_AFTER_025`.
+5. **"Nothing reader-visible" must be checked against every surface that iterates tables, not just canonical measures.**
+   The opus final review found the coverage report (→ `/llms.txt`, the "what you can ask" box) lists every *active*
+   table, so a prod sync alone would have advertised a table no question could use. The fix cost nothing: move the prod
+   load to the part that adds the canonical figures.
+6. **A live-data sync into a throwaway PGlite is a zero-risk live proof.** `registerTables` + `syncTable` with the real
+   `ODataV4Source` into `createTestDb()` ran every validation stage on the real 106,683 cells without touching prod —
+   use it before any new-table prod load.
+
 ## Session 137 — per-task reviews miss what only a rendered screen or a cross-task view shows
 
 1. **Look at a screenshot of every new visual component before accepting its review.** The Task 6 reviewer approved axis

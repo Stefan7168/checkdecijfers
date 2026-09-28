@@ -1033,6 +1033,29 @@ that second case proactively; it is a residual worth knowing about, not a bug in
 `web/app/health.test.ts` (the refactored route still returns identical bytes/status codes). A
 wiring pin lives in `web/app/onboarding-cron.test.ts`.
 
+## Regional statistics table `70072ned` (ADR 061, session 138, 2026-09-28)
+
+A wide CBS table (248 codes) ingested for 12 figures via a **measure allow-list** (`slice.measures` in
+`src/ingestion/registry-seed.ts`) and with statuses read from **CBS's period notes** (`periodNoteStatus`), because CBS
+publishes no machine status for it. Three things to know:
+
+1. **Prod load (Part 2, owner present, after the deploy that adds the 12 canonical figures is live):**
+   `node --import ./scripts/force-ipv4.mjs --env-file=.env src/ingestion/cli.ts sync 70072ned` (auto-registers, pinned;
+   expect ~106,683 rows) → `npm run registry:apply` → spot-check 3–5 cells (value + status) against a fresh CBS fetch.
+   Pre-flight first: `select id, status, slice from cbs_tables where lower(id) like '70072%'` must be empty — a leftover
+   row with a different slice now fails the sync on purpose ("period-note status map was reviewed for … a different set").
+   Do NOT load it earlier: the coverage report lists every active table, so `/llms.txt` and the "what you can ask" box
+   would advertise a table no question can use yet.
+2. **Sync fails with "CBS names a topic we have not reviewed: …"** — CBS added or reworded a heading in a period note.
+   Read the heading, decide which of the 12 figures it covers (`[]` if none — compare with the figure's CBS topic), add
+   the normalised heading (lowercase, no leading "-", no trailing ";"/".") to `periodNoteStatus.headings`, push, re-sync.
+   Never map a heading to `[]` just to get the sync through.
+3. **Changing the 12 figures** (adding/removing a code): edit `slice.measures` AND the heading map in the seed, then —
+   because registration skips an existing table — update the stored slice to match
+   (`update cbs_tables set slice = '<the seed's slice as JSON>' where id = '70072ned'`, owner-supervised) and run
+   `sync 70072ned --rebaseline`. Until both match, every sync refuses (by design). A new code must first be measured
+   single-valued per (region, year) — the v4 feed reuses 34 codes for several figures.
+
 ## Ingestion alerts (#23, built session 109, 2026-09-17)
 
 **What it is.** A proactive owner e-mail — reusing the SAME Resend mechanism as every alert above

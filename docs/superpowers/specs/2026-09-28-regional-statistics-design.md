@@ -60,7 +60,7 @@ scatter chip (see D6), typed "X tegen Y" questions (#333(2)).
   measured full-slice check of 0 duplicate keys (done for these 12, §2). Income is the most-wanted regional figure
   but its v4 code is ambiguous; it stays out until CBS fixes the feed or we find an unambiguous code — recorded as an
   open question, never approximated.
-- **D3 — A duplicate-cell check for every sync (fail closed, on purpose).** New check in the existing
+- **D3 — A duplicate-cell check for every sync (fail closed, on purpose).** *(As built: this check already existed in `row_plausibility` — `src/ingestion/validate.ts`; Part 1 only rewrote its message to name CBS code reuse. The "our upsert would hit ON CONFLICT" line in §2 was wrong.)* New check in the existing
   `row_plausibility` validation stage: two fetched rows with the same (measure, region, period, other dims) fail the
   batch and quarantine per today's rules, with a summary naming the first duplicate. Applies to all tables (none
   has duplicates today — proven by the fixture suite staying green). No new `FailureStage` value, so no DDL.
@@ -76,7 +76,10 @@ scatter chip (see D6), typed "X tegen Y" questions (#333(2)).
   - **Part 1 (now, zero AI spend):** D1/D3/D4 hardening, `70072ned` in the seed set + hermetic fixture (captured with
     a narrower period floor to keep the repo small), `TABLE_REGISTRY_DEFAULTS` entry, then the owner-supervised live
     load (`ingest register`, `ingest sync 70072ned` — data only, no DDL) and a value spot-check against CBS.
-    Nothing reader-visible changes; the data sits ready.
+    Nothing reader-visible changes; the data sits ready. *(Changed after the final review: loading prod would already
+    list the table on `/llms.txt` and the coverage box, so the prod load moves to Part 2 — same session as the canonical
+    figures. Part 1 instead proved the load with a full live-data sync into a throwaway local database: 106,683 cells, all
+    checks passed.)*
   - **Part 2 (code built now on a branch; merged in the owner-supervised recording session after 2026-10-01):**
     the 12 `CANONICAL_MEASURES` entries, `REGIONAL_KEYS`, English labels (both maps — CI-enforced), the scatter
     partner map (D6), new labelled intent-eval cases, re-record intent + clarify + followup fixtures (cheap tier),
@@ -101,8 +104,9 @@ scatter chip (see D6), typed "X tegen Y" questions (#333(2)).
 - **Principle (a)/R5:** every value is a stored CBS cell; nothing is computed. Scatter pairs are two stored legs.
 - **Principle (c):** ambiguous CBS cells refuse the whole sync (D3); a missing allow-listed code fails loudly (D4);
   an incomplete class never ranks (RS1, unchanged).
-- **R8/R9/R11:** audit rows, completeness and per-cell provisional status unchanged — `70072ned` cells carry CBS's
-  status like every table (2024/2025 values may be Voorlopig).
+- **R8/R9/R11:** audit rows and completeness unchanged. *(Corrected during the build: `70072ned` does NOT carry a
+  machine-readable status — every period has `Status: null`; statuses are read from CBS's period notes, fail-closed.
+  See ADR 061 decision 4 and plan Task 3a.)*
 - **Principle (b):** bulk-ingested; no request-path CBS call.
 
 ## 5. Testing

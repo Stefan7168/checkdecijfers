@@ -18,22 +18,23 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-27/28 local, session 137 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-28-session-138-kickoff.md](session-briefs/2026-09-28-session-138-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-28 local, session 138 — owner present; verify against `git log` / Actions runs
+before trusting this). Previous kickoff: [session-briefs/2026-09-28-session-138-kickoff.md](session-briefs/2026-09-28-session-138-kickoff.md).**
 
-- **`main` is live and green**: last code push `ad96af3c` (CI 36340666368 green incl. deploy), docs `895fe168`. Prod 200. Full session log: [status-archive.md](status-archive.md).
-- **Shipped LIVE in session 137 (owner pick while CBS is down): two-measure charts** ([#296](open-questions.md), ADR
-  [060](decisions/060-two-measure-scatter.md)). Under a CBS region-set answer a zero-AI chip "Zet af tegen …" answers with an
-  audited scatter chart: one dot per region, auto log scale, named extremes, search, swap, table, left-out regions with CBS
-  reasons, both definitions/sources, Dutch + English (English at render time, no model call). Works in chat, replay, embed,
-  CSV, proof panel. No DB change, no new flag. Only one pair exists (population × home price) until regional statistics land.
-  Verified: backend 3964 + web 3262 tests, benchmark 14/14 + 6/6 + 0 fabricated (fallbacks 0), `audit:verify 1 400` unchanged,
-  real browser pass on the local harness. Follow-ups: [#333](open-questions.md).
-- **Spend:** the $50 monthly roof is nearly used until it resets **2026-10-01** (session 137 spent nothing on AI).
-- **NEXT PRIORITY: regional statistics** (owner-chosen) — a regional-statistics set from ONE CBS table (candidate `70072ned`),
-  design first; **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting connections, "Technische
-  storing" banner on www.cbs.nl at 19:58 local 09-27). Retry at session start. It also multiplies the scatter's pairs.
-- **After 10-01 (small, owner-supervised spend):** the next live benchmark (confirms #330 live); #328 'Declared bankruptcies'.
+- **CBS is back** ([#329](open-questions.md) resolved 2026-09-28): both data APIs answer 200.
+- **Regional statistics, Part 1 BUILT (session 138, ADR [061](decisions/061-regional-statistics-70072ned.md))** — owner picked
+  12 figures from `70072ned` (density, WOZ value, % owner-occupied, % hbo/wo, cars per 1,000, distance to station, growth,
+  household size, % single-person, businesses, benefit recipients incl. AOW, distance to supermarket). Data layer only:
+  a measure allow-list slice (fingerprint scoped to the 12) and per-cell status read from CBS's period notes (CBS publishes
+  no machine status for this table — found mid-build). Proven with a full live-data sync into a throwaway DB: 106,683 cells,
+  every check passed. **Nothing reader-visible; prod NOT loaded on purpose** (the coverage box and `/llms.txt` would list it).
+  Household income excluded (CBS's v4 feed reuses its code). Residuals: [#334](open-questions.md).
+- **NEXT PRIORITY: regional statistics Part 2** (after the spend roof resets **2026-10-01**, owner present): write its plan,
+  add the 12 canonical figures + `REGIONAL_KEYS` + English labels + a scatter partner per figure, re-record the
+  intent/clarify/followup fixtures (cheap tier, small spend), merge + deploy, then prod `sync 70072ned` + `registry:apply`
+  (RUNBOOK "Regional statistics table `70072ned`"), then the live benchmark (also confirms #330).
+- **Spend:** the $50 monthly roof is nearly used until 2026-10-01 (session 138 spent nothing on AI).
+- **Also after 10-01 (small, owner-supervised):** #328 'Declared bankruptcies'.
 - **Waiting on the owner (not urgent):** #245 sub-questions, #275 homepage styles row (on hold), own-data publishing
   spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
 - **Not building (measured):** #331 script matcher. Unscheduled, small: #327, #299, #277(a), #333.
