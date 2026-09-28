@@ -537,6 +537,29 @@ async function comparePeriod(ctx: SuggestionContext): Promise<ChipCandidate | nu
   return null;
 }
 
+/** ADR 061 part 2 (spec D6): each regional figure's natural "Zet af tegen"
+ * partner(s), in preference order — counts pair with population, rates /
+ * averages / distances with population density, density with the average
+ * WOZ value. plotAgainst tries these first, then falls back to every other
+ * REGIONAL_KEYS member in registry order, so a partner not servable for the
+ * answered year never leaves the chip out when another pair works. */
+export const SCATTER_PARTNERS: Readonly<Record<string, readonly string[]>> = {
+  population_on_1_january: ['population_density'],
+  business_establishments: ['population_on_1_january'],
+  benefit_recipients_total: ['population_on_1_january'],
+  population_density: ['average_woz_value'],
+  average_woz_value: ['population_density'],
+  average_home_sale_price_by_gemeente: ['population_density'],
+  owner_occupied_homes_share: ['population_density'],
+  highly_educated_share: ['population_density'],
+  passenger_cars_per_1000_residents: ['population_density'],
+  distance_to_train_station: ['population_density'],
+  population_growth_per_1000: ['population_density'],
+  average_household_size: ['population_density'],
+  single_person_households_share: ['population_density'],
+  distance_to_large_supermarket: ['population_density'],
+};
+
 /** #296 (two-measure scatter), Task 5, generator 0 — "Zet af tegen …": the
  * zero-AI scatter follow-up chip on a CBS region-set answer. Offered FIRST in
  * the click-options generator list (ahead of every other generator, priority
@@ -553,18 +576,21 @@ async function comparePeriod(ctx: SuggestionContext): Promise<ChipCandidate | nu
  * (StructuredIntent's regions/regionSet are mutually exclusive), so those
  * fields carry nothing useful here.
  *
- * Candidates are every OTHER `REGIONAL_KEYS` member, in registry order
- * (today exactly one, since `REGIONAL_KEYS` has two entries — the loop keeps
- * working if a third regional measure is ever registered): the first whose
- * pair intent is structurally sound (`pairIntentProblem`, pair.ts) AND dry-run
- * servable (`servableAndTakeable`, the SAME click-time-schema-then-echoServability
- * gate every comparison chip uses — its pairWith branch, dry-run.ts, proves
- * >= SCATTER_MIN_PAIRS paired regions without this module ever seeing a
- * cell) is offered. Label: the pair target's registry `measureTitle`
- * (falling back to `definitionLabel` when unset), lower-cased at the join
- * point — the same `lowerFirst` the scatter chart title itself uses
- * (chart/scatter.ts), so "Zet af tegen bevolking op 1 januari" reads as one
- * sentence rather than shouting a title mid-clause. */
+ * Candidates: the target's `SCATTER_PARTNERS` entry (ADR 061 part 2 / spec
+ * D6) tried FIRST, in listed order, then every other `REGIONAL_KEYS` member
+ * in registry order as a fallback — so a curated partner that isn't servable
+ * for the answered year (missing data, a stub refusal) never drops the chip
+ * entirely when another pairing works. Duplicates, the target itself and
+ * non-`REGIONAL_KEYS` members are skipped throughout. The first candidate
+ * whose pair intent is structurally sound (`pairIntentProblem`, pair.ts) AND
+ * dry-run servable (`servableAndTakeable`, the SAME click-time-schema-then-
+ * echoServability gate every comparison chip uses — its pairWith branch,
+ * dry-run.ts, proves >= SCATTER_MIN_PAIRS paired regions without this module
+ * ever seeing a cell) is offered. Label: the pair target's registry
+ * `measureTitle` (falling back to `definitionLabel` when unset), lower-cased
+ * at the join point — the same `lowerFirst` the scatter chart title itself
+ * uses (chart/scatter.ts), so "Zet af tegen bevolking op 1 januari" reads as
+ * one sentence rather than shouting a title mid-clause. */
 async function plotAgainst(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.result.shape !== 'region_set') return null;
   const resolved = ctx.result.intent;
@@ -573,8 +599,23 @@ async function plotAgainst(ctx: SuggestionContext): Promise<ChipCandidate | null
   const regionSet = resolved.regionSet;
   const period = resolved.period;
   if (regionSet === undefined || period.kind !== 'codes' || period.codes.length !== 1) return null;
+
+  const byKey = new Map(ctx.registry.map((measure) => [measure.key, measure] as const));
+  const seen = new Set<string>([resolved.target.key]);
+  const candidates: CanonicalMeasure[] = [];
+  for (const key of SCATTER_PARTNERS[resolved.target.key] ?? []) {
+    if (seen.has(key) || !REGIONAL_KEYS.has(key)) continue;
+    seen.add(key);
+    const measure = byKey.get(key);
+    if (measure !== undefined) candidates.push(measure);
+  }
   for (const measure of ctx.registry) {
-    if (!REGIONAL_KEYS.has(measure.key) || measure.key === resolved.target.key) continue;
+    if (!REGIONAL_KEYS.has(measure.key) || seen.has(measure.key)) continue;
+    seen.add(measure.key);
+    candidates.push(measure);
+  }
+
+  for (const measure of candidates) {
     const candidate: StructuredIntent = {
       schemaVersion: INTENT_SCHEMA_VERSION,
       target: resolved.target,

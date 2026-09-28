@@ -30,7 +30,10 @@ afterAll(async () => {
 
 const REFERENCE_DATE = '2026-08-15';
 const QUESTION = 'Gemiddelde verkoopprijs per provincie in 2024';
-const CHIP_LABEL = 'Zet af tegen bevolking op 1 januari';
+// ADR 061 part 2 (spec D6): SCATTER_PARTNERS prefers population_density for
+// average_home_sale_price_by_gemeente over the registry-order fallback
+// (population_on_1_january), which this end-to-end test exercised before.
+const CHIP_LABEL = 'Zet af tegen bevolkingsdichtheid';
 
 /** Any call to this is a test failure by construction — the whole flow
  * (offer AND take) must cost zero tokens. */
@@ -95,13 +98,15 @@ describe('the "Zet af tegen …" chip: offer + click-take, hermetic end to end',
     expect(pending.clickOptions?.[0]).toMatchObject({ id: 'pair-1', label: CHIP_LABEL });
 
     // #296 final-review fix I1: the chip carries its deterministic English
-    // label, so an English reader's translation request leaves it out (its
-    // '1' in 'op 1 januari' would otherwise survive masking and send the
-    // whole English answer to the Dutch fallback) and shows the fixed label
-    // in its place.
-    expect(pending.clickOptions?.[0]?.labelEn).toBe('Plot against population on 1 January');
+    // label, so an English reader's translation request leaves it out and
+    // shows the fixed label in its place (a plotAgainst chip whose label
+    // names a measure WITH a digit, e.g. "bevolking op 1 januari", would
+    // otherwise survive masking and send the whole English answer to the
+    // Dutch fallback — the digit-survival check below covers that case
+    // generally, not only this particular pair).
+    expect(pending.clickOptions?.[0]?.labelEn).toBe('Plot against population density');
     expect(fixedEnglishChipLabels(answered)[answered.suggestions.indexOf(CHIP_LABEL)]).toBe(
-      'Plot against population on 1 January',
+      'Plot against population density',
     );
     const prep = prepareTranslation(answered);
     expect(prep.maskedDutch.chips).toHaveLength(answered.suggestions.length - 1);
@@ -134,7 +139,7 @@ describe('the "Zet af tegen …" chip: offer + click-take, hermetic end to end',
     }
     expect(scatter.points.length).toBeGreaterThanOrEqual(3);
     expect(taken.result.attribution.tableId).toBe('83625NED');
-    expect(paired.attribution.tableId).toBe('03759ned');
+    expect(paired.attribution.tableId).toBe('70072ned');
     expect(taken.answer.source).toBe('template');
     expect(taken.answer.model).toBeNull();
     expect(taken.parse.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
@@ -142,6 +147,6 @@ describe('the "Zet af tegen …" chip: offer + click-take, hermetic end to end',
     // own one-measure intent (legIntents strips pairWith before either leg
     // runs) — pair.ts's own `intent` field on PairedResults carries it.
     if (taken.parse.kind !== 'intent') throw new Error(`expected the take's own parse kind 'intent', got ${taken.parse.kind}`);
-    expect(taken.parse.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(taken.parse.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_density' });
   });
 });

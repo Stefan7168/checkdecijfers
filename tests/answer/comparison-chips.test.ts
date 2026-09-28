@@ -31,6 +31,7 @@ import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import {
   CLICK_TAKE_MODEL,
+  SCATTER_PARTNERS,
   buildAnswerChips,
   buildSuggestions,
   respondToClarificationReply,
@@ -44,6 +45,7 @@ import type { ServabilityCheck } from '../../src/answer/intent/policy.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
 import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
+import { REGIONAL_KEYS } from '../../src/answer/intent/index.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
 import {
@@ -395,33 +397,56 @@ describe('buildAnswerChips — the gates (stub checks)', () => {
   });
 });
 
+// ADR 061 part 2 (spec D6): SCATTER_PARTNERS is a static curation, checked
+// for internal consistency once here rather than per-pairing in the
+// behavioural tests below.
+describe('SCATTER_PARTNERS (ADR 061 part 2 / spec D6)', () => {
+  it('every key and every listed partner is a REGIONAL_KEYS member, and no key lists itself', () => {
+    for (const [key, partners] of Object.entries(SCATTER_PARTNERS)) {
+      expect(REGIONAL_KEYS.has(key), `SCATTER_PARTNERS key '${key}' is not a REGIONAL_KEYS member`).toBe(true);
+      for (const partner of partners) {
+        expect(REGIONAL_KEYS.has(partner), `SCATTER_PARTNERS['${key}'] partner '${partner}' is not a REGIONAL_KEYS member`).toBe(
+          true,
+        );
+        expect(partner, `SCATTER_PARTNERS['${key}'] lists itself as a partner`).not.toBe(key);
+      }
+    }
+  });
+
+  it('every REGIONAL_KEYS member has a SCATTER_PARTNERS entry', () => {
+    for (const key of REGIONAL_KEYS) {
+      expect(Object.hasOwn(SCATTER_PARTNERS, key), `REGIONAL_KEYS member '${key}' has no SCATTER_PARTNERS entry`).toBe(true);
+    }
+  });
+});
+
 // #296 (two-measure scatter), Task 5: the "Zet af tegen …" plotAgainst
 // generator — offered FIRST (ahead of every other generator) on a CBS
 // region_set answer over a REGIONAL_KEYS measure, gated by the pair dry-run
 // (echoServability's pairWith branch, dry-run.ts).
 describe('buildAnswerChips — plotAgainst (stub checks)', () => {
-  it('a region-set answer over average_home_sale_price_by_gemeente offers "Zet af tegen bevolking op 1 januari" FIRST when the pair dry-run serves', async () => {
+  it('a region-set answer over average_home_sale_price_by_gemeente offers "Zet af tegen bevolkingsdichtheid" FIRST when the pair dry-run serves (ADR 061 part 2 / spec D6: SCATTER_PARTNERS prefers population density over the registry-order fallback)', async () => {
     const result = await answered(homePriceAllProvinces);
     const check: ServabilityCheck = async () => SERVABLE;
     const chips = await buildAnswerChips(homePriceAllProvinces, result, check, ON);
-    expect(chips.suggestions[0]).toBe('Zet af tegen bevolking op 1 januari');
+    expect(chips.suggestions[0]).toBe('Zet af tegen bevolkingsdichtheid');
     expect(chips.clickOptions[0]).toEqual({
       id: 'pair-1',
-      label: 'Zet af tegen bevolking op 1 januari',
+      label: 'Zet af tegen bevolkingsdichtheid',
       intent: {
         schemaVersion: INTENT_SCHEMA_VERSION,
         target: result.intent.target,
         regionSet: result.intent.regionSet,
         period: result.intent.period,
         derivation: 'none',
-        pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+        pairWith: { kind: 'canonical', key: 'population_density' },
       },
       impliedRecency: false,
       // Final-review fix I1: a deterministic, hand-built English label — the
       // measure title's own English name (english-names.data.ts), never a
       // model translation — so the chip stays out of the English
       // translation call entirely.
-      labelEn: 'Plot against population on 1 January',
+      labelEn: 'Plot against population density',
     });
     expect(chips.axes[0]).toBe('measure');
     expectNoValueDigits(chips.suggestions);
@@ -435,31 +460,45 @@ describe('buildAnswerChips — plotAgainst (stub checks)', () => {
     expect(chips.clickOptions.some((o) => o.id.startsWith('pair-'))).toBe(false);
   });
 
-  it('a region-set answer over population_on_1_january pairs with average_home_sale_price_by_gemeente instead', async () => {
+  it('a region-set answer over population_on_1_january now pairs with population_density FIRST (ADR 061 part 2 / spec D6: SCATTER_PARTNERS, not the average-home-price registry-order fallback)', async () => {
     const result = await answered(populationAllProvinces);
     const check: ServabilityCheck = async () => SERVABLE;
+    const chips = await buildAnswerChips(populationAllProvinces, result, check, ON);
+    expect(chips.suggestions[0]).toBe('Zet af tegen bevolkingsdichtheid');
+    expect(chips.clickOptions[0]!.intent.pairWith).toEqual({
+      kind: 'canonical',
+      key: 'population_density',
+    });
+    // The pair measure's title 'Bevolkingsdichtheid' through the shared
+    // hand-written English name list, lower-cased like the Dutch label.
+    expect(chips.clickOptions[0]!.labelEn).toBe('Plot against population density');
+  });
+
+  it('a region-set answer over population_on_1_january falls back to average_home_sale_price_by_gemeente when population_density is not servable (SCATTER_PARTNERS preference, then the registry-order fallback)', async () => {
+    const result = await answered(populationAllProvinces);
+    const check: ServabilityCheck = async (candidate) =>
+      candidate.pairWith?.kind === 'canonical' && candidate.pairWith.key === 'population_density' ? NOT_SERVABLE : SERVABLE;
     const chips = await buildAnswerChips(populationAllProvinces, result, check, ON);
     expect(chips.suggestions[0]).toBe('Zet af tegen gemiddelde verkoopprijs');
     expect(chips.clickOptions[0]!.intent.pairWith).toEqual({
       kind: 'canonical',
       key: 'average_home_sale_price_by_gemeente',
     });
-    // The pair measure's title 'Gemiddelde verkoopprijs' through the shared
-    // hand-written English name list, lower-cased like the Dutch label.
     expect(chips.clickOptions[0]!.labelEn).toBe('Plot against average purchase price');
   });
 
   it("a pair measure whose title has no English name falls back to its hand-written English topic term, never the Dutch title", async () => {
     const result = await answered(homePriceAllProvinces);
     const check: ServabilityCheck = async () => SERVABLE;
-    // An injected registry: the population measure under a title the shared
-    // English name list does not know.
+    // An injected registry: the SCATTER_PARTNERS-preferred candidate for
+    // average_home_sale_price_by_gemeente (population_density) under a title
+    // the shared English name list does not know.
     const registry = CANONICAL_MEASURES.map((m) =>
-      m.key === 'population_on_1_january' ? { ...m, measureTitle: 'Inwonertal zonder Engelse naam' } : m,
+      m.key === 'population_density' ? { ...m, measureTitle: 'Dichtheid zonder Engelse naam' } : m,
     );
     const chips = await buildAnswerChips(homePriceAllProvinces, result, check, ON, registry);
-    expect(chips.suggestions[0]).toBe('Zet af tegen inwonertal zonder Engelse naam');
-    expect(chips.clickOptions[0]!.labelEn).toBe('Plot against population');
+    expect(chips.suggestions[0]).toBe('Zet af tegen dichtheid zonder Engelse naam');
+    expect(chips.clickOptions[0]!.labelEn).toBe('Plot against population density');
   });
 
   it('a non-region_set answer offers no plotAgainst chip', async () => {
@@ -483,18 +522,18 @@ describe('buildAnswerChips — plotAgainst (stub checks)', () => {
 });
 
 describe('buildAnswerChips — plotAgainst against the real fixture db + real dry-run', () => {
-  it('provinces 2024 home price answer offers the "Zet af tegen bevolking op 1 januari" chip, dry-run proven (>= SCATTER_MIN_PAIRS)', async () => {
+  it('provinces 2024 home price answer offers the "Zet af tegen bevolkingsdichtheid" chip, dry-run proven (>= SCATTER_MIN_PAIRS) — ADR 061 part 2 / spec D6 curated partner', async () => {
     const result = await answered(homePriceAllProvinces);
     const chips = await buildAnswerChips(homePriceAllProvinces, result, realCheck, ON);
-    expect(chips.suggestions).toContain('Zet af tegen bevolking op 1 januari');
+    expect(chips.suggestions).toContain('Zet af tegen bevolkingsdichtheid');
     const pairOption = chips.clickOptions.find((o) => o.id === 'pair-1');
     expect(pairOption).toBeDefined();
-    expect(pairOption!.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(pairOption!.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_density' });
     // The producer-side gate (servableAndTakeable) and the click-time trust
     // boundary must agree: an offered pair chip always survives the reply
     // turn's own re-validation — minus its display-only English label, which
     // the trust boundary accepts and then strips (M5, validate-pending.ts).
-    expect(pairOption!.labelEn).toBe('Plot against population on 1 January');
+    expect(pairOption!.labelEn).toBe('Plot against population density');
     const { labelEn: _labelEn, ...withoutEnglish } = pairOption!;
     expect(validateClickOptions([pairOption])).toEqual([withoutEnglish]);
   });

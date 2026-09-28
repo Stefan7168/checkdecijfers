@@ -31,6 +31,7 @@ export {
   buildRefusalSuggestionsBoth,
   buildSuggestions,
   MAX_SUGGESTIONS,
+  SCATTER_PARTNERS,
 } from './suggestions.ts';
 export type { AnswerChips, RefusalSuggestionsBoth } from './suggestions.ts';
 // WP26 mechanism A (ADR 024): the client-held click-option trust boundary.
