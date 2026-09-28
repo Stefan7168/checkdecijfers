@@ -91,7 +91,7 @@ describe('serializeMeasureList / buildMeasureFitRequest — metadata only (R1), 
   const schema: CbsTableSchema = {
     tableId: '37789ksz',
     title: 'Sociale zekerheid; kerncijfers',
-    dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
+    dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
     measures: [
       {
         code: 'D000203_2',

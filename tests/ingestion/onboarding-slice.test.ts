@@ -21,7 +21,7 @@ function periodCode(c: string): CbsCode {
 const NATIONAL_ONLY_SCHEMA: CbsTableSchema = {
   tableId: 'X',
   title: 'X',
-  dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
+  dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
   measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
   modified: null,
 };
@@ -30,8 +30,8 @@ const GEO_SCHEMA: CbsTableSchema = {
   tableId: 'Y',
   title: 'Y',
   dimensions: [
-    { name: 'RegioS', kind: 'GeoDimension' },
-    { name: 'Perioden', kind: 'TimeDimension' },
+    { name: 'RegioS', kind: 'GeoDimension', title: "Regio's" },
+    { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
   ],
   measures: [{ code: 'M1', title: 'M1', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
   modified: null,
@@ -104,7 +104,7 @@ describe('estimateSlice — over the cap', () => {
     const measureOnly: CbsTableSchema = {
       tableId: 'Z',
       title: 'Z',
-      dimensions: [{ name: 'SomeDim', kind: 'Dimension' }],
+      dimensions: [{ name: 'SomeDim', kind: 'Dimension', title: 'SomeDim' }],
       measures: [{ code: 'M1', title: 'M1', unit: 'x', decimals: 0, description: '', dataType: '' }],
       modified: null,
     };

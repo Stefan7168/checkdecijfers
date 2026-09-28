@@ -543,10 +543,20 @@ export function parseJsonStatDataset(
     });
   }
 
-  const dimensions: CbsDimension[] = coordinateDimNames.map((name) => ({
-    name,
-    kind: name === 'time' ? 'TimeDimension' : name === 'geo' ? 'GeoDimension' : 'Dimension',
-  }));
+  // breadth step 3, Task 1: JSON-stat's own dimension-level `label` (distinct
+  // from `category.label`'s per-CODE labels, read separately into
+  // `dimLabels` above) when present; '' otherwise — never guessed.
+  const dimensions: CbsDimension[] = coordinateDimNames.map((name) => {
+    const label = ds.dimension[name]?.label;
+    return {
+      name,
+      kind: name === 'time' ? 'TimeDimension' : name === 'geo' ? 'GeoDimension' : 'Dimension',
+      // F7 (session 139 final-review fix wave): typeof guard, matching the
+      // datasetTitle guard above — a malformed live payload's non-string
+      // label must never flow through as-is.
+      title: typeof label === 'string' ? label : '',
+    };
+  });
 
   // breadth step 2, Task 3: JSON-stat's own equivalent of CBS's 'Modified' —
   // the dataset's optional `updated` timestamp, verbatim when present.

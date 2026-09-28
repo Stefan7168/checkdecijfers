@@ -10,6 +10,20 @@ export interface CbsDimension {
   /** Exact identifier, e.g. 'RegioS', 'Perioden', 'Geslacht'. */
   name: string;
   kind: CbsDimensionKind;
+  /**
+   * The dimension's human title, verbatim from the source (CBS v4
+   * Dimensions' `Title`, e.g. `BurgerlijkeStaat` -> 'Burgerlijke staat'; the
+   * Eurostat adapter's own JSON-stat dimension `label` when present — see
+   * jsonstat.ts). '' when the source has none (never guessed — principle c).
+   * NOT part of the schema fingerprint (fingerprint.ts hashes name + kind
+   * only, byte-identical before/after this field was added) and NOT stored
+   * in `cbs_tables.expected_dimensions` (that column stays {name, kind}
+   * only — see pipeline.ts). Breadth step 3, Task 1: feeds the breakdown
+   * resolver's stated defaults/button text ("<dimension title>: <member
+   * title>", docs/superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md
+   * Global Constraints) — never persisted registry state on its own.
+   */
+  title: string;
 }
 
 export interface CbsMeasure {
