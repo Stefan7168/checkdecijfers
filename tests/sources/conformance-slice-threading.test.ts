@@ -84,8 +84,8 @@ function schema(): CbsTableSchema {
     tableId: 'fake:t1',
     title: 'Fake tabel',
     dimensions: [
-      { name: 'Perioden', kind: 'TimeDimension' },
-      { name: 'RegioS', kind: 'GeoDimension' },
+      { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      { name: 'RegioS', kind: 'GeoDimension', title: "Regio's" },
     ],
     measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
     modified: null,

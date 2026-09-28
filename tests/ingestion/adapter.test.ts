@@ -8,6 +8,7 @@ import type { CbsObservationRow } from '../../src/cbs-adapter/types.ts';
 import { FixtureSource, loadFixtureDocs, type FixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { ODataV4Source } from '../../src/cbs-adapter/odata-v4.ts';
 import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -28,6 +29,35 @@ describe('adapter parsing (real captured wire data)', () => {
     expect(byName.Geslacht).toBe('Dimension');
     expect(byName.Leeftijd).toBe('Dimension');
     expect(byName.BurgerlijkeStaat).toBe('Dimension');
+  });
+
+  // Breadth step 3, Task 1: every dimension carries CBS's own 'Title' verbatim.
+  it('parseDimensions of 03759ned fixture fills title from CBS Title (BurgerlijkeStaat -> "Burgerlijke staat")', async () => {
+    const docs = await loadFixtureDocs(fixturePath('03759ned'));
+    const source = new FixtureSource(docs);
+    const schema = await source.fetchTableSchema('03759ned');
+
+    const burgerlijkeStaat = schema.dimensions.find((d) => d.name === 'BurgerlijkeStaat');
+    expect(burgerlijkeStaat?.title).toBe('Burgerlijke staat');
+    // every dimension in this fixture carries a non-empty CBS Title.
+    for (const d of schema.dimensions) {
+      expect(d.title.length).toBeGreaterThan(0);
+    }
+  });
+
+  // Breadth step 3, Task 1: computeFingerprint hashes only name + kind
+  // (fingerprint.ts), so adding `title` to CbsDimension must not change it —
+  // pinned against a value computed BEFORE this task's change existed.
+  it('computeFingerprint of the 03759ned fixture schema is unchanged by adding CbsDimension.title', async () => {
+    const docs = await loadFixtureDocs(fixturePath('03759ned'));
+    const source = new FixtureSource(docs);
+    const schema = await source.fetchTableSchema('03759ned');
+
+    const fingerprint = computeFingerprint(
+      schema.dimensions,
+      schema.measures.map((m) => m.code),
+    );
+    expect(fingerprint).toBe('a8d13e655814e9292b7dfa37adf29dfd141111098d6352e4e15afc33cf7194f8');
   });
 
   it('parseMeasures of 82235NED gives D002936 unit "x 1 000" decimals 0', async () => {

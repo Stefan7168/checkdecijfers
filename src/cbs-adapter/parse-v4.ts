@@ -60,7 +60,12 @@ export function parseDimensions(raw: unknown): CbsDimension[] {
         `CBS Dimensions row for '${name}' has unrecognized Kind '${kind}' (expected Dimension, TimeDimension or GeoDimension)`,
       );
     }
-    return { name, kind: kind as CbsDimensionKind };
+    // breadth step 3, Task 1: CBS's own 'Title' verbatim; '' when absent
+    // (never guessed — principle c). Not required (unlike Identifier/Kind):
+    // a missing title degrades the resolver's stated-default wording, it
+    // does not corrupt the row.
+    const title = optionalString(row, 'Title') ?? '';
+    return { name, kind: kind as CbsDimensionKind, title };
   });
 }
 

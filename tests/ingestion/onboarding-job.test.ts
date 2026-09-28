@@ -896,7 +896,7 @@ describe('runOnboardingJob — fit gate: candidate fallback (WP27 stage C)', () 
           ? {
               tableId: KW_ONLY,
               title: 'Kwartaalcijfers zonder jaartotalen',
-              dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
+              dimensions: [{ name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' }],
               measures: [{ code: 'M0001', title: 'Iets per kwartaal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
               modified: null,
             }

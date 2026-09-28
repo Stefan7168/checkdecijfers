@@ -102,8 +102,8 @@ function baseTable(): FakeTable {
       tableId: 'fake:t1',
       title: 'Fake tabel',
       dimensions: [
-        { name: 'Perioden', kind: 'TimeDimension' },
-        { name: 'RegioS', kind: 'GeoDimension' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+        { name: 'RegioS', kind: 'GeoDimension', title: "Regio's" },
       ],
       measures: [{ code: 'M1', title: 'Aantal', unit: 'aantal', decimals: 0, description: '', dataType: '' }],
       modified: null,
@@ -309,7 +309,7 @@ describe('F1 — replay + D4 id discipline failures', () => {
     const zero = baseTable();
     zero.schema = {
       ...zero.schema,
-      dimensions: [{ name: 'RegioS', kind: 'GeoDimension' }],
+      dimensions: [{ name: 'RegioS', kind: 'GeoDimension', title: "Regio's" }],
     };
     expect(families(await run({ table: zero }))).toContain('F1_replay');
 
@@ -317,8 +317,8 @@ describe('F1 — replay + D4 id discipline failures', () => {
     two.schema = {
       ...two.schema,
       dimensions: [
-        { name: 'Perioden', kind: 'TimeDimension' },
-        { name: 'PeriodenB', kind: 'TimeDimension' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+        { name: 'PeriodenB', kind: 'TimeDimension', title: 'PeriodenB' },
       ],
     };
     expect(families(await run({ table: two }))).toContain('F1_replay');

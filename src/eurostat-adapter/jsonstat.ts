@@ -543,9 +543,13 @@ export function parseJsonStatDataset(
     });
   }
 
+  // breadth step 3, Task 1: JSON-stat's own dimension-level `label` (distinct
+  // from `category.label`'s per-CODE labels, read separately into
+  // `dimLabels` above) when present; '' otherwise — never guessed.
   const dimensions: CbsDimension[] = coordinateDimNames.map((name) => ({
     name,
     kind: name === 'time' ? 'TimeDimension' : name === 'geo' ? 'GeoDimension' : 'Dimension',
+    title: ds.dimension[name]?.label ?? '',
   }));
 
   // breadth step 2, Task 3: JSON-stat's own equivalent of CBS's 'Modified' —
