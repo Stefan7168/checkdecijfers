@@ -155,6 +155,41 @@ Behaviour (tests on the same fixtures):
 
 ---
 
+### Task 5b: Answering from slice-cache tables — per-cell confirmation dates
+
+*Added during execution (2026-09-28): Task 5's review found that `runQuery` refuses any table whose `last_sync_at` is
+null (`src/query/run.ts` ~746) and slice-cache tables never get one — so none could be answered. Setting
+`last_sync_at = now()` on each fetch was rejected: it would re-date OTHER slices' cells as "synced today" (R4), start
+false stale-sync alarms, flip onboarding's `alreadyIngestedSet`, and make coverage pages claim a whole-table sync.*
+
+**Files:** `migrations/037_slice_cache.sql` (edit in place — still file-only), `src/ingestion/slice-cache.ts`,
+`src/query/run.ts` (and whatever computes `syncedAt` / `registry.lastSyncAt` for a result), tests in
+`tests/query/slice-cache-missing.test.ts` (or a new `tests/query/slice-cache-answer.test.ts`) and
+`tests/ingestion/slice-cache.test.ts`.
+
+**Rules:**
+1. `slice_fetches.checked_at timestamptz not null default now()` — set on every successful `fetchSlice` (insert AND
+   refetch) and bumped by `ensureSlice` on a cache hit (CBS `Modified` confirmed unchanged = the cells re-confirmed now).
+   Update migration-037.test.ts accordingly.
+2. `cbs_tables.last_sync_at` stays NULL for slice-cache tables (never written by the slice path) — stale-sync,
+   onboarding and coverage keep ignoring them.
+3. In the query layer, for `ingest_mode = 'slice_cache'` tables (probe the column; absent ⇒ today's behaviour):
+   - replace the `lastSyncAt === null` refusal with the real invariant: every served cell must be covered by ≥ 1
+     `slice_fetches` row whose filter contains its coordinate (measure, period, every dimension member) — otherwise
+     `internal_inconsistency` (never serve an unaccounted cell);
+   - date each non-retained cell by the LATEST `checked_at` among the fetches covering it; retained cells keep their
+     #154 date; the result's `syncedAt` = the minimum over its cells (the existing #154 rule);
+   - `registry.lastSyncAt` for the result = the latest covering `checked_at`, so `staleness.ts`'s retained clause reads
+     correctly. Full tables: byte-identical.
+4. Tests: a slice-cache table answers (value, unit, status, syncedAt = the covering fetch's checked_at); a cell stored by
+   slice A is NOT re-dated when slice B is fetched later; an `ensureSlice` cache hit bumps `checked_at` and the answer's
+   date moves; a retained cell keeps its #154 date; a cell with no covering fetch → `internal_inconsistency`; a full
+   table's answer is unchanged (existing tests). Turn Task 5's `it.todo` into a real test.
+
+Commit `feat(query): answer from slice-cache tables with per-slice confirmation dates (breadth step 2)`.
+
+---
+
 ### Task 6 (controller): verification + docs
 
 Full `scripts/verify-block.sh`, `/code-review` LOW, opus final whole-branch review, then merge to `main` (owner present) — safe because nothing in the request path calls the new functions. Docs: ADR 062 (breadth: two lanes + slice cache, as-built step 2), RUNBOOK (migration 037 is file-only; owner applies with `npm run db:migrate` before step 5 goes live), STATUS, build plan, open-questions #335.
