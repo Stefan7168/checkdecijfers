@@ -4,7 +4,7 @@
 ([#335](../open-questions.md), [brief](../session-briefs/2026-09-28-sanity-check.md)) chose breadth as the next priority;
 the owner approved the design ("Yes, write the plan (Recommended)"). Design:
 [superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md](../superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md).
-**Steps 2 (slice cache), 3 (breakdown resolver) and 4 (table-scoped parser, hermetic) built** — see the "As built" sections. Step 4's recording + calibration run and steps 5–6 not done.
+**Steps 2 (slice cache), 3 (breakdown resolver) and 4 (table-scoped parser, hermetic) built** — see the "As built" sections. Step 4b settled the parser before recording. Step 4's recording + calibration run and steps 5–6 not done.
 
 **Relates to:** ADR [003](003-cbs-access-layer.md) (bulk ingestion, principle b), ADRs [025](025-cbs-catalog-table-discovery.md)/
 [026](026-on-demand-fetch-job-architecture.md)/[027](027-finder-shape-fit-gate.md) (today's on-demand onboarding, which
@@ -111,6 +111,19 @@ on-demand onboarding only delivers time-only tables (7% of current tables), cost
   the prompt told the model to drop place names on tables without regions (a silent national answer) — fixed; the final
   opus review ("with fixes", 0 Critical) led to one fix wave + a small follow-up (look-alike places, region-coded
   members only). Items to settle before the recording run and in step 5: [#339](../open-questions.md).
+
+## As built — step 4b (session 139, 2026-09-29, branch `breadth-step-4b`)
+
+Settles the parser before its first recording (every item changes prompt bytes): the CBS adapter carries measure groups
+(`CbsMeasure.groupPath`, CBS `MeasureGroups` titles root → leaf; in memory only — fingerprint, `cbs_tables.units` and
+all curated prompts byte-identical; best-effort: a failed fetch flags `measureGroupsUnavailable` and only the table
+parser refuses such a table); the prompt shows `groep:` lines and the duplicate-measure guard includes the group (it
+resolved every identical-title case in the fixtures); prompt/schema versions 2; month/quarter questions default to the
+seasonally adjusted measure when they don't say; reader-side place names are normalized (`places.ts`: suffix/prefix,
+aliases) and the place KIND is used only to reject (a municipality question never takes a province member; look-alikes
+still ask); the pre-filter always offers region-coded members the reader named. Final opus review found one Critical
+(the first normalization discarded the kind — "gemeente Utrecht" matched the province) — fixed before merge. Dry run: 35
+cases, ~102k estimated input tokens for the recording run.
 
 ## Trade-offs and open points (step 5)
 
