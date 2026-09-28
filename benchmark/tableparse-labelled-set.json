@@ -398,12 +398,12 @@
       }
     },
     {
-      "id": "acceptable-arbeid-werklozen-seizoen-of-niet",
+      "id": "seizoen-default-arbeid-werklozen",
       "table": "80590ned",
       "question": "Hoeveel werklozen waren er in maart 2024?",
-      "note": "Breadth step 4b, Task 2 — the new acceptableMeasureCodes form: the question names the 'Werkloze beroepsbevolking' group ('werklozen') but, unlike the case above, does NOT say whether it wants the seasonally adjusted figure — so 3000800_2 (Niet-seizoengecorrigeerd) and D001875 (Seizoengecorrigeerd), the group's two same-group members, are EQUALLY faithful reads of this exact question; the answer just needs to name which one it used. Neither is 'more correct' than the other, so scoring only the first as correct would penalize an equally valid pick. Geslacht/Leeftijd not mentioned.",
+      "note": "Final-review I3 (breadth step 4b fix wave, controller ruling; was 'acceptable-arbeid-werklozen-seizoen-of-niet', which accepted either code): the question names the 'Werkloze beroepsbevolking' group ('werklozen') and a MONTH, but does not say whether it wants seasonally adjusted figures. The group offers both 3000800_2 (Niet-seizoengecorrigeerd) and D001875 (Seizoengecorrigeerd); the prompt now settles the default — a month or quarter question that does not say takes the 'Seizoengecorrigeerd' measure (the curated pipeline's default for werkloosheid, CBS's own headline practice) — so D001875 is the one correct pick. Geslacht/Leeftijd not mentioned.",
       "expect": {
-        "acceptableMeasureCodes": ["3000800_2", "D001875"],
+        "measureCode": "D001875",
         "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
         "periodKind": "month",
         "regions": []

@@ -131,6 +131,24 @@ describe('buildTableParseSystemPrompt', () => {
     expect(prompt).toMatch(/dezelfde titel.*verschillende groep.*iets anders/);
   });
 
+  // Final-review I3 (breadth step 4b fix wave, controller ruling): the
+  // seasonal-adjustment default is settled in the prompt BEFORE the
+  // recording run — a month/quarter question that does not say takes the
+  // group's "Seizoengecorrigeerd" measure (the curated pipeline's default for
+  // werkloosheid, CBS's own headline practice); a yearly question never takes
+  // an adjusted measure unless it asks for one (seasonal adjustment only
+  // exists below a year; a yearly question that EXPLICITLY asks for adjusted
+  // figures — labelled case 'total-arbeidsdeelname-generiek' — keeps its
+  // adjusted measure, and step 5's per-cell check refuses the missing
+  // yearly cell rather than the parser silently swapping in the unadjusted
+  // figure).
+  it('states the seasonal-adjustment default: month/quarter without a stated preference → "Seizoengecorrigeerd"; an unstated year never', () => {
+    const prompt = buildTableParseSystemPrompt();
+    const maat = prompt.slice(prompt.indexOf('MAAT\n'), prompt.indexOf('UITSPLITSINGEN\n'));
+    expect(maat).toMatch(/maand of kwartaal[^\n]*niet of ze seizoengecorrigeerde cijfers wil[^\n]*"Seizoengecorrigeerd"/);
+    expect(maat).toMatch(/heel jaar niet dat ze seizoengecorrigeerde cijfers wil[^\n]*nooit een seizoengecorrigeerde maat/);
+  });
+
   // Fix round 1 (task review, CRITICAL): the prompt must tell the model to
   // ALWAYS list every place the reader names, as written, with its kind,
   // even when the table has no regions — never silently drop it (which

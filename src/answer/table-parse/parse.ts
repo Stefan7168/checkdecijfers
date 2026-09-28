@@ -551,6 +551,7 @@ MAAT
 - Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment ("hoeveel zijn er"), een in- of uitstroom of verandering ("hoeveel kwamen erbij"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet, beantwoordt de vraag NIET.
 - Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt.
 - Maten kunnen gegroepeerd zijn (zie "groep:" bij de maat); de groep vertelt bij welke populatie of grootheid de maat hoort — twee maten met dezelfde titel in een verschillende groep meten dus iets anders.
+- Zegt een vraag over een maand of kwartaal niet of ze seizoengecorrigeerde cijfers wil, en biedt de juiste groep zowel een seizoengecorrigeerde als een niet-seizoengecorrigeerde maat, kies dan de maat "Seizoengecorrigeerd". Zegt een vraag over een heel jaar niet dat ze seizoengecorrigeerde cijfers wil, kies dan nooit een seizoengecorrigeerde maat: seizoencorrectie bestaat alleen voor maand- en kwartaalcijfers.
 
 UITSPLITSINGEN
 Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:
