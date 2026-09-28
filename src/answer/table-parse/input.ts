@@ -34,6 +34,12 @@ import type { CbsCode, CbsDimension, CbsTableSchema } from '../../cbs-adapter/ty
 import { classifyDimension, findGrandTotal, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
 import { parsePeriodCode } from '../../ingestion/periods.ts';
 import type { PeriodGrain } from '../../query/types.ts';
+import {
+  REGION_MEMBER_CODE,
+  memberPlaceKey,
+  normalizeQuestionForPlaceMatch,
+  placeKeyNamedInQuestion,
+} from './places.ts';
 
 /** Thrown when a table can never be offered to the table-scoped parser —
  * the caller refuses the question for this table, it is never a partial
@@ -149,12 +155,23 @@ function sharesWord(title: string, qWords: Set<string>): boolean {
  * Builds one breakdown dimension's offered member list. Dimensions with at
  * most MEMBER_PROMPT_CAP members are offered in full. Larger dimensions are
  * pre-filtered deterministically: CBS's own grand total (step 3's
- * findGrandTotal, when one exists) first, then every OTHER member whose
- * normalized title shares a normalized word with the question, in CBS
- * order, the combined list capped at MEMBER_PROMPT_CAP. When there is no
- * grand total and nothing matches, the dimension is still offered
- * (truncated, with zero members) — the model then has only `niet_genoemd` /
- * `anders` for it, never a silently guessed member.
+ * findGrandTotal, when one exists) first, then every OTHER member that
+ * EITHER shares a normalized word with the question OR — breadth step 4b,
+ * Task 3, controller ruling — is a REGION-CODED member (REGION_MEMBER_CODE)
+ * whose place key (memberPlaceKey) is named in the question
+ * (placeKeyNamedInQuestion), in CBS order, the combined (deduped) list capped
+ * at MEMBER_PROMPT_CAP. The place-aware rule catches what the generic word
+ * rule alone misses: an alias ("Den Haag" names the "'s-Gravenhage" member —
+ * "haag" shares no word with "gravenhage") and every look-alike member a
+ * bare place name refers to (e.g. "Groningen" on 85004NED names all three of
+ * "Groningen (PV)"/"(ES)"/"(ET)", so F1's several-members-match "anders" rule
+ * downstream sees every one of them, not just whichever the word rule
+ * happened to also catch). A non-region-coded member is never added by this
+ * rule, even when its title happens to equal a place name (the follow-up
+ * ruling's birth-country "Nederland" case). When there is no grand total and
+ * nothing matches either rule, the dimension is still offered (truncated,
+ * with zero members) — the model then has only `niet_genoemd` / `anders` for
+ * it, never a silently guessed member.
  */
 function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): TableParseBreakdown {
   const allMembers: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
@@ -172,13 +189,25 @@ function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): 
 
   const total = findGrandTotal(allMembers);
   const qWords = questionWords(question);
+  const normalizedQuestionForPlaces = normalizeQuestionForPlaceMatch(question);
   const selected: BreakdownMember[] = [];
-  if (total) selected.push(total);
+  const selectedCodes = new Set<string>();
+  if (total) {
+    selected.push(total);
+    selectedCodes.add(total.code);
+  }
 
   for (const member of allMembers) {
     if (selected.length >= MEMBER_PROMPT_CAP) break;
-    if (total && member.code === total.code) continue;
-    if (sharesWord(member.title, qWords)) selected.push(member);
+    if (selectedCodes.has(member.code)) continue;
+    const wordMatch = sharesWord(member.title, qWords);
+    const placeMatch =
+      REGION_MEMBER_CODE.test(member.code) &&
+      placeKeyNamedInQuestion(normalizedQuestionForPlaces, memberPlaceKey(member.title));
+    if (wordMatch || placeMatch) {
+      selected.push(member);
+      selectedCodes.add(member.code);
+    }
   }
 
   return {

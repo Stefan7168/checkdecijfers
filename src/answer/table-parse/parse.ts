@@ -55,7 +55,7 @@ import { oneOfToAnyOf } from '../llm/json-schema.ts';
 import { periodSpecSchema, regionScopeSchema, regionTermSchema } from '../intent/schema.ts';
 import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
-import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
+import { REGION_MEMBER_CODE, memberPlaceKey, readerPlaceKey } from './places.ts';
 import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from './input.ts';
 
 /** Cheap tier (same reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL): a
@@ -271,24 +271,6 @@ function measureFingerprint(m: TableParseMeasure): string {
   return JSON.stringify([m.groupPath, m.title, displayUnit(m), condense(m.description)]);
 }
 
-/** Only a member whose CODE carries a CBS region prefix counts as a place
- * for the region checks below (follow-up ruling): a birth-country-like
- * member titled "Nederland" but coded e.g. 1012600 is a population
- * characteristic, not the place Nederland. Measured on the committed
- * fixtures: 85004NED RegioS uses NL/PV/ES/ET codes, 82291NED
- * CaribischNederland uses CN/GM codes; LD/CR/WK/BU complete CBS's own region
- * code families (landsdeel, COROP, wijk, buurt). Deliberately local to this
- * validator — src/query/breakdowns.ts's geo-like classification is not
- * changed. */
-const REGION_MEMBER_CODE = /^(NL|PV|GM|LD|CR|WK|BU|CN|ES|ET)\d/;
-
-/** A member title reduced to the place name a reader would write: CBS's
- * trailing disambiguation dropped ("Groningen (PV)" → "Groningen"), then the
- * shared region-name normalization (src/sources/region-names.ts). */
-function memberPlaceKey(title: string): string {
-  return normalizeRegionName(baseLabel(title));
-}
-
 /**
  * Parses + validates the model's output text against ONE table's own closed
  * menu (`input`, from Task 2's buildTableParseSchema). Throws
@@ -455,7 +437,10 @@ export function validateTableParseOutput(
  * about a place", and the code decides whether this table can serve it:
  *
  * - A region class (`regionScope`) cannot be served → region-unavailable.
- * - Each named place must match (memberPlaceKey) at least one OFFERED,
+ * - Each named place, keyed with `readerPlaceKey` (baseLabel, one leading
+ *   Dutch kind word stripped, then `normalizeRegionName` — so "Groningen
+ *   (PV)", "provincie Groningen" and "Den Haag" all key the same as their
+ *   matching member's `memberPlaceKey`), must match at least one OFFERED,
  *   REGION-CODED (REGION_MEMBER_CODE) member of some breakdown dimension
  *   (85004NED's RegioS, 82291NED's CaribischNederland), else →
  *   region-unavailable. A non-region-coded member with the same title (a
@@ -482,7 +467,7 @@ function checkRegionsOnRegionlessTable(
   }
 
   for (const region of result.regions) {
-    const key = normalizeRegionName(region.name);
+    const key = readerPlaceKey(region.name);
     const listing: { dim: TableParseBreakdown; matchCodes: string[] }[] = [];
     for (const dim of input.breakdowns) {
       const matchCodes = dim.members

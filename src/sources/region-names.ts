@@ -12,8 +12,12 @@
 // future split seam. resolve.ts re-exports both, so its callers are unchanged.
 
 /** Everyday-name → official CBS base name. CBS labels Den Haag as
- * 's-Gravenhage (docs/07 quirk); users overwhelmingly say Den Haag. */
-const REGION_NAME_ALIASES: Record<string, string> = {
+ * 's-Gravenhage (docs/07 quirk); users overwhelmingly say Den Haag. Exported
+ * (breadth step 4b, Task 3) so a caller that must detect an alias KEY
+ * occurring inside a larger piece of text (e.g. a whole question, where
+ * normalizeRegionName's own whole-string alias substitution never fires) can
+ * do so without duplicating this map. */
+export const REGION_NAME_ALIASES: Record<string, string> = {
   'den haag': "'s-gravenhage",
 };
 

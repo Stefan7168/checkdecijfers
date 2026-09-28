@@ -1106,3 +1106,92 @@ describe('validateTableParseOutput — only region-coded members count as places
     expect(validateTableParseOutput(json, input).breakdowns['Geboorteland']).toEqual({ kind: 'member', code: '1012600' });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Breadth step 4b, Task 3 — reader-side place normalization (readerPlaceKey):
+// a reader typing a CBS-style title verbatim ("Groningen (PV)") or prefixing
+// a bare name with a Dutch kind word ("provincie Groningen") must key the
+// same as the matching member(s) — before this task, the validator keyed the
+// NAMED region with plain normalizeRegionName(region.name), so a trailing
+// parenthetical or a leading kind word left in the region.name made it key
+// DIFFERENTLY from every offered member and threw the (wrong)
+// TableParseRegionUnavailableError even though 85004NED plainly offers
+// matching members.
+// ---------------------------------------------------------------------------
+
+describe('validateTableParseOutput — reader-side place normalization (readerPlaceKey, Task 3)', () => {
+  it('"Groningen (PV)" (CBS-style title, parenthetical included) matches the same three offered members as bare "Groningen" — several match, so only \'anders\' passes', () => {
+    const input = groningenInput();
+    const named = [{ name: 'Groningen (PV)', kind: 'onbekend' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+
+    // Before this task: readerPlaceKey did not exist, the validator keyed on
+    // normalizeRegionName('Groningen (PV)') = "groningen (pv)", which matches
+    // NO offered member's memberPlaceKey ("groningen") — a
+    // TableParseRegionUnavailableError, even though the table plainly offers
+    // three matching members. That must no longer happen.
+    const niVsRegionUnavailable = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { regions: named });
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('"provincie Groningen" (leading Dutch kind word) matches the same three offered members as bare "Groningen"', () => {
+    const input = groningenInput();
+    const named = [{ name: 'provincie Groningen', kind: 'provincie' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+
+    const niVsRegionUnavailable = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { regions: named });
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(niVsRegionUnavailable, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  // 85004NED has no 's-Gravenhage member (its RegioS is PV/ES/ET-coded, not
+  // municipalities) — a small synthetic breakdown dimension, mirroring the
+  // 'geboorteland' synthetic table above, pins the "Den Haag" alias case
+  // against a single, unambiguous GM-coded match.
+  function denHaagInput(question: string): TableParseSchema {
+    const schema: CbsTableSchema = {
+      tableId: 'SYN06',
+      title: 'Synthetische tabel naar woonplaats',
+      dimensions: [
+        { name: 'Woonplaats', kind: 'Dimension', title: 'Woonplaats' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    const codeLists: Record<string, CbsCode[]> = {
+      // Only 1 of 8 members is region-coded (12.5%, under the 0.8 geo-like
+      // threshold — mirrors 85004NED's own measured ratio), so this stays an
+      // ordinary 'breakdown' dimension, not 'geo_like'.
+      Woonplaats: [
+        { code: 'F0001', title: 'Fictieve plek A', dimensionGroup: null, status: null, index: 1 },
+        { code: 'F0002', title: 'Fictieve plek B', dimensionGroup: null, status: null, index: 2 },
+        { code: 'F0003', title: 'Fictieve plek C', dimensionGroup: null, status: null, index: 3 },
+        { code: 'F0004', title: 'Fictieve plek D', dimensionGroup: null, status: null, index: 4 },
+        { code: 'GM0518', title: "'s-Gravenhage (GM)", dimensionGroup: null, status: null, index: 5 },
+        { code: 'F0006', title: 'Fictieve plek E', dimensionGroup: null, status: null, index: 6 },
+        { code: 'F0007', title: 'Fictieve plek F', dimensionGroup: null, status: null, index: 7 },
+        { code: 'F0008', title: 'Fictieve plek G', dimensionGroup: null, status: null, index: 8 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    return buildTableParseSchema(schema, codeLists, question);
+  }
+
+  it('"Den Haag" matches the single offered \'s-Gravenhage (GM) member (alias substitution)', () => {
+    const input = denHaagInput('Hoeveel personen woonden er in Den Haag in 2020?');
+    expect(input.hasRegions).toBe(false);
+    const json = jsonWith(input, { Woonplaats: 'GM0518' }, { measureCode: 'M1', regions: [{ name: 'Den Haag', kind: 'gemeente' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['Woonplaats']).toEqual({ kind: 'member', code: 'GM0518' });
+  });
+
+  it('"Den Haag" with \'niet_genoemd\' on the matching dimension throws (would silently fall to the total)', () => {
+    const input = denHaagInput('Hoeveel personen woonden er in Den Haag in 2020?');
+    const json = jsonWith(input, { Woonplaats: TABLE_PARSE_NOT_NAMED }, { measureCode: 'M1', regions: [{ name: 'Den Haag', kind: 'gemeente' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+});

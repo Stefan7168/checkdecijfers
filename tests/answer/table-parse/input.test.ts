@@ -191,6 +191,103 @@ describe('buildTableParseSchema — member pre-filter', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Breadth step 4b, Task 3 — the pre-filter's place-aware addition rule: a
+// truncated dimension also offers every REGION-CODED member whose place key
+// occurs in the (normalized) question as a whole word/sequence, merged with
+// the generic word-rule selection, CBS order, total first, deduped, capped at
+// MEMBER_PROMPT_CAP.
+// ---------------------------------------------------------------------------
+
+describe('buildTableParseSchema — place-aware pre-filter addition (Task 3)', () => {
+  it('85004NED: "Groningen (PV)" (CBS-style title) offers all three look-alike Groningen members', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in Groningen (PV) in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+  });
+
+  it('85004NED: "provincie Groningen" (leading Dutch kind word) offers all three look-alike Groningen members', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in provincie Groningen in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    expect(dim.truncated).toBe(true);
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+  });
+
+  it('85004NED: a bare "Groningen" offers all three look-alike Groningen members, in CBS (index) order', () => {
+    const { schema, codeLists } = loadFixture('85004NED');
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel megawatt stond er opgesteld in Groningen in 2021?');
+    const dim = result.breakdowns.find((b) => b.name === 'RegioS')!;
+    const codes = dim.members.map((m) => m.code);
+    expect(codes).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+    // CBS order: PV20 (index 2) before ES01 (index 15) before ET0101 (index 46).
+    expect(codes.indexOf('PV20')).toBeLessThan(codes.indexOf('ES01'));
+    expect(codes.indexOf('ES01')).toBeLessThan(codes.indexOf('ET0101'));
+  });
+
+  // Synthetic dimension (>40 members, so the pre-filter truncates it), mirroring
+  // 85004NED's own low region-coded ratio (12.5%, under the 0.8 geo_like
+  // threshold) so it stays classified as an ordinary 'breakdown' dimension.
+  // Isolates the case the generic word rule alone cannot reach: "Den Haag"
+  // shares no word with "'s-Gravenhage" ("haag" vs "gravenhage"), so only the
+  // alias-aware place rule adds the member.
+  function denHaagPreFilterSchema(): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
+    const filler: CbsCode[] = Array.from({ length: 44 }, (_, i) => ({
+      code: `F${String(i + 1).padStart(4, '0')}`,
+      title: `Fictieve plek ${i + 1}`,
+      dimensionGroup: null,
+      status: null,
+      index: i + 1,
+    }));
+    const codeLists: Record<string, CbsCode[]> = {
+      Woonplaats: [
+        ...filler,
+        { code: 'GM0518', title: "'s-Gravenhage (GM)", dimensionGroup: null, status: null, index: 45 },
+        // Same place name, but a NON-region code — must never be added by
+        // the place-aware rule (it is also not a word-rule match: nothing in
+        // the question shares a word with "'s-Gravenhage").
+        { code: 'F0045', title: "'s-Gravenhage", dimensionGroup: null, status: null, index: 46 },
+      ],
+      Perioden: [{ code: '2020JJ00', title: '2020', dimensionGroup: null, status: 'Definitief', index: 1 }],
+    };
+    const schema: CbsTableSchema = {
+      tableId: 'SYN07',
+      title: 'Synthetische tabel naar woonplaats',
+      dimensions: [
+        { name: 'Woonplaats', kind: 'Dimension', title: 'Woonplaats' },
+        { name: 'Perioden', kind: 'TimeDimension', title: 'Perioden' },
+      ],
+      measures: [{ code: 'M1', title: 'Personen', unit: 'aantal', decimals: 0, description: 'aantal personen', dataType: 'Long', groupPath: [] }],
+      modified: null,
+    };
+    return { schema, codeLists };
+  }
+
+  it('a truncated dimension offers a region-coded member the generic word rule alone would miss ("Den Haag" -> \'s-Gravenhage via alias)', () => {
+    const { schema, codeLists } = denHaagPreFilterSchema();
+    expect(codeLists.Woonplaats!.length).toBeGreaterThan(MEMBER_PROMPT_CAP);
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen woonden er in Den Haag in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Woonplaats')!;
+    expect(dim.truncated).toBe(true);
+    // The generic word rule alone matches nothing here — "haag" (4 letters,
+    // kept) shares no word with any offered title, including "'s-Gravenhage"
+    // ("gravenhage").
+    expect(questionWords('Hoeveel personen woonden er in Den Haag in 2020?').has('gravenhage')).toBe(false);
+    expect(dim.members).toEqual([{ code: 'GM0518', title: "'s-Gravenhage (GM)" }]);
+  });
+
+  it('non-region-coded members are never added by the place-aware rule, even sharing the exact place name', () => {
+    const { schema, codeLists } = denHaagPreFilterSchema();
+    const result = buildTableParseSchema(schema, codeLists, 'Hoeveel personen woonden er in Den Haag in 2020?');
+    const dim = result.breakdowns.find((b) => b.name === 'Woonplaats')!;
+    expect(dim.members.some((m) => m.code === 'F0045')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Margins never offered as a breakdown
 // ---------------------------------------------------------------------------
 
