@@ -1,6 +1,8 @@
 // Breadth step 3, Task 2 — fetches REAL CBS breakdown-dimension member lists
-// for the measured total-rule test cases (constraints.md) and writes
-// tests/fixtures/cbs-breakdowns/sample.json. A tiny, committed, one-off
+// for the measured total-rule test cases
+// (docs/superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md
+// Global Constraints) and writes tests/fixtures/cbs-breakdowns/sample.json.
+// A tiny, committed, one-off
 // research script (not part of the app) — Task 2's tests read only the
 // written fixture, never the network.
 //
@@ -21,7 +23,8 @@ const MAX_MEMBERS = 30;
 
 interface Case {
   /** Stable id for the test file to key its assertions on — describes the
-   * measured trap/case from constraints.md, not the raw table/dim pair. */
+   * measured trap/case from the plan's Global Constraints, not the raw
+   * table/dim pair. */
   id: string;
   table: string;
   dimension: string;

@@ -1,6 +1,7 @@
 // Breadth step 3, Task 2 — breakdown resolver. Pure module: picks CBS's own
 // grand total for an unnamed breakdown dimension by the MEASURED conservative
-// rule (constraints.md, measured 2026-09-28 over all 2,330 breakdown
+// rule (docs/superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md
+// Global Constraints, measured 2026-09-28 over all 2,330 breakdown
 // dimensions of the 1,271 current tables), or returns a button question.
 // Principle (c): never guess — every case below is either a real CBS member
 // list (tests/fixtures/cbs-breakdowns/sample.json, fetched live by
@@ -87,6 +88,39 @@ describe('findGrandTotal — measured rule, real CBS member lists', () => {
 
   it('findGrandTotal of an empty member list is null', () => {
     expect(findGrandTotal([])).toBeNull();
+  });
+
+  // ---- F1 (final review, session 139): tightened rule — the first member
+  // must ITSELF qualify by a 'Totaal'-prefixed title or a T00 code, not
+  // merely by the '; totaal' / ', totaal' suffix. ------------------------
+
+  it('85004NED/BronEnTechniek: first member is a candidate ONLY via the ", totaal" suffix -> null (a solar sub-total in a solar+wind table)', () => {
+    const members: BreakdownMember[] = [
+      { code: 'E006590', title: 'Zonnestroom, totaal' },
+      { code: 'A050176', title: 'Zonnestroom, klein vermogen' },
+      { code: 'A050177', title: 'Zonnestroom, groot vermogen' },
+      { code: 'E006637', title: 'Windenergie op land' },
+    ];
+    expect(findGrandTotal(members)).toBeNull();
+  });
+
+  // ---- F9: edge tests -----------------------------------------------------
+
+  it('two T00-coded members, T00 first -> null (not the only T00 code)', () => {
+    const members: BreakdownMember[] = [
+      { code: 'T001', title: 'Totaal A' },
+      { code: 'T002', title: 'Totaal B' },
+      { code: 'X', title: 'Iets anders' },
+    ];
+    expect(findGrandTotal(members)).toBeNull();
+  });
+
+  it('first member is T00-coded (title does not start with "Totaal") and a later member is "Totaal …"-titled -> the first (clause b: only T00 code)', () => {
+    const members: BreakdownMember[] = [
+      { code: 'T001', title: 'Iets' },
+      { code: 'X2', title: 'Totaal Y' },
+    ];
+    expect(findGrandTotal(members)).toEqual({ code: 'T001', title: 'Iets' });
   });
 });
 
@@ -325,6 +359,132 @@ describe('resolveBreakdowns — synthetic tables', () => {
     if (!result.ok) throw new Error('unreachable');
     expect(result.coordinates).toEqual({ Bedrijfsgrootte: 'A' });
     expect(result.defaults).toEqual([]);
+  });
+
+  // ---- F9: a single, non-total member still becomes a 1-option question ---
+
+  it('a single member that is not a total -> question with exactly 1 option', () => {
+    const dims: BreakdownDimension[] = [
+      { name: 'Solo', title: 'Solo', kind: 'Dimension', members: [member('X1', 'Iets')] },
+    ];
+    const result = resolveBreakdowns(dims, {});
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.question.dimension).toBe('Solo');
+    expect(result.question.options).toEqual([member('X1', 'Iets')]);
+    expect(result.question.totalOptions).toBe(1);
+  });
+
+  // ---- F2: `named` is checked, never silently trusted ----------------------
+
+  describe('named input is checked (F2)', () => {
+    const dims: BreakdownDimension[] = [
+      {
+        name: 'Geslacht',
+        title: 'Geslacht',
+        kind: 'Dimension',
+        members: [member('T001038', 'Totaal mannen en vrouwen'), member('3000', 'Mannen'), member('4000', 'Vrouwen')],
+      },
+    ];
+
+    it('an unknown key in `named` (not any dimension name) throws, naming the key', () => {
+      expect(() => resolveBreakdowns(dims, { NotADimension: 'x' })).toThrow(/NotADimension/);
+    });
+
+    it('a wrong-case key ("geslacht" vs "Geslacht") throws — case must match exactly', () => {
+      expect(() => resolveBreakdowns(dims, { geslacht: '3000' })).toThrow(/geslacht/);
+    });
+
+    it('a non-member code named on a breakdown dimension -> a question for that dimension, never a silent default', () => {
+      const result = resolveBreakdowns(dims, { Geslacht: 'DOES-NOT-EXIST' });
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.question.dimension).toBe('Geslacht');
+      expect(result.question.options).toEqual(dims[0]!.members);
+    });
+
+    it('a valid named code on a breakdown dimension still works, and is not re-added to defaults', () => {
+      const result = resolveBreakdowns(dims, { Geslacht: '3000' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('unreachable');
+      expect(result.coordinates).toEqual({ Geslacht: '3000' });
+      expect(result.defaults).toEqual([]);
+    });
+
+    it('named time/geo/geo_like dimensions pass through unchecked — the caller owns them', () => {
+      const mixedDims: BreakdownDimension[] = [
+        { name: 'Perioden', title: 'Perioden', kind: 'TimeDimension', members: [] },
+        { name: 'RegioS', title: "Regio's", kind: 'GeoDimension', members: [] },
+      ];
+      const result = resolveBreakdowns(mixedDims, { Perioden: 'anything-uncheckable', RegioS: 'also-uncheckable' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('unreachable');
+      expect(result.coordinates).toEqual({ Perioden: 'anything-uncheckable', RegioS: 'also-uncheckable' });
+    });
+  });
+
+  // ---- F3: ok:true reports the caller's own dimensions ---------------------
+
+  it('ok:true carries callerDimensions — time/geo/geo_like dims NOT in `named`, in table order', () => {
+    const dims: BreakdownDimension[] = [
+      { name: 'Perioden', title: 'Perioden', kind: 'TimeDimension', members: [] },
+      { name: 'RegioS', title: "Regio's", kind: 'GeoDimension', members: [] },
+      {
+        name: 'Geslacht',
+        title: 'Geslacht',
+        kind: 'Dimension',
+        members: [member('T001038', 'Totaal mannen en vrouwen'), member('3000', 'Mannen')],
+      },
+    ];
+    const result = resolveBreakdowns(dims, { RegioS: 'PV20' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.callerDimensions).toEqual(['Perioden']);
+  });
+
+  it('ok:true carries an empty callerDimensions when there are no time/geo/geo_like dimensions at all', () => {
+    const dims: BreakdownDimension[] = [
+      {
+        name: 'Geslacht',
+        title: 'Geslacht',
+        kind: 'Dimension',
+        members: [member('T001038', 'Totaal mannen en vrouwen'), member('3000', 'Mannen')],
+      },
+    ];
+    const result = resolveBreakdowns(dims, {});
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.callerDimensions).toEqual([]);
+  });
+
+  // ---- F4: an empty dimension title falls back to the dimension name -------
+
+  it('an empty dimension title falls back to the name in a stated default, and statedDefaultsText never shows a doubled ": "', () => {
+    const dims: BreakdownDimension[] = [
+      {
+        name: 'Geslacht',
+        title: '',
+        kind: 'Dimension',
+        members: [member('T001038', 'Totaal mannen en vrouwen'), member('3000', 'Mannen')],
+      },
+    ];
+    const result = resolveBreakdowns(dims, {});
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.defaults).toEqual([
+      { dimension: 'Geslacht', dimensionTitle: 'Geslacht', code: 'T001038', memberTitle: 'Totaal mannen en vrouwen' },
+    ]);
+    expect(statedDefaultsText(result.defaults, 'nl')).toBe('Uitgangspunt: Geslacht: Totaal mannen en vrouwen');
+  });
+
+  it('an empty dimension title falls back to the name in a question, too', () => {
+    const dims: BreakdownDimension[] = [
+      { name: 'Bedrijfsgrootte', title: '  ', kind: 'Dimension', members: [member('A', 'Klein'), member('B', 'Groot')] },
+    ];
+    const result = resolveBreakdowns(dims, {});
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.question.dimensionTitle).toBe('Bedrijfsgrootte');
   });
 });
 
