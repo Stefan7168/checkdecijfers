@@ -1045,6 +1045,267 @@
      "derivation": "none"
     }
    }
+  },
+  {
+   "id": "rf-dichtheid-amsterdam-2025",
+   "category": "variant",
+   "question": "Wat was de bevolkingsdichtheid van Amsterdam in 2025?",
+   "note": "ADR 061 part 2: population_density (70072ned, M000100) must not collapse into the inwonertal key (population_on_1_january) just because both are about Amsterdam.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_density"
+     },
+     "regions": [
+      "GM0363"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-woz-utrecht-2024",
+   "category": "variant",
+   "question": "Wat was de gemiddelde WOZ-waarde in Utrecht (gemeente) in 2024?",
+   "note": "ADR 061 part 2: WOZ must not become sale price (average_home_sale_price_by_gemeente) — the gemeente valuation key (average_woz_value, M003039) is a distinct measure. 'Utrecht (gemeente)' must resolve to the gemeente code, not the province.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_woz_value"
+     },
+     "regions": [
+      "GM0344"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-woz-vs-verkoopprijs",
+   "category": "variant",
+   "question": "Wat was de gemiddelde verkoopprijs van een woning in Utrecht (gemeente) in 2024?",
+   "note": "ADR 061 part 2 guard, inverse of rf-woz-utrecht-2024: a question asking for the SALE price in the same gemeente/year must stay on average_home_sale_price_by_gemeente and must not become the WOZ tax valuation (average_woz_value).",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_home_sale_price_by_gemeente"
+     },
+     "regions": [
+      "GM0344"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-koopwoningen-per-provincie-2024",
+   "category": "region_set",
+   "question": "Welk percentage koopwoningen had elke provincie in 2024?",
+   "note": "ADR 061 part 2: owner_occupied_homes_share (70072ned, 1014800) is a region-class ask over all_provincies, same shape as rs-elke-provincie-2025.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "owner_occupied_homes_share"
+     },
+     "regionSet": {
+      "kind": "all_provincies"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-autos-meeste-gemeente-2025",
+   "category": "region_set",
+   "question": "Welke gemeente had in 2025 de meeste personenauto's per 1000 inwoners?",
+   "note": "ADR 061 part 2: 'welke gemeente ... de meeste' is a max over the all_gemeenten class (no gemeente named), same max-derivation shape as rs-utrecht-hoogste-huizenprijs but over ALL gemeenten rather than one province.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "passenger_cars_per_1000_residents"
+     },
+     "regionSet": {
+      "kind": "all_gemeenten"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "max"
+    }
+   }
+  },
+  {
+   "id": "rf-afstand-station-groningen-2025",
+   "category": "region_set",
+   "question": "Wat was de gemiddelde afstand tot een treinstation per gemeente in Groningen in 2025?",
+   "note": "ADR 061 part 2: 'per gemeente in Groningen' resolves the gemeente/provincie ambiguity to the province (same disambiguation as rs-groningen-per-gemeente-2016); distance_to_train_station is the average ROAD distance over ALL residents, not just those without a station nearby.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "distance_to_train_station"
+     },
+     "regionSet": {
+      "kind": "gemeenten_in_provincie",
+      "parent": "PV20"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-bedrijfsvestigingen-vs-faillissementen",
+   "category": "variant",
+   "question": "Hoeveel bedrijfsvestigingen had Rotterdam in 2025?",
+   "note": "ADR 061 part 2 guard: business_establishments (70072ned, M000200_2 — counted on 1 January, rounded to multiples of five) must not become the bankruptcy count (bankruptcies_businesses).",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "business_establishments"
+     },
+     "regions": [
+      "GM0599"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-uitkeringen-eindhoven-2024",
+   "category": "variant",
+   "question": "Hoeveel mensen hadden een uitkering in Eindhoven in 2024?",
+   "note": "ADR 061 part 2 meaning trap: benefit_recipients_total (70072ned, X033647) INCLUDES AOW (mostly pensioners) — this is not an unemployment measure.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "benefit_recipients_total"
+     },
+     "regions": [
+      "GM0772"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-hoogopgeleid-per-provincie-2024",
+   "category": "region_set",
+   "question": "Hoeveel procent hoogopgeleiden had elke provincie in 2024?",
+   "note": "ADR 061 part 2: highly_educated_share (70072ned, 2018790, CBS title 'Hbo, wo') is a region-class ask over all_provincies; 'hoogopgeleid' means hbo or wo as HIGHEST completed level, not merely having attended.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "highly_educated_share"
+     },
+     "regionSet": {
+      "kind": "all_provincies"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rf-supermarkt-afstand-vs-omzet",
+   "category": "variant",
+   "question": "Wat was de gemiddelde afstand tot een grote supermarkt in Den Haag in 2025?",
+   "note": "ADR 061 part 2 guard: distance_to_large_supermarket (70072ned, D000025 — average ROAD distance over ALL residents) must not become supermarket turnover (supermarket_turnover_yoy). 'Den Haag' resolves the same as v-den-haag (GM0518).",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "distance_to_large_supermarket"
+     },
+     "regions": [
+      "GM0518"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
   }
  ]
 }
