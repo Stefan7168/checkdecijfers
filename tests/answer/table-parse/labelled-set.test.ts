@@ -13,20 +13,36 @@
 // missing/extra dimension), every member code is a real code on that
 // dimension AND — since the pre-filter can cut a real member from what's
 // OFFERED for a given question — is actually IN the offered list
-// buildTableParseSchema returns for that exact question text. A mismatch
-// here means the labelled set and the fixtures/builder have drifted apart,
-// which would silently invalidate every future replay/record score.
+// buildTableParseSchema returns for that exact question text. Final-review
+// fix wave: every case's expectation is ALSO run through the real validator
+// as canned model output — an ordinary case must validate, an expected
+// refusal ('ambiguous' measure, outcome 'region_unavailable') must throw
+// exactly its error class — so a label can never contradict the validator's
+// own rules (e.g. a named place with 'niet_genoemd' on the dimension that
+// lists it). A mismatch here means the labelled set and the
+// fixtures/builder/validator have drifted apart, which would silently
+// invalidate every future replay/record score.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../../src/cbs-adapter/types.ts';
 import { buildTableParseSchema } from '../../../src/answer/table-parse/input.ts';
+import type { TableParseSchema } from '../../../src/answer/table-parse/input.ts';
 import { findGrandTotal } from '../../../src/query/breakdowns.ts';
 import {
+  buildTableParseRequest,
+  validateTableParseOutput,
+  TableParseAmbiguousMeasureError,
+  TableParseRegionUnavailableError,
+} from '../../../src/answer/table-parse/parse.ts';
+import {
   buildDryRunRows,
+  buildLabelIndex,
+  expectedErrorClass,
   loadLabelledSet,
   loadTableFixture,
   summarizeDryRun,
+  LABEL_AMBIGUOUS_MEASURE,
   type LabelledCase,
 } from '../../../scripts/tableparse-eval.ts';
 
@@ -44,6 +60,52 @@ const PERIOD_KINDS = new Set([
   'latest',
   'none',
 ]);
+
+const REGION_SCOPES = new Set(['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie']);
+
+/** A valid period spec of the labelled kind — the label only records the
+ * discriminant, the validator needs a whole spec. */
+function samplePeriod(kind: string): Record<string, unknown> {
+  switch (kind) {
+    case 'year':
+      return { kind, year: 2020 };
+    case 'quarter':
+      return { kind, year: 2020, quarter: 2 };
+    case 'month':
+      return { kind, year: 2020, month: 3 };
+    case 'year_range':
+      return { kind, fromYear: 2018, toYear: 2020 };
+    case 'since':
+      return { kind, year: 2018, quarter: null, month: null };
+    case 'last_n':
+      return { kind, unit: 'year', n: 3 };
+    case 'now_vs_ago':
+      return { kind, unit: 'year', amount: 5 };
+    case 'change_over_year':
+      return { kind, year: 2020 };
+    case 'date_range':
+      return { kind, from: { year: 2020, month: 1, day: null }, to: { year: 2020, month: 12, day: null }, toInclusive: true };
+    case 'relative':
+      return { kind, unit: 'year', offset: -1 };
+    default:
+      return { kind };
+  }
+}
+
+/** The label, written as the model output it expects. */
+function cannedFromLabel(c: LabelledCase, input: TableParseSchema, measureCode: string): string {
+  return JSON.stringify({
+    version: 1,
+    measureCode,
+    breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: c.expect.breakdowns[b.name] })),
+    period: samplePeriod(c.expect.periodKind),
+    regions: c.expect.regions.map((name) => ({ name, kind: 'onbekend' })),
+    regionScope: c.expect.regionScope ?? null,
+    derivation: 'none',
+    confidence: 0.9,
+    reading: 'label',
+  });
+}
 
 const set = loadLabelledSet();
 
@@ -76,9 +138,22 @@ describe('tableparse-labelled-set.json — integrity', () => {
       const input = buildTableParseSchema(schema, codeLists, c.question);
 
       // --- measure -------------------------------------------------------
-      if (c.expect.measureCode !== 'geen') {
-        const measureCodes = schema.measures.map((m) => m.code);
-        expect(measureCodes).toContain(c.expect.measureCode);
+      const measureCodes = schema.measures.map((m) => m.code);
+      if (c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE) {
+        // Every listed measure is real, and picking ANY of them must throw
+        // the ambiguous-measure error (the real F4 guard, not a re-derived
+        // comparison).
+        const ambiguous = c.expect.ambiguousMeasures ?? [];
+        expect(ambiguous.length).toBeGreaterThanOrEqual(2);
+        for (const code of ambiguous) {
+          expect(measureCodes).toContain(code);
+          expect(() => validateTableParseOutput(cannedFromLabel(c, input, code), input)).toThrow(
+            TableParseAmbiguousMeasureError,
+          );
+        }
+      } else {
+        expect(c.expect.ambiguousMeasures).toBeUndefined();
+        if (c.expect.measureCode !== 'geen') expect(measureCodes).toContain(c.expect.measureCode);
       }
 
       // --- breakdowns: exactly the offered dimensions, once each ---------
@@ -105,15 +180,34 @@ describe('tableparse-labelled-set.json — integrity', () => {
       // --- period / regions ------------------------------------------------
       expect(PERIOD_KINDS.has(c.expect.periodKind)).toBe(true);
       expect(Array.isArray(c.expect.regions)).toBe(true);
-      if (c.expect.regions.length > 0) {
-        // A named region only means something on a table that actually has
-        // one (Global Constraints: region terms on a region-less table
-        // throw at the parser layer) — a labelled case naming a region on a
-        // region-less table would itself be internally inconsistent.
-        expect(input.hasRegions).toBe(true);
+      const scope = c.expect.regionScope ?? null;
+      expect(scope === null || REGION_SCOPES.has(scope)).toBe(true);
+      if (c.expect.outcome !== undefined) expect(c.expect.outcome).toBe('region_unavailable');
+
+      // --- the label, run through the real validator --------------------
+      // (An 'ambiguous' label is checked above, measure by measure.)
+      if (c.expect.measureCode !== LABEL_AMBIGUOUS_MEASURE) {
+        const canned = cannedFromLabel(c, input, c.expect.measureCode);
+        if (c.expect.outcome === 'region_unavailable') {
+          expect(() => validateTableParseOutput(canned, input)).toThrow(TableParseRegionUnavailableError);
+        } else {
+          expect(() => validateTableParseOutput(canned, input)).not.toThrow();
+        }
       }
     },
   );
+
+  it('expectedErrorClass maps the two refusal label forms, and nothing else', () => {
+    for (const c of set.cases) {
+      const expected =
+        c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE
+          ? 'TableParseAmbiguousMeasureError'
+          : c.expect.outcome === 'region_unavailable'
+            ? 'TableParseRegionUnavailableError'
+            : null;
+      expect(expectedErrorClass(c)).toBe(expected);
+    }
+  });
 
   it('covers every category the brief requires at its stated minimum', () => {
     const geenCount = set.cases.filter((c) => c.expect.measureCode === 'geen').length;
@@ -123,6 +217,10 @@ describe('tableparse-labelled-set.json — integrity', () => {
     const totalCases = set.cases.filter((c) => c.id.startsWith('total-'));
     const nototalCases = set.cases.filter((c) => c.id.startsWith('nototal-'));
 
+    const ambiguousCount = set.cases.filter((c) => c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE).length;
+    const regionUnavailableCount = set.cases.filter((c) => c.expect.outcome === 'region_unavailable').length;
+    expect(ambiguousCount).toBeGreaterThanOrEqual(1);
+    expect(regionUnavailableCount).toBeGreaterThanOrEqual(1);
     expect(geenCount).toBeGreaterThanOrEqual(4);
     expect(andersCount).toBeGreaterThanOrEqual(3);
     expect(regionCount).toBeGreaterThanOrEqual(2);
@@ -173,6 +271,23 @@ describe('tableparse-labelled-set.json — integrity', () => {
       });
       expect(hasNoTotal).toBe(true);
     }
+  });
+});
+
+describe('tableparse-eval.ts — recorded-fixture labels (F7)', () => {
+  it('maps every case\'s exact serialized user turn back to its own case id', () => {
+    const index = buildLabelIndex(set.cases);
+    expect(index.size).toBe(set.cases.length);
+    for (const c of set.cases) {
+      const { schema, codeLists } = loadTableFixture(c.table);
+      const input = buildTableParseSchema(schema, codeLists, c.question);
+      expect(index.get(buildTableParseRequest(c.question, input).question)).toBe(c.id);
+    }
+  });
+
+  it('does not label the bare question (the recorder only ever sees the serialized turn)', () => {
+    const index = buildLabelIndex(set.cases);
+    expect(index.get(set.cases[0]!.question)).toBeUndefined();
   });
 });
 

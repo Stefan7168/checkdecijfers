@@ -23,6 +23,7 @@ import {
   validateTableParseOutput,
   TableParseValidationError,
   TableParseRegionUnavailableError,
+  TableParseAmbiguousMeasureError,
   TABLE_PARSE_MEASURE_NONE,
   TABLE_PARSE_NOT_NAMED,
   TABLE_PARSE_OTHER,
@@ -58,7 +59,9 @@ function caribischInput(): TableParseSchema {
 }
 
 // 85004NED: `RegioS` (86 members) classifies as an ordinary `breakdown`
-// dimension (measured fact, task-2-report.md) rather than geo/geo_like — so
+// dimension (measured against the committed fixture — only 16% of its
+// members carry a region-style code, under classifyDimension's 0.8
+// geo-like threshold; pinned in input.test.ts) rather than geo/geo_like — so
 // this table's hasRegions is FALSE even though the dimension is literally
 // called "Regio's". A neutral question matches nothing in RegioS and there
 // is no grand total, so the offered member list is genuinely empty.
@@ -75,6 +78,7 @@ function validJson(input: TableParseSchema, overrides: Record<string, unknown> =
     breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: TABLE_PARSE_NOT_NAMED })),
     period: { kind: 'year', year: 2023 },
     regions: [],
+    regionScope: null,
     derivation: 'none',
     confidence: 0.9,
     reading: 'testantwoord',
@@ -610,12 +614,15 @@ describe('validateTableParseOutput — period grain availability', () => {
     const { schema, codeLists } = loadFixture('80590ned');
     const input = buildTableParseSchema(schema, codeLists, 'Hoeveel personen waren er?');
     expect(input.periodGrains).toEqual(['JJ', 'KW', 'MM']);
+    // M006335: a measure the model can tell apart (its first measure,
+    // 3000790_2, has indistinguishable twins — see the F4 tests below).
+    const measureCode = 'M006335';
     expect(
-      validateTableParseOutput(validJson(input, { period: { kind: 'quarter', year: 2023, quarter: 1 } }), input)
+      validateTableParseOutput(validJson(input, { measureCode, period: { kind: 'quarter', year: 2023, quarter: 1 } }), input)
         .periodGrainUnavailable,
     ).toBe(false);
     expect(
-      validateTableParseOutput(validJson(input, { period: { kind: 'month', year: 2023, month: 4 } }), input)
+      validateTableParseOutput(validJson(input, { measureCode, period: { kind: 'month', year: 2023, month: 4 } }), input)
         .periodGrainUnavailable,
     ).toBe(false);
   });
@@ -629,7 +636,7 @@ describe('tableParse (stub client, no real LLM)', () => {
   it('calls the client with the built request and returns the validated result', async () => {
     const input = landbouwInput();
     const client = new StubClient(validJson(input, { measureCode: 'D003040', confidence: 0.93, reading: 'ok' }));
-    const result = await tableParse(LANDBOUW_QUESTION, input, { client });
+    const { result } = await tableParse(LANDBOUW_QUESTION, input, { client });
     expect(client.calls).toHaveLength(1);
     expect(client.calls[0]!.system).toBe(buildTableParseSystemPrompt());
     expect(result.measureCode).toBe('D003040');
@@ -637,9 +644,255 @@ describe('tableParse (stub client, no real LLM)', () => {
     expect(result.reading).toBe('ok');
   });
 
+  // Final-review F9: the call's audit metadata travels with the result
+  // (mirrors parseQuestion keeping model + usage), so step 5 can log the
+  // exact request/response that produced a parse.
+  it('returns audit metadata: request hash, model, usage and the raw output text', async () => {
+    const input = landbouwInput();
+    const outputText = validJson(input);
+    const client = new StubClient(outputText);
+    const { audit } = await tableParse(LANDBOUW_QUESTION, input, { client });
+    expect(audit.requestHash).toBe(requestHash(client.calls[0]!));
+    expect(audit.requestHash).toBe(requestHash(buildTableParseRequest(LANDBOUW_QUESTION, input)));
+    expect(audit.model).toBe('stub');
+    expect(audit.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
+    expect(audit.outputText).toBe(outputText);
+  });
+
   it('propagates TableParseValidationError from an off-allowlist stub response', async () => {
     const input = landbouwInput();
     const client = new StubClient(validJson(input, { measureCode: 'INVENTED' }));
     await expect(tableParse(LANDBOUW_QUESTION, input, { client })).rejects.toThrow(TableParseValidationError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review fix wave — F1 (places on region-coded breakdown dimensions),
+// F3 (regionScope), F4 (indistinguishable measures), F9 (question quoting),
+// F10 (geen short-circuits the region checks)
+// ---------------------------------------------------------------------------
+
+function jsonWith(input: TableParseSchema, choices: Record<string, string>, overrides: Record<string, unknown> = {}): string {
+  return validJson(input, {
+    breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: choices[b.name] ?? TABLE_PARSE_NOT_NAMED })),
+    ...overrides,
+  });
+}
+
+// 85004NED: "Groningen" matches THREE offered RegioS members — PV20
+// "Groningen (PV)", ES01 "Groningen (ES)", ET0101 "Groningen (ET)" — and the
+// table's hasRegions is false (RegioS is an ordinary breakdown dimension).
+const GRONINGEN_QUESTION = 'Hoeveel megawatt aan opgesteld vermogen was er in Groningen in 2021?';
+function groningenInput(question = GRONINGEN_QUESTION): TableParseSchema {
+  const { schema, codeLists } = loadFixture('85004NED');
+  return buildTableParseSchema(schema, codeLists, question);
+}
+const GRONINGEN = [{ name: 'Groningen', kind: 'onbekend' }];
+
+describe('validateTableParseOutput — places on a region-coded breakdown dimension (F1)', () => {
+  it('fixture facts: hasRegions is false and all three Groningen members are offered', () => {
+    const input = groningenInput();
+    expect(input.hasRegions).toBe(false);
+    const offered = input.breakdowns.find((b) => b.name === 'RegioS')!.members.map((m) => m.code);
+    expect(offered).toEqual(expect.arrayContaining(['PV20', 'ES01', 'ET0101']));
+  });
+
+  it("accepts 'anders' on the dimension that lists the named place", () => {
+    const input = groningenInput();
+    const result = validateTableParseOutput(jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: GRONINGEN }), input);
+    expect(result.breakdowns['RegioS']).toEqual({ kind: 'other' });
+    expect(result.regions).toEqual(GRONINGEN);
+  });
+
+  it('accepts a member pick whose title matches the named place (the prompt, not the validator, asks for anders when several fit)', () => {
+    const input = groningenInput();
+    const result = validateTableParseOutput(jsonWith(input, { RegioS: 'PV20' }, { regions: GRONINGEN }), input);
+    expect(result.breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV20' });
+  });
+
+  it("rejects 'niet_genoemd' on the dimension that lists the named place — the place would silently fall to the total", () => {
+    const input = groningenInput();
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { regions: GRONINGEN });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('rejects a member pick whose title does NOT match the named place', () => {
+    const question = 'Hoeveel megawatt aan opgesteld vermogen was er in Groningen en Drenthe in 2021?';
+    const input = groningenInput(question);
+    const offered = input.breakdowns.find((b) => b.name === 'RegioS')!.members.map((m) => m.code);
+    expect(offered).toContain('PV22'); // Drenthe (PV)
+    const json = jsonWith(input, { RegioS: 'PV22' }, { regions: GRONINGEN });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('throws TableParseRegionUnavailableError when a named place matches no offered member of any breakdown dimension', () => {
+    // "Maastricht" is not a member title on its own ("Maastricht Heuvelland
+    // (ET)" is a different, larger area) — whole-name matching, never a
+    // substring guess.
+    const question = 'Hoeveel megawatt aan opgesteld vermogen was er in Maastricht in 2021?';
+    const input = groningenInput(question);
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: [{ name: 'Maastricht', kind: 'gemeente' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('82291NED: "Caribisch Nederland" matches exactly one CaribischNederland member (CN01), matched case-insensitively', () => {
+    const { schema, codeLists } = loadFixture('82291NED');
+    const question = 'Wat is het percentage volwassenen met hoge bloeddruk in Caribisch Nederland in 2021?';
+    const input = buildTableParseSchema(schema, codeLists, question);
+    const ok = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'caribisch nederland', kind: 'landsdeel' }] });
+    expect(validateTableParseOutput(ok, input).breakdowns['CaribischNederland']).toEqual({ kind: 'member', code: 'CN01' });
+    const bonaire = jsonWith(input, { CaribischNederland: 'GM9001' }, { regions: [{ name: 'Caribisch Nederland', kind: 'landsdeel' }] });
+    expect(() => validateTableParseOutput(bonaire, input)).toThrow(TableParseValidationError);
+  });
+
+  it('a table that DOES have regions is not subject to this check (regions are resolved against its geo dimension later)', () => {
+    const { schema, codeLists } = loadFixture('03759ned');
+    const input = buildTableParseSchema(schema, codeLists, 'Hoeveel inwoners had Amsterdam in 2022?');
+    const json = jsonWith(input, {}, { regions: [{ name: 'Amsterdam', kind: 'gemeente' }] });
+    expect(() => validateTableParseOutput(json, input)).not.toThrow();
+  });
+});
+
+describe('validateTableParseOutput — regionScope (F3)', () => {
+  it('passes regionScope through (null by default)', () => {
+    const input = landbouwInput();
+    expect(validateTableParseOutput(validJson(input), input).regionScope).toBeNull();
+  });
+
+  it('a non-null regionScope on a table without regions throws TableParseRegionUnavailableError', () => {
+    const input = groningenInput('Welke provincie had in 2021 het meeste opgestelde vermogen?');
+    expect(input.hasRegions).toBe(false);
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regionScope: 'all_provincies', derivation: 'max' });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('a non-null regionScope is accepted on a table that has regions', () => {
+    const { schema, codeLists } = loadFixture('03759ned');
+    const input = buildTableParseSchema(schema, codeLists, 'Hoeveel inwoners had elke provincie in 2022?');
+    const result = validateTableParseOutput(validJson(input, { regionScope: 'all_provincies' }), input);
+    expect(result.regionScope).toBe('all_provincies');
+  });
+
+  it('an unknown regionScope value is a schema violation', () => {
+    const input = landbouwInput();
+    expect(() => validateTableParseOutput(validJson(input, { regionScope: 'alle_wijken' }), input)).toThrow(
+      TableParseValidationError,
+    );
+  });
+
+  it('the JSON schema carries regionScope as a required, nullable enum', () => {
+    const schema = tableParseJsonSchema() as { required?: string[]; properties?: Record<string, unknown> };
+    expect(schema.required).toContain('regionScope');
+    expect(JSON.stringify(schema.properties?.regionScope)).toContain('all_provincies');
+  });
+});
+
+describe("validateTableParseOutput — 'geen' short-circuits the region checks (F10)", () => {
+  it("a 'geen' measure with a named place on a region-less table returns the result with regions as given", () => {
+    const input = landbouwInput();
+    const regions = [{ name: 'Utrecht', kind: 'onbekend' }];
+    const result = validateTableParseOutput(
+      validJson(input, { measureCode: TABLE_PARSE_MEASURE_NONE, regions }),
+      input,
+    );
+    expect(result.measureCode).toBeNull();
+    expect(result.regions).toEqual(regions);
+  });
+
+  it("a 'geen' measure with a regionScope on a region-less table does not throw either", () => {
+    const input = landbouwInput();
+    const result = validateTableParseOutput(
+      validJson(input, { measureCode: TABLE_PARSE_MEASURE_NONE, regionScope: 'all_gemeenten' }),
+      input,
+    );
+    expect(result.regionScope).toBe('all_gemeenten');
+  });
+
+  it("a 'geen' measure with niet_genoemd on the dimension listing the named place does not throw", () => {
+    const input = groningenInput();
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_NOT_NAMED }, { measureCode: TABLE_PARSE_MEASURE_NONE, regions: GRONINGEN });
+    expect(() => validateTableParseOutput(json, input)).not.toThrow();
+  });
+
+  it("'geen' does NOT skip the structural breakdown allowlist", () => {
+    const input = landbouwInput();
+    const json = validJson(input, {
+      measureCode: TABLE_PARSE_MEASURE_NONE,
+      breakdowns: [{ dimension: 'NotADimension', choice: TABLE_PARSE_NOT_NAMED }],
+    });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+  });
+});
+
+describe('validateTableParseOutput — indistinguishable measures (F4)', () => {
+  // 80590ned: four measures share title "Niet-seizoengecorrigeerd", unit
+  // "x 1000" and an empty description (3000790_2, 3000795_2, 3000800_2,
+  // 3000810_2) — nothing the model sees tells them apart.
+  function arbeidInput(): TableParseSchema {
+    const { schema, codeLists } = loadFixture('80590ned');
+    return buildTableParseSchema(schema, codeLists, 'Hoeveel werklozen waren er in 2021 (niet seizoengecorrigeerd)?');
+  }
+
+  it('fixture fact: the four x 1000 non-adjusted measures are identical in title, unit and description', () => {
+    const input = arbeidInput();
+    const group = input.measures.filter((m) => ['3000790_2', '3000795_2', '3000800_2', '3000810_2'].includes(m.code));
+    expect(group).toHaveLength(4);
+    expect(new Set(group.map((m) => `${m.title}|${m.unit}|${m.description}`)).size).toBe(1);
+  });
+
+  it('choosing one of several indistinguishable measures throws TableParseAmbiguousMeasureError', () => {
+    const input = arbeidInput();
+    const json = jsonWith(input, {}, { measureCode: '3000790_2' });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseAmbiguousMeasureError);
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it('a measure whose description sets it apart is accepted (M006335)', () => {
+    const input = arbeidInput();
+    const json = jsonWith(input, {}, { measureCode: 'M006335' });
+    expect(validateTableParseOutput(json, input).measureCode).toBe('M006335');
+  });
+
+  it("'geen' is never an ambiguous-measure error", () => {
+    const input = arbeidInput();
+    const json = jsonWith(input, {}, { measureCode: TABLE_PARSE_MEASURE_NONE });
+    expect(validateTableParseOutput(json, input).measureCode).toBeNull();
+  });
+});
+
+describe('serializeTableParseInput — the question is JSON-quoted (F9)', () => {
+  it('embeds the question with JSON.stringify, so an inner quote cannot break out of the quoted text', () => {
+    const input = landbouwInput();
+    const question = 'Wat was de "echte" uitstoot van de landbouw?';
+    const text = serializeTableParseInput(question, input);
+    expect(text).toContain(`Volledige vraag van de gebruiker: ${JSON.stringify(question)}`);
+    expect(text).toContain('\\"echte\\"');
+  });
+});
+
+describe('buildTableParseSystemPrompt — final-review rules (F1, F3)', () => {
+  it("widens 'anders' to several fitting members and questions across members", () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('MEERDERE leden');
+    expect(prompt).toContain('"ouderen"');
+    expect(prompt).toContain('welke leeftijdsgroep had de meeste');
+  });
+
+  it('tells the model to pick the place member on a breakdown dimension, or anders when several fit', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(prompt).toContain('Groningen (PV)');
+    expect(prompt).toContain('Groningen (ES)');
+    expect(prompt).toContain('Groningen (ET)');
+  });
+
+  it('explains regionScope with the curated class values', () => {
+    const prompt = buildTableParseSystemPrompt();
+    for (const v of ['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie']) {
+      expect(prompt).toContain(v);
+    }
+    expect(prompt).toContain('regionScope');
   });
 });

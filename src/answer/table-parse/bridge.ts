@@ -19,6 +19,13 @@
 //                  defense-in-depth seam against caller drift (e.g. a
 //                  `fullDims` built from a different table or a stale code
 //                  list), not because the first check is expected to fail.
+//                  Final-review F5: when the picked code IS the dimension's
+//                  own CBS grand total (step 3's findGrandTotal over the FULL
+//                  list), the dimension is left OUT of `named` instead — the
+//                  resolver then picks that same total itself AND records it
+//                  as a StatedDefault, so the answer discloses the total
+//                  ("Uitgangspunt: …") exactly as it does for a dimension
+//                  the reader never mentioned. Same coordinate, never hidden.
 //   'not_named' -> OMITTED from `named` entirely. resolveBreakdowns then
 //                  decides for itself, per its own conservative rule: fall
 //                  to CBS's own grand total when one uniquely exists, or ask
@@ -45,7 +52,7 @@
 // not reader ambiguity" treatment as its other invariant violations — a
 // caller that reaches here with a 'geen' parse has a bug, not a design
 // question to route through step 3.
-import type { BreakdownDimension } from '../../query/breakdowns.ts';
+import { findGrandTotal, type BreakdownDimension } from '../../query/breakdowns.ts';
 import type { TableParseSchema } from './input.ts';
 import type { TableParseResult } from './parse.ts';
 
@@ -107,6 +114,9 @@ export function namedFromParse(
           `TableParseSchema this result was validated against`,
       );
     }
+    // F5: an explicit total pick goes through the resolver's own default
+    // path, so it is disclosed as a stated default (see module doc).
+    if (findGrandTotal(fullDim!.members)?.code === choice.code) continue;
     named[breakdown.name] = choice.code;
   }
 

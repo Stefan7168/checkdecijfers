@@ -1,7 +1,7 @@
 // Breadth step 4, Task 1 — fetches REAL CBS table schema + full dimension code
-// lists for a fixed set of tables (chosen for shape variety, see
-// .superpowers/sdd/2026-09-28-breadth-step-4-table-parser/task-1-brief.md) and
-// writes one committed fixture per table to
+// lists for a fixed set of tables (chosen for shape variety — plan:
+// docs/superpowers/plans/2026-09-28-breadth-step-4-table-parser.md, Task 1)
+// and writes one committed fixture per table to
 // tests/fixtures/tableparse/schemas/<tableId>.json, so Task 2's table-scoped
 // parser tests can build input from them without a network call. Metadata
 // only (title, dimensions, measures, code lists) — never touches Observations.
@@ -22,8 +22,12 @@ const MAX_BYTES_HARD_STOP = 5 * 1024 * 1024; // 5 MB — STOP and report, never 
 const MAX_BYTES_WARN = 1 * 1024 * 1024; // 1 MB — keep, but report the size
 
 // Exact as-published table IDs, casing preserved (catalog quirk #1). Chosen
-// for shape variety — see task-1-brief.md for the reason each is on the list.
-// Fix round 1 (controller ruling, task-1-report.md): `83052NED` and
+// for shape variety: yearly-only vs mixed JJ/KW/MM periods, a real
+// GeoDimension (03759ned, 84521NED), region-CODED ordinary dimensions
+// (85004NED's RegioS, 82291NED's CaribischNederland), long member lists that
+// need the pre-filter (85669NED's Klimaatsectoren, 84521NED's Diagnose),
+// no-grand-total dimensions and a Marges dimension (82291NED).
+// Fix round 1 (controller ruling): `83052NED` and
 // `86116NED` have no TimeDimension at all — kept on purpose as "must refuse"
 // cases for Task 2's builder, not shape drift. `82291NED` and `80590ned`
 // added as the ELIGIBLE counterparts: a genuine Marges case with a real
@@ -62,7 +66,7 @@ async function main() {
     if (bytes > MAX_BYTES_HARD_STOP) {
       throw new Error(
         `${tableId} fixture would be ${(bytes / (1024 * 1024)).toFixed(2)} MB, over the 5 MB hard ` +
-          `stop (task-1-brief.md) — STOPPING without writing. Report this and do not edit the data ` +
+          `stop — STOPPING without writing. Report this and do not edit the data ` +
           `to fit.`,
       );
     }

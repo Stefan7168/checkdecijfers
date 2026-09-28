@@ -4,14 +4,18 @@
 // classification behaviour is pinned against actual CBS tables, not
 // hand-crafted approximations. Two cases need a synthetic schema because no
 // fixture table happens to have the shape (a String-typed measure alongside
-// a numeric one; a table with no numeric measure at all) — see
-// task-2-brief.md.
+// a numeric one; a table with no numeric measure at all).
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { classifyDimension } from '../../../src/query/breakdowns.ts';
 import type { CbsCode, CbsTableSchema } from '../../../src/cbs-adapter/types.ts';
-import { buildTableParseSchema, questionWords, MEMBER_PROMPT_CAP } from '../../../src/answer/table-parse/input.ts';
+import {
+  buildTableParseSchema,
+  questionWords,
+  MEMBER_PROMPT_CAP,
+  TableParseIneligibleTableError,
+} from '../../../src/answer/table-parse/input.ts';
 
 function loadFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
   const path = fileURLToPath(new URL(`../../fixtures/tableparse/schemas/${tableId}.json`, import.meta.url));
@@ -66,7 +70,28 @@ describe('buildTableParseSchema — measure filtering', () => {
     const { schema, codeLists } = syntheticSchema([
       { code: 'S1', title: 'Naam', unit: '', decimals: 0, description: '', dataType: 'String' },
     ]);
-    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow();
+    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow(
+      TableParseIneligibleTableError,
+    );
+  });
+
+  // Final-review F6/F9: a dimension with no code-list entry at all must never
+  // become a zero-member breakdown (or, for the time dimension, empty
+  // periodGrains) — the table is refused with a typed error instead.
+  it('throws TableParseIneligibleTableError when a breakdown dimension has no code list', () => {
+    const { schema, codeLists } = loadFixture('82291NED');
+    const { Persoonskenmerken: _dropped, ...withoutOne } = codeLists;
+    expect(() => buildTableParseSchema(schema, withoutOne, 'irrelevante vraag')).toThrow(
+      TableParseIneligibleTableError,
+    );
+  });
+
+  it('throws TableParseIneligibleTableError when the time dimension has no code list', () => {
+    const { schema, codeLists } = loadFixture('82291NED');
+    const { Perioden: _dropped, ...withoutTime } = codeLists;
+    expect(() => buildTableParseSchema(schema, withoutTime, 'irrelevante vraag')).toThrow(
+      TableParseIneligibleTableError,
+    );
   });
 });
 
@@ -78,13 +103,17 @@ describe('buildTableParseSchema — no time dimension refuses', () => {
   it('83052NED: Perioden is kind Dimension, not TimeDimension -> throws', () => {
     const { schema, codeLists } = loadFixture('83052NED');
     expect(schema.dimensions.some((d) => d.kind === 'TimeDimension')).toBe(false);
-    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow();
+    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow(
+      TableParseIneligibleTableError,
+    );
   });
 
   it('86116NED: no Perioden dimension at all -> throws', () => {
     const { schema, codeLists } = loadFixture('86116NED');
     expect(schema.dimensions.some((d) => d.kind === 'TimeDimension')).toBe(false);
-    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow();
+    expect(() => buildTableParseSchema(schema, codeLists, 'irrelevante vraag')).toThrow(
+      TableParseIneligibleTableError,
+    );
   });
 });
 
@@ -270,6 +299,24 @@ describe('questionWords', () => {
   it('splits on punctuation (non-letters/digits), not just whitespace', () => {
     const words = questionWords('landbouw, mobiliteit; industrie!');
     expect(words).toEqual(new Set(['landbouw', 'mobiliteit', 'industrie']));
+  });
+
+  // Final-review F8 (controller ruling): digit runs of length >= 2 are match
+  // words too, so an age band like "65 tot 80 jaar" can be matched by a
+  // question naming "65" or "80". A single digit stays dropped.
+  it('keeps digit runs of length >= 2 as match words, drops single digits', () => {
+    const words = questionWords('Hoeveel 65-plussers tussen 65 en 80 jaar, groep 3?');
+    expect(words.has('65')).toBe(true);
+    expect(words.has('80')).toBe(true);
+    expect(words.has('plussers')).toBe(true);
+    expect(words.has('jaar')).toBe(true);
+    expect(words.has('3')).toBe(false);
+    expect(words.has('en')).toBe(false);
+  });
+
+  it('a mixed letter+digit token under 4 characters is still dropped (only pure digit runs are kept short)', () => {
+    const words = questionWords('uitstoot van co2');
+    expect(words.has('co2')).toBe(false);
   });
 
   it('is case-insensitive: same word regardless of case yields one entry', () => {

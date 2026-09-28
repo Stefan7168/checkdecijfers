@@ -17,15 +17,36 @@
 // spec and region names cover them); 'margins' dimensions resolve by step
 // 3's own convention and are never offered either; 'geo_like' dimensions set
 // `hasRegions` and are excluded too. Only 'breakdown'-classified dimensions
-// reach the model. Measured 2026-09-28 (task-2-report.md): a region-CODED
-// dimension does not automatically classify as 'geo_like' — the 0.8
-// threshold is a real gate, not a formality (85004NED's RegioS at 16% and
+// reach the model. Measured 2026-09-28 against the committed fixtures
+// (tests/fixtures/tableparse/schemas/): a region-CODED dimension does not
+// automatically classify as 'geo_like' — the 0.8 threshold is a real gate,
+// not a formality (85004NED's RegioS at 16% region-coded members and
 // 82291NED's CaribischNederland at 75% both fall under it and are offered as
-// ordinary breakdowns instead).
+// ordinary breakdowns instead). Places named in a question are then checked
+// against those breakdown members by parse.ts's validator (final-review F1),
+// never silently dropped.
+//
+// Every refusal here is the typed TableParseIneligibleTableError: the table
+// can never be served through the table-scoped path (no numeric measure, no
+// TimeDimension, or a dimension whose code list is missing — a missing code
+// list must never become a zero-member breakdown or empty period grains).
 import type { CbsCode, CbsDimension, CbsTableSchema } from '../../cbs-adapter/types.ts';
 import { classifyDimension, findGrandTotal, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
 import { parsePeriodCode } from '../../ingestion/periods.ts';
 import type { PeriodGrain } from '../../query/types.ts';
+
+/** Thrown when a table can never be offered to the table-scoped parser —
+ * the caller refuses the question for this table, it is never a partial
+ * menu. */
+export class TableParseIneligibleTableError extends Error {
+  readonly tableId: string;
+
+  constructor(tableId: string, reason: string) {
+    super(`buildTableParseSchema: table '${tableId}' ${reason} — never offered`);
+    this.name = 'TableParseIneligibleTableError';
+    this.tableId = tableId;
+  }
+}
 
 /** A breakdown dimension larger than this is pre-filtered deterministically
  * before it ever reaches the model (Global Constraints, plan doc). */
@@ -86,23 +107,27 @@ function dimensionLabel(d: Pick<CbsDimension, 'name' | 'title'>): string {
 }
 
 /** The pre-filter's word normalization (Global Constraints, plan doc):
- * lowercase, diacritics stripped, split on non-letters/digits, words under 4
- * letters dropped (a shared short word like "van" or "wat" is not a
- * meaningful topic match). Used both for the question itself (exported for
- * tests) and, identically, for each candidate member's title below — a
- * member matches when it shares at least one such normalized word with the
- * question. */
+ * lowercase, diacritics stripped, split on non-letters/digits. A token is a
+ * match word when it has at least 4 characters (a shared short word like
+ * "van" or "wat" is not a meaningful topic match) OR is a pure digit run of
+ * at least 2 digits (final-review F8: an age band such as "65 tot 80 jaar"
+ * must be reachable by a question naming "65" or "80"; a lone digit is
+ * noise). Used both for the question itself and, identically, for each
+ * candidate member's title below — a member matches when it shares at least
+ * one such normalized word with the question. */
 function normalizedWords(text: string): Set<string> {
   const flattened = text
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
-  const tokens = flattened.split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
+  const tokens = flattened
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 4 || (t.length >= 2 && /^[0-9]+$/.test(t)));
   return new Set(tokens);
 }
 
-/** Exported for Task 2's own tests (the brief requires it) and reused
- * verbatim by Task 3's prompt-serialization notes about what was matched. */
+/** The question's match words (see normalizedWords). Exported for this
+ * module's own tests. */
 export function questionWords(question: string): Set<string> {
   return normalizedWords(question);
 }
@@ -160,12 +185,13 @@ function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): 
 }
 
 /**
- * Builds the table-scoped parser's input from raw CBS metadata. Throws when
- * the table has no numeric measure, or no TimeDimension at all — both mean
- * this table can never be answered through the table-scoped path and must
- * never be offered to a reader question (measured refuse cases: 83052NED's
- * `Perioden` is kind `Dimension`, not `TimeDimension`; 86116NED has no
- * Perioden dimension whatsoever).
+ * Builds the table-scoped parser's input from raw CBS metadata. Throws
+ * TableParseIneligibleTableError when the table has no numeric measure, no
+ * TimeDimension at all, or a dimension without a code-list entry — each
+ * means this table can never be answered through the table-scoped path and
+ * must never be offered to a reader question (measured refuse cases:
+ * 83052NED's `Perioden` is kind `Dimension`, not `TimeDimension`; 86116NED
+ * has no Perioden dimension whatsoever).
  */
 export function buildTableParseSchema(
   schema: CbsTableSchema,
@@ -177,23 +203,31 @@ export function buildTableParseSchema(
     .map((m) => ({ code: m.code, title: m.title, unit: m.unit, description: m.description }));
 
   if (measures.length === 0) {
-    throw new Error(
-      `buildTableParseSchema: table '${schema.tableId}' has no numeric measure — never offered`,
-    );
+    throw new TableParseIneligibleTableError(schema.tableId, 'has no numeric measure');
   }
 
   const timeDim = schema.dimensions.find((d) => d.kind === 'TimeDimension');
   if (!timeDim) {
-    throw new Error(
-      `buildTableParseSchema: table '${schema.tableId}' has no TimeDimension — never offered`,
-    );
+    throw new TableParseIneligibleTableError(schema.tableId, 'has no TimeDimension');
+  }
+
+  // Final-review F6: a dimension without a code-list entry is a capture gap,
+  // not an empty dimension — refuse the table rather than offer a
+  // zero-member breakdown (or derive empty periodGrains from nothing).
+  for (const dim of schema.dimensions) {
+    if (!Object.prototype.hasOwnProperty.call(codeLists, dim.name)) {
+      throw new TableParseIneligibleTableError(
+        schema.tableId,
+        `has no code list for dimension '${dim.name}'`,
+      );
+    }
   }
 
   let hasRegions = false;
   const breakdowns: TableParseBreakdown[] = [];
 
   for (const dim of schema.dimensions) {
-    const codes = codeLists[dim.name] ?? [];
+    const codes = codeLists[dim.name]!;
     const members: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
     const asBreakdownDimension: BreakdownDimension = {
       name: dim.name,
@@ -214,7 +248,7 @@ export function buildTableParseSchema(
     breakdowns.push(buildBreakdown(dim, codes, question));
   }
 
-  const timeCodes = codeLists[timeDim.name] ?? [];
+  const timeCodes = codeLists[timeDim.name]!;
   const grainsPresent = new Set<PeriodGrain>();
   for (const code of timeCodes) {
     const parsed = parsePeriodCode(code.code);

@@ -11,8 +11,12 @@ import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../../src/cbs-adapter/types.ts';
 import { buildTableParseSchema } from '../../../src/answer/table-parse/input.ts';
 import type { TableParseSchema } from '../../../src/answer/table-parse/input.ts';
-import type { BreakdownDimension } from '../../../src/query/breakdowns.ts';
-import type { TableParseResult } from '../../../src/answer/table-parse/parse.ts';
+import { findGrandTotal, resolveBreakdowns, type BreakdownDimension } from '../../../src/query/breakdowns.ts';
+import {
+  validateTableParseOutput,
+  TABLE_PARSE_NOT_NAMED,
+  type TableParseResult,
+} from '../../../src/answer/table-parse/parse.ts';
 import { namedFromParse } from '../../../src/answer/table-parse/bridge.ts';
 
 function loadFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
@@ -44,6 +48,7 @@ function baseResult(breakdowns: TableParseResult['breakdowns']): TableParseResul
     period: { kind: 'year', year: 2020 },
     periodGrainUnavailable: false,
     regions: [],
+    regionScope: null,
     derivation: 'none',
     confidence: 0.9,
     reading: 'test',
@@ -123,6 +128,30 @@ describe('namedFromParse', () => {
     expect(outcome).toEqual({ ok: true, named: { Geslacht: '4000', SoortOpname: 'A044921' } });
   });
 
+  // Final-review F5: a member pick that IS the dimension's CBS grand total is
+  // left out of `named`, so the resolver picks that same total itself and
+  // records it as a StatedDefault — the reader then sees "Uitgangspunt: …"
+  // instead of an undisclosed total.
+  it("omits an explicit pick of the dimension's own grand total from `named` (the resolver then discloses it)", () => {
+    const { input, fullDims } = emissiesInput('Hoeveel broeikasgassen in totaal in 2019?');
+    const emissies = fullDims.find((d) => d.name === 'EmissiesNaarLucht')!;
+    expect(findGrandTotal(emissies.members)?.code).toBe('T001372');
+    const result = baseResult({
+      EmissiesNaarLucht: { kind: 'member', code: 'T001372' }, // Totaal broeikasgassen
+      Klimaatsectoren: { kind: 'not_named' },
+    });
+    expect(namedFromParse(result, input, fullDims)).toEqual({ ok: true, named: {} });
+  });
+
+  it('keeps a non-total member pick on a dimension that has a grand total', () => {
+    const { input, fullDims } = emissiesInput('Hoeveel methaan in 2019?');
+    const result = baseResult({
+      EmissiesNaarLucht: { kind: 'member', code: 'A044107' }, // Methaan (CH4)
+      Klimaatsectoren: { kind: 'not_named' },
+    });
+    expect(namedFromParse(result, input, fullDims)).toEqual({ ok: true, named: { EmissiesNaarLucht: 'A044107' } });
+  });
+
   it('throws when a member code is not found in the full code list (caller/fullDims mismatch)', () => {
     const { input } = emissiesInput('Wat was de uitstoot van CO2?');
     const result = baseResult({
@@ -161,5 +190,81 @@ describe('namedFromParse', () => {
     expect(() => namedFromParse(result, input, fullDims)).toThrow(
       /missing a choice for offered dimension 'Klimaatsectoren'/,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review F11 — the full chain over real fixtures: builder → (canned
+// model JSON) → validator → bridge → step 3's resolveBreakdowns. No LLM.
+// ---------------------------------------------------------------------------
+
+function cannedJson(input: TableParseSchema, measureCode: string, choices: Record<string, string> = {}): string {
+  return JSON.stringify({
+    version: 1,
+    measureCode,
+    breakdowns: input.breakdowns.map((b) => ({ dimension: b.name, choice: choices[b.name] ?? TABLE_PARSE_NOT_NAMED })),
+    period: { kind: 'year', year: 2019 },
+    regions: [],
+    regionScope: null,
+    derivation: 'none',
+    confidence: 0.9,
+    reading: 'test',
+  });
+}
+
+function fullChain(tableId: string, question: string, measureCode: string, choices: Record<string, string> = {}) {
+  const { schema, codeLists } = loadFixture(tableId);
+  const input = buildTableParseSchema(schema, codeLists, question);
+  const fullDims = fullDimsFor(schema, codeLists);
+  const parse = validateTableParseOutput(cannedJson(input, measureCode, choices), input);
+  const bridged = namedFromParse(parse, input, fullDims);
+  if (!bridged.ok) throw new Error(`unexpected ask for ${bridged.askDimension}`);
+  return resolveBreakdowns(fullDims, bridged.named);
+}
+
+describe('full chain: builder → validator → bridge → resolveBreakdowns (real fixtures)', () => {
+  it("84521NED: Leeftijd 'niet_genoemd' (two totals, none resolvable) becomes a question for Leeftijd — never a guessed total", () => {
+    const resolution = fullChain('84521NED', 'Hoeveel ziekenhuisopnamen waren er in 2019?', 'M006162_1');
+    expect(resolution.ok).toBe(false);
+    if (resolution.ok) return;
+    expect(resolution.question.dimension).toBe('Leeftijd');
+    expect(resolution.question.options.map((o) => o.code)).toEqual(expect.arrayContaining(['10000', 'T001249']));
+  });
+
+  it("85669NED: every dimension 'niet_genoemd' falls to each dimension's own CBS total, recorded as stated defaults", () => {
+    const resolution = fullChain('85669NED', 'Hoeveel broeikasgas kwam er vrij in 2019?', 'D003040');
+    expect(resolution.ok).toBe(true);
+    if (!resolution.ok) return;
+    expect(resolution.coordinates).toEqual({ EmissiesNaarLucht: 'T001372', Klimaatsectoren: 'T001616' });
+    expect(resolution.defaults.map((d) => [d.dimension, d.code])).toEqual([
+      ['EmissiesNaarLucht', 'T001372'],
+      ['Klimaatsectoren', 'T001616'],
+    ]);
+    expect(resolution.callerDimensions).toEqual(['Perioden']);
+  });
+
+  it('85669NED: an explicit pick of the grand total (F5) still ends up as a disclosed stated default', () => {
+    const resolution = fullChain('85669NED', 'Hoeveel broeikasgassen in totaal in 2019?', 'D003040', {
+      EmissiesNaarLucht: 'T001372',
+    });
+    expect(resolution.ok).toBe(true);
+    if (!resolution.ok) return;
+    expect(resolution.coordinates['EmissiesNaarLucht']).toBe('T001372');
+    expect(resolution.defaults.find((d) => d.dimension === 'EmissiesNaarLucht')).toEqual({
+      dimension: 'EmissiesNaarLucht',
+      dimensionTitle: expect.any(String),
+      code: 'T001372',
+      memberTitle: 'Totaal broeikasgassen',
+    });
+  });
+
+  it('85669NED: a non-total member pick is a coordinate, not a stated default', () => {
+    const resolution = fullChain('85669NED', 'Hoeveel methaan kwam er vrij in 2019?', 'D003040', {
+      EmissiesNaarLucht: 'A044107',
+    });
+    expect(resolution.ok).toBe(true);
+    if (!resolution.ok) return;
+    expect(resolution.coordinates['EmissiesNaarLucht']).toBe('A044107');
+    expect(resolution.defaults.map((d) => d.dimension)).toEqual(['Klimaatsectoren']);
   });
 });

@@ -13,14 +13,20 @@
 //     characters and a rough token estimate (chars / 3.5) per case, plus the
 //     totals. Zero spend, no network, no API key needed.
 //   --replay: ReplayLlmClient over tests/fixtures/llm/tableparse/ — scores
-//     each case (measure, each breakdown dimension, period kind, regions)
-//     against benchmark/tableparse-labelled-set.json's expectations and
-//     writes benchmark/tableparse-calibration-report.json. No fixtures are
-//     recorded yet, so this will fail loudly until a record run exists —
-//     expected, not a bug in this script.
+//     each case (measure, each breakdown dimension, period kind, regions,
+//     region class) against benchmark/tableparse-labelled-set.json's
+//     expectations — an expected refusal ('ambiguous' measure, or outcome
+//     'region_unavailable') scores correct only when the validator throws
+//     that exact error class — and writes
+//     benchmark/tableparse-calibration-report.json with, per case, the
+//     confidence, periodGrainUnavailable and the error class thrown (if any).
+//     No fixtures are recorded yet, so this will fail loudly until a record
+//     run exists — expected, not a bug in this script.
 //   --record: RecordingLlmClient — spends real Anthropic tokens and writes
-//     replay fixtures. NEVER run in this step (task-4-brief.md): refused
-//     unless TABLEPARSE_RECORD_OK=1 is set, so it cannot run by accident.
+//     replay fixtures, each labelled with its case id (matched by the exact
+//     serialized user turn, see buildLabelIndex). NEVER run in step 4
+//     (plan: docs/superpowers/plans/2026-09-28-breadth-step-4-table-parser.md):
+//     refused unless TABLEPARSE_RECORD_OK=1 is set, so it cannot run by accident.
 //     Recording is an owner-supervised step (CLAUDE.md git-workflow rule:
 //     live LLM spend stays owner-supervised) — an autonomous/session-driven
 //     run must never flip that env var itself.
@@ -37,6 +43,7 @@ import {
   tableParse,
   TableParseValidationError,
   TableParseRegionUnavailableError,
+  TableParseAmbiguousMeasureError,
 } from '../src/answer/table-parse/parse.ts';
 import {
   AnthropicLlmClient,
@@ -51,17 +58,38 @@ const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tableparse', i
 const SET_PATH = fileURLToPath(new URL('../benchmark/tableparse-labelled-set.json', import.meta.url));
 const REPORT_PATH = fileURLToPath(new URL('../benchmark/tableparse-calibration-report.json', import.meta.url));
 
+/** measureCode value for "the fitting measures are indistinguishable" —
+ * the validator must throw TableParseAmbiguousMeasureError. */
+export const LABEL_AMBIGUOUS_MEASURE = 'ambiguous';
+
 export interface LabelledCase {
   id: string;
   table: string;
   question: string;
   note?: string;
   expect: {
+    /** A real measure code, 'geen', or LABEL_AMBIGUOUS_MEASURE. */
     measureCode: string;
+    /** Required with LABEL_AMBIGUOUS_MEASURE: the offered measures the
+     * model cannot tell apart (any pick among them must throw). */
+    ambiguousMeasures?: string[];
+    /** 'region_unavailable': a named place the table cannot serve — the
+     * validator must throw TableParseRegionUnavailableError. */
+    outcome?: 'region_unavailable';
     breakdowns: Record<string, string>;
     periodKind: string;
     regions: string[];
+    /** Absent = null (no region class asked). */
+    regionScope?: string | null;
   };
+}
+
+/** The error class a case expects the validator to throw, or null when the
+ * case expects an ordinary parse. */
+export function expectedErrorClass(c: LabelledCase): string | null {
+  if (c.expect.measureCode === LABEL_AMBIGUOUS_MEASURE) return 'TableParseAmbiguousMeasureError';
+  if (c.expect.outcome === 'region_unavailable') return 'TableParseRegionUnavailableError';
+  return null;
 }
 
 export interface LabelledSet {
@@ -131,6 +159,23 @@ export function summarizeDryRun(rows: DryRunRow[]): DryRunSummary {
   };
 }
 
+/** Final-review F7: RecordingLlmClient's label callback only receives the
+ * serialized user turn (request.question), not the reader's question — so
+ * the index maps each case's EXACT serialized user turn to its id. Two cases
+ * with the same table + question would collide (the last one would win); the
+ * integrity test pins that the index has one entry per case and that every
+ * case maps back to itself, so a collision fails CI instead of mislabelling
+ * a fixture. */
+export function buildLabelIndex(cases: LabelledCase[]): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const c of cases) {
+    const { schema, codeLists } = loadTableFixture(c.table);
+    const input = buildTableParseSchema(schema, codeLists, c.question);
+    index.set(buildTableParseRequest(c.question, input).question, c.id);
+  }
+  return index;
+}
+
 function runDryRun(): void {
   const set = loadLabelledSet();
   const summary = summarizeDryRun(buildDryRunRows(set.cases));
@@ -158,6 +203,14 @@ interface ScoredCase {
   id: string;
   pass: boolean;
   problems: string[];
+  /** The model's stated confidence, null when the validator threw. */
+  confidence: number | null;
+  /** The validator's grain signal, null when the validator threw. */
+  periodGrainUnavailable: boolean | null;
+  /** The TableParseValidationError subclass name thrown, if any. */
+  errorClass: string | null;
+  /** The replay-fixture key for this case's request. */
+  requestHash: string;
 }
 
 function choiceLabel(choice: { kind: 'member' | 'not_named' | 'other'; code?: string } | undefined): string {
@@ -171,8 +224,24 @@ async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase
   const { schema, codeLists } = loadTableFixture(c.table);
   const input = buildTableParseSchema(schema, codeLists, c.question);
   const problems: string[] = [];
+  const expectedError = expectedErrorClass(c);
+  const scored: Omit<ScoredCase, 'pass' | 'problems'> = {
+    id: c.id,
+    confidence: null,
+    periodGrainUnavailable: null,
+    errorClass: null,
+    requestHash: requestHash(buildTableParseRequest(c.question, input)),
+  };
   try {
-    const result = await tableParse(c.question, input, { client });
+    const { result } = await tableParse(c.question, input, { client });
+    scored.confidence = result.confidence;
+    scored.periodGrainUnavailable = result.periodGrainUnavailable;
+    if (expectedError !== null) {
+      problems.push(
+        `expected ${expectedError}, got a parse (measure ${result.measureCode ?? 'geen'}) — the job would not refuse`,
+      );
+      return { ...scored, pass: false, problems };
+    }
     const gotMeasure = result.measureCode ?? 'geen';
     if (gotMeasure !== c.expect.measureCode) {
       problems.push(`measure: expected ${c.expect.measureCode}, got ${gotMeasure}`);
@@ -191,24 +260,29 @@ async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase
     if (JSON.stringify(gotRegions) !== JSON.stringify(expRegions)) {
       problems.push(`regions: expected [${expRegions.join(', ')}], got [${gotRegions.join(', ')}]`);
     }
+    const expScope = c.expect.regionScope ?? null;
+    if (result.regionScope !== expScope) {
+      problems.push(`regionScope: expected ${expScope}, got ${result.regionScope}`);
+    }
   } catch (error) {
-    if (error instanceof TableParseRegionUnavailableError) {
-      problems.push(`region-unavailable error: ${error.message}`);
-    } else if (error instanceof TableParseValidationError) {
-      problems.push(`validation error (the job would refuse): ${error.message}`);
-    } else {
-      throw error;
+    if (!(error instanceof TableParseValidationError)) throw error;
+    scored.errorClass = error.name;
+    const matchesExpected =
+      (expectedError === 'TableParseAmbiguousMeasureError' && error instanceof TableParseAmbiguousMeasureError) ||
+      (expectedError === 'TableParseRegionUnavailableError' && error instanceof TableParseRegionUnavailableError);
+    if (!matchesExpected) {
+      const expectation = expectedError === null ? 'a parse' : expectedError;
+      problems.push(`expected ${expectation}, got ${error.name} (the job would refuse): ${error.message}`);
     }
   }
-  return { id: c.id, pass: problems.length === 0, problems };
+  return { ...scored, pass: problems.length === 0, problems };
 }
 
 function buildClient(mode: 'replay' | 'record'): LlmClient {
   if (mode === 'replay') return new ReplayLlmClient(FIXTURES_DIR);
   const live = new AnthropicLlmClient();
-  return new RecordingLlmClient(live, FIXTURES_DIR, (question) =>
-    (loadLabelledSet().cases.find((c) => c.question === question) ?? { id: null }).id,
-  );
+  const labels = buildLabelIndex(loadLabelledSet().cases);
+  return new RecordingLlmClient(live, FIXTURES_DIR, (serializedTurn) => labels.get(serializedTurn) ?? null);
 }
 
 async function runReplayOrRecord(mode: 'replay' | 'record'): Promise<void> {

@@ -19,9 +19,12 @@
 // menu for measure and breakdowns. `measureCode` must be a real measure code
 // or 'geen'; every offered breakdown dimension gets exactly one choice — a
 // real, OFFERED member code, 'niet_genoemd' (the question says nothing about
-// that dimension), or 'anders' (the question names something in that
-// dimension that is not in the offered list — most often because the
-// pre-filter cut it, never because the model may repair it into a guess).
+// that dimension), or 'anders' (the question says something about that
+// dimension that is not exactly one offered member: not in the offered list
+// — e.g. cut by the pre-filter — several members fit, or the question asks
+// across members; never repaired into a guess). A chosen measure that
+// cannot be told apart from another offered measure (same title, unit and
+// description) throws TableParseAmbiguousMeasureError (final-review F4).
 // Anything else throws TableParseValidationError — never a partial result
 // (principle c).
 //
@@ -30,19 +33,29 @@
 // period precision the question names, verbatim, even when the table cannot
 // serve them (fix round 1, task review, CRITICAL/IMPORTANT) — the code
 // decides servability, never the model by silently omitting what the reader
-// asked. A named place on a region-less table throws the distinct
-// `TableParseRegionUnavailableError` subclass (never silently dropped, which
-// would read as a national-total answer to a question about one place); a
+// asked. On a table WITHOUT a region/geo-like dimension (hasRegions false),
+// a named place must be an offered member of some breakdown dimension (e.g.
+// 85004NED's region-coded but ordinary `RegioS`), and that dimension must
+// then be answered with the matching member or 'anders' — never
+// 'niet_genoemd' or another member, either of which would silently answer
+// about a different population (final-review F1). A place that matches no
+// offered member, or a region class (`regionScope`, final-review F3) on such
+// a table, throws the distinct `TableParseRegionUnavailableError` subclass
+// (never silently dropped, which would read as a national-total answer to a
+// question about one place). A 'geen' measure short-circuits all region
+// checks (final-review F10: step 5 refuses on geen with the right reason). A
 // named period precision the table doesn't publish sets
 // `periodGrainUnavailable` (a refusal SIGNAL, not a throw — see
 // `requiredGrain`).
 import { z } from 'zod';
-import type { LlmClient, LlmRequest } from '../llm/client.ts';
+import type { LlmClient, LlmRequest, LlmUsage } from '../llm/client.ts';
+import { requestHash } from '../llm/client.ts';
 import { oneOfToAnyOf } from '../llm/json-schema.ts';
-import { periodSpecSchema, regionTermSchema } from '../intent/schema.ts';
-import type { PeriodSpec, RegionTerm } from '../intent/types.ts';
+import { periodSpecSchema, regionScopeSchema, regionTermSchema } from '../intent/schema.ts';
+import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
-import type { TableParseSchema } from './input.ts';
+import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
+import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from './input.ts';
 
 /** Cheap tier (same reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL): a
  * closed choice over a supplied menu is the easy shape; the principle-(c)
@@ -66,14 +79,17 @@ export const TABLE_PARSE_MEASURE_NONE = 'geen';
 /** The literal for "the question says nothing about this dimension". */
 export const TABLE_PARSE_NOT_NAMED = 'niet_genoemd';
 
-/** The literal for "the question names something in this dimension, but it
- * is not in the OFFERED member list" — exists because of the deterministic
- * pre-filter (Task 2): a long member list is cut down by text match, so the
- * member the reader actually named may be missing from what the model saw.
- * The bridge (step 5) must turn this into a clarifying question for that
- * dimension, NEVER into the dimension's grand total — a silent total where
- * the reader named a subgroup would be a wrong answer about a different
- * population (principle c). */
+/** The literal for "the question says something about this dimension that
+ * is not exactly one OFFERED member" (final-review F3): the named thing is
+ * not in the offered list (the deterministic pre-filter can cut a long
+ * member list, so the member the reader named may be missing from what the
+ * model saw), SEVERAL offered members fit (e.g. "ouderen" over several age
+ * bands, or a place name that several members carry), or the question asks
+ * ACROSS the members ("welke leeftijdsgroep had de meeste…"). The bridge
+ * must turn this into a clarifying question for that dimension, NEVER into
+ * the dimension's grand total — a silent total where the reader named a
+ * subgroup would be a wrong answer about a different population
+ * (principle c). */
 export const TABLE_PARSE_OTHER = 'anders';
 
 /** Acceptance threshold. **Assumption:** uncalibrated until the recording
@@ -108,6 +124,23 @@ export class TableParseRegionUnavailableError extends TableParseValidationError 
   }
 }
 
+/** Final-review F4: the chosen measure has the same title, unit and
+ * (condensed) description as at least one OTHER offered measure — the model
+ * saw nothing that tells them apart, so its pick is a coin flip, not a
+ * reading of the question. Step 5 refuses (or asks) rather than serve a
+ * number for a measure nobody can identify. */
+export class TableParseAmbiguousMeasureError extends TableParseValidationError {
+  /** Every offered measure code indistinguishable from the chosen one
+   * (including the chosen one), in table order. */
+  readonly measureCodes: string[];
+
+  constructor(message: string, outputText: string, measureCodes: string[]) {
+    super(message, outputText);
+    this.name = 'TableParseAmbiguousMeasureError';
+    this.measureCodes = measureCodes;
+  }
+}
+
 /** One breakdown dimension's validated choice. */
 export type TableParseBreakdownChoice =
   | { kind: 'member'; code: string }
@@ -126,6 +159,10 @@ export interface TableParseResult {
   period: PeriodSpec;
   periodGrainUnavailable: boolean;
   regions: RegionTerm[];
+  /** A class of regions the question asks about ("welke provincie…"), or
+   * null. Only ever non-null here on a table that has regions (or on a
+   * 'geen' parse, which skips the region checks). */
+  regionScope: RegionScopeKind | null;
   derivation: IntentDerivation;
   confidence: number;
   reading: string;
@@ -161,6 +198,9 @@ const tableParseOutputSchema = z.strictObject({
   /** Possibly empty, never nullable (controller ruling) — the model states
    * "no regions" by returning []. */
   regions: z.array(regionTermSchema),
+  /** The curated parser's own region-class vocabulary (final-review F3),
+   * reused rather than re-declared; null = no class. */
+  regionScope: regionScopeSchema,
   derivation: z.enum(['none', 'difference', 'max', 'series']),
   /** Confidence 0..1 in the parse, range-checked in code (structured-output
    * schemas carry no numeric min/max). */
@@ -202,18 +242,37 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
   }
 }
 
+/** What the model sees of a measure — the serialization's own title, unit
+ * and condensed description. Two offered measures with the same fingerprint
+ * are indistinguishable to the model (final-review F4). */
+function measureFingerprint(m: TableParseMeasure): string {
+  return JSON.stringify([m.title, m.unit, condense(m.description)]);
+}
+
+/** A member title reduced to the place name a reader would write: CBS's
+ * trailing disambiguation dropped ("Groningen (PV)" → "Groningen"), then the
+ * shared region-name normalization (src/sources/region-names.ts). */
+function memberPlaceKey(title: string): string {
+  return normalizeRegionName(baseLabel(title));
+}
+
 /**
  * Parses + validates the model's output text against ONE table's own closed
  * menu (`input`, from Task 2's buildTableParseSchema). Throws
  * TableParseValidationError — never a partial result — on invalid JSON, a
  * schema violation, confidence outside 0..1, an unknown/invented measure
- * code, an unknown/missing/duplicated breakdown dimension, or a member code
+ * code, an unknown/missing/duplicated breakdown dimension, a member code
  * not in that dimension's OFFERED list (including a real member the
- * pre-filter cut). Throws the distinct TableParseRegionUnavailableError
- * subclass specifically for region terms on a table with no region/geo-like
- * dimension — the reader named a real place this table cannot serve, so
- * step 5 refuses with a precise message rather than a generic malformed-
- * output one.
+ * pre-filter cut), or — on a table without regions — a named place whose
+ * breakdown dimension was answered with 'niet_genoemd' or a non-matching
+ * member. Throws the TableParseAmbiguousMeasureError subclass when the
+ * chosen measure is indistinguishable from another offered measure. Throws
+ * the distinct TableParseRegionUnavailableError subclass when, on a table
+ * with no region/geo-like dimension, a named place matches no offered
+ * breakdown member or a region class is asked — the reader asked about
+ * places this table cannot serve, so step 5 refuses with a precise message
+ * rather than a generic malformed-output one. A 'geen' measure skips every
+ * region check (step 5 refuses on geen).
  */
 export function validateTableParseOutput(
   outputText: string,
@@ -251,6 +310,21 @@ export function validateTableParseOutput(
     measureCode = null;
   } else if (measureCodes.includes(data.measureCode)) {
     measureCode = data.measureCode;
+    const chosen = input.measures.find((m) => m.code === measureCode)!;
+    const fingerprint = measureFingerprint(chosen);
+    const twins = input.measures.filter((m) => measureFingerprint(m) === fingerprint);
+    if (twins.length > 1) {
+      throw new TableParseAmbiguousMeasureError(
+        `table-parse chose measure '${measureCode}', but it has the same title, unit and description as ` +
+          `${twins
+            .filter((m) => m.code !== measureCode)
+            .map((m) => `'${m.code}'`)
+            .join(', ')} on table '${input.tableId}' — nothing tells them apart, so the pick is not a reading ` +
+          `of the question`,
+        outputText,
+        twins.map((m) => m.code),
+      );
+    }
   } else {
     throw new TableParseValidationError(
       `table-parse chose measure code '${data.measureCode}' which is NOT in table ` +
@@ -313,35 +387,91 @@ export function validateTableParseOutput(
     );
   }
 
-  // --- regions: only meaningful when the table has any ---------------------
-  // Fix round 1 (task review, CRITICAL): the prompt now tells the model to
-  // ALWAYS list every place the reader names, even on a region-less table —
-  // so this is no longer "the model misbehaved", it is "the reader asked
-  // about a region this table cannot serve". A distinct error subclass lets
-  // step 5 refuse with a precise message instead of a generic malformed-
-  // output error.
-  if (!input.hasRegions && data.regions.length > 0) {
-    throw new TableParseRegionUnavailableError(
-      `table-parse named region(s) (${data.regions.map((r) => r.name).join(', ')}) on table ` +
-        `'${input.tableId}', which has no region/geo-like dimension`,
-      outputText,
-    );
-  }
-
   // --- period grain availability: a signal, never a throw -------------------
   const grain = requiredGrain(data.period);
   const periodGrainUnavailable = grain !== null && !input.periodGrains.includes(grain);
 
-  return {
+  const validated: TableParseResult = {
     measureCode,
     breakdowns,
     period: data.period,
     periodGrainUnavailable,
     regions: data.regions,
+    regionScope: data.regionScope,
     derivation: data.derivation,
     confidence: data.confidence,
     reading: data.reading,
   };
+
+  // Final-review F10: a 'geen' measure short-circuits the region checks —
+  // the question is refused on geen (with that reason) regardless of its
+  // places, so a region error here would only mis-state WHY it is refused.
+  if (measureCode === null) return validated;
+
+  if (!input.hasRegions) {
+    checkRegionsOnRegionlessTable(validated, input, outputText);
+  }
+
+  return validated;
+}
+
+/**
+ * The region checks for a table WITHOUT a region/geo-like dimension. The
+ * prompt tells the model to ALWAYS list every place the reader names, even
+ * here — so a place is not "the model misbehaved", it is "the reader asked
+ * about a place", and the code decides whether this table can serve it:
+ *
+ * - A region class (`regionScope`) cannot be served → region-unavailable.
+ * - Each named place must match (memberPlaceKey) at least one OFFERED member
+ *   of some breakdown dimension (85004NED's RegioS, 82291NED's
+ *   CaribischNederland), else → region-unavailable.
+ * - Every dimension listing that place must be answered with a member whose
+ *   title matches that place, or 'anders' (several members fit — e.g.
+ *   "Groningen (PV)/(ES)/(ET)"). 'niet_genoemd' or a non-matching member
+ *   would silently answer about the total or a different place → a plain
+ *   TableParseValidationError (the output contradicts itself).
+ */
+function checkRegionsOnRegionlessTable(
+  result: TableParseResult,
+  input: TableParseSchema,
+  outputText: string,
+): void {
+  if (result.regionScope !== null) {
+    throw new TableParseRegionUnavailableError(
+      `table-parse asked about the region class '${result.regionScope}' on table '${input.tableId}', which ` +
+        `has no region/geo-like dimension`,
+      outputText,
+    );
+  }
+
+  for (const region of result.regions) {
+    const key = normalizeRegionName(region.name);
+    const listing: TableParseBreakdown[] = input.breakdowns.filter((b) =>
+      b.members.some((m) => memberPlaceKey(m.title) === key),
+    );
+    if (listing.length === 0) {
+      throw new TableParseRegionUnavailableError(
+        `table-parse named region '${region.name}' on table '${input.tableId}', which has no ` +
+          `region/geo-like dimension and no offered breakdown member with that name`,
+        outputText,
+      );
+    }
+    for (const dim of listing) {
+      const choice = result.breakdowns[dim.name]!;
+      if (choice.kind === 'other') continue;
+      if (choice.kind === 'member') {
+        const member = dim.members.find((m) => m.code === choice.code);
+        if (member && memberPlaceKey(member.title) === key) continue;
+      }
+      const got = choice.kind === 'member' ? `member '${choice.code}'` : `'${TABLE_PARSE_NOT_NAMED}'`;
+      throw new TableParseValidationError(
+        `table-parse named region '${region.name}', which is a member of dimension '${dim.name}', but answered ` +
+          `that dimension with ${got} — the place would silently fall to the total or another member; it must ` +
+          `be the matching member or '${TABLE_PARSE_OTHER}'`,
+        outputText,
+      );
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -358,13 +488,21 @@ MAAT
 
 UITSPLITSINGEN
 Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:
-- Een ledencode, LETTERLIJK overgenomen uit de ledenlijst van DIE dimensie, wanneer de vraag dat lid noemt of er overduidelijk naar verwijst.
+- Een ledencode, LETTERLIJK overgenomen uit de ledenlijst van DIE dimensie, wanneer de vraag precies dat ene lid noemt of er overduidelijk naar verwijst.
 - 'niet_genoemd' wanneer de vraag helemaal niets zegt over deze dimensie.
-- 'anders' wanneer de vraag wél iets noemt binnen deze dimensie, maar dat niet in de aangeboden ledenlijst staat. Let op: lange ledenlijsten zijn voor je ingekort (dit staat erbij als "ingekort: N van M") — het genoemde lid kan dus bestaan maar simpelweg niet in jouw lijst staan. Kies dan 'anders', nooit het totaal en nooit een ander lid dat er toevallig op lijkt.
+- 'anders' wanneer de vraag wél iets zegt over deze dimensie, maar dat niet precies één aangeboden lid is:
+  - het genoemde staat niet in de aangeboden ledenlijst. Let op: lange ledenlijsten zijn voor je ingekort (dit staat erbij als "ingekort: N van M") — het genoemde lid kan dus bestaan maar simpelweg niet in jouw lijst staan;
+  - MEERDERE leden passen bij wat de vraag noemt (bijvoorbeeld "ouderen" over meerdere leeftijdsklassen);
+  - de vraag vergelijkt of zoekt over de leden heen ("welke leeftijdsgroep had de meeste …", "per geslacht").
+  Kies in al die gevallen 'anders' — nooit het totaal en nooit één lid dat er toevallig op lijkt.
 Elke aangeboden dimensie komt precies één keer voor in je antwoord.
 
 REGIO'S
 Noem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een CBS-code — codes horen alleen bij maten en leden.
+Staat een genoemde plaats zelf als lid in een aangeboden uitsplitsing (bijvoorbeeld een dimensie met provincies, regio's of gemeenten), dan noem je haar hier ÉN kies je voor die dimensie dat lid. Passen meerdere leden bij de genoemde plaats (bijvoorbeeld "Groningen (PV)", "Groningen (ES)" en "Groningen (ET)"), of noemt de vraag meerdere plaatsen uit dezelfde dimensie, kies dan voor die dimensie 'anders'.
+
+REGIOKLASSE
+regionScope vul je ALLEEN wanneer de vraag gaat over een hele klasse van regio's in plaats van over genoemde plaatsen: "per provincie", "elke/alle provincies", "welke provincie …" → "all_provincies"; "per landsdeel", "alle landsdelen" → "all_landsdelen"; "per gemeente", "alle gemeenten", "welke gemeente …" zonder genoemde provincie → "all_gemeenten"; "de gemeenten in {provincie}", "welke gemeente in {provincie} …" → "gemeenten_in_provincie", met die provincie als enige regio. Vul de klasse OOK in wanneer deze tabel geen regio's kent — de code bepaalt of de klasse kan. Som nooit zelf de leden van een klasse op als regio's. In elke andere vraag is regionScope null.
 
 PERIODE
 Geef de periode ALTIJD exact met de precisie die de vraag zelf noemt — OOK wanneer die precisie niet voorkomt in de lijst "Beschikbare periode-precisies". Pas de gevraagde periode nooit aan naar een precisie die wel beschikbaar is (bijvoorbeeld een genoemd kwartaal afronden op een jaar, omdat alleen jaren beschikbaar zijn) — de code bepaalt zelf of en hoe die precisie beantwoord kan worden. Voorbeelden van het format:
@@ -438,7 +576,7 @@ export function serializeTableParseInput(question: string, input: TableParseSche
     : "Regio's: deze tabel kent geen regio's.";
 
   return (
-    `Volledige vraag van de gebruiker: "${question}"\n` +
+    `Volledige vraag van de gebruiker: ${JSON.stringify(question)}\n` +
     `Tabel: ${input.tableId} — ${input.title}\n\n` +
     `Maten in deze tabel:\n${measureLines.join('\n')}\n\n` +
     `Uitsplitsingen in deze tabel:\n` +
@@ -472,18 +610,44 @@ export function buildTableParseRequest(
   };
 }
 
+/** The call's audit metadata (final-review F9) — mirrors parseQuestion
+ * keeping the response's model + usage next to its outcome, plus the
+ * request hash (the replay-fixture key) and the raw output text, so step 5
+ * can log exactly which request/response produced a parse. */
+export interface TableParseAudit {
+  requestHash: string;
+  model: string;
+  usage: LlmUsage;
+  outputText: string;
+}
+
+export interface TableParseOutcome {
+  result: TableParseResult;
+  audit: TableParseAudit;
+}
+
 /**
  * The table-scoped parse: turns a reader's question, read against ONE
- * table's own closed menu, into a validated TableParseResult. Throws
- * TableParseValidationError on malformed or off-allowlist output — never a
- * partial result (principle c).
+ * table's own closed menu, into a validated TableParseResult plus the
+ * call's audit metadata. Throws TableParseValidationError (or one of its
+ * subclasses) on malformed, off-allowlist or unservable output — never a
+ * partial result (principle c); the error carries the raw output text.
  */
 export async function tableParse(
   question: string,
   input: TableParseSchema,
   options: TableParseOptions,
-): Promise<TableParseResult> {
+): Promise<TableParseOutcome> {
   const request = buildTableParseRequest(question, input, options);
   const response = await options.client.complete(request);
-  return validateTableParseOutput(response.outputText, input);
+  const result = validateTableParseOutput(response.outputText, input);
+  return {
+    result,
+    audit: {
+      requestHash: requestHash(request),
+      model: response.model,
+      usage: response.usage,
+      outputText: response.outputText,
+    },
+  };
 }

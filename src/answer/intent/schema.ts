@@ -30,7 +30,7 @@ export const regionTermSchema = z.strictObject({
 // v4 (#267, ADR 054 task 9): nullable-not-optional, like every field here.
 // null = the question asks about no region class. No 'none' member: one way
 // to say "no class", not two.
-const regionScopeSchema = z
+export const regionScopeSchema = z
   .enum(['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie'])
   .nullable();
 
