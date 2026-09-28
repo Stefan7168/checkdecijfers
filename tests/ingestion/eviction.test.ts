@@ -13,8 +13,9 @@
 //  - an evicted table is indistinguishable from never-onboarded: the
 //    `alreadyIngestedSet` predicate no longer matches and registerTables
 //    performs a FULL fresh registration again (the re-onboarding trace);
-//  - migration 025's hardcoded pinned-id snapshot cannot drift from
-//    SEED_TABLES, and its UPDATEs behave on a pre-025 database.
+//  - migration 025's hardcoded pinned-id snapshot (frozen at the seed set as
+//    it stood when 025 applied) plus every seed added after it accounts for
+//    all of SEED_TABLES, and 025's UPDATEs behave on a pre-025 database.
 //
 // The end-to-end half onboards 82235NED through the REAL job (FixtureSource +
 // stub LLMs — the onboarding-job.test.ts harness, replicated minimally) so the
@@ -216,12 +217,23 @@ describe('table eviction — scope and mechanics (synthetic tables)', () => {
     }
   });
 
-  it("migration 025's pinned-id snapshot matches SEED_TABLES exactly", () => {
+  // Seed tables added AFTER migration 025 was applied (2026-08-28). 025's
+  // pinned-id list is history and is never edited; these seeds are pinned
+  // at registration instead — the CLI registers every seed table with
+  // { pinned: true } (src/ingestion/cli.ts). Append here when a seed table
+  // is added; never edit the applied migration.
+  const SEEDS_ADDED_AFTER_025 = ['70072ned'];
+
+  it("migration 025's pinned-id snapshot equals SEED_TABLES minus the seeds added after it", () => {
     const sql = readFileSync(join(MIGRATIONS_DIR, '025_table_eviction_lifecycle.sql'), 'utf8');
     const block = sql.match(/set pinned = true where id in \(([\s\S]*?)\)/)?.[1] ?? '';
     const ids = [...block.matchAll(/'([^']+)'/g)].map((m) => m[1]);
     // Exact set AND exact count (a duplicate id would pass a set-only check).
-    expect([...ids].sort()).toEqual(SEED_TABLES.map((t) => t.id).sort());
+    expect([...ids].sort()).toEqual(
+      SEED_TABLES.map((t) => t.id).filter((id) => !SEEDS_ADDED_AFTER_025.includes(id)).sort(),
+    );
+    // Every later seed really is a seed (a stale entry here would hide drift).
+    for (const id of SEEDS_ADDED_AFTER_025) expect(SEED_TABLES.map((t) => t.id)).toContain(id);
   });
 
   it('migration 025 pins pre-existing seed rows and starts every pre-existing TTL clock at migration time', async () => {
