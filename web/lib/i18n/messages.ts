@@ -917,6 +917,8 @@ const nl = {
   // itself carries no source line to say so.
   'chart.download.pdf': 'Download als PDF',
   'chart.download.pngTransparent': 'PNG, alleen grafiek (transparant, zonder bronregel)',
+  // WP-LOOK part (a2) round 2 (session 144): the share-link picture as a file.
+  'chart.download.sharePicture': 'Afbeelding voor sociale media (PNG, zoals de deellink die toont)',
   'chart.download.failed': 'Downloaden lukte niet in deze browser.',
   // Session 136 (#278): a download carries the title and caption, but a
   // reader-typed one only when every number in it is on the chart.
@@ -2281,6 +2283,7 @@ const en: Messages = {
   'chart.download.svg': 'Download as SVG',
   'chart.download.pdf': 'Download as PDF',
   'chart.download.pngTransparent': 'PNG, chart only (transparent, no source line)',
+  'chart.download.sharePicture': 'Image for social media (PNG, as the share link shows it)',
   'chart.download.failed': 'Download did not work in this browser.',
   'chart.download.ownTextLeftOut':
     "Your own title or caption mentions a number that isn't on the chart, so the download uses the standard title and leaves the caption out.",

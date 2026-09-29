@@ -58,7 +58,8 @@ import { Button } from './ui/button.tsx';
 // yet, docs/open-questions.md #7) — making every embed's only outbound link
 // dead on arrival. One shared constant means the iframe `src` this dialog
 // generates and the backlink `href` chart.tsx renders can never disagree.
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://checkdecijfers.nl';
+export { APP_URL } from '../lib/app-url.ts';
+import { APP_URL } from '../lib/app-url.ts';
 
 // Row 2 (session 110 UX audit pass 2): the generated snippet used to hardcode
 // height="440" while a DEFAULT embedded chart (single series, no markers, no

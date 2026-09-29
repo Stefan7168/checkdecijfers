@@ -147,6 +147,7 @@ import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { ChartShareButton } from './chart-share-button.tsx';
+import { createEmbedCode } from '../app/embed-actions.ts';
 import { stripDimensionCode } from '../lib/dim-label.ts';
 import { ACTION_ROW_CLASS } from '../lib/chart-action-row.ts';
 import { ChartEditField, ChartEditTabs, chartEditPanelId, chartEditTabId, type ChartEditTabId } from './chart-edit-tabs.tsx';
@@ -5033,6 +5034,20 @@ export function ChartView({
                 attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
                 filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
                 lang={chartLang}
+                // Round 2 of part (a2) (session 144): the share-link picture as
+                // a file — offered exactly when the Share button is (an audit
+                // row to sign a token for), minted through the same action.
+                sharePicture={
+                  embed
+                    ? {
+                        mint: async () => {
+                          const r = await createEmbedCode(embed.auditId);
+                          return r.ok ? r.token : null;
+                        },
+                        form: tabularForm ? null : state.form,
+                      }
+                    : null
+                }
                 frame={pres}
                 frameImage={frameImage}
                 headlineText={chartHeadline}

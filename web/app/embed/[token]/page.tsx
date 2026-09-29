@@ -61,6 +61,8 @@ import { rerunLive } from '../../../backend/chart/embed-live.ts';
 import { getChartHeadlinePublic } from '../../../backend/chart/headline-store.ts';
 import { getOwnChartEdits } from '../../../backend/chart/edits-store.ts';
 import { getUserChartStyle } from '../../../backend/chart/user-styles.ts';
+import { APP_URL } from '../../../lib/app-url.ts';
+import { SHARE_PREVIEW_SIZE } from '../../../lib/share-preview.tsx';
 import type { ChartSpec } from '../../../backend/chart/types.ts';
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
@@ -167,17 +169,29 @@ async function loadPublishedEdits(
 // the Open Graph image (opengraph-image.tsx wires the picture itself). Title
 // and description are spec strings / the saved headline; a link that
 // resolves to nothing gets the bare brand and stays out of search indexes.
-export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
-  const { token } = await params;
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ form?: string }>;
+}): Promise<Metadata> {
+  const [{ token }, query] = await Promise.all([params, searchParams]);
   const chart = await loadEmbedChart(token).catch(() => null);
   if (chart === null) return { title: 'checkdecijfers.nl', robots: NOINDEX };
   const description = chart.headlineText ?? chart.spec.attributionLine;
+  // Round 2 (session 144): the picture is a route handler (preview/route.tsx)
+  // so the reader's `?form=` can reach it — the `opengraph-image` file
+  // convention takes no query string. Absolute URL: crawlers need one.
+  const image = new URL(`${APP_URL}/embed/${token}/preview`);
+  if (isChartForm(query.form) && !isTabularForm(query.form)) image.searchParams.set('form', query.form);
+  const images = [{ url: image.toString(), width: SHARE_PREVIEW_SIZE.width, height: SHARE_PREVIEW_SIZE.height, alt: 'Grafiek van checkdecijfers.nl' }];
   return {
     title: `${chart.spec.title} · checkdecijfers.nl`,
     description,
     robots: NOINDEX,
-    openGraph: { title: chart.spec.title, description, type: 'article', siteName: 'checkdecijfers.nl' },
-    twitter: { card: 'summary_large_image', title: chart.spec.title, description },
+    openGraph: { title: chart.spec.title, description, type: 'article', siteName: 'checkdecijfers.nl', images },
+    twitter: { card: 'summary_large_image', title: chart.spec.title, description, images },
   };
 }
 

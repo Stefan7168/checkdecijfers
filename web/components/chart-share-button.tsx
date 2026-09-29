@@ -34,6 +34,16 @@ export function buildShareUrl(token: string, opts: { lang: Lang; form: string | 
   return `${APP_URL}/embed/${token}?${params.toString()}`;
 }
 
+/** WP-LOOK part (a2) round 2 (session 144): the picture a Share link unfurls
+ * with, as a file — the same route the embed page's metadata points at
+ * (app/embed/[token]/preview/route.tsx), with the shown form and the
+ * download flag that makes the browser save it instead of showing it. */
+export function buildSharePreviewDownloadUrl(token: string, form: string | null): string {
+  const params = new URLSearchParams({ download: '1' });
+  if (form) params.set('form', form);
+  return `${APP_URL}/embed/${token}/preview?${params.toString()}`;
+}
+
 export function ChartShareButton({
   auditId,
   lang,

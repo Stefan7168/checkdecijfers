@@ -22,6 +22,7 @@ import { Download } from 'lucide-react';
 import { Button } from './ui/button.tsx';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { UTILITY_ACTION_BUTTON_CLASS, UTILITY_ACTION_LABEL_CLASS } from '../lib/chart-action-row.ts';
+import { buildSharePreviewDownloadUrl } from './chart-share-button.tsx';
 import {
   FRAME_CORNER_PX,
   FRAME_GRADIENT_ANGLE,
@@ -994,6 +995,7 @@ export function ChartDownloadMenu({
   captionText = null,
   notice = null,
   syncedAt = null,
+  sharePicture = null,
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
    * its own <svg> dynamically, so the live node is found at click time
@@ -1032,6 +1034,12 @@ export function ChartDownloadMenu({
    * no `syncedAt` just omits the date segment) — never used by the other
    * three (unchanged) export formats. */
   syncedAt?: string | null;
+  /** WP-LOOK part (a2) round 2 (session 144): when the chart has an audit
+   * row and a signed-in owner, the menu also offers the share-link picture
+   * (1200×630, the server-made card) as a file. `mint` is the same token
+   * action the Share button uses; the menu never mints until the item is
+   * chosen. Null (an anonymous reader, a chart with no audit row): no item. */
+  sharePicture?: { mint: () => Promise<string | null>; form: string | null } | null;
 }) {
   const frameInput: FrameExportInput | undefined = frame === undefined ? undefined : { values: frame, image: frameImage };
   const exportTexts: ExportTexts = { headline: headlineText, title: titleText, caption: captionText };
@@ -1048,10 +1056,14 @@ export function ChartDownloadMenu({
   const secondItemRef = useRef<HTMLButtonElement>(null);
   const thirdItemRef = useRef<HTMLButtonElement>(null);
   const fourthItemRef = useRef<HTMLButtonElement>(null);
+  const fifthItemRef = useRef<HTMLButtonElement>(null);
+  const [pictureBusy, setPictureBusy] = useState(false);
   // #215: generalized from the old two-item first/second toggle so
   // ArrowUp/ArrowDown keep cycling correctly now that the menu has four
   // items (PNG, SVG, PDF, PNG chart-only) — order matches the rendered menu.
-  const itemRefs = [firstItemRef, secondItemRef, thirdItemRef, fourthItemRef];
+  const itemRefs = sharePicture
+    ? [firstItemRef, secondItemRef, thirdItemRef, fourthItemRef, fifthItemRef]
+    : [firstItemRef, secondItemRef, thirdItemRef, fourthItemRef];
 
   // WAI-ARIA menu button: focus lands on the first item when the menu opens.
   useEffect(() => {
@@ -1185,6 +1197,35 @@ export function ChartDownloadMenu({
           >
             {t(lang, 'chart.download.pngTransparent')}
           </button>
+          {sharePicture ? (
+            <button
+              ref={fifthItemRef}
+              type="button"
+              role="menuitem"
+              disabled={pictureBusy}
+              className={MENU_ITEM_CLASS}
+              onClick={() => {
+                setPictureBusy(true);
+                setFailed(false);
+                void sharePicture
+                  .mint()
+                  .then((token) => {
+                    if (token === null) {
+                      setFailed(true);
+                      return;
+                    }
+                    setOpen(false);
+                    // The route answers with Content-Disposition: attachment,
+                    // so the browser saves the file and stays on the page.
+                    window.location.assign(buildSharePreviewDownloadUrl(token, sharePicture.form));
+                  })
+                  .catch(() => setFailed(true))
+                  .finally(() => setPictureBusy(false));
+              }}
+            >
+              {t(lang, 'chart.download.sharePicture')}
+            </button>
+          ) : null}
         </div>
         {notice ? (
           <p id={`${menuId}-notice`} data-testid="chart-download-notice" className="w-64 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">

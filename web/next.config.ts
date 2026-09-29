@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
   env: {
     DATABASE_CA_CERT: readFileSync(CA_PATH, "utf8"),
   },
+  // WP-LOOK part (a2) round 2 (session 144): the share-preview image route
+  // reads Inter from assets/fonts at runtime (web/lib/share-preview-fonts.ts);
+  // a `readFile` behind a computed path is invisible to the bundler's file
+  // tracing, so the files are listed for the function bundle explicitly.
+  outputFileTracingIncludes: {
+    "/embed/[token]/preview": ["./assets/fonts/*.ttf"],
+  },
   // ADR 041: deny iframe-embedding everywhere EXCEPT /embed/:path+, which is
   // the one route (Task 5, web/app/embed/[token]/page.tsx) meant to be
   // loaded inside a third-party <iframe>. Next applies ALL matching entries

@@ -1,22 +1,23 @@
 // @vitest-environment node
-// WP-LOOK part (a2) (session 143): the Open Graph image route returns a real
-// 1200×630 PNG for a valid share token, and the neutral brand PNG (never an
-// error, never a number) when the token resolves to nothing.
+// WP-LOOK part (a2) round 2 (session 144): the share-preview picture as a
+// route handler — real rasterisation through Next's image tool with the
+// bundled Inter files, the reader's form from the query, the download flag.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const { verifyEmbedToken } = vi.hoisted(() => ({ verifyEmbedToken: vi.fn() }));
-vi.mock('../../../backend/chart/embed-token.ts', () => ({ verifyEmbedToken }));
+vi.mock('../../../../backend/chart/embed-token.ts', () => ({ verifyEmbedToken }));
 const { loadAuditRecord } = vi.hoisted(() => ({ loadAuditRecord: vi.fn() }));
-vi.mock('../../../backend/answer/audit/index.ts', () => ({
+vi.mock('../../../../backend/answer/audit/index.ts', () => ({
   loadAuditRecord,
-  isRedacted: (response: unknown) =>
-    typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true,
+  isRedacted: (r: { redacted?: boolean }) => r.redacted === true,
 }));
-vi.mock('../../../lib/db.ts', () => ({ getDb: () => ({}) }));
+vi.mock('../../../../lib/db.ts', () => ({ getDb: () => ({}) }));
 const { getChartHeadlinePublic } = vi.hoisted(() => ({ getChartHeadlinePublic: vi.fn(async () => null as string | null) }));
-vi.mock('../../../backend/chart/headline-store.ts', () => ({ getChartHeadlinePublic }));
+vi.mock('../../../../backend/chart/headline-store.ts', () => ({ getChartHeadlinePublic }));
 
-import Image, { contentType, size } from './opengraph-image.tsx';
+import { GET } from './route.tsx';
+import { loadPreviewFonts } from '../../../../lib/share-preview-fonts.ts';
 
 function chartSpec() {
   return {
@@ -47,50 +48,70 @@ function chartSpec() {
 }
 
 function pngSize(bytes: Uint8Array): { width: number; height: number } {
-  // PNG signature (8 bytes) + IHDR length/type (8 bytes) + width/height (4+4, big-endian).
   expect(Array.from(bytes.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
-async function renderFor(token: string): Promise<Uint8Array> {
-  const res = await Image({ params: Promise.resolve({ token }) });
+async function get(token: string, query = ''): Promise<Response> {
+  const req = new NextRequest(`http://localhost/embed/${token}/preview${query}`);
+  return GET(req, { params: Promise.resolve({ token }) });
+}
+
+async function bytesOf(res: Response): Promise<Uint8Array> {
   expect(res.headers.get('content-type')).toContain('image/png');
   return new Uint8Array(await res.arrayBuffer());
 }
 
-describe('embed opengraph-image', () => {
+describe('embed preview route', () => {
   beforeEach(() => {
     process.env.EMBED_TOKEN_SECRET = 'test-secret';
     verifyEmbedToken.mockReset();
     loadAuditRecord.mockReset();
   });
 
-  it('declares the platform size and PNG type', () => {
-    expect(size).toEqual({ width: 1200, height: 630 });
-    expect(contentType).toBe('image/png');
+  it('ships Inter in three weights from the repo', async () => {
+    const fonts = await loadPreviewFonts();
+    expect(fonts.map((f) => f.weight)).toEqual([400, 600, 700]);
+    for (const f of fonts) {
+      expect(f.name).toBe('Inter');
+      expect(f.data.byteLength).toBeGreaterThan(100_000);
+    }
   });
 
-  it('a valid token renders a 1200×630 PNG of the stored chart', async () => {
+  it('a valid token renders a 1200×630 PNG of the stored chart, cacheable, inline', async () => {
     verifyEmbedToken.mockReturnValue(7);
     loadAuditRecord.mockResolvedValue({ id: 7, response: { kind: 'answer', chart: chartSpec() } });
-    const bytes = await renderFor('7.sig');
+    const res = await get('7.sig');
+    expect(res.headers.get('cache-control')).toContain('s-maxage=3600');
+    expect(res.headers.get('content-disposition')).toBeNull();
+    const bytes = await bytesOf(res);
     expect(pngSize(bytes)).toEqual({ width: 1200, height: 630 });
     expect(bytes.length).toBeGreaterThan(5000);
   }, 60_000);
 
+  it('follows the reader\'s form (bars differ from the line) and offers the file with ?download=1', async () => {
+    verifyEmbedToken.mockReturnValue(7);
+    loadAuditRecord.mockResolvedValue({ id: 7, response: { kind: 'answer', chart: chartSpec() } });
+    const line = await bytesOf(await get('7.sig'));
+    const bars = await bytesOf(await get('7.sig', '?form=bar'));
+    expect(Buffer.from(bars).equals(Buffer.from(line))).toBe(false);
+    const download = await get('7.sig', '?form=bar&download=1');
+    expect(download.headers.get('content-disposition')).toBe('attachment; filename="checkdecijfers-83693NED-deelafbeelding.png"');
+    expect(Buffer.from(await bytesOf(download)).equals(Buffer.from(bars))).toBe(true);
+  }, 90_000);
+
   it('an invalid token, a missing record or a redacted answer still returns the neutral PNG', async () => {
     verifyEmbedToken.mockReturnValue(null);
-    const invalid = await renderFor('nope');
+    const invalid = await bytesOf(await get('nope'));
     expect(pngSize(invalid)).toEqual({ width: 1200, height: 630 });
 
     verifyEmbedToken.mockReturnValue(8);
     loadAuditRecord.mockResolvedValue(null);
-    expect(pngSize(await renderFor('8.sig'))).toEqual({ width: 1200, height: 630 });
+    expect(pngSize(await bytesOf(await get('8.sig')))).toEqual({ width: 1200, height: 630 });
 
     loadAuditRecord.mockResolvedValue({ id: 8, response: { kind: 'answer', chart: chartSpec(), redacted: true } });
-    const redacted = await renderFor('8.sig');
-    expect(pngSize(redacted)).toEqual({ width: 1200, height: 630 });
+    const redacted = await bytesOf(await get('8.sig'));
     // The neutral card is byte-identical whatever the reason.
     expect(Buffer.from(redacted).equals(Buffer.from(invalid))).toBe(true);
   }, 60_000);

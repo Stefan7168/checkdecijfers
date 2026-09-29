@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import {
   buildSharePreview,
+  previewFormFor,
   NEUTRAL_PREVIEW_STRINGS,
   NeutralPreviewCard,
   SHARE_PREVIEW_SIZE,
@@ -73,23 +74,53 @@ describe('buildSharePreview', () => {
     ]);
     for (const str of model.strings) for (const run of digitRuns(str)) expect(allowed, `digit run ${run} in "${str}"`).toContain(run);
   });
-  it('embeds the server renderer\'s own SVG (with the attribution footer and every plotted value) as a data URI that fits the card', () => {
+  it('draws the plot marks as a data URI SVG and hands every label back as text the card sets itself (round 2)', () => {
     const model = buildSharePreview(spec(), null);
-    expect(model.plotSvg.startsWith('<svg')).toBe(true);
-    expect(model.plotSvg).toContain('86141NED');
-    // The subtitle inside the plot carries the human label, never CBS's leading code.
-    expect(model.plotSvg).toContain('Alle bestedingen');
-    expect(model.plotSvg).not.toContain('000000 Alle');
-    for (const v of ['1,3', '2,7', '10,0', '3,3']) expect(model.plotSvg).toContain(v);
+    expect(model.plot.svg.startsWith('<svg')).toBe(true);
+    // Marks only: no <text> inside the SVG (the image tool cannot font it).
+    expect(model.plot.svg).not.toContain('<text');
+    expect(model.plot.svg).toContain('<polyline');
     expect(model.plotDataUri.startsWith('data:image/svg+xml;base64,')).toBe(true);
-    expect(Buffer.from(model.plotDataUri.slice('data:image/svg+xml;base64,'.length), 'base64').toString('utf8')).toBe(model.plotSvg);
-    expect(model.plot.width).toBeLessThanOrEqual(SHARE_PREVIEW_SIZE.width - 96);
-    expect(model.plot.height).toBeLessThanOrEqual(SHARE_PREVIEW_SIZE.height - 96);
-    expect(model.plot.width).toBeGreaterThan(600);
+    expect(Buffer.from(model.plotDataUri.slice('data:image/svg+xml;base64,'.length), 'base64').toString('utf8')).toBe(model.plot.svg);
+    // The card's own subtitle carries the human label, never CBS's leading code.
+    expect(model.subtitle).toBe('% · Alle bestedingen');
+    // Handed-back text: the period labels, the lowest and highest value as
+    // y-axis ticks, the first and the last point's value.
+    const texts = model.plot.texts.map((t) => t.text);
+    for (const l of ['2020', '2024']) expect(texts).toContain(l);
+    for (const v of ['1,3', '10,0', '3,3']) expect(texts).toContain(v);
+    expect(model.plot.texts.find((t) => t.text === '3,3' && t.role === 'value')?.anchor).toBe('start');
+    expect(model.plot.width).toBe(SHARE_PREVIEW_SIZE.width - 88);
+    expect(model.plot.height).toBeGreaterThan(200);
+    expect(model.plot.height).toBeLessThan(SHARE_PREVIEW_SIZE.height - 200);
+    // Every handed-back string is on the digit-scan list.
+    for (const t of texts) expect(model.strings).toContain(t);
+  });
+  it('follows the reader\'s form — bars over time, an area fill — and falls back to the line for a form it cannot draw', () => {
+    expect(buildSharePreview(spec(), null, 'bar').plot.svg).toContain('<rect');
+    expect(buildSharePreview(spec(), null, 'bar').plot.svg).not.toContain('<polyline');
+    expect(buildSharePreview(spec(), null, 'area').plot.svg).toContain('<polygon');
+    expect(previewFormFor('dumbbell')).toBe('line');
+    expect(previewFormFor('area')).toBe('area');
+    expect(previewFormFor(null)).toBe('line');
+    expect(buildSharePreview(spec({ kind: 'bar' }), null, 'area').form).toBe('line');
+  });
+  it('thins the x-axis labels of a long monthly series to what fits, keeping the first and the last', () => {
+    const months = Array.from({ length: 24 }, (_, i) => ({
+      ...point(`2024 maand ${String(i + 1)}`, 2 + i / 10, `${String(2 + Math.floor(i / 10))},${String(i % 10)}`, i + 1),
+      // Codes sort chronologically only when zero-padded (CBS's own shape).
+      periodCode: `2024MM${String(i + 1).padStart(2, '0')}`,
+    }));
+    const model = buildSharePreview(spec({ series: [{ label: 'x', regionCode: null, points: months }] }), null);
+    const xLabels = model.plot.texts.filter((t) => t.role === 'x-label').map((t) => t.text);
+    expect(xLabels.length).toBeGreaterThanOrEqual(3);
+    expect(xLabels.length).toBeLessThan(12);
+    expect(xLabels[0]).toBe('2024 maand 1');
+    expect(xLabels[xLabels.length - 1]).toBe('2024 maand 24');
   });
   it('carries the saved journalist headline sentence when there is one', () => {
     const model = buildSharePreview(spec(), 'Inflatie zakte in 2024 naar 3,3 procent');
-    expect(model.strings[0]).toBe('Inflatie zakte in 2024 naar 3,3 procent');
+    expect(model.strings).toContain('Inflatie zakte in 2024 naar 3,3 procent');
     const html = renderToStaticMarkup(<SharePreviewCard model={model} />);
     expect(html).toContain('Inflatie zakte in 2024 naar 3,3 procent');
     expect(html).toContain('checkdecijfers.nl');

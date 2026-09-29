@@ -23,7 +23,8 @@ export type {
   CuratedChartsOutcome,
   CuratedChartToggle,
 } from './curated.ts';
-export { renderChartSvg } from './render.ts';
+export { renderChartPlot, renderChartSvg, thinXLabels } from './render.ts';
+export type { RenderForm, RenderedPlot, RenderedText } from './render.ts';
 export type { RenderChartOptions } from './render.ts';
 export { chartSpecSchema } from './schema.ts';
 export type { ParsedChartSpec } from './schema.ts';

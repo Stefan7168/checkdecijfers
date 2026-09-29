@@ -1098,3 +1098,52 @@ describe('security: user-supplied text can never inject a live element through t
     expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
   });
 });
+
+// WP-LOOK part (a2) round 2 (session 144): the share-link picture as a file.
+describe('ChartDownloadMenu — the share picture (round 2 of part a2)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('offers the item only when a share picture can be minted, mints on choice and hands the browser the download URL', async () => {
+    const ref = createRef<HTMLDivElement>();
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const mint = vi.fn(async () => 'tok123');
+    render(
+      <div ref={ref}>
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="x" sharePicture={{ mint, form: 'bar' }} />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    const item = screen.getByRole('menuitem', { name: 'Afbeelding voor sociale media (PNG, zoals de deellink die toont)' });
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5);
+    fireEvent.click(item);
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(mint).toHaveBeenCalledTimes(1);
+    expect(assign.mock.calls[0]![0]).toMatch(/\/embed\/tok123\/preview\?download=1&form=bar$/);
+  });
+
+  it('shows the failure line when no token can be minted, and offers no item without an audit row', async () => {
+    const ref = createRef<HTMLDivElement>();
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    render(
+      <div ref={ref}>
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="x" sharePicture={{ mint: async () => null, form: null }} />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Afbeelding voor sociale media/ }));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(assign).not.toHaveBeenCalled();
+    cleanup();
+    render(
+      <div ref={ref}>
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="x" />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+  });
+});

@@ -295,18 +295,28 @@ describe('/embed/[token] — frozen render', () => {
   // Graph image); noindex holds on EVERY branch, valid chart included.
   it('sets noindex via generateMetadata on every branch, and the unfurl title/description come from the stored chart', async () => {
     verifyEmbedToken.mockReturnValue(null);
-    const missing = await generateMetadata({ params: params('nope') });
+    const missing = await generateMetadata({ params: params('nope'), searchParams: Promise.resolve({}) });
     expect(missing.robots).toEqual({ index: false, follow: false });
     expect(missing.title).toBe('checkdecijfers.nl');
 
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     loadAuditRecord.mockResolvedValue(answerRecord());
-    const valid = await generateMetadata({ params: params('42.sig') });
+    const valid = await generateMetadata({ params: params('42.sig'), searchParams: Promise.resolve({ form: 'bar' }) });
     expect(valid.robots).toEqual({ index: false, follow: false });
     expect(valid.title).toBe('Testreeks · checkdecijfers.nl');
     expect(valid.description).toBe('Bron: CBS StatLine, tabel 83693NED.');
     expect(valid.openGraph?.title).toBe('Testreeks');
+    // Round 2 (session 144): the picture is the preview route, carrying the
+    // reader's form; the same image for Twitter cards.
+    const images = valid.openGraph?.images as { url: string; width: number; height: number }[];
+    expect(images[0]!.url).toMatch(/\/embed\/42\.sig\/preview\?form=bar$/);
+    expect(images[0]!.url).toMatch(/^https?:\/\//);
+    expect([images[0]!.width, images[0]!.height]).toEqual([1200, 630]);
+    expect((valid.twitter as { images?: unknown[] }).images).toEqual(images);
+    // A table form never reaches the picture (the renderer has no table).
+    const table = await generateMetadata({ params: params('42.sig'), searchParams: Promise.resolve({ form: 'table' }) });
+    expect((table.openGraph?.images as { url: string }[])[0]!.url).not.toContain('form=');
   });
 
   // Session 101 (open-questions #237(b)/#205): the Pro pitch on the frozen
