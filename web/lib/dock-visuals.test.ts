@@ -23,7 +23,7 @@ const CHART_SPEC: UserChartSpec = {
   yHeaders: ['Revenue'],
   series: [{ label: 'Revenue', points: [{ rowRef: 'r1:c1', xKey: '2020', xLabel: '2020', value: 100, formattedValue: '100,0', sourceText: '100,0' }] }],
   provenance: { datasetId: 1, sourceKind: 'file_csv', displayName: 'verkoop.csv', sourceUrlHost: null, capturedAt: '2026-01-01', contentSha256: 'x' },
-  disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
+  disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.',
 };
 
 const LAST_INSTRUCTION: ClientChartInstruction = { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null };

@@ -139,7 +139,7 @@ test.describe.serial('own-data chart publishing', () => {
       // included, per user-chart.tsx's own comment on that block).
       await expect(guestPage.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 30_000 });
       await expect(guestPage.getByText('Your data · unverified')).toBeVisible();
-      await expect(guestPage.getByText('User-uploaded data — not verified by checkdecijfers.')).toBeVisible();
+      await expect(guestPage.getByText('User-uploaded data — not verified by graphmaker.studio.')).toBeVisible();
 
       // The author's source line, verbatim (the dialog's default embedLang
       // matched the card's own display language, Dutch in this harness —
