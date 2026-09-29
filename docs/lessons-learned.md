@@ -32,6 +32,12 @@ on top.
    Share, Insights). Share did not exist — the cheapest mechanism (a link to the existing public embed page, same
    signed token) took one small component and no new route. Ask with an "Other" option open, then build the cheapest
    version of what comes back rather than negotiating the list down.
+6. **The verification block does not run the browser smoke; CI does.** `scripts/verify-block.sh` (typechecks, both
+   vitest suites, benchmark, `next build`) was fully green, and CI run 36526710931 still went red on the Playwright
+   e2e smoke (`web/e2e/`, 7 failures): those specs click the very controls that moved into the popup, and nothing
+   local had exercised them. For any change to the chart card's controls, run
+   `cd web && npx playwright test e2e/cbs-copilot.spec.ts e2e/chart-copilot.spec.ts` (~10 min, hermetic) BEFORE
+   pushing — or add it to the block. A red push on `main` blocks the deploy, so this cost a fix commit, not an outage.
 
 ## Session 141 — a vision review that starts from the live site, not from the docs
 

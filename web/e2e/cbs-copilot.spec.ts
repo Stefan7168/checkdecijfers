@@ -11,7 +11,7 @@
 // Question: the SAME `!!intent` harness injection chart-copilot.spec.ts uses
 // (Amsterdam + Rotterdam, 2020–2024) — the fixture cases were captured over
 // exactly that spec.
-import { expect, signInAsHarnessUser, test } from './harness.ts';
+import { expect, openEdit, signInAsHarnessUser, test } from './harness.ts';
 
 const REGION_SERIES_INTENT = JSON.stringify({
   target: { kind: 'canonical', key: 'population_on_1_january' },
@@ -38,6 +38,7 @@ test.describe.serial('the CBS chart co-pilot', () => {
     await page.getByPlaceholder('Stel een vraag…').fill(`!!intent ${REGION_SERIES_INTENT}`);
     await page.getByRole('button', { name: 'Verstuur' }).click();
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // 1. The chat doorway under the card (the same group the own-data card
     // uses), with the CBS tier's own "figures do not change here" line.
@@ -54,11 +55,8 @@ test.describe.serial('the CBS chart co-pilot', () => {
     await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
 
     // 2. ⌘Z on the card walks the chat edit back like any other edit.
-    const card = page
-      .locator('div[tabindex="-1"]')
-      .filter({ has: page.getByRole('button', { name: 'Ongedaan maken' }) })
-      .first();
-    await card.click({ position: { x: 4, y: 4 } });
+    // With the Edit popup open the key handler is on the dialog content.
+    await page.getByRole('dialog', { name: 'Grafiek bewerken' }).click({ position: { x: 4, y: 4 } });
     await page.keyboard.press(UNDO);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
     // ...and redo puts it back: only the history's PAST is saved, so the
@@ -86,6 +84,7 @@ test.describe.serial('the CBS chart co-pilot', () => {
     await page.reload();
     await page.getByRole('button', { name: /^!!intent/ }).first().click();
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
+    await openEdit(page);
     await expect(page.getByRole('button', { name: 'Ongedaan maken' }).first()).toBeEnabled();
   });
 });

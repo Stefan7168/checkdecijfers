@@ -97,7 +97,12 @@ export function ChartEditModal({
         className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-6 sm:max-w-2xl sm:p-8 lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
       >
         <DialogTitle className="lg:col-span-2">{title}</DialogTitle>
-        <div className="min-w-0">{chartSlot}</div>
+        {/* WP-LOOK part (a) (session 142): the chart column scrolls on its own
+          * at desktop width too — with the notes / goal-line / period-range
+          * strips under the chart, a 720–800 px laptop window otherwise put
+          * the note form and "Periode markeren" below an unreachable fold
+          * (found by the Playwright smoke). */}
+        <div className="min-w-0 lg:max-h-[85vh] lg:overflow-y-auto">{chartSlot}</div>
         <div className="min-w-0 lg:max-h-[85vh] lg:overflow-y-auto">{children}</div>
       </DialogContent>
     </Dialog>

@@ -13,7 +13,7 @@
 // why an ad-hoc phrasing would 400 at the LLM stub). Two lines is the minimum
 // shape that makes "hide one series" observable as a count.
 import type { Locator } from '@playwright/test';
-import { expect, signInAsHarnessUser, test } from './harness.ts';
+import { expect, openEdit, signInAsHarnessUser, test } from './harness.ts';
 
 const REGION_SERIES_INTENT = JSON.stringify({
   target: { kind: 'canonical', key: 'population_on_1_january' },
@@ -21,6 +21,14 @@ const REGION_SERIES_INTENT = JSON.stringify({
   derivation: 'none',
   regions: ['GM0363', 'GM0599'], // Amsterdam, Rotterdam
 });
+
+// A taller window than Playwright's default 720 px. The Edit popup's LEFT
+// column (chart + legend + the caption/notes/era forms) has no scroll
+// container of its own at desktop width (chart-edit-modal.tsx:
+// `lg:overflow-visible`; only the right pane scrolls), so at 720 px the
+// pending-note form and the era-shading form sit below the fold and cannot
+// be reached. The layout gap is reported to the owner, not hidden here.
+test.use({ viewport: { width: 1280, height: 1100 } });
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Shift+Meta+z' : 'Control+y';
@@ -35,6 +43,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // The legend chip's accessible name is just the series label
     // (SeriesLegend in chart.tsx — the swatch is aria-hidden).
@@ -60,11 +69,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     // it (`getByRole('heading', { level: 3 })` times out, with and without a
     // visible filter). The card root is the honest target for "a click
     // anywhere in the card" anyway — it is the element the handler is on.
-    const card = page
-      .locator('div[tabindex="-1"]')
-      .filter({ has: page.getByRole('button', { name: 'Ongedaan maken' }) })
-      .first();
-    await card.click({ position: { x: 4, y: 4 } });
+    await page.getByRole('dialog', { name: 'Grafiek bewerken' }).click({ position: { x: 4, y: 4 } });
     await page.keyboard.press(UNDO);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
     await page.keyboard.press(REDO);
@@ -78,6 +83,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.reload();
     await page.getByRole('button', { name: /^!!intent/ }).first().click();
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
+    await openEdit(page);
     await expect(page.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
   });
 
@@ -86,6 +92,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Open the goal line form by clicking "Doellijn toevoegen"
     const addGoalLineButton = page.getByRole('button', { name: 'Doellijn toevoegen' });
@@ -130,6 +137,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // REGION_SERIES_INTENT has TWO regions (Amsterdam + Rotterdam), and
     // headlineFigure() is deliberately null for several series (chart-
@@ -179,13 +187,17 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Find the dim button for Rotterdam (Dim Rotterdam)
     const dimButton = page.getByRole('button', { name: /Dim Rotterdam/ });
     await expect(dimButton).toBeVisible();
 
     // Before dimming: both lines should have full opacity
-    const allLines = page.locator('path[class*="recharts-curve"]');
+    // `.recharts-line-curve`, not `[class*="recharts-curve"]`: with the popup
+    // open the pointer rests over the chart it was moved into, and Recharts'
+    // hover cursor is a third `recharts-curve` path (`recharts-tooltip-cursor`).
+    const allLines = page.locator('path.recharts-line-curve');
     const linesBeforeDim = await allLines.count();
     expect(linesBeforeDim).toBe(2);
 
@@ -204,11 +216,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(dimmedLines).toHaveCount(1);
 
     // Undo with keyboard
-    const card = page
-      .locator('div[tabindex="-1"]')
-      .filter({ has: page.getByRole('button', { name: 'Ongedaan maken' }) })
-      .first();
-    await card.click({ position: { x: 4, y: 4 } });
+    await page.getByRole('dialog', { name: 'Grafiek bewerken' }).click({ position: { x: 4, y: 4 } });
     await page.keyboard.press(UNDO);
 
     // After undo: dim button should not be pressed
@@ -224,6 +232,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Open the era shading form
     const markButton = page.getByRole('button', { name: 'Periode markeren' });
@@ -288,6 +297,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Final-review fix I8: "Gemiddelde tonen" now only offers itself when
     // exactly ONE series is visible (averaging across several different
@@ -309,6 +319,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Final-review fix I8: see the previous test — the mean control needs
     // exactly one visible series.
@@ -330,6 +341,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Click "Verschil aanduiden" to activate picker mode. Located by its
     // `title` attribute (stable across the picker toggle) rather than by
@@ -396,6 +408,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Activate difference picker (see the previous test for why this is
     // located by `title` rather than by accessible name or `[aria-pressed]`).
@@ -467,6 +480,7 @@ test.describe.serial('chart co-pilot phase 5 — dumbbell, slope, heatmap', () =
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${TWO_PERIOD_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     const dumbbellTab = page.getByRole('tab', { name: 'Dumbbell' });
     const slopeTab = page.getByRole('tab', { name: 'Helling' });
@@ -565,6 +579,7 @@ test.describe.serial('chart co-pilot phase 5 — dumbbell, slope, heatmap', () =
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${TWO_PERIOD_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // First the tab, directly: record what it draws.
     const dumbbellTab = page.getByRole('tab', { name: 'Dumbbell' });
@@ -610,6 +625,7 @@ test.describe.serial('chart co-pilot phase 5 — dumbbell, slope, heatmap', () =
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${SINGLE_REGION_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
+    await openEdit(page);
 
     // Each disabled tab carries its reason twice: `title` for the pointer
     // and an `aria-describedby` target for a screen reader — the same text.
@@ -699,6 +715,7 @@ test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked ove
     await ask(page, PROVINCIES_QUESTION);
     // Opens on horizontal bars (answer.spec.ts (d)).
     await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+    await openEdit(page);
 
     // `exact`: "Gestapeld" is a substring of "Gestapeld (%)".
     const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
@@ -772,6 +789,7 @@ test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked ove
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, PROVINCIES_QUESTION);
     await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+    await openEdit(page);
 
     // First the tab, directly: record what it draws.
     const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
@@ -819,6 +837,7 @@ test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked ove
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Amsterdam + Rotterdam are a hand-picked selection (`regions`, never
     // `regionSet`), so the stored spec carries `regionScope: null` and there
@@ -881,6 +900,7 @@ test.describe.serial('chart co-pilot phase 6 — the donut and a house style thr
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, PROVINCIES_QUESTION);
     await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+    await openEdit(page);
 
     // Into the pie form first: `pieHole` is offered in that form alone
     // (resolvePresentation), and the chat's capabilities are built from the
@@ -927,6 +947,7 @@ test.describe.serial('chart co-pilot phase 6 — the donut and a house style thr
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // The frame (chart-frame.tsx): pristine, it is a bare wrapper with no
     // inline style at all, so no paper colour; Broadsheet paints its paper
@@ -997,6 +1018,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // The era list's entries (chart-era-shading.tsx), each carrying its own
     // delete button — scoped this way rather than by label text: the reply
@@ -1045,6 +1067,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // The panel's own Dim button (same one the phase-1 "dim a series via the
     // legend" test above drives by click) reflects the SAME reducer state
@@ -1061,7 +1084,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
 
     // Dimmed, not hidden: both curves still render, one at reduced opacity
     // (same assertions the panel-driven test above makes).
-    await expect(page.locator('path[class*="recharts-curve"]')).toHaveCount(2);
+    await expect(page.locator('path.recharts-line-curve')).toHaveCount(2);
     await expect(page.locator('path[stroke-opacity="0.35"]')).toHaveCount(1);
     await expect(dimButton).toHaveAttribute('aria-pressed', 'true');
 
@@ -1077,6 +1100,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // No default headline for this two-region chart (same premise the
     // phase-1 "click a point to make it the headline" test above documents).
@@ -1112,6 +1136,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
     await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DERIVED_DIFFERENCE_MESSAGE);
@@ -1139,6 +1164,7 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+    await openEdit(page);
 
     // Scoped by the delete button's own `data-command-kind`, same pattern
     // the era-shading test above uses for its list (chart-goal-line.tsx
