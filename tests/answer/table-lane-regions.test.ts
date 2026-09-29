@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../src/cbs-adapter/types.ts';
 import type { BreakdownDimension } from '../../src/query/breakdowns.ts';
 import { resolveTableRegions } from '../../src/answer/table-lane/regions.ts';
-import type { TableLaneTable } from '../../src/answer/table-lane/plan.ts';
+import type { TableLaneTable } from '../../src/answer/table-lane/types.ts';
+import type { RegionTerm } from '../../src/answer/intent/types.ts';
 
 function loadFixture(tableId: string): TableLaneTable {
   const path = fileURLToPath(new URL(`../fixtures/tableparse/schemas/${tableId}.json`, import.meta.url));
@@ -96,6 +97,62 @@ describe('resolveTableRegions — geo dimension', () => {
       choices: [{ dimension: 'RegioS', code: 'GM0344' }],
     });
     expect(r).toMatchObject({ ok: true, coordinates: { RegioS: ['GM0344'] } });
+  });
+
+  it('a choice is bound to a place by membership, not queue order — terms swapping order between rounds', () => {
+    const utrecht: RegionTerm = { name: 'Utrecht', kind: 'onbekend' };
+    const groningen: RegionTerm = { name: 'Groningen', kind: 'onbekend' };
+    const run = (terms: RegionTerm[], choices: { dimension: string; code: string }[]) =>
+      resolveTableRegions({ ...base, terms, table: geo, regionDims: [geoDim], choices });
+
+    // Round 1: [Utrecht, Groningen] → asked about Utrecht first.
+    expect(run([utrecht, groningen], [])).toMatchObject({ ok: false, question: { options: [{ code: 'PV26' }, { code: 'CR17' }, { code: 'GM0344' }] } });
+    // Round 2: the re-parse lists [Groningen, Utrecht]; the Utrecht pick must NOT land on Groningen.
+    expect(run([groningen, utrecht], [{ dimension: 'RegioS', code: 'GM0344' }])).toEqual({
+      ok: false,
+      question: {
+        dimension: 'RegioS',
+        dimensionTitle: "Regio's",
+        options: [
+          { code: 'PV20', title: 'Groningen (PV)' },
+          { code: 'GM0014', title: 'Groningen (gemeente)' },
+        ],
+        totalOptions: 2,
+      },
+    });
+    // Round 3: both answered; order of terms flips again — each pick stays with its own place.
+    const choices = [
+      { dimension: 'RegioS', code: 'GM0344' },
+      { dimension: 'RegioS', code: 'PV20' },
+    ];
+    expect(run([utrecht, groningen], choices)).toMatchObject({ ok: true, coordinates: { RegioS: ['GM0344', 'PV20'] } });
+    expect(run([groningen, utrecht], choices)).toMatchObject({ ok: true, coordinates: { RegioS: ['PV20', 'GM0344'] } });
+  });
+
+  it('a choice outside the ambiguous place\'s matches is never applied — the question is asked again', () => {
+    const r = resolveTableRegions({
+      ...base,
+      terms: [{ name: 'Utrecht', kind: 'onbekend' }],
+      table: geo,
+      regionDims: [geoDim],
+      choices: [{ dimension: 'RegioS', code: 'GM0363' }], // Amsterdam: a real member, but not an Utrecht
+    });
+    expect(r).toMatchObject({ ok: false, question: { dimension: 'RegioS', totalOptions: 3 } });
+  });
+
+  it('with several NL members, a choice outside them is not applied (asked again)', () => {
+    const t = synthetic('Test', {
+      name: 'RegioS',
+      kind: 'GeoDimension',
+      codes: [code('NL01', 'Nederland'), code('NL02', 'Nederland (oud)'), code('PV20', 'Groningen (PV)')],
+    });
+    const dim = dimOf(t, 'RegioS');
+    expect(
+      resolveTableRegions({ ...base, terms: [], table: t, regionDims: [dim], choices: [{ dimension: 'RegioS', code: 'PV20' }] }),
+    ).toMatchObject({ ok: false, question: { totalOptions: 2 } });
+    expect(
+      resolveTableRegions({ ...base, terms: [], table: t, regionDims: [dim], choices: [{ dimension: 'RegioS', code: 'NL02' }] }),
+    ).toMatchObject({ ok: true, coordinates: { RegioS: ['NL02'] } });
   });
 
   it('a choice with a code that is not a member of the dimension throws (caller bug)', () => {
@@ -257,6 +314,19 @@ describe('resolveTableRegions — national-only table ("Nederland", rule 5)', ()
     expect(
       resolveTableRegions({ ...base, terms: [{ name: 'Amsterdam', kind: 'gemeente' }], table: national, regionDims: [] }),
     ).toMatchObject({ ok: false, reason: 'region_unavailable' });
+  });
+
+  it('"Nederland" on a regionless table WITH region-coded breakdown members is left to the breakdown (never nationalTable)', () => {
+    const t = loadFixture('85004NED');
+    expect(
+      resolveTableRegions({
+        ...base,
+        hasRegionCodedBreakdownMember: true,
+        terms: [{ name: 'Nederland', kind: 'land' }],
+        table: t,
+        regionDims: [],
+      }),
+    ).toEqual({ ok: true, coordinates: {}, defaults: [], named: [] });
   });
 
   it('a regionless table WITH region-coded breakdown members leaves places to the breakdowns (parser-checked)', () => {

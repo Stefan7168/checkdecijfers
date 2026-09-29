@@ -143,21 +143,32 @@ describe('planTableLane — refusals, in order', () => {
       period: { kind: 'year', year: 2021 },
       regions: [{ name: 'Nederland', kind: 'land' }],
     });
-    expect(p).toMatchObject({ kind: 'refuse', reason: 'region_unavailable', parse: null, parseAudit: null });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'region_unavailable', parse: null });
+    // R6: the paid call's audit is kept on every outcome where a model call happened.
+    if (p.kind !== 'refuse') return;
+    expect(p.parseAudit).toMatchObject({ model: 'stub-model', usage: { inputTokens: 7, outputTokens: 3 } });
+    expect(p.parseAudit?.requestHash).toMatch(/^[0-9a-f]{32}$/);
+    expect(p.parseAudit?.outputText).toContain('Nederland');
   });
 
-  it('2b. malformed model output → table_lane_unsure with the validator message, no audit', async () => {
+  it("2b. malformed model output → table_lane_unsure with the validator message, the call's audit kept (R6)", async () => {
     const { plan: p } = await plan(emissions, 'Uitstoot 2020?', 'not json');
     expect(p.kind).toBe('refuse');
     if (p.kind !== 'refuse') return;
     expect(p.reason).toBe('table_lane_unsure');
     expect(p.detail).toMatch(/not valid JSON/);
-    expect(p.parseAudit).toBeNull();
+    expect(p.parse).toBeNull();
+    expect(p.parseAudit).toEqual({
+      requestHash: expect.stringMatching(/^[0-9a-f]{32}$/),
+      model: 'stub-model',
+      usage: { inputTokens: 7, outputTokens: 3 },
+      outputText: 'not json',
+    });
   });
 
   it('2c. an invented measure code → table_lane_unsure', async () => {
     const { plan: p } = await plan(emissions, 'Uitstoot 2020?', { measureCode: 'XXX', period: { kind: 'year', year: 2020 } });
-    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_unsure' });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_unsure', parseAudit: { model: 'stub-model' } });
   });
 
   it('2d. an indistinguishable measure (TableParseAmbiguousMeasureError) → table_lane_unsure', async () => {
@@ -169,7 +180,7 @@ describe('planTableLane — refusals, in order', () => {
       periods: [code('2020JJ00', '2020')],
     });
     const { plan: p } = await plan(table, 'Hoeveel in 2020?', { measureCode: 'M1', period: { kind: 'year', year: 2020 } });
-    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_unsure' });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_unsure', parseAudit: { model: 'stub-model' } });
   });
 
   it('2e. any other error (e.g. the LLM call failing) propagates', async () => {
@@ -451,6 +462,39 @@ describe('planTableLane — fetch', () => {
     expect(p.intent.target).toEqual({ kind: 'explicit', tableId: 'T1', measure: 'M1', dims: { Regio: 'PV20' } });
     expect(p.intent).not.toHaveProperty('regions');
     expect(p.slice.members).toEqual({ Regio: ['PV20'] });
+  });
+
+  it('two GeoDimensions → region_unavailable, before the period/slice steps can shadow it', async () => {
+    const periods: CbsCode[] = [];
+    for (let y = 1850; y <= 2030; y++) for (let m = 1; m <= 12; m++) periods.push(code(`${y}MM${String(m).padStart(2, '0')}`));
+    const table = synthetic({
+      dims: [
+        { name: 'RegioA', kind: 'GeoDimension', title: 'Regio A', codes: [code('NL01', 'Nederland'), code('PV20', 'Groningen (PV)')] },
+        { name: 'RegioB', kind: 'GeoDimension', title: 'Regio B', codes: [code('NL01', 'Nederland'), code('PV21', 'Fryslân (PV)')] },
+      ],
+      periods, // "since 1850" would be table_lane_too_large if the geo check came after the slice
+    });
+    const { plan: p } = await plan(table, 'Aantal sinds januari 1850?', {
+      measureCode: 'M1',
+      period: { kind: 'since', year: 1850, quarter: null, month: 1 },
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'region_unavailable' });
+  });
+
+  it('"Nederland" on a regionless table with region-coded breakdown members → the NL01 member of that breakdown', async () => {
+    const table = loadFixture('85004NED'); // RegioS is an ordinary (16 % region-coded) breakdown with NL01
+    const { plan: p } = await plan(table, 'Hoeveel windenergie op land werd in Nederland opgewekt in 2023?', {
+      measureCode: 'M002195',
+      period: { kind: 'year', year: 2023 },
+      breakdowns: { BronEnTechniek: 'E006637', RegioS: 'NL01' },
+      regions: [{ name: 'Nederland', kind: 'land' }],
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.intent).not.toHaveProperty('regions');
+    expect(p.intent.target).toMatchObject({ dims: { BronEnTechniek: 'E006637', RegioS: 'NL01' } });
+    expect(p.selection.nationalTable).toBeUndefined();
+    expect(p.selection.named).toContainEqual({ dimension: 'RegioS', dimensionTitle: "Regio's", code: 'NL01', memberTitle: 'Nederland' });
   });
 
   it('does not pass previousQuestion to the parser (Task 7 does)', async () => {

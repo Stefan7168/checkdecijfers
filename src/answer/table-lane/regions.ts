@@ -32,14 +32,14 @@ import {
 import { normalizeRegionName } from '../../sources/region-names.ts';
 import {
   classifyDimension,
+  dimensionLabel,
   toQuestion,
   type BreakdownDimension,
   type BreakdownMember,
   type BreakdownQuestion,
   type StatedDefault,
 } from '../../query/breakdowns.ts';
-import type { TableLaneChoice } from './types.ts';
-import type { TableLaneTable } from './plan.ts';
+import type { TableLaneChoice, TableLaneTable } from './types.ts';
 
 export type TableRegionResolution =
   | {
@@ -65,10 +65,6 @@ export function isNationalTerm(term: RegionTerm): boolean {
 /** A CBS national member: the NL region family ("NL01"). */
 const NATIONAL_MEMBER_CODE = /^NL\d/;
 
-function dimensionLabel(d: Pick<BreakdownDimension, 'name' | 'title'>): string {
-  return d.title.trim().length > 0 ? d.title : d.name;
-}
-
 function stated(d: BreakdownDimension, m: BreakdownMember): StatedDefault {
   return { dimension: d.name, dimensionTitle: dimensionLabel(d), code: m.code, memberTitle: m.title };
 }
@@ -90,6 +86,8 @@ export function resolveTableRegions(input: {
 }): TableRegionResolution {
   const { terms, regionScope, table, regionDims, hasRegionCodedBreakdownMember, choices } = input;
 
+  // Defence in depth: planTableLane already refuses a region class at its
+  // step 6, before this resolver runs; kept so a direct caller cannot skip it.
   if (regionScope !== null) {
     return refuse('table_lane_region_class', `the question asks about the region class '${regionScope}'`);
   }
@@ -135,9 +133,18 @@ export function resolveTableRegions(input: {
     list.push(choice.code);
     queue.set(choice.dimension, list);
   }
-  const takeChoice = (dim: BreakdownDimension): BreakdownMember | null => {
-    const code = queue.get(dim.name)?.shift();
-    return code === undefined ? null : dim.members.find((m) => m.code === code)!;
+  // A reader's pick is bound to the question it answers by MEMBERSHIP, never
+  // by queue position: the parse is re-run every button round and may list
+  // the places in another order, so the first queued code that is one of
+  // THIS question's options is consumed; none → the question is asked again.
+  // A queued code that fits no open question is never applied.
+  const takeChoice = (dim: BreakdownDimension, allowed: BreakdownMember[]): BreakdownMember | null => {
+    const list = queue.get(dim.name);
+    if (!list) return null;
+    const index = list.findIndex((code) => allowed.some((m) => m.code === code));
+    if (index === -1) return null;
+    const [code] = list.splice(index, 1);
+    return allowed.find((m) => m.code === code)!;
   };
 
   const coordinates: Record<string, string[]> = {};
@@ -146,19 +153,22 @@ export function resolveTableRegions(input: {
 
   if (terms.length === 0) {
     for (const dim of regionDims) {
-      const chosen = takeChoice(dim);
+      const nationals = dim.members.filter((m) => NATIONAL_MEMBER_CODE.test(m.code));
+      if (nationals.length === 1) {
+        // No question is ever asked here, so no stored choice applies.
+        coordinates[dim.name] = [nationals[0]!.code];
+        defaults.push(stated(dim, nationals[0]!));
+        continue;
+      }
+      // The question offered the several NL members, or (none) the full list.
+      const options = nationals.length === 0 ? dim.members : nationals;
+      const chosen = takeChoice(dim, options);
       if (chosen) {
         coordinates[dim.name] = [chosen.code];
         named.push(stated(dim, chosen));
         continue;
       }
-      const nationals = dim.members.filter((m) => NATIONAL_MEMBER_CODE.test(m.code));
-      if (nationals.length === 1) {
-        coordinates[dim.name] = [nationals[0]!.code];
-        defaults.push(stated(dim, nationals[0]!));
-        continue;
-      }
-      return { ok: false, question: toQuestion(nationals.length === 0 ? dim : { ...dim, members: nationals }) };
+      return { ok: false, question: toQuestion({ ...dim, members: options }) };
     }
     return { ok: true, coordinates, defaults, named };
   }
@@ -206,7 +216,7 @@ export function resolveTableRegions(input: {
     } else if (matches.length === 1) {
       picked = matches[0]!;
     } else {
-      const chosen = takeChoice(dim);
+      const chosen = takeChoice(dim, matches);
       if (!chosen) return { ok: false, question: toQuestion({ ...dim, members: matches }) };
       picked = chosen;
     }

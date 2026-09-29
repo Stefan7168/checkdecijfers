@@ -167,7 +167,7 @@ export type BreakdownResolution =
  * question or stated default must never show an empty label or double up a
  * ": " separator. Never guesses a DIFFERENT word: the dimension's own `name`
  * (its stable identifier) is not a guess. */
-function dimensionLabel(d: Pick<BreakdownDimension, 'name' | 'title'>): string {
+export function dimensionLabel(d: Pick<BreakdownDimension, 'name' | 'title'>): string {
   return d.title.trim().length > 0 ? d.title : d.name;
 }
 

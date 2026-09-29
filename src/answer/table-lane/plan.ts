@@ -46,10 +46,10 @@
 // terms go on to resolveTableRegions, which applies the "Caribisch" title
 // guard and records "Regio: Nederland (landelijke tabel)". The parser module
 // itself is untouched (prompt + validator bytes unchanged).
-import type { CbsCode, CbsTableSchema } from '../../cbs-adapter/types.ts';
 import { SLICE_MAX_CELLS, type SliceRequest } from '../../ingestion/slice-cache.ts';
 import {
   classifyDimension,
+  dimensionLabel,
   resolveBreakdowns,
   toQuestion,
   type BreakdownDimension,
@@ -76,7 +76,7 @@ import { namedFromParse } from '../table-parse/bridge.ts';
 import { REGION_MEMBER_CODE } from '../table-parse/places.ts';
 import { resolveTablePeriod } from './periods.ts';
 import { isNationalTerm, resolveTableRegions } from './regions.ts';
-import type { TableLaneChoice } from './types.ts';
+import type { TableLaneChoice, TableLaneTable } from './types.ts';
 
 export type TableLaneRefusalReason =
   | 'table_lane_ineligible' // TableParseIneligibleTableError, or registerSchemaOnly refused (Task 4)
@@ -101,6 +101,8 @@ export interface TableLaneSelection {
 }
 
 export type TableLanePlan =
+  /** `parse` is null on the step-1/2 refusals (no validated result);
+   * `parseAudit` is null only when no model call happened (step 1) — Ruling R6. */
   | {
       kind: 'refuse';
       reason: TableLaneRefusalReason;
@@ -120,15 +122,11 @@ export type TableLanePlan =
       offered: TableParseSchema;
     };
 
-export interface TableLaneTable {
-  /** Live CBS metadata (groupPath included) — fetched by the job. */
-  schema: CbsTableSchema;
-  /** Same source; period codes carry status. */
-  codeLists: Record<string, CbsCode[]>;
-}
+export type { TableLaneTable } from './types.ts';
 
 /** Wraps the caller's client so the one response is still at hand when the
- * validator throws (the "Nederland" re-validation needs its audit). */
+ * validator throws — the step-2 refusals keep its audit (Ruling R6) and the
+ * "Nederland" re-validation needs it. */
 function recordingClient(client: LlmClient): { client: LlmClient; last: () => { request: LlmRequest; response: LlmResponse } | null } {
   let last: { request: LlmRequest; response: LlmResponse } | null = null;
   return {
@@ -140,6 +138,19 @@ function recordingClient(client: LlmClient): { client: LlmClient; last: () => { 
       },
     },
     last: () => last,
+  };
+}
+
+/** The audit of the one recorded call — field for field what tableParse
+ * itself returns (parse.ts). Ruling R6: kept on EVERY outcome where a model
+ * call happened, step-2 refusals included. */
+function auditOf(call: { request: LlmRequest; response: LlmResponse } | null): TableParseAudit | null {
+  if (call === null) return null;
+  return {
+    requestHash: requestHash(call.request),
+    model: call.response.model,
+    usage: call.response.usage,
+    outputText: call.response.outputText,
   };
 }
 
@@ -176,19 +187,7 @@ function absorbNationalTerms(
     if (e instanceof TableParseValidationError) return null;
     throw e;
   }
-  return {
-    result: { ...result, regions },
-    audit: {
-      requestHash: requestHash(call.request),
-      model: call.response.model,
-      usage: call.response.usage,
-      outputText: call.response.outputText,
-    },
-  };
-}
-
-function dimensionLabel(d: Pick<BreakdownDimension, 'name' | 'title'>): string {
-  return d.title.trim().length > 0 ? d.title : d.name;
+  return { result: { ...result, regions }, audit: auditOf(call)! };
 }
 
 export async function planTableLane(input: {
@@ -260,12 +259,12 @@ export async function planTableLane(input: {
   } catch (e) {
     if (e instanceof TableParseRegionUnavailableError) {
       const absorbed = nationalOnly ? absorbNationalTerms(e, offered, recorder.last()) : null;
-      if (absorbed === null) return refuse('region_unavailable', e.message, null, null);
+      if (absorbed === null) return refuse('region_unavailable', e.message, null, auditOf(recorder.last()));
       result = absorbed.result;
       parseAudit = absorbed.audit;
     } else if (e instanceof TableParseValidationError) {
       // Includes TableParseAmbiguousMeasureError.
-      return refuse('table_lane_unsure', e.message, null, null);
+      return refuse('table_lane_unsure', e.message, null, auditOf(recorder.last()));
     } else {
       throw e; // Task 4 treats it as a retryable failure.
     }
@@ -363,6 +362,13 @@ export async function planTableLane(input: {
     if ('question' in regions) return { kind: 'ask', question: regions.question, parse: result, parseAudit, offered };
     return refuse(regions.reason, regions.detail, result, parseAudit);
   }
+  // resolveIntent reads ONE GeoDimension (src/query/resolve.ts); a second one
+  // could never carry its coordinate in the intent. Checked here, with the
+  // other region checks, so no later step's reason (e.g. too_large) shadows it.
+  const geoDims = regionDims.filter((d) => classOf.get(d.name) === 'geo');
+  if (geoDims.length > 1) {
+    return refuse('region_unavailable', `table '${schema.tableId}' has ${geoDims.length} GeoDimensions`, result, parseAudit);
+  }
 
   // --- 11. Period -------------------------------------------------------------------------
   const period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
@@ -399,10 +405,6 @@ export async function planTableLane(input: {
   // GeoDimension only (expected_dimensions kind 'GeoDimension'); every plain
   // Dimension — breakdowns, margins AND a geo-like region dimension — is a
   // `target.dims` coordinate (one code each).
-  const geoDims = regionDims.filter((d) => classOf.get(d.name) === 'geo');
-  if (geoDims.length > 1) {
-    return refuse('region_unavailable', `table '${schema.tableId}' has ${geoDims.length} GeoDimensions`, result, parseAudit);
-  }
   const dims: Record<string, string> = {};
   for (const d of fullDims) {
     const cls = classOf.get(d.name)!;
