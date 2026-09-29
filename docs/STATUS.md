@@ -22,8 +22,9 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
 
 - **⚑ OWNER STATEMENT, end of session 143 (2026-09-29): "This project is going absolutely fucking nowhere."** Three
   months, zero outside users, a taste-only gate. The session's one recommendation: stop building, put it in front of
-  ten real people this week, build only what they say. **Owner decision pending — ask for it first next session**
-  (kickoff, top block). Nothing below is a plan until that answer is in.
+  ten real people this week, build only what they say. **Owner decision, session 144 (2026-09-29): "Keep building
+  The Look"** — chosen in one dialog over launch-to-ten / pause. So part (c) the homepage is the work; the
+  launch-to-ten recommendation stays recorded ([#352](open-questions.md)) and is raised again at the (c) sign-off.
 - **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
   ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
   number. Ask a question, see the chart. ONE Edit button opens ONE popup holding ALL editing. Nothing removed, everything
