@@ -1,5 +1,31 @@
 # STATUS archive — the session log
 
+**Session 141 (2026-09-29, local UTC+7, owner present — the vision review and interview; ran in parallel with session
+140's wrap-up in the SAME checkout; spent nothing on AI).**
+
+1. **Owner ask:** "give the vision it has now, compared to what's being built … our look is still very childish …
+   some features don't make sense … interview me … adjust the development plan."
+2. **Research** (two cheap-tier agents + a live browser check): docs vision history, feature inventory, the live site
+   next to Competitor G. Findings in [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md):
+   three positionings layered; ~1,908 commits / ~163k lines / 63 ADRs / 220 open questions; 2 accounts, 0 outside
+   users; no launch gate; homepage without a chart above the fold; gallery empty on a cold visit (5.4 s first request,
+   cards on the third); chart ≈ ¼ of its card under 11 form tabs + two disclaimer boxes.
+3. **Interview (five questions):** product = sourced charts of official statistics; user = anyone who publishes a
+   number; gate = owner's "I would share this" (dated gate declined); look = ask → chart, ONE Edit button → ONE popup,
+   tidied with design skill, Competitor G as the simplicity reference; freeze = remove nothing, no new feature work
+   until the gate, merge everything finished. ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md).
+4. **Step-5 table-lane branch:** `/code-review` LOW over the 17-commit diff (no hunk-visible defects) + the full
+   verification block (typechecks green; backend 4,621/4,622 — one `tests/chart/user-styles.test.ts` ENOENT flake under
+   parallel load that passes solo; benchmark GATE PASS, 6/6 refusals, 0 fabricated; web 3,402 green; `next build`
+   green). While the block ran, session 140 (resumed by the owner) merged and pushed the branch itself: `763b91e7`, CI
+   36518156649 green incl. deploy. The branch is deleted.
+5. **Docs pushed:** `7f55cfae` (+ the part-(a) mockup shown to the owner, the chart-card structure map and this entry in the follow-up docs commit) (docs-only, CI skipped by design) — ADR 063, vision one-liner, STATUS top block, 08-build-
+   plan WP-LOOK + breadth paused, open-questions #335 addendum / #346 / #347, 03/06 pointers, README headline, lessons,
+   [session-142 kickoff](session-briefs/2026-09-29-session-142-kickoff.md). Memory index compacted (historical
+   sessions moved to an index file).
+6. **Next:** WP-LOOK part (a), the answer chart — design skills loaded first, screenshots next to Competitor G until
+   the owner says "I would share this" (open-questions #346).
+
 **Session 140 (2026-09-29, local UTC+7 — started by the owner's kickoff paste; the owner was present at the start and
 at the wrap-up; ran in PARALLEL with session 141 (the owner's vision review) in the same checkout; spent nothing on AI).**
 
