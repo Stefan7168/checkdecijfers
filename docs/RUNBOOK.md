@@ -306,6 +306,26 @@ the old history on purpose (rollback insurance); the owner deletes it when satis
 identity for every clone: the noreply address in the fresh-clone step below — never a personal
 e-mail (the repo is public).
 
+## Wiring graphmaker.studio (rebrand, ADR 064) — added session 144, 2026-09-29
+
+**State (verified with `vercel domains inspect`, 2026-09-29 18:47 CEST):** `graphmaker.studio` and `www.graphmaker.studio`
+are ADDED to the Vercel project `checkdecijfers` (done by the session, owner GO). The domain is registered at a third party
+and its DNS is at **Cloudflare** (nameservers `brett.ns.cloudflare.com` / `daphne.ns.cloudflare.com`), which no session
+can reach — the records are the owner's step. Until they exist the domain resolves nowhere and every link stays on
+`checkdecijfers.vercel.app` (`NEXT_PUBLIC_APP_URL` in `web/.env.production`). **Owner chose "later" in session 144.**
+
+1. **Owner, in the Cloudflare dashboard → graphmaker.studio → DNS → Records:** add (or edit an existing one for the same
+   name) `A  @  76.76.21.21` and `A  www  76.76.21.21`, both **proxy OFF** (grey cloud, "DNS only") — proxied records
+   stop Vercel issuing the certificate. TTL Auto.
+2. **Session (any, no owner needed):** `cd web && vercel domains inspect graphmaker.studio` until the WARNING is gone and
+   the certificate shows; `curl -sI https://graphmaker.studio | head -1` → 200/307.
+3. **Session, with the owner present (it changes every link and share picture):** set `NEXT_PUBLIC_APP_URL=https://graphmaker.studio`
+   in `web/.env.production` (the committed public file, see the note on `NEXT_PUBLIC_*` above), push → CI deploys. Old
+   Share/Embed links on the vercel address keep working (the app answers on both); new ones use the domain. Then
+   retire the "parked domain" reason in `web/components/chart-embed-dialog.tsx` and the default in `web/lib/app-url.ts`.
+4. **Later, owner:** a graphmaker mailbox + Resend sender domain (`noreply@mail.checkdecijfers.nl`, `hi@checkdecijfers.nl`
+   stay until then), the Supabase auth custom domain (#7's Google consent-screen wish), and then #353 (SEO pages).
+
 ## Adding a data source (WP30c and later)
 
 The step-by-step recipe lives in [docs/how-to-add-a-source.md](how-to-add-a-source.md) (WP30b,
