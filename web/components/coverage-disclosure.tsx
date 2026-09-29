@@ -23,8 +23,13 @@ const PILL = 'rounded-full border border-border px-3 py-1 text-xs text-muted-for
 export function CoverageDisclosureView({
   coverage,
   onPickExample,
+  defaultOpen = false,
 }: {
   coverage: CoverageDisclosure | null | undefined;
+  /** #353: the SEO landing page renders the list already open — a crawler
+   * and a reader both get the full holdings without a click. Everywhere
+   * else keeps the collapsed default (owner, session 87). */
+  defaultOpen?: boolean;
   /** Present ⇒ the example renders as a click-to-fill button (chat composer,
    * #75 fill-don't-send convention). Absent ⇒ the example renders as plain
    * text (landing page — no composer to fill there). */
@@ -34,7 +39,7 @@ export function CoverageDisclosureView({
   if (!coverage || coverage.tables.length === 0) return null;
 
   return (
-    <details className="text-xs text-muted-foreground">
+    <details className="text-xs text-muted-foreground" open={defaultOpen || undefined}>
       <summary className="cursor-pointer font-medium text-muted-foreground">{t('coverage.summary')}</summary>
       <div className="mt-2 flex flex-col gap-3">
         <div>

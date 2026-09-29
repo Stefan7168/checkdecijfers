@@ -324,7 +324,36 @@ can reach — the records are the owner's step. Until they exist the domain reso
    Share/Embed links on the vercel address keep working (the app answers on both); new ones use the domain. Then
    retire the "parked domain" reason in `web/components/chart-embed-dialog.tsx` and the default in `web/lib/app-url.ts`.
 4. **Later, owner:** a graphmaker mailbox + Resend sender domain (`noreply@mail.checkdecijfers.nl`, `hi@checkdecijfers.nl`
-   stay until then), the Supabase auth custom domain (#7's Google consent-screen wish), and then #353 (SEO pages).
+   stay until then), the Supabase auth custom domain (#7's Google consent-screen wish).
+5. **Session, after step 3 (owner GO):** switch the SEO landing pages on — the next section.
+
+## SEO landing pages (#353) — built DARK session 145, 2026-09-29; switched on only after the domain is live
+
+**What exists:** `/netherlands-cbs-data` — a public, LLM-free page (the /galerij shell) with the 12 curated chart
+stories and the "what we hold today" list (the same cached coverage list the landing shows, rendered open), in both
+languages. Zero AI spend, no database objects, no server actions. `/eurostat-data` is NOT built (owner, session 145):
+it follows in the same shape once real Eurostat series are loaded AND curated — never a page that promises more than
+we hold (principle c). Design and file list: [open-questions #353](open-questions.md).
+
+**The switch:** `SEO_PAGES_INDEXABLE` in `web/lib/seo-pages.ts` (a constant — the cheapest mechanism, no env var, no
+row). While `false` (today): the page carries `noindex` like every other pre-launch page, `/robots.txt` keeps the
+blanket disallow, `/sitemap.xml` is empty. While `true`: `/robots.txt` allows exactly the listed SEO paths (a more
+specific allow beats the blanket "/" for every major crawler) and names the sitemap; each SEO page's metadata turns
+`index, follow` with a canonical link under `NEXT_PUBLIC_APP_URL`; `/sitemap.xml` lists the pages. Nothing else on
+the site changes — the blanket noindex in `web/app/layout.tsx` stays for every other route.
+
+**Go-live (session, owner present — it is the first indexable page of the product):**
+1. Preconditions: the domain wiring above is at step 3 (`NEXT_PUBLIC_APP_URL=https://graphmaker.studio` deployed), and
+   `curl -sI https://graphmaker.studio/robots.txt | head -1` → 200 (the proxy lists `/robots.txt` and `/sitemap.xml`
+   as public since session 145 — before that they 307'd to `/login`, harmless while everything was noindex).
+2. Flip `SEO_PAGES_INDEXABLE` to `true` in `web/lib/seo-pages.ts`; update the three tests that pin `false`
+   (`web/lib/seo-pages.test.ts` and the OFF cases in `web/app/robots.test.ts` / `web/app/sitemap.test.ts`); full
+   verification block; push → CI deploys.
+3. Verify live: `curl -s https://graphmaker.studio/robots.txt` shows the allow line and the sitemap;
+   `curl -s https://graphmaker.studio/sitemap.xml` lists the page; the page's HTML has `<link rel="canonical">` and
+   `index, follow` in its robots meta. Then submit the sitemap in Google Search Console (owner, account step).
+4. Rollback: set the constant back to `false` and push — the page returns to noindex within one deploy; a crawler that
+   already indexed it drops it on its next visit.
 
 ## Adding a data source (WP30c and later)
 

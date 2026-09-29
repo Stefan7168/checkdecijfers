@@ -55,6 +55,11 @@ describe('CoverageDisclosureView — nl (default)', () => {
     expect(screen.queryByText(/eurostat/i)).toBeNull();
   });
 
+  it('#353: defaultOpen renders the <details> already open (the SEO page lists its holdings in full)', () => {
+    const { container } = render(<CoverageDisclosureView coverage={coverage()} defaultOpen />);
+    expect(container.querySelector('details')?.hasAttribute('open')).toBe(true);
+  });
+
   it('renders nothing when coverage is null (never a build has succeeded)', () => {
     const { container } = render(<CoverageDisclosureView coverage={null} />);
     expect(container).toBeEmptyDOMElement();

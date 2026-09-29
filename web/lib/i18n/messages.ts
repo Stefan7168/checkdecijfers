@@ -1430,6 +1430,21 @@ const nl = {
   // getGalleryStories() is still building its cache (a cold read, #190) —
   // see gallery.tsx's GalleryLoadingRow.
   'gallery.loadingNote': 'Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.',
+  // #353 (session 145): the SEO landing page for the CBS source,
+  // /netherlands-cbs-data. Claims match the public-claim rule (CLAUDE.md):
+  // traceable to a CBS cell with source and date — never absolute slogans.
+  'seoNl.pageTitle': 'Nederlandse CBS-data als grafieken — graphmaker.studio',
+  'seoNl.metaDescription':
+    'Officiële statistiek van Nederland (CBS) als deelbare grafieken: inflatie, werkloosheid, huizenprijzen, economische groei en meer — elk cijfer herleidbaar naar een CBS-tabelcel, met bron en datum.',
+  'seoNl.heading': 'Nederlandse statistiek van het CBS, als grafieken',
+  'seoNl.intro1':
+    'graphmaker.studio maakt grafieken van de officiële statistiek van Nederland, zoals het Centraal Bureau voor de Statistiek (CBS) die publiceert: inflatie, werkloosheid, huizenprijzen, economische groei, faillissementen en meer.',
+  'seoNl.intro2':
+    'Elk cijfer is herleidbaar naar een CBS-tabelcel en elke grafiek toont bron en datum. De cijfers worden door deterministische code uit onze eigen kopie van de CBS-tabellen berekend — geen taalmodel rekent of interpreteert ze.',
+  'seoNl.chartsHeading': 'Grafieken uit de CBS-cijfers',
+  'seoNl.holdingsHeading': 'Wat we vandaag in huis hebben',
+  'seoNl.holdingsIntro':
+    'De CBS-tabellen die we nu bijhouden, met de datum waarop we ze voor het laatst bij het CBS hebben gecontroleerd. Andere tabellen halen we op verzoek op.',
   // Fix-wave finding 4: every title is now the QUESTION a reader would have
   // typed in chat — it demonstrates the positioning sentence directly and
   // never repeats the chart's own on-screen title one line below. The
@@ -2633,6 +2648,19 @@ const en: Messages = {
   'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
   // #3 (session 110 UX audit): see the nl entry's comment.
   'gallery.loadingNote': 'Loading the gallery — reload in a moment if it stays empty.',
+  // #353 (session 145): see the nl entries' comment.
+  'seoNl.pageTitle': 'Netherlands CBS data as charts — graphmaker.studio',
+  'seoNl.metaDescription':
+    'Official statistics of the Netherlands (CBS) as shareable charts: inflation, unemployment, house prices, economic growth and more — every number traceable to a CBS table cell, with source and date.',
+  'seoNl.heading': 'Netherlands statistics from CBS, as charts',
+  'seoNl.intro1':
+    'graphmaker.studio turns the official statistics of the Netherlands, as published by Statistics Netherlands (CBS), into charts: inflation, unemployment, house prices, economic growth, bankruptcies and more.',
+  'seoNl.intro2':
+    'Every number is traceable to a CBS table cell and every chart shows its source and date. Deterministic code computes the figures from our own copy of the CBS tables — no language model calculates or interprets them.',
+  'seoNl.chartsHeading': 'Charts from the CBS figures',
+  'seoNl.holdingsHeading': 'What we hold today',
+  'seoNl.holdingsIntro':
+    'The CBS tables we keep today, with the date we last checked each one against CBS. Other tables are fetched on request.',
   // Fix-wave finding 4: every title is the QUESTION a reader would have
   // typed — the separate "lead" line was dropped, the question says it.
   'gallery.story.consumentenvertrouwen.title': 'How optimistic are the Dutch?',

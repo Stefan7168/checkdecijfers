@@ -73,6 +73,13 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/galerij')).toBe(true);
     expect(isPublicPath('/galerij-debug')).toBe(false);
     expect(isPublicPath('/galerij/anything')).toBe(false);
+    // #353: the SEO landing page — public, exact match, same posture.
+    expect(isPublicPath('/netherlands-cbs-data')).toBe(true);
+    expect(isPublicPath('/netherlands-cbs-data/x')).toBe(false);
+    // #353 review finding: the crawler files must be readable anonymously.
+    expect(isPublicPath('/robots.txt')).toBe(true);
+    expect(isPublicPath('/sitemap.xml')).toBe(true);
+    expect(isPublicPath('/sitemap.xml/other')).toBe(false);
   });
 
   it('allows the auth-flow paths', () => {

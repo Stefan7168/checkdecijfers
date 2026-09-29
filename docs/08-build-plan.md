@@ -1230,6 +1230,15 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
   cheap tier; [#338](open-questions.md)) → **step 6** table-lane benchmark (0 fabricated, refusals correct; also measures #340/#342/#343/#344) →
   flip `TABLE_LANE_ENABLED` (RUNBOOK "Table lane (breadth step 5)").
 
+## SEO landing pages ([#353](open-questions.md), owner pick session 145, 2026-09-29) — NETHERLANDS PAGE ✅ BUILT DARK; EUROSTAT PAGE WAITS FOR CURATED EUROSTAT SERIES; SWITCH-ON WAITS FOR THE DOMAIN
+
+Bounded build (brainstormed in chat, no spec): `/netherlands-cbs-data` on the /galerij shell — the 12 curated stories +
+the coverage list rendered open, both languages, zero AI, no DDL. One indexing switch (`web/lib/seo-pages.ts`,
+`false` today) drives robots.ts's allow-list, the page's index/canonical metadata and the new `/sitemap.xml`. Code
+review LOW found that `/robots.txt` had always 307'd to `/login` (proxy allowlist) — fixed with `/sitemap.xml` in the
+same change. **Next:** domain live (RUNBOOK "Wiring graphmaker.studio" steps 1–3) → flip the switch (RUNBOOK "SEO
+landing pages") → `/eurostat-data` once Eurostat series are curated (#313 E2a).
+
 ## Regional statistics → region questions (owner pick 2026-09-26, session 134) — PART 1 ✅ BUILT (session 138), PART 2 BUILT ON BRANCH `regional-stats-part2` + PARKED (owner sanity check #335: breadth first)
 
 **Session 138 (2026-09-28):** CBS back; designed + Part 1 built (ADR [061](decisions/061-regional-statistics-70072ned.md),

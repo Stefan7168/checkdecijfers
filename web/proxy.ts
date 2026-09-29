@@ -47,6 +47,17 @@ const PUBLIC_EXACT_PATHS = [
   // route 307's to /login until it's listed here). No AI spend, no server
   // actions, only the deterministic curated-chart feed (web/lib/ontdek.ts).
   '/galerij',
+  // #353 (session 145): the SEO landing page for the CBS source — same
+  // posture as /galerij (curated feed + coverage list, no AI, no actions).
+  '/netherlands-cbs-data',
+  // #353 review finding (session 145): the two crawler files. /robots.txt
+  // had 307'd to /login on prod since it existed (harmless while the whole
+  // site was noindex — a crawler that cannot read robots.txt assumes
+  // "allowed", and every page then said noindex itself); once the SEO switch
+  // is ON, both files MUST be readable anonymously or the allow rule and the
+  // sitemap are never seen.
+  '/robots.txt',
+  '/sitemap.xml',
 ];
 
 const PUBLIC_PATH_PREFIXES = [
