@@ -112,7 +112,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: "Breadth step 5 (table lane, Task 3): present-only, set only by respondTableLane (src/answer/table-lane/respond.ts). checkTableLane pins its version, pairs it with the rest of the record — on an answer the table it names must be the answer's attributed table and a stored slice (sliceFilterKey) must back it; the table-parse call must appear in llm_calls exactly once, with the envelope's parseAudit model + tokens (and never without an envelope); `question` iff the row is a clarification. The selection note is RE-DERIVED byte-identically from the stored `selection` + `lang` (fix round 1, Ruling R8), and the parse prompt/schema versions must pair with parseAudit. The parse and the menu hash are recorded, not re-derived: the table's live schema the plan ran over is not stored, so there is nothing at audit time to re-derive them from — the served NUMBERS are covered by `result`/`body` as on every answer. Named `shape-checked` because the treatment is a mix (pairings + one byte-identical re-derivation), like `english`.",
+      note: "Breadth step 5 (table lane, Task 3): present-only, set only by respondTableLane (src/answer/table-lane/respond.ts). checkTableLane pins its version, pairs it with the rest of the record — on an answer the table it names must be the answer's attributed table and a stored slice (sliceFilterKey) must back it; the table-parse call must appear in llm_calls exactly once, with the envelope's parseAudit model + tokens (and never without an envelope); `question` iff the row is a clarification. The selection note is RE-DERIVED byte-identically from the stored `selection` + `lang` (fix round 1, Ruling R8), and the parse prompt/schema versions must pair with parseAudit. `previousQuestion` (Task 7 fix round 1) — the follow-up context the parse's user turn quoted — is stored and shape-checked (null, or one or two non-empty prior questions; the key must be present). The parse, the menu hash and the parse request hash are recorded, not re-derived: the table's live schema the plan ran over is not stored, so there is nothing at audit time to re-derive them from — the served NUMBERS are covered by `result`/`body` as on every answer. Named `shape-checked` because the treatment is a mix (pairings + one byte-identical re-derivation), like `english`.",
     },
   },
   ClarificationResponse: {
@@ -134,7 +134,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, previousQuestion shape-checked, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
     },
   },
   RefusalResponse: {
@@ -158,7 +158,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, previousQuestion shape-checked, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
     },
   },
   ComposedAnswer: {
@@ -241,6 +241,39 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       why: "#196 staleness INPUTS (update cadence, last sync), captured at query time. The staleness verdict they feed depends on wall-clock time at serve, which no later reader can reproduce — so the warning itself is replayed verbatim (AnswerResponse.stalenessWarning, shape-checked through the text re-assembly) rather than re-derived, and these inputs with it. Present-only: synthetic results carry no key.",
     },
   },
+  // Breadth step 5, Task 7 fix round 1 (review Minor 2): the table lane's own
+  // envelope (the `tableLane` key above) joins the manifest, so a new key on
+  // it — like `previousQuestion` — cannot land without an R8 decision.
+  TableLaneEnvelope: {
+    version: { category: 'shape-checked' }, // version pin (v1)
+    rowId: {
+      category: 'ignored',
+      why: 'a pointer to the table_lane_requests row, which retention deletes on its own schedule — the audit row must stand on its own, so nothing is checked against it',
+    },
+    tableId: { category: 'shape-checked' }, // must equal the answer's attributed table
+    finderConfidence: {
+      category: 'ignored',
+      why: "the finder's (or follow-up link's) routing confidence — telemetry about how the table was chosen; no number in the answer depends on it and nothing stored can re-derive it",
+    },
+    parse: { category: 'shape-checked' }, // never without its parseAudit
+    parseAudit: { category: 'shape-checked' }, // paired with the llm_calls 'table_parse' entry (model + tokens)
+    offeredMenuHash: {
+      category: 'ignored',
+      why: 'recorded, not re-derived: the table schema the plan ran over is not stored, so there is nothing at audit time to hash again',
+    },
+    parsePromptVersion: { category: 'shape-checked' }, // paired with parseAudit
+    parseSchemaVersion: { category: 'shape-checked' }, // paired with parseAudit
+    lang: { category: 'shape-checked' }, // nl|en, the language selectionNote re-derives in
+    selection: { category: 'shape-checked' }, // the ground truth selectionNote re-derives FROM
+    selectionNote: { category: 'rederived' }, // selectionNote(selection, lang), byte-identical
+    sliceFilterKey: { category: 'shape-checked' }, // an answer (and a cached-slice claim) must have one
+    question: { category: 'shape-checked' }, // present iff clarification; offered titles = options
+    fromCachedSlice: { category: 'shape-checked' }, // implies a sliceFilterKey
+    previousQuestion: {
+      category: 'shape-checked',
+      note: 'Task 7 fix round 1: the follow-up context the parse user turn quoted — null, or one or two non-empty prior questions, key required. Shape only: the offered menu is not stored, so the parse request hash cannot be rebuilt.',
+    },
+  },
 };
 
 /** Interfaces whose own members the manifest must cover, in the file that
@@ -260,6 +293,10 @@ const SOURCES: { file: string; interfaces: string[] }[] = [
     // block in MANIFEST for why it is covered here.
     file: fileURLToPath(new URL('../../src/query/types.ts', import.meta.url)),
     interfaces: ['ValidatedResult'],
+  },  {
+    // Task 7 fix round 1: the table lane's envelope (see its MANIFEST block).
+    file: fileURLToPath(new URL('../../src/answer/table-lane/types.ts', import.meta.url)),
+    interfaces: ['TableLaneEnvelope'],
   },
 ];
 
@@ -363,6 +400,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       RefusalResponse: 13, // ADR 058 phase 2 (#332), Task 5: + present-only `english`; breadth step 5: + present-only `tableLane`
       ComposedAnswer: 20, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`; #296: + present-only `scatterLine`, `pairedDefinitionLine`
       ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
+      TableLaneEnvelope: 16, // breadth step 5 Task 7 r1: joined the manifest with `previousQuestion`
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
       expect(declared.get(name)?.length, `${name} parsed an unexpected member count`).toBe(count);

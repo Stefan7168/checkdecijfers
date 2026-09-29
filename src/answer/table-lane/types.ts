@@ -73,4 +73,12 @@ export interface TableLaneEnvelope {
   question: BreakdownQuestion | null;
   /** Settled choice 1: CBS unreachable, answered from a < 24 h cached slice. */
   fromCachedSlice: boolean;
+  /** Task 7 fix round 1 (review Minor 2): the row's previous-question context
+   * (table_lane_requests.previous_question — at most the two most recent
+   * prior questions, one per line) that the parse's user turn quoted, or null
+   * on a plain row. Kept here so audit_answers alone records which request
+   * produced the parse (#339 (11)); the row itself is deleted by retention.
+   * Reconstruct checks its shape — the offered menu is not stored, so the
+   * request hash cannot be rebuilt at audit time. */
+  previousQuestion: string | null;
 }

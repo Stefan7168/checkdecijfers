@@ -1061,6 +1061,17 @@ function checkTableLane(record: AuditRecord, problems: string[]): void {
   if (lane.fromCachedSlice && lane.sliceFilterKey === null) {
     problems.push('tableLane claims a cached slice without a sliceFilterKey');
   }
+  // Task 7 fix round 1 (review Minor 2): the follow-up context the parse's
+  // user turn quoted — null, or one or two non-empty prior questions (one per
+  // line). Shape only: the offered menu is not stored, so the parse request
+  // hash itself cannot be rebuilt here.
+  const previous: unknown = (lane as { previousQuestion?: unknown }).previousQuestion;
+  if (previous !== null) {
+    const lines = typeof previous === 'string' ? previous.split('\n') : null;
+    if (lines === null || lines.length > 2 || lines.some((line) => line.trim().length === 0)) {
+      problems.push('tableLane previousQuestion is neither null nor one or two non-empty prior questions');
+    }
+  }
 }
 
 export function reconstructionReport(record: AuditRecord): ReconstructionReport {

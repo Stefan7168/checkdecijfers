@@ -82,6 +82,12 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock('../backend/ingestion/table-lane-store.ts', () => store);
 
+// Task 7 r1 (R14): the real table finder, controllable per test (only built
+// when ONBOARDING_ENABLED='1').
+const finderMod = vi.hoisted(() => ({ buildOnboardingFinder: vi.fn() }));
+vi.mock('../backend/ingestion/onboarding-finder.ts', () => finderMod);
+
+import { resolveUnmatched, type OutcomeContext } from '../backend/answer/intent/policy.ts';
 import { askQuestion, pollTableLane, replyToTableLane } from './actions.ts';
 
 const fakeDb = {} as Db;
@@ -338,21 +344,29 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
     return audit.answerQuestionAudited.mock.calls[0]![2] as { tableFinder?: Finder };
   }
 
-  /** The pipeline's curated miss: the unmatched exit consults the injected
-   * finder (as src/answer/intent/policy.ts resolveUnmatched does) and a
-   * routing becomes the onboarding_pending refusal. */
+  /** The pipeline's curated miss, through the REAL unmatched exit
+   * (src/answer/intent/policy.ts resolveUnmatched — the only place the
+   * pipeline consults a finder): an onboarding outcome becomes the
+   * onboarding_pending refusal, anything else the B15 clarification. */
   function driveMiss(term: string): void {
     audit.answerQuestionAudited.mockImplementation(async (_db: Db, question: string, options: { tableFinder?: Finder }) => {
-      const routing = options.tableFinder ? await options.tableFinder(term, question) : null;
-      const response = routing
-        ? ({
-            kind: 'refusal',
-            reason: 'onboarding_pending',
-            question,
-            text: ONBOARDING_PENDING_TEXT,
-            onboarding: { tableId: routing.tableId, topicTerm: routing.topicTerm, confidence: routing.confidence, candidateIds: routing.candidateIds },
-          } as unknown as ComposedResponse)
-        : ({ kind: 'clarification', question, text: 'Welk onderwerp bedoel je?' } as unknown as ComposedResponse);
+      const context = {
+        question,
+        raw: { unmatchedMeasureTerm: term, nearestCanonicalKeys: [] },
+        model: 'stub',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      } as unknown as OutcomeContext;
+      const outcome = await resolveUnmatched(context, options.tableFinder as never);
+      const response =
+        outcome.kind === 'onboarding'
+          ? ({
+              kind: 'refusal',
+              reason: 'onboarding_pending',
+              question,
+              text: ONBOARDING_PENDING_TEXT,
+              onboarding: { tableId: outcome.tableId, topicTerm: outcome.topicTerm, confidence: outcome.confidence, candidateIds: outcome.candidateIds },
+            } as unknown as ComposedResponse)
+          : ({ kind: 'clarification', question, text: 'Welk onderwerp bedoel je?' } as unknown as ComposedResponse);
       return { response, auditId: 11 } as AuditedResponse;
     });
     billing.chargeAndRun.mockImplementation(
@@ -398,11 +412,28 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
     expect(kickTableLaneJob).toHaveBeenCalledTimes(1);
   });
 
-  it('a curated HIT still wins: the link is never used, the answer passes through', async () => {
+  it('a curated HIT still wins: the link finder is injected but never invoked, the answer passes through', async () => {
+    vi.stubEnv('ONBOARDING_ENABLED', '1');
+    const realFinder = vi.fn();
+    finderMod.buildOnboardingFinder.mockReturnValue(realFinder);
     store.readTableLaneRequest.mockResolvedValue(PARENT);
     const answer = { kind: 'answer', question: 'q', text: 'Het antwoord.', answer: { body: 'x' } } as unknown as ComposedResponse;
-    drive(answer, 5, 20);
+    // A curated hit: the pipeline answers and never reaches its unmatched
+    // exit. The finder it was handed is wrapped in a spy to prove that.
+    let injected: Finder | undefined;
+    const finderSpy = vi.fn();
+    audit.answerQuestionAudited.mockImplementation(async (_db: Db, _q: string, options: { tableFinder?: Finder }) => {
+      injected = options.tableFinder;
+      if (injected) finderSpy.mockImplementation(injected);
+      return { response: answer, auditId: 5 } as AuditedResponse;
+    });
+    billing.chargeAndRun.mockImplementation(
+      async (_db: Db, _uid: string, _rid: string, run: () => Promise<AuditedResponse>) => ({ kind: 'ok', ...(await run()), netCost: 20 }) as GatedResponse,
+    );
     const outcome = await askQuestion('Hoeveel inwoners heeft Utrecht?', RID, null, undefined, 3, 50);
+    expect(injected).toBeTypeOf('function'); // the link finder WAS in the slot ...
+    expect(finderSpy).not.toHaveBeenCalled(); // ... but a hit never consults it
+    expect(realFinder).not.toHaveBeenCalled(); // (nor, through it, the real finder)
     expect(store.createTableLaneRequest).not.toHaveBeenCalled();
     expect(outcome.tableLane).toBeNull();
     expect(outcome.gated).toEqual({ kind: 'ok', netCost: 20, auditId: 5, response: answer });
@@ -463,6 +494,158 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
     expect(outcome.tableLane).toBeNull();
     expect(reportError).toHaveBeenCalledWith('askQuestion.tableLaneFollowUp', expect.any(Error), expect.objectContaining({ requestId: RID }));
     spy.mockRestore();
+  });
+
+  // --- R14: the link is a FALLBACK behind the real finder ---------------------
+
+  function realFinderReturning(pick: Awaited<ReturnType<Finder>>): ReturnType<typeof vi.fn> {
+    const realFinder = vi.fn().mockResolvedValue(pick);
+    finderMod.buildOnboardingFinder.mockReturnValue(realFinder);
+    return realFinder;
+  }
+
+  it('R14: the real finder confidently picks a DIFFERENT table → that table, as a new question (no previousQuestion)', async () => {
+    vi.stubEnv('ONBOARDING_ENABLED', '1');
+    const realFinder = realFinderReturning({ tableId: '83625NED', topicTerm: 'huizenprijzen', confidence: 0.93, alreadyPending: false, candidateIds: ['83625NED'] });
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('huizenprijzen');
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 52 }) });
+    const outcome = await askQuestion('En de huizenprijzen?', RID, null, undefined, 3, 50);
+    expect(realFinder).toHaveBeenCalledWith('huizenprijzen', 'En de huizenprijzen?');
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(fakeDb, {
+      userId: 'user-1',
+      requestId: RID,
+      threadId: 3,
+      lang: 'nl',
+      question: 'En de huizenprijzen?',
+      tableId: '83625NED',
+      finderConfidence: 0.93,
+    });
+    expect(outcome.tableLane).toEqual({ rowId: 52 });
+  });
+
+  it('R14: the real finder confidently picks the SAME table → the link, with previousQuestion', async () => {
+    vi.stubEnv('ONBOARDING_ENABLED', '1');
+    realFinderReturning({ tableId: '84521NED', topicTerm: 'opnamen', confidence: 0.97, alreadyPending: false, candidateIds: ['84521NED'] });
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('opnamen');
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 53 }) });
+    await askQuestion('En de opnamen voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({
+        tableId: '84521NED',
+        finderConfidence: 0.88, // the link's routing (the parent's), not the re-pick's
+        parentId: 50,
+        previousQuestion: 'Hoeveel ziekenhuisopnamen waren er in 2019?',
+      }),
+    );
+  });
+
+  it('R14: the real finder returns nothing → the link, with previousQuestion', async () => {
+    vi.stubEnv('ONBOARDING_ENABLED', '1');
+    const realFinder = realFinderReturning(null);
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('vrouwen');
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 54 }) });
+    await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(realFinder).toHaveBeenCalledTimes(1);
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ tableId: '84521NED', parentId: 50, previousQuestion: 'Hoeveel ziekenhuisopnamen waren er in 2019?' }),
+    );
+  });
+
+  it('R15: a bare follow-up with no topic term keeps today\'s curated clarification (the finder slot is never reached)', async () => {
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    audit.answerQuestionAudited.mockImplementation(async (_db: Db, question: string, options: { tableFinder?: Finder }) => {
+      const context = {
+        question,
+        raw: { unmatchedMeasureTerm: null, nearestCanonicalKeys: [] },
+        model: 'stub',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      } as unknown as OutcomeContext;
+      const outcome = await resolveUnmatched(context, options.tableFinder as never);
+      expect(outcome.kind).toBe('clarification');
+      return { response: { kind: 'clarification', question, text: 'Welk onderwerp bedoel je?' } as unknown as ComposedResponse, auditId: 11 } as AuditedResponse;
+    });
+    billing.chargeAndRun.mockImplementation(
+      async (_db: Db, _uid: string, _rid: string, run: () => Promise<AuditedResponse>) => ({ kind: 'ok', ...(await run()), netCost: 10 }) as GatedResponse,
+    );
+    const outcome = await askQuestion('En in 2020?', RID, null, undefined, 3, 50);
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(outcome.tableLane).toBeNull();
+    expect(outcome.gated).toMatchObject({ kind: 'ok', netCost: 10, response: { kind: 'clarification' } });
+  });
+
+  // --- Minor 1: a link routing that cannot be queued while onboarding is dormant
+
+  it('flag on + ONBOARDING_ENABLED off + the queue insert throws: a free, audited table_lane_failed text — never the onboarding offer', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('vrouwen');
+    store.createTableLaneRequest.mockRejectedValue(new Error('connection reset'));
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(offerToken.signOnboardingOffer).not.toHaveBeenCalled();
+    expect(onboarding.onboardingPrice).not.toHaveBeenCalled();
+    expect(outcome.onboardingOffer).toBeNull();
+    expect(outcome.tableLane).toBeNull();
+    // The audited routing turn (auditId 11), refunded by the gate (net 0),
+    // with the lane's own failure wording.
+    expect(outcome.gated).toMatchObject({
+      kind: 'ok',
+      netCost: 0,
+      auditId: 11,
+      response: { kind: 'refusal', text: 'Het ophalen van deze CBS-tabel is niet gelukt. Je betaalt hier niets voor.' },
+    });
+    expect(outcome.threadId).toBe(7); // attached like every audited turn
+    expect(reportError).toHaveBeenCalledWith('askQuestion.tableLane', expect.any(Error), expect.objectContaining({ requestId: RID }));
+    spy.mockRestore();
+  });
+
+  it('the same failure with ONBOARDING_ENABLED on keeps Task 5\'s offer fallback', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubEnv('ONBOARDING_ENABLED', '1');
+    realFinderReturning(null);
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('vrouwen');
+    store.createTableLaneRequest.mockRejectedValue(new Error('connection reset'));
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(outcome.onboardingOffer).toEqual({ token: 'signed-offer', priceCredits: 100 });
+    spy.mockRestore();
+  });
+
+  // --- Minor 4: chained follow-ups keep the two most recent prior questions --
+
+  it('a three-turn chain carries at most the two most recent prior questions', async () => {
+    const Q1 = 'Hoeveel ziekenhuisopnamen waren er in 2019?';
+    const Q2 = 'En voor vrouwen?';
+    const Q3 = 'En in 2020?';
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 60 }) });
+    driveMiss('x');
+
+    // Turn 2 follows the first answer (no previous question of its own).
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    await askQuestion(Q2, RID, null, undefined, 3, 50);
+    expect(store.createTableLaneRequest.mock.calls.at(-1)![1]).toMatchObject({ previousQuestion: Q1 });
+
+    // Turn 3 follows turn 2's answer.
+    store.readTableLaneRequest.mockResolvedValue({ ...PARENT, id: 51, question: Q2, previousQuestion: Q1, parentId: 50 });
+    await askQuestion(Q3, RID2, null, undefined, 3, 51);
+    expect(store.createTableLaneRequest.mock.calls.at(-1)![1]).toMatchObject({ previousQuestion: `${Q1}\n${Q2}` });
+
+    // Turn 4 follows turn 3's answer: the oldest question drops off.
+    store.readTableLaneRequest.mockResolvedValue({ ...PARENT, id: 52, question: Q3, previousQuestion: `${Q1}\n${Q2}`, parentId: 51 });
+    await askQuestion('En voor mannen?', '00000000-0000-4000-8000-000000000003', null, undefined, 3, 52);
+    expect(store.createTableLaneRequest.mock.calls.at(-1)![1]).toMatchObject({ previousQuestion: `${Q2}\n${Q3}`, parentId: 52 });
+  });
+
+  it('a prior question with its own line breaks is flattened, so the two-question window stays exact', async () => {
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 61 }) });
+    driveMiss('x');
+    store.readTableLaneRequest.mockResolvedValue({ ...PARENT, question: 'Hoeveel opnamen\n  waren er\r\nin 2019?' });
+    await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(store.createTableLaneRequest.mock.calls.at(-1)![1]).toMatchObject({ previousQuestion: 'Hoeveel opnamen waren er in 2019?' });
   });
 
   it('flag off: the link is never read and the outcome is exactly today\'s', async () => {

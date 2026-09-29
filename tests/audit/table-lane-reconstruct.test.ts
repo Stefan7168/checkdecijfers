@@ -19,6 +19,7 @@ import type { AnswerResponse, ClarificationResponse, RefusalResponse } from '../
 import { planTableLane, type TableLanePlan, type TableLaneRefusalReason } from '../../src/answer/table-lane/plan.ts';
 import { respondTableLane } from '../../src/answer/table-lane/respond.ts';
 import type { TableLaneTable } from '../../src/answer/table-lane/types.ts';
+import type { TableLaneRow } from '../../src/ingestion/table-lane-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import {
   LANE_MEASURE,
@@ -59,7 +60,7 @@ const OPTIONS: AuditedRespondOptions = {
   referenceDate: REF,
 };
 
-async function answerRecord(target: () => Db = () => db): Promise<AuditRecord> {
+async function answerRecord(target: () => Db = () => db, rowOverrides: Partial<TableLaneRow> = {}): Promise<AuditRecord> {
   const client = new StubParseClient(
     parseOutput(table, LANE_QUESTION, {
       measureCode: LANE_MEASURE,
@@ -75,7 +76,7 @@ async function answerRecord(target: () => Db = () => db): Promise<AuditRecord> {
   const fetched = await ensureSlice(db, source, LANE_TABLE, plan.slice);
   if (!fetched.ok) throw new Error(fetched.summary);
   const audited = await respondTableLane(target(), {
-    row: laneRow(),
+    row: laneRow(rowOverrides),
     plan,
     fetch: { ok: true, filterKey: fetched.filterKey, fromCache: false },
     referenceDate: REF,
@@ -246,6 +247,30 @@ describe('table-lane rows: stored selection + parse versions (fix round 1)', () 
     const t = clone(await answerRecord());
     (t.response as AnswerResponse).tableLane!.lang = 'en';
     expect(problemsOf(t)).toContain('selectionNote');
+  });
+
+  // Task 7 fix round 1 (review Minor 2): the previous question is stored;
+  // reconstruct checks its shape (the offered menu is not stored, so the
+  // request hash itself cannot be rebuilt at audit time).
+  it('stores previousQuestion (null on a plain row) and a follow-up row reconstructs cleanly', async () => {
+    const plain = await answerRecord();
+    expect(plain.response.tableLane!.previousQuestion).toBeNull();
+    const followUp = await answerRecord(() => db, { previousQuestion: 'Hoeveel inwoners had Amsterdam in 2023?' });
+    expect(followUp.response.tableLane!.previousQuestion).toBe('Hoeveel inwoners had Amsterdam in 2023?');
+    expect(reconstructionReport(followUp).problems).toEqual([]);
+  });
+
+  it.each([
+    ['an empty string', ''],
+    ['a non-string', 42],
+    ['more than two prior questions', 'Een?\nTwee?\nDrie?'],
+    ['a missing key', undefined],
+  ])('tamper: previousQuestion as %s fails', async (_label, value) => {
+    const t = clone(await answerRecord());
+    const lane = (t.response as AnswerResponse).tableLane! as unknown as Record<string, unknown>;
+    if (value === undefined) delete lane.previousQuestion;
+    else lane.previousQuestion = value;
+    expect(problemsOf(t)).toContain('previousQuestion');
   });
 
   it('tamper: parse versions dropped while the parse audit stays fails', async () => {

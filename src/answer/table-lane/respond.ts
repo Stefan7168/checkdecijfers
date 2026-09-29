@@ -136,6 +136,7 @@ function envelope(input: RespondTableLaneInput, lang: 'nl' | 'en'): TableLaneEnv
     sliceFilterKey: onFetchPath && fetch !== null ? fetch.filterKey : null,
     question: plan.kind === 'ask' && input.refusalOverride === undefined ? plan.question : null,
     fromCachedSlice: onFetchPath && fetch !== null ? fetch.fromCache : false,
+    previousQuestion: row.previousQuestion,
   };
 }
 

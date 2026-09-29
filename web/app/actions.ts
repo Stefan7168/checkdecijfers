@@ -139,6 +139,7 @@ import {
 } from '../backend/ingestion/table-lane-store.ts';
 import type { TableLaneEnvelope } from '../backend/answer/table-lane/types.ts';
 import type { TableLaneRow } from '../backend/ingestion/table-lane-store.ts';
+import { buildTableLaneRefusal } from '../backend/answer/table-lane/templates.ts';
 import type { OnboardingRouting, TableFinder } from '../backend/answer/intent/policy.ts';
 import { kickTableLaneJob } from '../lib/table-lane-kick.ts';
 import { matchBreakdownReply, tableLaneEnabled } from '../lib/table-lane.ts';
@@ -657,14 +658,23 @@ export async function askQuestion(
         // behaves byte-identically pre-WP16 — no finder, no per-question
         // rerank spend, no path that can touch the not-yet-migrated tables.
         //
-        // Breadth step 5 (Task 7): a validated follow-up link REPLACES the
-        // finder with one that answers the previous lane answer's table — the
-        // finder slot is consulted only on a curated miss (the unmatched
-        // exit), so a curated hit always wins and a miss skips the catalog
-        // search. `followUp` is null whenever the flag is off, so the
-        // ONBOARDING_ENABLED branch below is then exactly today's.
+        // Breadth step 5 (Task 7, fix round 1 Ruling R14): a validated
+        // follow-up link wraps the finder slot as a FALLBACK — the real finder
+        // (when ONBOARDING_ENABLED) runs first and a confident pick of a
+        // DIFFERENT table wins; otherwise the previous lane answer's table is
+        // used. The slot is consulted only on a curated miss (the unmatched
+        // exit), so a curated hit always wins. `followUp` is null whenever the
+        // flag is off, so the ONBOARDING_ENABLED branch below is then exactly
+        // today's.
         ...(followUp !== null
-          ? { tableFinder: tableLaneFollowUpFinder(followUp) }
+          ? {
+              tableFinder: tableLaneFollowUpFinder(
+                followUp,
+                process.env.ONBOARDING_ENABLED === '1'
+                  ? buildOnboardingFinder({ db: getDb(), userId, rerankClient: new AnthropicLlmClient() })
+                  : undefined,
+              ),
+            }
           : process.env.ONBOARDING_ENABLED === '1'
             ? {
                 tableFinder: buildOnboardingFinder({
@@ -690,9 +700,18 @@ export async function askQuestion(
     // the row has none, which a threadless caller (Dashboard) would never
     // show. Flag off (or not thread-aware) ⇒ this block is skipped and the
     // code below runs exactly as before.
+    // Fix round 1 (review Minor 1): set when a FOLLOW-UP LINK routing could
+    // not be queued while onboarding is dormant (see below).
+    let dormantLinkFailure = false;
     if (threadAware && tableLaneEnabled()) {
       const routed = await routeToTableLane(gated, { userId, requestId, question, lang, validatedThreadId, followUp });
-      if (routed !== null) {
+      if (routed !== null && routed.kind === 'failed') {
+        // Nothing was charged (one transaction). A finder routing falls back
+        // to today's offer path (Task 5). A LINK routing exists even with
+        // ONBOARDING_ENABLED off, so there it must never reach the offer
+        // path: the turn becomes the lane's own free failure text instead.
+        dormantLinkFailure = routed.fromLink && process.env.ONBOARDING_ENABLED !== '1';
+      } else if (routed !== null) {
         if (routed.kind === 'insufficient') {
           // The routing refusal was refunded by the gate; settle a (normally
           // absent) web add-on the same way before returning.
@@ -727,11 +746,13 @@ export async function askQuestion(
     // never fabricates: it only reads a refusal the pipeline already produced
     // and audited, and its own failure (secret unset) degrades to an honest
     // "not available right now" with nothing charged or queued.
-    const { gated: finalGated, offer } = await maybeTriggerOnboarding(gated, {
-      userId,
-      requestId,
-      question,
-    });
+    const { gated: finalGated, offer } = dormantLinkFailure
+      ? { gated: withTableLaneFailedText(gated), offer: null }
+      : await maybeTriggerOnboarding(gated, {
+          userId,
+          requestId,
+          question,
+        });
     // ⟨W3⟩ Web add-on settlement on the FINAL gated object (post-onboarding) —
     // keep the +10 iff a cited web section shipped on an audited 'ok' turn,
     // else refund the taken debit (a no-op when none was taken).
@@ -879,7 +900,12 @@ async function routeToTableLane(
     /** Task 7: the validated previous lane answer (validateTableLaneFollowUp). */
     followUp?: TableLaneRow | null;
   },
-): Promise<{ kind: 'queued'; rowId: number } | { kind: 'insufficient'; balance: number; required: number } | null> {
+): Promise<
+  | { kind: 'queued'; rowId: number }
+  | { kind: 'insufficient'; balance: number; required: number }
+  | { kind: 'failed'; fromLink: boolean }
+  | null
+> {
   if (gated.kind !== 'ok') return null;
   const response = gated.response;
   if (
@@ -905,15 +931,50 @@ async function routeToTableLane(
       question: ctx.question,
       tableId: response.onboarding.tableId,
       finderConfidence: response.onboarding.confidence,
-      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUp.question } : {}),
+      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUpPreviousQuestion(followUp) } : {}),
     });
     if (result.kind === 'insufficient') return result;
     return { kind: 'queued', rowId: result.row.id };
   } catch (error) {
-    console.error('table-lane routing failed (falling back to the onboarding offer):', error);
+    console.error('table-lane routing failed (falling back):', error);
     await reportError('askQuestion.tableLane', error, { requestId: ctx.requestId, userId: ctx.userId });
-    return null;
+    return { kind: 'failed', fromLink: followUp !== null };
   }
+}
+
+/** Fix round 1 (review Minor 4): the previous-question context a follow-up
+ * row carries — the parent's own context plus the parent's question, keeping
+ * at most the TWO most recent prior questions, one per line (oldest first).
+ * Each question's own line breaks are flattened to spaces so the window is
+ * exact; the parser reads the result verbatim (JSON-quoted). */
+const FOLLOW_UP_MAX_PRIOR_QUESTIONS = 2;
+function followUpPreviousQuestion(parent: TableLaneRow): string {
+  const flat = (q: string) => q.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  const prior = parent.previousQuestion ? parent.previousQuestion.split('\n') : [];
+  return [...prior, flat(parent.question)].slice(-FOLLOW_UP_MAX_PRIOR_QUESTIONS).join('\n');
+}
+
+/** Fix round 1 (review Minor 1): the audited, gate-refunded routing refusal
+ * (net 0) shown with the table lane's own failure wording
+ * ('table_lane_failed' — "… niet gelukt. Je betaalt hier niets voor.") instead
+ * of an onboarding offer. The audited row is unchanged (the same text-only
+ * override the offer path applies); the reason stays the audited one. */
+function withTableLaneFailedText(gated: GatedResponse): GatedResponse {
+  if (gated.kind !== 'ok' || gated.response.kind !== 'refusal') return gated;
+  const response = gated.response;
+  const failed = buildTableLaneRefusal('table_lane_failed', {
+    tableId: response.onboarding?.tableId ?? '',
+    tableTitle: null,
+    detail: 'follow-up routing could not be queued',
+  });
+  return {
+    ...gated,
+    response: {
+      ...response,
+      text: failed.text,
+      ...(response.english && failed.en ? { english: { ...response.english, text: failed.en.text } } : {}),
+    },
+  };
 }
 
 // Breadth step 5 (Task 7): the follow-up link askQuestion received — the row
@@ -949,14 +1010,26 @@ async function validateTableLaneFollowUp(
 // override a curated answer; it answers the previous lane answer's table
 // without a catalog search (no rerank spend), as a fresh (never
 // already-pending) routing — routeToTableLane then queues the follow-up row.
-function tableLaneFollowUpFinder(parent: TableLaneRow): TableFinder {
-  return async (term: string): Promise<OnboardingRouting> => ({
-    tableId: parent.tableId,
-    topicTerm: term,
-    confidence: parent.finderConfidence,
-    alreadyPending: false,
-    candidateIds: [parent.tableId],
-  });
+//
+// Fix round 1 (Ruling R14): the link is a FALLBACK, not an override. The real
+// finder (when available) runs first; a confident pick of a DIFFERENT table
+// wins and routes as a new question (routeToTableLane adds follow-up fields
+// only for the linked table), so a topic change is never answered from the
+// old table. No pick, no finder, or the same table ⇒ the linked table.
+function tableLaneFollowUpFinder(parent: TableLaneRow, finder: TableFinder | undefined): TableFinder {
+  return async (term: string, question: string): Promise<OnboardingRouting> => {
+    if (finder !== undefined) {
+      const pick = await finder(term, question);
+      if (pick !== null && pick.tableId !== parent.tableId) return pick;
+    }
+    return {
+      tableId: parent.tableId,
+      topicTerm: term,
+      confidence: parent.finderConfidence,
+      alreadyPending: false,
+      candidateIds: [parent.tableId],
+    };
+  };
 }
 
 // ⟨W3⟩/⟨W1⟩ (WP129+130, ADR 032): the web add-on settlement. Runs AFTER the

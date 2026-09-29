@@ -130,6 +130,23 @@ function refusePlan(
 // ---------------------------------------------------------------------------
 
 describe('respondTableLane — fetch plan → audited answer', () => {
+  // Task 7 fix round 1 (review Minor 2): a follow-up row's previous question
+  // rides the envelope, so the parse request's user turn is on record in
+  // audit_answers itself (the row can be deleted by retention).
+  it('a follow-up row stores its previous question in the envelope', async () => {
+    const plan = await fetchPlan();
+    const filterKey = await storeSlice(plan);
+    const audited = await respondTableLane(db, {
+      row: laneRow({ previousQuestion: 'Hoeveel inwoners had Amsterdam in 2023?', parentId: 40 }),
+      plan,
+      fetch: { ok: true, filterKey, fromCache: false },
+      referenceDate: REF,
+      tableTitle: table.schema.title,
+      respondOptions: options(),
+    });
+    expect(audited.response.tableLane?.previousQuestion).toBe('Hoeveel inwoners had Amsterdam in 2023?');
+  });
+
   it('answers through the existing pipeline, carries tableLane, and writes one audit row with the table parse', async () => {
     const plan = await fetchPlan();
     const filterKey = await storeSlice(plan);
@@ -167,6 +184,7 @@ describe('respondTableLane — fetch plan → audited answer', () => {
       sliceFilterKey: filterKey,
       question: null,
       fromCachedSlice: false,
+      previousQuestion: null,
     });
     // The selection note is NOT part of the answer text (digits in member
     // titles must never meet the verbatim-number check).
