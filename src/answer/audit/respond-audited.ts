@@ -38,7 +38,7 @@ import { attachEnglish } from '../translate/translate.ts';
 // #296: a scatter answer is never translated (no LLM on the scatter path) —
 // its English is derived at render time from the stored spec (web layer).
 import { isScatterAnswer } from '../respond/scatter-answer.ts';
-import type { AuditSourceTag } from './types.ts';
+import type { AuditSourceTag, LlmCallRecord } from './types.ts';
 import {
   maybeAlertInternalRefusal,
   maybeAlertSemanticCheckSkip,
@@ -174,6 +174,53 @@ async function persistOrFailClosed(
   }
 }
 
+/** Breadth step 5 (table lane, Task 3): the shared tail of every audited
+ * entry point below — web attach, English attach, the fail-closed audit write
+ * and the post-write alerts, in that order. Extracted VERBATIM from
+ * answerQuestionAudited / answerClarificationReplyAudited (whose two inline
+ * copies were identical, byte-identical behaviour) so the table lane's
+ * respondPreparsedAudited runs the very same steps instead of a third copy
+ * that could drift. */
+async function attachAndPersist(
+  db: Db,
+  response: ComposedResponse,
+  wrap: WrapContext,
+  options: AuditedRespondOptions,
+): Promise<AuditedResponse> {
+  const tracker = wrap.tracker;
+  // WP129+130 (ADR 032): attach the web section BEFORE persisting, so the
+  // stored row carries it verbatim (R8) and latencyMs honestly includes web
+  // time. Both keys are always set (A1). No selection/client/billing (the
+  // benchmark, tests, CLI) ⇒ both keys null, zero web machinery.
+  const augmented = await attachWebAugmentation(response, {
+    selection: options.sourceSelection,
+    client: options.webClient,
+    billing: options.webBilling,
+  });
+  // ADR 058: the English rendering rides the SAME row (R8), attached before
+  // the write so latency and llm_calls stay honest. No lang/client (the
+  // benchmark, tests, CLI, every Dutch reader) ⇒ the same object back.
+  // #296: skipped for a scatter answer — no translate call on that path.
+  const withEnglish = isScatterAnswer(augmented) ? augmented : await attachEnglish(augmented, {
+    lang: options.lang,
+    client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
+    // #325 check C12: the SAME injected client, tracked under its own role
+    // so llm_calls separates translation spend from meaning-check spend.
+    checkClient: options.translateClient ? tracker.wrap('meaning_check', options.translateClient) : undefined,
+  });
+  const audited = await persistOrFailClosed(db, withEnglish, wrap);
+  // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
+  // fail-soft, after the audit write, never affecting the response.
+  await maybeAlertSemanticCheckSkip(audited, wrap.userId);
+  // #121: a served 'internal' refusal (the pipeline's honest catch-all for
+  // unexpected throws, template rung included) becomes loud — same posture.
+  await maybeAlertInternalRefusal(audited, wrap.userId);
+  // #121 option A (owner, 2026-07-24): a template answer served with a
+  // failing validator verdict becomes loud too — same posture.
+  await maybeAlertTemplateValidationFailure(audited, wrap.userId);
+  return audited;
+}
+
 export async function answerQuestionAudited(
   db: Db,
   question: string,
@@ -211,37 +258,7 @@ export async function answerQuestionAudited(
         }
       : {}),
   });
-  // WP129+130 (ADR 032): attach the web section BEFORE persisting, so the
-  // stored row carries it verbatim (R8) and latencyMs honestly includes web
-  // time. Both keys are always set (A1). No selection/client/billing (the
-  // benchmark, tests, CLI) ⇒ both keys null, zero web machinery.
-  const augmented = await attachWebAugmentation(response, {
-    selection: options.sourceSelection,
-    client: options.webClient,
-    billing: options.webBilling,
-  });
-  // ADR 058: the English rendering rides the SAME row (R8), attached before
-  // the write so latency and llm_calls stay honest. No lang/client (the
-  // benchmark, tests, CLI, every Dutch reader) ⇒ the same object back.
-  // #296: skipped for a scatter answer — no translate call on that path.
-  const withEnglish = isScatterAnswer(augmented) ? augmented : await attachEnglish(augmented, {
-    lang: options.lang,
-    client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
-    // #325 check C12: the SAME injected client, tracked under its own role
-    // so llm_calls separates translation spend from meaning-check spend.
-    checkClient: options.translateClient ? tracker.wrap('meaning_check', options.translateClient) : undefined,
-  });
-  const audited = await persistOrFailClosed(db, withEnglish, wrap);
-  // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
-  // fail-soft, after the audit write, never affecting the response.
-  await maybeAlertSemanticCheckSkip(audited, wrap.userId);
-  // #121: a served 'internal' refusal (the pipeline's honest catch-all for
-  // unexpected throws, template rung included) becomes loud — same posture.
-  await maybeAlertInternalRefusal(audited, wrap.userId);
-  // #121 option A (owner, 2026-07-24): a template answer served with a
-  // failing validator verdict becomes loud too — same posture.
-  await maybeAlertTemplateValidationFailure(audited, wrap.userId);
-  return audited;
+  return attachAndPersist(db, response, wrap, options);
 }
 
 export async function answerClarificationReplyAudited(
@@ -305,28 +322,74 @@ export async function answerClarificationReplyAudited(
   // WP129+130 (ADR 032): same attach seam on the reply turn. A 'clarification'
   // outcome here means the round is OVER (still-ambiguous → refusal), so a web
   // attempt may legitimately be owed; attach's own kind-check handles the
-  // clarification-skip case.
-  const augmented = await attachWebAugmentation(response, {
-    selection: options.sourceSelection,
-    client: options.webClient,
-    billing: options.webBilling,
-  });
-  // ADR 058: same English-attach seam on the reply turn (a reply can settle
-  // into an answer too, e.g. a takeable chip) — same A1 no-op absent lang/client.
-  // #296: skipped for a scatter answer (the click-take is its doorway).
-  const withEnglish = isScatterAnswer(augmented) ? augmented : await attachEnglish(augmented, {
+  // clarification-skip case. ADR 058: same English-attach seam (a reply can
+  // settle into an answer too, e.g. a takeable chip) — same A1 no-op absent
+  // lang/client; #296: skipped for a scatter answer. Then the same fail-closed
+  // write and the same three post-write alerts (#144, #121, #121 option A).
+  return attachAndPersist(db, response, wrap, options);
+}
+
+/** Breadth step 5 (table lane, Task 3): what a pre-parsed turn hands the
+ * audited wrap. `produce` builds the response (typically respondToIntent over
+ * an intent the table lane planned) from the TRACKED clients this wrap
+ * passes it, so compose / semantic-check spend lands in llm_calls exactly as
+ * on a curated turn. */
+export interface PreparsedTurn {
+  /** The reader's question, verbatim (the audit row's question). */
+  question: string;
+  /** LLM calls made BEFORE this wrap — the table lane's table-scoped parse,
+   * which the job ran to plan the turn. Recorded first in llm_calls, in the
+   * order given; an empty list records nothing. */
+  priorLlmCalls: LlmCallRecord[];
+  produce: (clients: {
+    answerClient: LlmClient;
+    semanticCheck?: RespondOptions['semanticCheck'];
+  }) => Promise<ComposedResponse>;
+}
+
+/** Breadth step 5 (table lane, Task 3): the audited entry point for a turn
+ * whose parse did NOT run through the curated parser (the table lane plans
+ * its intent from a validated table-scoped parse). Same guarantees as the two
+ * entry points above: ONE audit row, written before the response is returned
+ * (R8), the same web/English attach and the same fail-closed rules
+ * (attachAndPersist). A throw inside `produce` becomes the 'internal' refusal
+ * (principle c) — the same catch-all respondToQuestion applies. First turn
+ * only: no reply text, no pending, no conversation context. */
+export async function respondPreparsedAudited(
+  db: Db,
+  turn: PreparsedTurn,
+  options: AuditedRespondOptions,
+): Promise<AuditedResponse> {
+  const tracker = new LlmCallTracker();
+  tracker.calls.push(...turn.priorLlmCalls);
+  const wrap: WrapContext = {
+    question: turn.question,
+    referenceDate: options.referenceDate,
+    userId: options.userId ?? null,
+    sourceTag: options.sourceTag,
+    requestId: options.requestId,
+    replyText: null,
+    pendingClarification: null,
+    conversationContext: null,
+    tracker,
+    startedAt: performance.now(),
     lang: options.lang,
-    client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
-    // #325 check C12: the SAME injected client, tracked under its own role
-    // so llm_calls separates translation spend from meaning-check spend.
-    checkClient: options.translateClient ? tracker.wrap('meaning_check', options.translateClient) : undefined,
-  });
-  const audited = await persistOrFailClosed(db, withEnglish, wrap);
-  // #144 (ADR 034 §5): same fail-open skip alert on the reply turn.
-  await maybeAlertSemanticCheckSkip(audited, wrap.userId);
-  // #121: same internal-refusal alert on the reply turn.
-  await maybeAlertInternalRefusal(audited, wrap.userId);
-  // #121 option A: same template-validation alert on the reply turn.
-  await maybeAlertTemplateValidationFailure(audited, wrap.userId);
-  return audited;
+  };
+  let response: ComposedResponse;
+  try {
+    response = await turn.produce({
+      answerClient: tracker.wrap('compose', options.answerClient),
+      ...(options.semanticCheck
+        ? {
+            semanticCheck: {
+              ...options.semanticCheck,
+              client: tracker.wrap('semantic_check', options.semanticCheck.client),
+            },
+          }
+        : {}),
+    });
+  } catch (error) {
+    response = toInternalRefusal(turn.question, `preparsed turn failed: ${errorMessage(error)}`, options.lang);
+  }
+  return attachAndPersist(db, response, wrap, options);
 }

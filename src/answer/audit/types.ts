@@ -21,8 +21,10 @@ export interface LlmCallRecord {
    * parsing — plus its clarify- and follow-up-mode variants, WP9/WP15 —
    * answer phrasing, since #144/ADR 034 the reject-only semantic checker,
    * since ADR 058 the English-answer translator, and since #325 (check C12)
-   * the reject-only English meaning checker). */
-  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check' | 'translate' | 'meaning_check';
+   * the reject-only English meaning checker; since breadth step 5 the
+   * table lane's table-scoped parse, made by the job BEFORE the audited wrap
+   * and recorded from its TableParseAudit). */
+  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check' | 'translate' | 'meaning_check' | 'table_parse';
   /** The model that answered, as reported by the API response. */
   model: string;
   inputTokens: number;

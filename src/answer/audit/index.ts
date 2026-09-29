@@ -15,8 +15,8 @@ export type { AuditContext, AuditRow } from './write.ts';
 export { loadAuditRecord, loadAllAuditRecords } from './read.ts';
 export { reconstructionReport } from './reconstruct.ts';
 export type { ReconstructionReport } from './reconstruct.ts';
-export { answerQuestionAudited, answerClarificationReplyAudited } from './respond-audited.ts';
-export type { AuditedRespondOptions, AuditedResponse } from './respond-audited.ts';
+export { answerQuestionAudited, answerClarificationReplyAudited, respondPreparsedAudited } from './respond-audited.ts';
+export type { AuditedRespondOptions, AuditedResponse, PreparsedTurn } from './respond-audited.ts';
 export { LlmCallTracker } from './track.ts';
 export {
   REDACTED_QUESTION_TEXT,

@@ -71,6 +71,9 @@ absent on every answer that is not a multi-region series, on every **COMPLETE** 
 (there is nothing to disclose), and on every row stored before ADR 055 — so on this key the `?? null`
 read is load-bearing twice over: absence means "pre-feature *or* wrong shape *or* nothing was missing",
 and a reader must treat all three the same),
+`AnswerResponse.tableLane` / `ClarificationResponse.tableLane` / `RefusalResponse.tableLane` (breadth step 5 —
+the table lane's envelope, set only by `respondTableLane` on a table-lane row's response; absent on every other
+envelope and every row stored before the lane; reconstruct's `checkTableLane` reads it `?? null`),
 and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted`,
 `ValidatedResult.regionSet` (#253 — the coverage record; present ONLY on a `region_set` result),
 `ValidatedResult.regionSeries` (ADR 055 — the per-region coverage record; present ONLY on a

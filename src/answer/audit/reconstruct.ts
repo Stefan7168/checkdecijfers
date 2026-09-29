@@ -974,9 +974,82 @@ function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: stri
 
 /** Verifies that the record reconstructs its response, from the stored row
  * alone. Empty problems = R8 holds for this record. */
+/** Breadth step 5 (table lane, Task 3): the present-only `tableLane` envelope
+ * key, shape-checked against the rest of the stored record. Its CONTENT (the
+ * table parse, the selection note, the menu hash) is recorded, not
+ * re-derived — the live table schema the plan ran over is not stored, so
+ * nothing at audit time could re-derive it; the served numbers are covered by
+ * the answer checks as on every answer. What IS checked is that the key and
+ * the record agree about themselves:
+ *  - version pin (1);
+ *  - the table-parse call appears in llm_calls exactly once, with the
+ *    envelope's parseAudit model + tokens — and never on a row without the
+ *    envelope (an unexplained 'table_parse' call);
+ *  - a validated parse never without its audit;
+ *  - `question` iff the row is a clarification, and then its offered titles
+ *    are exactly the envelope's `options`;
+ *  - an answer names the table it is attributed to and is backed by a stored
+ *    slice (sliceFilterKey), as is a fromCachedSlice claim.
+ * `?? null` read (docs/13): every non-lane row, and every row stored before
+ * the lane, carries no key at all. */
+function checkTableLane(record: AuditRecord, problems: string[]): void {
+  const response = record.response;
+  const lane = response.tableLane ?? null;
+  const parseCalls = record.llmCalls.filter((call) => call.role === 'table_parse');
+  if (lane === null) {
+    if (parseCalls.length > 0) problems.push('llm_calls records a table_parse call on a row without a tableLane envelope');
+    return;
+  }
+  if (lane.version !== 1) {
+    problems.push(`tableLane version ${String(lane.version)} is not the v1 this reconstructor handles`);
+  }
+  const audit = lane.parseAudit;
+  if (audit === null) {
+    if (parseCalls.length > 0) problems.push('llm_calls records a table_parse call but tableLane.parseAudit is null');
+  } else if (parseCalls.length !== 1) {
+    problems.push(`llm_calls records ${parseCalls.length} table_parse calls; tableLane.parseAudit expects exactly one`);
+  } else {
+    const call = parseCalls[0]!;
+    if (
+      call.model !== audit.model ||
+      call.inputTokens !== audit.usage.inputTokens ||
+      call.outputTokens !== audit.usage.outputTokens
+    ) {
+      problems.push('llm_calls table_parse call differs from tableLane.parseAudit (model or tokens)');
+    }
+  }
+  if (lane.parse !== null && audit === null) {
+    problems.push('tableLane carries a parse without its parseAudit');
+  }
+  if ((response.kind === 'clarification') !== (lane.question !== null)) {
+    problems.push(`tableLane question ${lane.question !== null ? 'present' : 'absent'} on a '${response.kind}' row`);
+  }
+  if (response.kind === 'clarification' && lane.question !== null) {
+    const titles = lane.question.options.map((o) => o.title);
+    if (stableStringify(titles) !== stableStringify(response.options)) {
+      problems.push('tableLane question options differ from the clarification options');
+    }
+    if (lane.question.totalOptions < lane.question.options.length) {
+      problems.push('tableLane question totalOptions is below its shown options');
+    }
+  }
+  if (response.kind === 'answer') {
+    if (lane.tableId !== response.result.attribution.tableId) {
+      problems.push(`tableLane names table '${lane.tableId}' but the answer is attributed to '${response.result.attribution.tableId}'`);
+    }
+    if (lane.sliceFilterKey === null) {
+      problems.push('tableLane answer has no stored slice (sliceFilterKey null)');
+    }
+  }
+  if (lane.fromCachedSlice && lane.sliceFilterKey === null) {
+    problems.push('tableLane claims a cached slice without a sliceFilterKey');
+  }
+}
+
 export function reconstructionReport(record: AuditRecord): ReconstructionReport {
   const problems: string[] = [];
   checkEnvelopeIntegrity(record, problems);
+  checkTableLane(record, problems);
   if (record.response.kind === 'answer') {
     // #296: either scatter key present routes to the scatter check, which
     // itself fails a row carrying only one of the two.

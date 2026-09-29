@@ -110,6 +110,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       category: 'shape-checked',
       note: "ADR 058 (English answers, Task 7): set only by attachEnglish, present only when translation was attempted (A1). checkEnglishReconstruction re-derives the deterministic half (glossary/caveats/maskedDutch/maskTable) byte-for-byte via translate.ts's prepareTranslation(response) — the SAME function translateAnswer itself calls — and, on a `verified` row, re-checks the stored rawTranslation (checkTranslation), re-fills it through the RE-DERIVED maskTable and re-assembles the structural lines/text, all compared byte-identically to what was stored; chip `submit` values are checked against response.suggestions directly. A `fallback` row is checked for its guaranteed null-everything/failed-attempt shape instead — there is nothing translated to re-derive. Named `shape-checked` rather than `rederived`/`revalidated` because the treatment is a MIX of both (byte-identical re-derivation for the deterministic half, a re-check+re-fill for the model half), like `slotPhrasing`'s own note above.",
     },
+    tableLane: {
+      category: 'shape-checked',
+      note: "Breadth step 5 (table lane, Task 3): present-only, set only by respondTableLane (src/answer/table-lane/respond.ts). checkTableLane pins its version, pairs it with the rest of the record — on an answer the table it names must be the answer's attributed table and a stored slice (sliceFilterKey) must back it; the table-parse call must appear in llm_calls exactly once, with the envelope's parseAudit model + tokens (and never without an envelope); `question` iff the row is a clarification. Its own content (the parse, the selection note, the menu hash) is recorded, not re-derived: the table's live schema the plan ran over is not stored, so there is nothing at audit time to re-derive it from — the served NUMBERS are covered by `result`/`body` as on every answer.",
+    },
   },
   ClarificationResponse: {
     kind: { category: 'shape-checked' },
@@ -127,6 +131,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     english: {
       category: 'ignored',
       why: "ADR 058 phase 2 (#332), Task 5: a deterministic-template English sibling of `text`/`suggestions`, present only for an English reader (lang === 'en') — the same argument as `offer`/`guidance` above (value-free template text, no cell value, no reconstructible ground truth beyond what those two already cover). Unlike AnswerResponse.english (a translation-model output with a real re-derivation to run), this is produced from the SAME parameters as the Dutch fields at the SAME site, so there is nothing here for reconstruct to check that checking the Dutch fields does not already cover.",
+    },
+    tableLane: {
+      category: 'shape-checked',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, question iff clarification — on a clarification its offered titles must equal `options`).',
     },
   },
   RefusalResponse: {
@@ -147,6 +155,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     english: {
       category: 'ignored',
       why: "ADR 058 phase 2 (#332), Task 5: a deterministic-template English sibling of `text`/`offer`/`guidance`/`suggestions`, present only for an English reader (lang === 'en') — same argument as `offer`/`guidance` themselves. Unlike AnswerResponse.english (a translation-model output with a real re-derivation to run), this is produced from the SAME parameters as the Dutch fields at the SAME site (refusals.ts's `BuiltRefusal.en`), so there is nothing here for reconstruct to check beyond what checking the Dutch fields already covers.",
+    },
+    tableLane: {
+      category: 'shape-checked',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, question iff clarification — on a clarification its offered titles must equal `options`).',
     },
   },
   ComposedAnswer: {
@@ -346,9 +358,9 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 12, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`; #296: + present-only `pairedResult`, `scatter`
-      ClarificationResponse: 7, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
-      RefusalResponse: 12, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
+      AnswerResponse: 13, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`; #296: + present-only `pairedResult`, `scatter`; breadth step 5: + present-only `tableLane`
+      ClarificationResponse: 8, // ADR 058 phase 2 (#332), Task 5: + present-only `english`; breadth step 5: + present-only `tableLane`
+      RefusalResponse: 13, // ADR 058 phase 2 (#332), Task 5: + present-only `english`; breadth step 5: + present-only `tableLane`
       ComposedAnswer: 20, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`; #296: + present-only `scatterLine`, `pairedDefinitionLine`
       ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
     };
@@ -445,6 +457,11 @@ describe('the envelope-key manifest covers the declared types', () => {
       // ClarificationResponse.english, which really are ignored (see their
       // own manifest entries).
       'english',
+      // Breadth step 5 (table lane, Task 3): reconstruct.ts genuinely reads
+      // `tableLane.parseAudit.usage` (checkTableLane pairs it with the
+      // 'table_parse' llm_calls entry) — a bare-identifier match cannot tell
+      // that from `answer.usage`, which really is ignored (token telemetry).
+      'usage',
     ]);
     const nowRead: string[] = [];
     for (const [name, entries] of Object.entries(MANIFEST)) {
