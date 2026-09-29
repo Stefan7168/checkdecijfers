@@ -2651,6 +2651,8 @@ Only `select` statements; any DDL or write stays an owner-supervised, migration-
 
 ## Table-parser recording run (breadth step 4 — owner-supervised, after 2026-10-01; added session 139, 2026-09-29)
 
+**Session 145 (2026-09-29): the one-session plan for THIS run plus the regional Part 2 and Eurostat step 0 recordings — order, commands, measured cost basis (~$4.35 budget), pass/fail gates, owner decisions — is [session-briefs/2026-10-01-recording-run-plan.md](session-briefs/2026-10-01-recording-run-plan.md). Follow that on the day; this section stays the reference for the table-parser piece.**
+
 The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") has never called the AI. Its first
 recording turns the 39 labelled questions (`benchmark/tableparse-labelled-set.json`, now including the follow-up cases;
 prompt version 3 since breadth step 5) into replayable fixtures and a calibration report. Measured cost estimate: ~114k
