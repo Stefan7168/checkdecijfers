@@ -13,9 +13,14 @@ test('the logged-out landing serves its headline and three real gallery charts',
   await useDutch(context, baseURL!);
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Chat met de officiële cijfers van Nederland',
-  );
+  // WP-LOOK part (c), session 144: the chart-first headline, and a REAL
+  // chart above the fold — the hero's question bubble plus the product's own
+  // answer card (a rendered chart with its headline figure, not a skeleton).
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Stel een vraag. Deel de grafiek.');
+  const hero = page.getByRole('article', { name: 'Wat deed de inflatie?' });
+  await expect(hero).toBeVisible();
+  await expect(hero.locator('.recharts-surface')).toHaveCount(1);
+  await expect(hero.locator('[data-testid="headline-figure"]')).toHaveCount(1);
 
   // The teaser section always renders its heading; only the CARD area degrades
   // to a placeholder when no story could be built (#3, session 110 UX audit).
