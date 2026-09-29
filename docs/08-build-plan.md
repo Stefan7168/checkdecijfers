@@ -1317,6 +1317,20 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   rasterisation in vitest (node env) incl. the em-dash case. Residuals: the renderer's text renders in the tool's
   fallback face (not Inter); the reader's chosen form is not reflected (the spec's own line/bar is); no Download
   button for that exact PNG yet; the local harness has no `EMBED_TOKEN_SECRET`, so it always serves the neutral card.
+  **Round 2 BUILT + SIGNED OFF (session 144, 2026-09-29, `5e5608c1`; owner: "Fine" — all three residuals closed):**
+  the image tool rasterises through librsvg and never sees a bundled font inside a nested SVG, so the server renderer
+  gained a plot-only mode (`renderChartPlot`, `src/chart/render.ts`): marks in the SVG, every piece of text handed back
+  with coordinates and set by the image tool itself in Inter (Regular/SemiBold/Bold under `web/assets/fonts`, SIL OFL,
+  `web/lib/share-preview-fonts.ts`, traced into the function bundle via `outputFileTracingIncludes`). X labels thinned
+  to what fits (`thinXLabels`; 24 months no longer smear — the round-1 picture did), value labels on the first and last
+  point, the lowest and highest as y-axis ticks; line, area and bars-over-time follow the reader's `?form=` (any other
+  form falls back to the line, stated in `previewFormFor`). The picture moved from the `opengraph-image` file convention
+  to a route handler `/embed/<token>/preview` (the convention takes no query string); `generateMetadata` points
+  `og:image` + `twitter:image` there with the form; CDN cache one hour (review finding: a redacted chart must not
+  unfurl for a day). The card's Download menu offers the same PNG as a file (`?download=1`, minted through the Share
+  button's action, signed-in only). `renderChartSvg` output byte-identical across 24 snapshots. Tests:
+  `tests/chart/render-plot.test.ts`, `web/lib/share-preview.test.tsx`, `preview/route.test.tsx` (real PNGs with Inter),
+  `chart-download.test.tsx`.
 - **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
   session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
   and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the

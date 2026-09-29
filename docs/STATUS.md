@@ -35,7 +35,7 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
   **⚑ THE GATE IS PASSED (session 144, 2026-09-29): (a) done s143, (b) signed off s144 round 2, (c) signed off s144.
   ADR 063 says the owner now invites people — **the owner chose "Keep building, no launch yet" (same session, after the
   gate passed; [#352](open-questions.md)); the launch recommendation returns at the 2026-10-27 revisit trigger, not
-  before.** (a2) share-image verdict still pending.**
+  before.** (a2) share image signed off too — The Look is complete.**
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
   - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
@@ -48,10 +48,9 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
     36558081051 green + deployed, "I would share this"):** fixed-height popup that never jumps, footer pinned at the
     bottom of the screen, compact phone preview (tabs + Klaar on the first screen), unavailable chart types folded
     behind one line, Titel + Bijschrift fields on the Grafiek tab ([#346](open-questions.md));
-  - (a2, owner decision [#351](open-questions.md)) — **round 1 BUILT (session 143, SHA in the archive entry):** every
-    Share link unfurls with a 1200×630 picture of the chart (`/embed/<token>/opengraph-image`, Next's built-in image
-    tool around the ADR 014 server SVG); the embed page has title/description metadata. Owner's look at the picture
-    pending; residuals in 08-build-plan (fallback font, reader's form, no Download button yet);
+  - (a2, owner decision [#351](open-questions.md)) — round 1 built session 143; **round 2 BUILT + SIGNED OFF (session
+    144, `5e5608c1`, owner "Fine"):** the share picture in Inter (fonts shipped in the repo), 24 months readable, the
+    reader's form (line/area/bars), a Download of that exact PNG in the card's menu; route `/embed/<token>/preview`;
   - (c) the homepage — **round 1 BUILT (session 144, 2026-09-29, `8afcd17a`):** a real chart above the fold (the
     inflation story as question bubble + the product's own answer card), new hero copy nl/en, the frozen text example
     retired, teaser three-in-a-row minus the hero's story, how-it-works one row of four; **#347 fixed** — the built
