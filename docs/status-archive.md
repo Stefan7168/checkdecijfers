@@ -25,7 +25,7 @@
    four days (the cache key hashes all of `src/`, nothing pruned). Reported first, deleted on the owner's yes together
    with `web/.next` (26 GB freed, 25 → 51 GB free; both node_modules kept); `ensureSnapshot()` now prunes to the 3
    newest (`pruneSnapshots`, unit-tested); RUNBOOK section added.
-5. **Part (a2) round 1 (`56c62d96`, CI 36548015000 — see the next session's verification):** every Share link's embed
+5. **Part (a2) round 1 (`56c62d96`, CI 36548015000 green incl. deploy):** every Share link's embed
    page has an Open Graph image (`/embed/<token>/opengraph-image`, 1200×630): saved headline, headline figure verbatim,
    brand, and the ADR 014 server SVG embedded whole (base64 — a percent-encoded URI threw on the em dash in every CBS
    attribution line, found in the mandatory visual run), rasterised by Next's built-in image tool; `generateMetadata`

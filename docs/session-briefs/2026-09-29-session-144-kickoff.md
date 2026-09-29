@@ -12,8 +12,7 @@ Read order: `CLAUDE.md` → `docs/STATUS.md` top block → this file. Verify eve
 - **(b) the popup: round 1 built** (`abd02013`), owner ruling "good enough for now, come back to it later" — NOT signed
   off; another round after (a2)/(c). Residuals: fallback font parity, the empty right column on Grafiek at desktop
   height (left calm on purpose), owner has not asked for changes yet.
-- **(a2) the share preview image: round 1 built** (`56c62d96`) — confirm CI 36548015000 was green (it was in progress
-  at wrap-up; the same tree passed the full verification block + a real `next build`). The owner saw the real PNG;
+- **(a2) the share preview image: round 1 built** (`56c62d96`, CI 36548015000 green incl. deploy). The owner saw the real PNG;
   verdict pending. Residuals: the renderer's text renders in the image tool's fallback face (not Inter); the picture
   shows the spec's own line/bar, not the reader's chosen form; no Download button for that exact PNG; the local harness
   has no `EMBED_TOKEN_SECRET` (serves the neutral card there; the real card is exercised by the vitest rasterisation).
