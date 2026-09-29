@@ -17,6 +17,13 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 148 (2026-09-29 night, owner present) — STALE SHOWCASE FOUND + FIXED ([#355](open-questions.md)):** 13 of 20 CBS
+  tables were behind CBS (up to 52 days; the homepage GDP card said 1.3, CBS had revised it to 1.6). Built `npm run
+  ingest:freshness` (read-only, SAFE/REVIEW verdict per table), refreshed all 13 (batches 46–58, no quarantine; the report now
+  reads 0 of 20 behind), fixed the English chart unit "Aantal". Pushed `92746fe5`, CI 36592945949 green incl. deploy. The 1 October
+  plan was corrected (a FOURTH record script) and ten Eurostat step-0 cases drafted. OPEN owner decision: automate the check
+  (recommend: e-mail via the daily cron first). Kickoff: [session-briefs/2026-09-29-session-148-kickoff.md](session-briefs/2026-09-29-session-148-kickoff.md).
+
 **▶ SESSION 147 (2026-09-29 evening, owner present) — VERIFY-ONLY, WRAPPED:** no code or data changed. Tree clean at `62896015`,
   CI green, prod 200, DNS records for graphmaker.studio still absent. Nothing scheduled can run before 2026-10-01 (spend roof
   resets 02:00 CEST). Kickoff: [session-briefs/2026-09-29-session-147-kickoff.md](session-briefs/2026-09-29-session-147-kickoff.md).
@@ -27,8 +34,12 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-147-kickoff.md](session-briefs/2026-09-29-session-147-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145, kickoff pointer updated session 148 — verify against `git log` /
+Actions runs before trusting this). Kickoff: [session-briefs/2026-09-29-session-148-kickoff.md](session-briefs/2026-09-29-session-148-kickoff.md).**
+
+- **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables
+  behind. Nothing refreshes them automatically — re-run the report at the start of each session and in the monthly maintenance
+  session; a table it marks SAFE syncs with `--accept-new-codes`, REVIEW needs a person (RUNBOOK release-day sync).
 
 - **⚑ BREADTH RESUMED (session 145, owner pick): migrations 037 + 038 APPLIED on the live database** (owner present;
   exactly those two; `slice_fetches`, `table_lane_requests`, the `cbs_tables` columns, 8 indexes, RLS, the widened

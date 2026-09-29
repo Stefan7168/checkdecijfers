@@ -53,7 +53,7 @@ take as-is:
    row in it carries a per-cell status.
 5. **Two parts, split at the paid step.** Part 1 (this ADR's build): data only, nothing reader-visible — no canonical measure
    is added, so neither the intent vocabulary nor any LLM prompt changes. Part 2 adds the 12 `CANONICAL_MEASURES` +
-   `REGIONAL_KEYS`, English labels, a curated scatter partner per figure, and re-records the intent/clarify/followup fixtures
+   `REGIONAL_KEYS`, English labels, a curated scatter partner per figure, and re-records the intent/clarify/followup/onboarding-delivery fixtures (four record scripts — the fourth was missing from the first plan, found by the session-148 pre-flight)
    (cheap tier, owner-supervised, after 2026-10-01).
 6. **Migration 025 stays frozen.** Its pinned-id list is history; seeds added later are pinned at registration (the CLI passes
    `{ pinned: true }`), and its drift test names them (`SEEDS_ADDED_AFTER_025`).

@@ -1,5 +1,30 @@
 # STATUS archive — the session log
 
+**Session 148 (2026-09-29 night, owner present; zero AI spend; live data refresh of 13 tables).**
+
+1. Session opened with the session-147 kickoff (verify-only state: tree clean at `453bdfa0`, CI green, prod 200, DNS for graphmaker.studio
+   still absent, nothing schedulable before 2026-10-01). Offered a wrap; the owner pushed back ("there's something else you can do").
+2. **1 October plan pre-flight (zero spend):** `git merge-tree --write-tree main regional-stats-part2` clean (108 commits of drift, 6 of its
+   own); throwaway rebase, both typechecks clean; full root suite on the rebased tree 65 failed | 4480 passed, all 65 downstream of
+   intent-fixture hash misses; found the plan omitted `onboarding-delivery:record` (fourth script) — plan + ADR 061 + build plan fixed.
+   Ten Eurostat step-0 labelled cases drafted ([session-briefs/2026-10-01-eurostat-step0-cases.json](session-briefs/2026-10-01-eurostat-step0-cases.json));
+   the "filtered slice" half of step 0 was already resolved (spec §4.1).
+3. **Dogfooded the live site and found the showcase stale ([#355](open-questions.md)):** every chart "synced 2026-08-26" (GDP 2026-08-07), no
+   scheduled refresh. Read-only comparison against CBS's own `Modified` dates: 13 of 20 tables behind, up to 52 days; homepage GDP Q2
+   2026 growth 1.3* vs CBS's revised 1.6; PPI June 5.3* revised to 4.9.
+4. Built `npm run ingest:freshness` (`scripts/freshness-report.ts`, `src/ingestion/freshness.ts`: `assessFreshness` + `classifyRelease`, 11
+   tests). All 13 came out SAFE (only new periods; GDP a pure revision). Refreshed them one at a time (canary `85429NED`, then the rest, showcased
+   tables last, stop-on-failure): batches 46–58 all succeeded, `0` non-active tables afterwards, report read 0 of 20 behind. Largest: CPI
+   `86141NED` 616,714 rows / 2,842 new; GDP `85880NED` 100,507 rows / 267 new / 2,002 revised (all logged as corrections).
+5. Fixed the English chart showing CBS's capitalised unit "Aantal": display-only `translateUnitForDisplay` (answer-path `translateUnit`
+   unchanged so no LLM fixture hash moves).
+6. Verification block with `--e2e`: 4,661 backend + 3,477 web tests, benchmark gate PASS (6/6, 0 fabricated), real build, e2e; `/code-review`
+   LOW: no findings. Pushed `92746fe5`; CI 36592945949 green incl. deploy. Live check after deploy: GDP card 1.6, CPI 3.3 (August),
+   house price €503,523 (August), 10 of 12 SEO-page charts synced 2026-09-29 (the other two have nothing newer at CBS), "Aantal" gone.
+7. RUNBOOK release-day section, CLAUDE.md maintenance agenda, README, 04-architecture and the build plan updated; lessons appended.
+   Open owner decision recorded in #355: automate the freshness check (recommend e-mail via the daily cron first, auto-sync only if the
+   monthly manual run is a chore).
+
 **Session 147 (2026-09-29 evening, owner present; verify-only, zero spend, no code or data changed).**
 
 1. Read CLAUDE.md, STATUS top block and the session-146 kickoff. Verified: clean tree and pushed at `62896015`; CI 36576714588

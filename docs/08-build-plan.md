@@ -1250,7 +1250,7 @@ landing pages") → `/eurostat-data` once Eurostat series are curated (#313 E2a)
 Owner picked 12 figures from `70072ned`. Part 1 = data only: measure allow-list slice, status read from CBS's period notes
 (CBS publishes no machine status for this table), seed + fixture; proven by a full live-data sync into a throwaway DB
 (106,683 cells). **Part 2 (needs a plan):** the 12 `CANONICAL_MEASURES` + `REGIONAL_KEYS` + English labels + scatter
-partner map (spec D6/D7) + new intent-eval cases → re-record intent/clarify/followup fixtures (cheap tier) → merge +
+partner map (spec D6/D7) + new intent-eval cases → re-record intent/clarify/followup/onboarding-delivery fixtures (four scripts; cheap tier) → merge +
 deploy → prod `sync 70072ned` + `registry:apply` (RUNBOOK "Regional statistics table") → live benchmark.
 
 *(Earlier notes, kept for history:)*
@@ -1408,3 +1408,13 @@ no template chosen.
 **Was paused until the gate — the gate is passed (session 144); these are now paused only by the owner's own call
 (no pick yet, the session-145 kickoff recommends breadth first):** breadth step 6 / `TABLE_LANE_ENABLED`, regional
 statistics Part 2, Eurostat in chat, Pro plan, brand colours, and every owner-supervised item in STATUS's top block.
+
+## Data freshness — is our CBS copy current? ([#355](open-questions.md), found and mostly closed session 148, 2026-09-29)
+
+**Found by looking at the live site:** 13 of 20 CBS tables held older data than CBS publishes (up to 52 days); the homepage GDP card
+showed a figure CBS had since revised. **Done (zero AI spend):** `npm run ingest:freshness` (read-only report + SAFE/REVIEW release
+verdict, `src/ingestion/freshness.ts`, 11 tests); all 13 tables refreshed the same day, one at a time (batches 46–58, no quarantine);
+RUNBOOK release-day section and CLAUDE.md's monthly maintenance agenda now say to run the report. **Open, owner decision:** automate —
+recommendation (a) extend the daily cron (`/api/onboarding-cron`, already runs the missed-sync check) with the `Modified` comparison and
+e-mail the owner the exact command; only if the monthly manual run proves a chore, (b) auto-sync the SAFE tables. Not built: no unattended
+production writes without the owner's word. Known lag: the gallery's 30-minute shared cache shows old charts for up to ~30 min after a sync.

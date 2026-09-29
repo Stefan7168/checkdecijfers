@@ -6,6 +6,34 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 148 — the stale showcase (found by looking at the live site) and a plan rehearsal
+
+1. **A "nothing scheduled can run" session had missed the biggest defect on the product.** Session 147 verified the repo (clean tree,
+   green CI, prod 200) and wrapped; the owner pushed back ("there's something else you can do"). Opening the live site and comparing
+   it with CBS itself found that 13 of 20 CBS tables were behind — up to 52 days — and that the homepage GDP card showed 1.3% where
+   CBS had since revised the figure to 1.6%. **Rule going forward:** when the scheduled priority is blocked, dogfood the live product
+   against the source of truth (read-only: our DB vs CBS's own dates and values) before offering to wrap. "Verify state" means the
+   product surface, not only git/CI/HTTP 200.
+2. **An alert tuned against false alarms can hide the real problem.** The missed-sync alert (`src/ingestion/stale-sync.ts`) waits 60 days
+   on a monthly table on purpose, so it was silent while every monthly chart was a release behind. The sharper signal was already
+   in the data: CBS's own `Modified` date on the table. Compare against the source's change signal instead of guessing its cadence.
+3. **Rehearse a written plan's free half before the paid half.** Rebasing `regional-stats-part2` onto today's `main` (clean merge
+   check first with `git merge-tree --write-tree`, then a throwaway branch) plus one full suite run showed the 1 October plan listed
+   three record scripts where four are needed (`onboarding-delivery:record`; the RUNBOOK already said "all four"). The plan had been
+   written from a recollection of three scripts — grep the RUNBOOK rule when writing a procedure, do not restate it from memory.
+4. **A shared lookup used by two paths needs a split, not a widening.** Fixing the untranslated CBS unit "Aantal" (CBS capitalises it;
+   the word list holds `aantal`) by making `translateUnit` case-insensitive would also have changed the English-answer glossary the
+   translator prompt embeds, moving recorded LLM fixture hashes. A separate display-only `translateUnitForDisplay` fixed the chart and
+   left the answer path byte-identical (same lesson family as `feedback_llm_prompt_embedded_lists_hash_risk`).
+5. **Refresh order matters when a failed sync takes a table out of service.** A validator failure quarantines a table and it refuses
+   until re-baselined, so the 13 refreshes ran one at a time, a low-stakes canary first, the showcased tables last, stop-on-failure;
+   all 13 batches (46–58) succeeded. A read-only pre-classification (`classifyRelease`: only the next period changed?) is what made
+   `--accept-new-codes` safe to use from the start, as the RUNBOOK requires.
+6. **Mechanics.** A backgrounded `tail -8 | grep` buffers per command, so per-table progress arrives only when each table ends — fine, but
+   do not read silence as a hang (`ps` showed the sync alive, network-bound). The full backend suite took 1,052 s when other work ran beside it (swap in use) but 8.5 min
+   run alone inside the verification block (12.5 min end to end with `--e2e`); do not start anything heavy beside it. The gallery's 30-minute shared cache (#347) shows pre-sync charts for up to
+   ~30 min after a sync — expected, not a failed refresh.
+
 ## Session 146 — own-data import (Excel/ODS/JSON/paste/Google Sheet)
 
 1. **Trying the feature with realistic fake files found five real defects that 4,600 green tests had not** (euro-formatted numbers
