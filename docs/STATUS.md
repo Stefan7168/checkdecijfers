@@ -20,6 +20,10 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 143 — verify against `git log` / Actions runs before
 trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](session-briefs/2026-09-29-session-144-kickoff.md).**
 
+- **⚑ OWNER STATEMENT, end of session 143 (2026-09-29): "This project is going absolutely fucking nowhere."** Three
+  months, zero outside users, a taste-only gate. The session's one recommendation: stop building, put it in front of
+  ten real people this week, build only what they say. **Owner decision pending — ask for it first next session**
+  (kickoff, top block). Nothing below is a plan until that answer is in.
 - **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
   ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
   number. Ask a question, see the chart. ONE Edit button opens ONE popup holding ALL editing. Nothing removed, everything

@@ -20,7 +20,19 @@ Read order: `CLAUDE.md` → `docs/STATUS.md` top block → this file. Verify eve
   database cache".
 - **Spend:** the $50 monthly roof resets 2026-10-01. The Look needs no AI spend.
 
-## Next
+## ⚑ Read this before anything else — the owner's last words of session 143
+
+Asked whether to continue with the homepage, the owner answered: *"I have no idea why we would even need to focus on
+that right now. This project is going absolutely fucking nowhere."* The session's answer, in full in the chat and
+summarised here: three months, 143 sessions, zero users who are not the owner; every session ends in "screenshots
+sent, waiting for the verdict"; the gate is the owner's own taste with no date. **Session recommendation (one, committed):
+stop building and put the product, as it is, in front of ten real people this week** (one link, one instruction, seven
+days), then build only what they said. Offered to write the invite message, a five-question feedback page and a
+log-watch list — no new features until the answers are in. **The owner had not answered when the session closed.**
+Start the next session by asking for that decision — in ONE dialog, plainly — before touching part (c). If the owner
+says "launch to ten", the work is: the invite text, the feedback page (static, no AI), the watch list, and nothing else.
+
+## Next (only if the owner explicitly chooses to keep building)
 
 1. **Part (c), the homepage** (`web/components/landing.tsx`): a real chart above the fold; fix the gallery cold start
    (#347: the curated feed's first request took 5.4 s and rendered skeletons — pre-render/pre-warm/cache; measure before
