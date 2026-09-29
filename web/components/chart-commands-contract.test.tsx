@@ -634,7 +634,7 @@ function twoSeriesUserSpec(): UserChartSpec {
       capturedAt: '2026-09-18T12:00:00.000Z',
       contentSha256: 'deadbeef',
     },
-    disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
+    disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.',
   };
 }
 

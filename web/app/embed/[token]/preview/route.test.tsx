@@ -97,7 +97,7 @@ describe('embed preview route', () => {
     const bars = await bytesOf(await get('7.sig', '?form=bar'));
     expect(Buffer.from(bars).equals(Buffer.from(line))).toBe(false);
     const download = await get('7.sig', '?form=bar&download=1');
-    expect(download.headers.get('content-disposition')).toBe('attachment; filename="checkdecijfers-83693NED-deelafbeelding.png"');
+    expect(download.headers.get('content-disposition')).toBe('attachment; filename="graphmaker-83693NED-deelafbeelding.png"');
     expect(Buffer.from(await bytesOf(download)).equals(Buffer.from(bars))).toBe(true);
   }, 90_000);
 

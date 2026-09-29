@@ -126,7 +126,7 @@ export interface ResultCell {
   batchId: number;
 }
 
-export const DERIVED_DATA_MARKING = 'bewerking van CBS-gegevens door checkdecijfers.nl' as const;
+export const DERIVED_DATA_MARKING = 'bewerking van CBS-gegevens door graphmaker.studio' as const;
 
 /** R5's single true-by-construction "is this result derived, so must it show
  * DERIVED_DATA_MARKING?" predicate. Every marking-line call site (compose.ts,

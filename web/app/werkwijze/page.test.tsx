@@ -73,8 +73,8 @@ describe('WerkwijzePage — en', () => {
 
 describe('WerkwijzePage — metadata', () => {
   it('titles the page from the catalogue in the reader\'s language', async () => {
-    expect((await generateMetadata()).title).toBe('Werkwijze — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('Werkwijze — graphmaker.studio');
     getLang.mockResolvedValue('en');
-    expect((await generateMetadata()).title).toBe('How we work — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('How we work — graphmaker.studio');
   });
 });

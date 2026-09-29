@@ -65,7 +65,7 @@ const DRAWN_ON_DATE = { en: '28 August 2026', nl: '28 augustus 2026' } as const;
 const CONTENT: Record<Lang, Content> = {
   en: {
     statusLabels: { live: 'Live', frozen: 'Built, off', planned: 'Planned' },
-    kicker: 'Check de Cijfers · System map',
+    kicker: 'graphmaker.studio · System map',
     title: 'System map',
     tagline: 'Chat with official CBS figures — every number traceable to a CBS table.',
     drawnOn: `Drawn from the repo docs on ${DRAWN_ON_DATE.en}.`,
@@ -141,7 +141,7 @@ const CONTENT: Record<Lang, Content> = {
     ],
     servicesHeading: 'Every external service',
     servicesIntro:
-      "Check de Cijfers isn't one program — it's the website plus a row of external parties, each with exactly one job. Here is every one of them: what it does, why it was chosen, what it costs, and whether it's genuinely switched on today.",
+      "graphmaker.studio isn't one program — it's the website plus a row of external parties, each with exactly one job. Here is every one of them: what it does, why it was chosen, what it costs, and whether it's genuinely switched on today.",
     whyPrefix: 'Why this one: ',
     costPrefix: 'Cost: ',
     services: [
@@ -251,7 +251,7 @@ const CONTENT: Record<Lang, Content> = {
   },
   nl: {
     statusLabels: { live: 'Live', frozen: 'Gebouwd, uit', planned: 'Gepland' },
-    kicker: 'Check de Cijfers · Systeemoverzicht',
+    kicker: 'graphmaker.studio · Systeemoverzicht',
     title: 'Systeemoverzicht',
     tagline: 'Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.',
     drawnOn: `Getekend vanuit de repo-docs op ${DRAWN_ON_DATE.nl}.`,
@@ -327,7 +327,7 @@ const CONTENT: Record<Lang, Content> = {
     ],
     servicesHeading: 'Elke externe dienst',
     servicesIntro:
-      'Check de Cijfers is niet één programma — het is de website plus een rij externe partijen, elk met precies één taak. Hier staat elke partij, wat die doet, waarom die gekozen is, wat die kost, en of die vandaag echt aanstaat.',
+      'graphmaker.studio is niet één programma — het is de website plus een rij externe partijen, elk met precies één taak. Hier staat elke partij, wat die doet, waarom die gekozen is, wat die kost, en of die vandaag echt aanstaat.',
     whyPrefix: 'Waarom deze: ',
     costPrefix: 'Kosten: ',
     services: [

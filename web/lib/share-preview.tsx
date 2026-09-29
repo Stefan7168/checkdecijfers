@@ -34,7 +34,7 @@ import { DEFAULT_PALETTE } from './chart-presentation.ts';
 import { stripDimensionCode } from './dim-label.ts';
 
 export const SHARE_PREVIEW_SIZE = { width: 1200, height: 630 } as const;
-export const SHARE_PREVIEW_BRAND = 'checkdecijfers.nl';
+export const SHARE_PREVIEW_BRAND = 'graphmaker.studio';
 /** The public claim, digit-free (CLAUDE.md, public-claim rule). */
 export const SHARE_PREVIEW_TAGLINE = 'Elk getal herleidbaar tot een officiële CBS-tabel';
 /** The typeface the route loads for the image tool; the card names it so the

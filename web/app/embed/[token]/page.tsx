@@ -178,19 +178,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const [{ token }, query] = await Promise.all([params, searchParams]);
   const chart = await loadEmbedChart(token).catch(() => null);
-  if (chart === null) return { title: 'checkdecijfers.nl', robots: NOINDEX };
+  if (chart === null) return { title: 'graphmaker.studio', robots: NOINDEX };
   const description = chart.headlineText ?? chart.spec.attributionLine;
   // Round 2 (session 144): the picture is a route handler (preview/route.tsx)
   // so the reader's `?form=` can reach it — the `opengraph-image` file
   // convention takes no query string. Absolute URL: crawlers need one.
   const image = new URL(`${APP_URL}/embed/${token}/preview`);
   if (isChartForm(query.form) && !isTabularForm(query.form)) image.searchParams.set('form', query.form);
-  const images = [{ url: image.toString(), width: SHARE_PREVIEW_SIZE.width, height: SHARE_PREVIEW_SIZE.height, alt: 'Grafiek van checkdecijfers.nl' }];
+  const images = [{ url: image.toString(), width: SHARE_PREVIEW_SIZE.width, height: SHARE_PREVIEW_SIZE.height, alt: 'Grafiek van graphmaker.studio' }];
   return {
-    title: `${chart.spec.title} · checkdecijfers.nl`,
+    title: `${chart.spec.title} · graphmaker.studio`,
     description,
     robots: NOINDEX,
-    openGraph: { title: chart.spec.title, description, type: 'article', siteName: 'checkdecijfers.nl', images },
+    openGraph: { title: chart.spec.title, description, type: 'article', siteName: 'graphmaker.studio', images },
     twitter: { card: 'summary_large_image', title: chart.spec.title, description, images },
   };
 }

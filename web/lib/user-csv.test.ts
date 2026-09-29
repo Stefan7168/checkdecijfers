@@ -73,12 +73,12 @@ function twoSeriesSpec(): UserChartSpec {
 describe('buildUserChartCsv', () => {
   it('pins the complete nl file for a small two-series spec', () => {
     const { filename, content } = buildUserChartCsv(twoSeriesSpec(), 'nl');
-    expect(filename).toBe('checkdecijfers-your-data-7.csv');
+    expect(filename).toBe('graphmaker-your-data-7.csv');
     expect(content).toBe(
       BOM +
-        'User-uploaded data — not verified by checkdecijfers.\r\n' +
+        'User-uploaded data — not verified by graphmaker.studio.\r\n' +
         'Bron: eigen bestand verkoop-2024.csv, geüpload op 2026-09-06\r\n' +
-        'Bestand aangemaakt door checkdecijfers.nl\r\n' +
+        'Bestand aangemaakt door graphmaker.studio\r\n' +
         '\r\n' +
         'Jaar;Reeks;Waarde;Weergave;Cel;Opmerking\r\n' +
         '2023;Amsterdam;40;40,0;r1:c1;\r\n' +
@@ -90,12 +90,12 @@ describe('buildUserChartCsv', () => {
 
   it('pins the complete en file for the same spec — xHeader stays verbatim, only fixed copy translates', () => {
     const { filename, content } = buildUserChartCsv(twoSeriesSpec(), 'en');
-    expect(filename).toBe('checkdecijfers-your-data-7.csv');
+    expect(filename).toBe('graphmaker-your-data-7.csv');
     expect(content).toBe(
       BOM +
-        'User-uploaded data — not verified by checkdecijfers.\r\n' +
+        'User-uploaded data — not verified by graphmaker.studio.\r\n' +
         'Source: your file verkoop-2024.csv, uploaded 2026-09-06\r\n' +
-        'File created by checkdecijfers.nl\r\n' +
+        'File created by graphmaker.studio\r\n' +
         '\r\n' +
         'Jaar;Series;Value;Shown as;Cell;Note\r\n' +
         '2023;Amsterdam;40;40,0;r1:c1;\r\n' +
@@ -214,6 +214,6 @@ describe('buildUserChartCsv', () => {
 
   it('names the file after the dataset id', () => {
     const { filename } = buildUserChartCsv(spec({ provenance: { ...spec().provenance, datasetId: 42 } }), 'nl');
-    expect(filename).toBe('checkdecijfers-your-data-42.csv');
+    expect(filename).toBe('graphmaker-your-data-42.csv');
   });
 });

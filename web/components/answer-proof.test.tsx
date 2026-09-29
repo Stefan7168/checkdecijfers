@@ -231,13 +231,13 @@ describe('AnswerProof — honesty surfaces', () => {
   it('renders the CC BY marking only when `marked` is true', () => {
     render(<AnswerProof proof={fakeProof({ marked: true })} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
-    expect(screen.getByText('bewerking van CBS-gegevens door checkdecijfers.nl')).toBeInTheDocument();
+    expect(screen.getByText('bewerking van CBS-gegevens door graphmaker.studio')).toBeInTheDocument();
   });
 
   it('renders no marking when `marked` is false', () => {
     render(<AnswerProof proof={fakeProof({ marked: false })} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
-    expect(screen.queryByText('bewerking van CBS-gegevens door checkdecijfers.nl')).toBeNull();
+    expect(screen.queryByText('bewerking van CBS-gegevens door graphmaker.studio')).toBeNull();
   });
 });
 

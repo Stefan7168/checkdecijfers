@@ -31,7 +31,7 @@ export const DATASET_TURN_ENVELOPE_VERSION = 1 as const;
  * with in the first place. English (session-brief §8 Q6, superseded by the
  * later "product copy/UI text is English" decision, open-questions #206 —
  * the original design's Dutch wording is recorded there for history). */
-export const USER_DATA_DISCLAIMER = 'User-uploaded data — not verified by checkdecijfers.' as const;
+export const USER_DATA_DISCLAIMER = 'User-uploaded data — not verified by graphmaker.studio.' as const;
 
 /** The persistent top-left badge on a user-data chart (D11, H2) — a
  * SEPARATE, shorter string from `USER_DATA_DISCLAIMER` above (that one is

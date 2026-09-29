@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { formatOverlayValue } from './chart-models.ts';
 import type { ChartPoint } from '../backend/chart/types.ts';
 
-const marking = 'bewerking van CBS-gegevens door checkdecijfers.nl' as const;
+const marking = 'bewerking van CBS-gegevens door graphmaker.studio' as const;
 const points = [
   { resultId: 'a', decimals: 1 },
   { resultId: 'b', decimals: 1 },

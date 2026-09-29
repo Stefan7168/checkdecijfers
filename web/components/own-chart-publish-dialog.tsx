@@ -49,7 +49,7 @@ const COLOUR_LABEL_KEY: Record<OwnEmbedColour, MessageKey> = {
 // generic document title would. Never interpolates anything the reader
 // typed (the source-line field) — see `escapeHtmlAttribute` below for why
 // that would matter if it ever did.
-const EMBED_TITLE = 'checkdecijfers.nl — your chart';
+const EMBED_TITLE = 'graphmaker.studio — your chart';
 
 /** HTML-attribute-escapes a string for use inside a double-quoted attribute
  * value in the generated embed snippet. Unlike chart-embed-dialog.tsx's own

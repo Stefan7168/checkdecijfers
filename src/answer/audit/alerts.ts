@@ -38,7 +38,7 @@ export async function alertSemanticCheckSkip(
 
   try {
     await sendAdminAlertEmail(
-      'checkdecijfers: semantische controle overgeslagen (fail-open)',
+      'graphmaker.studio: semantische controle overgeslagen (fail-open)',
       [
         'De semantische dubbelcheck (#144) kon niet draaien; het antwoord is geserveerd op de volledige deterministische validatie (fail-open, ADR 034 §5).',
         '',
@@ -124,7 +124,7 @@ export async function alertInternalRefusal(
 
   try {
     await sendAdminAlertEmail(
-      'checkdecijfers: interne weigering geserveerd',
+      'graphmaker.studio: interne weigering geserveerd',
       [
         'De pijplijn liep tegen een onverwachte fout aan en heeft eerlijk geweigerd ("internal", principe c) — de gebruiker kreeg een nette weigering en is gecompenseerd via het normale gate-pad.',
         '',
@@ -171,7 +171,7 @@ export async function alertTemplateValidationFailure(
 
   try {
     await sendAdminAlertEmail(
-      'checkdecijfers: sjabloon-antwoord geserveerd met afgekeurd validator-verdict',
+      'graphmaker.studio: sjabloon-antwoord geserveerd met afgekeurd validator-verdict',
       [
         'Een sjabloon-antwoord is geserveerd terwijl de automatische dubbelcheck het afkeurde (#121, owner-keuze optie A: tonen + melden).',
         '',
@@ -280,8 +280,8 @@ export async function alertRetentionPurge(
 ): Promise<void> {
   const subject =
     alert.kind === 'failed'
-      ? 'checkdecijfers: de GDPR-bewaartermijnpurge is MISLUKT'
-      : 'checkdecijfers: de GDPR-purge sloeg het trial-been over';
+      ? 'graphmaker.studio: de GDPR-bewaartermijnpurge is MISLUKT'
+      : 'graphmaker.studio: de GDPR-purge sloeg het trial-been over';
   const meaning =
     alert.kind === 'failed'
       ? 'De purge is het ENIGE dat de bewaartermijnen afdwingt (auditrijen 2 jaar, ' +
@@ -327,8 +327,8 @@ export async function alertTrialPotLow(
 ): Promise<void> {
   const empty = alert.remaining <= 0;
   const subject = empty
-    ? 'checkdecijfers: het gratis proefpotje is LEEG'
-    : `checkdecijfers: nog ${alert.remaining} proefvragen in het potje`;
+    ? 'graphmaker.studio: het gratis proefpotje is LEEG'
+    : `graphmaker.studio: nog ${alert.remaining} proefvragen in het potje`;
   const body = empty
     ? 'De homepage toont vanaf nu "log in om verder te gaan" in plaats van het proefveld. ' +
       'Bijvullen: npm run trialpot:set -- <aantal>. De trial heropent ZONDER deploy — ' +
@@ -395,14 +395,14 @@ export async function alertTableStatusFlip(
 ): Promise<void> {
   const subject =
     alert.flips.length === 1
-      ? `checkdecijfers: tabel ${alert.flips[0]!.tableId} is niet meer actueel bij de bron`
-      : `checkdecijfers: ${alert.flips.length} geregistreerde tabellen zijn niet meer actueel bij de bron`;
+      ? `graphmaker.studio: tabel ${alert.flips[0]!.tableId} is niet meer actueel bij de bron`
+      : `graphmaker.studio: ${alert.flips.length} geregistreerde tabellen zijn niet meer actueel bij de bron`;
   const lines = alert.flips.map(
     (f) =>
       `- ${f.tableId}: ${f.oldStatus ?? '(geen catalogusrij)'} -> ${f.newStatus ?? '(niet meer in de catalogus)'}`,
   );
   const body = [
-    'Een of meer tabellen waar checkdecijfers.nl echt cijfers uit serveert, staan bij de bron niet ' +
+    'Een of meer tabellen waar graphmaker.studio echt cijfers uit serveert, staan bij de bron niet ' +
       'meer als actueel geregistreerd (bijv. CBS "Gediscontinueerd"/"Vervallen"), of zijn helemaal ' +
       'uit de catalogus verdwenen.',
     '',
@@ -489,8 +489,8 @@ export async function alertHealthProbeFailure(
 ): Promise<void> {
   const subject =
     alert.failed.length === 1
-      ? `checkdecijfers: de gezondheidscheck faalt (${alert.failed[0]})`
-      : `checkdecijfers: de gezondheidscheck faalt op ${alert.failed.length} punten`;
+      ? `graphmaker.studio: de gezondheidscheck faalt (${alert.failed[0]})`
+      : `graphmaker.studio: de gezondheidscheck faalt op ${alert.failed.length} punten`;
   const body = [
     'De dagelijkse onboarding-cron heeft na zijn eigen taak dezelfde controles gedraaid als ' +
       '/api/health (#23/#114), en minstens één daarvan faalt.',
@@ -549,8 +549,8 @@ export async function alertIngestionRunProblems(
 ): Promise<void> {
   const subject =
     alert.problems.length === 1
-      ? `checkdecijfers: ingestieprobleem bij tabel ${alert.problems[0]!.tableId}`
-      : `checkdecijfers: ${alert.problems.length} ingestieproblemen in deze run`;
+      ? `graphmaker.studio: ingestieprobleem bij tabel ${alert.problems[0]!.tableId}`
+      : `graphmaker.studio: ${alert.problems.length} ingestieproblemen in deze run`;
   const lines = alert.problems.map(
     (p) =>
       `- ${p.tableId} (bron: ${p.source}), check: ${p.check}, batch: ${p.batchId ?? '(geen batch-id)'} — ${p.message}`,
@@ -618,8 +618,8 @@ export async function alertMissedSyncs(
 ): Promise<void> {
   const subject =
     alert.overdue.length === 1
-      ? `checkdecijfers: tabel ${alert.overdue[0]!.tableId} heeft geen verversing binnen de verwachte termijn`
-      : `checkdecijfers: ${alert.overdue.length} tabellen hebben geen verversing binnen de verwachte termijn`;
+      ? `graphmaker.studio: tabel ${alert.overdue[0]!.tableId} heeft geen verversing binnen de verwachte termijn`
+      : `graphmaker.studio: ${alert.overdue.length} tabellen hebben geen verversing binnen de verwachte termijn`;
   const lines = alert.overdue.map(
     (e) =>
       `- ${e.tableId}: laatst succesvol gesynchroniseerd op ${e.lastSuccessfulSyncAt} ` +

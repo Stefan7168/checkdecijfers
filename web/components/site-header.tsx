@@ -31,7 +31,7 @@ import { ThemeToggle } from './theme-toggle.tsx';
 import { Badge } from './ui/badge.tsx';
 import { Button } from './ui/button.tsx';
 
-const WORDMARK = 'Check de Cijfers';
+const WORDMARK = 'graphmaker.studio';
 
 // The logout submit button, split out so useFormStatus can read the pending
 // state of its parent <form action={signOut}> and give feedback during the

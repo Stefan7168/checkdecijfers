@@ -1,4 +1,8 @@
-# checkdecijfers.nl
+# graphmaker.studio (repo: checkdecijfers.nl)
+
+> Rebranded to **graphmaker.studio** on 2026-09-29 (ADR 064): every reader-visible name is graphmaker.studio; the
+> repo, the `checkdecijfers.vercel.app` address, mail domains and embed protocol strings keep the old name until
+> the domain is wired.
 
 **A beautiful, sourced chart of official Dutch and European statistics — you ask in plain language,
 you get a chart you would publish, and the AI never does the math.** ([ADR 063](docs/decisions/063-chart-first-refocus-look-is-the-gate.md),

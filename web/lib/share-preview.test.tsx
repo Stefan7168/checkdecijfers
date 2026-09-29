@@ -66,7 +66,7 @@ describe('buildSharePreview', () => {
     expect(model.headline?.value).toBe('3,3');
     expect(model.strings).toContain('3,3');
     expect(model.strings).toContain('% · 2024');
-    expect(model.strings).toContain('checkdecijfers.nl');
+    expect(model.strings).toContain('graphmaker.studio');
     const allowed = new Set([
       ...s.series.flatMap((se) => se.points.flatMap((p) => [...digitRuns(p.formattedValue ?? ''), ...digitRuns(p.periodLabel)])),
       ...digitRuns(s.attributionLine),
@@ -123,7 +123,7 @@ describe('buildSharePreview', () => {
     expect(model.strings).toContain('Inflatie zakte in 2024 naar 3,3 procent');
     const html = renderToStaticMarkup(<SharePreviewCard model={model} />);
     expect(html).toContain('Inflatie zakte in 2024 naar 3,3 procent');
-    expect(html).toContain('checkdecijfers.nl');
+    expect(html).toContain('graphmaker.studio');
     expect(html).toContain('data:image/svg+xml');
   });
 });

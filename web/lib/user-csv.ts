@@ -128,7 +128,7 @@ export function buildUserChartCsv(spec: UserChartSpec, lang: Lang): UserChartCsv
 
   const lines = [...preamble, '', header, ...dataRows];
   return {
-    filename: `checkdecijfers-your-data-${spec.provenance.datasetId}.csv`,
+    filename: `graphmaker-your-data-${spec.provenance.datasetId}.csv`,
     content: BOM + lines.join(CRLF) + CRLF,
   };
 }

@@ -213,7 +213,7 @@ function buildAlternatesLineEn(translatedAlternates: string[]): string | null {
 // A hand-written English translation of DERIVED_DATA_MARKING
 // (src/query/types.ts) — a fixed literal, never a runtime transform of the
 // Dutch string (principle a).
-const DERIVED_DATA_MARKING_EN = 'adaptation of CBS data by checkdecijfers.nl';
+const DERIVED_DATA_MARKING_EN = 'adaptation of CBS data by graphmaker.studio';
 
 // ---------------------------------------------------------------------------
 // attributionLine — mirrors buildAttributionLine

@@ -66,8 +66,8 @@ function sampleSvg(): SVGSVGElement {
 
 describe('attributedSvgMarkup', () => {
   it('bakes the attribution text into the returned markup', () => {
-    const markup = attributedSvgMarkup(sampleSvg(), 'Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl');
-    expect(markup).toContain('Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl');
+    const markup = attributedSvgMarkup(sampleSvg(), 'Bron: CBS StatLine, tabel 12345NED. graphmaker.studio');
+    expect(markup).toContain('Bron: CBS StatLine, tabel 12345NED. graphmaker.studio');
   });
 
   it('grows the height to make room for the footer, width unchanged', () => {
@@ -98,7 +98,7 @@ describe('wrapAttributionText (#223: the footer must never cut text off)', () =>
   });
 
   it('reproduces the original text when lines are rejoined with spaces (nothing lost)', () => {
-    const text = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. checkdecijfers.nl';
+    const text = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. graphmaker.studio';
     expect(wrapAttributionText(text, 80).join(' ')).toBe(text);
   });
 
@@ -115,7 +115,7 @@ describe('attributedSvgMarkup — footer wraps instead of cutting off on a narro
     return svg;
   }
 
-  const longAttribution = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. checkdecijfers.nl';
+  const longAttribution = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. graphmaker.studio';
 
   it('renders the same single-line footer as before this fix when the text already fits', () => {
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie');
@@ -202,7 +202,7 @@ describe('ChartDownloadMenu', () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <div ref={ref}>
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
@@ -216,7 +216,7 @@ describe('ChartDownloadMenu', () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <div ref={ref}>
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
@@ -231,7 +231,7 @@ describe('ChartDownloadMenu', () => {
       <div ref={ref}>
         {/* eslint-disable-next-line react/no-unknown-property */}
         <svg data-testid="chart-svg" width="400" height="200" />
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     expect(container.querySelector('[data-testid="chart-svg"]')).not.toBeNull();
@@ -250,7 +250,7 @@ describe('ChartDownloadMenu', () => {
       <div ref={ref}>
         {/* eslint-disable-next-line react/no-unknown-property */}
         <svg data-testid="chart-svg" width="400" height="200" />
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
@@ -275,7 +275,7 @@ describe('ChartDownloadMenu', () => {
       <div ref={ref}>
         {/* eslint-disable-next-line react/no-unknown-property */}
         <svg data-testid="chart-svg" width="400" height="200" />
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
@@ -337,8 +337,8 @@ describe('ChartDownloadMenu — PNG, chart only (transparent) (#215)', () => {
         <svg data-testid="chart-svg" width="400" height="200" />
         <ChartDownloadMenu
           containerRef={ref}
-          attributionText="Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl"
-          filenameBase="checkdecijfers-12345NED"
+          attributionText="Bron: CBS StatLine, tabel 12345NED. graphmaker.studio"
+          filenameBase="graphmaker-12345NED"
           syncedAt="2026-09-15T00:00:00.000Z"
         />
       </div>,
@@ -371,7 +371,7 @@ describe('ChartDownloadMenu — PNG, chart only (transparent) (#215)', () => {
         <ChartDownloadMenu
           containerRef={ref}
           attributionText="attributie"
-          filenameBase="checkdecijfers-12345NED"
+          filenameBase="graphmaker-12345NED"
           syncedAt="2026-09-15T00:00:00.000Z"
         />
       </div>,
@@ -399,8 +399,8 @@ describe('ChartDownloadMenu — PDF export (#215)', () => {
         <svg data-testid="chart-svg" width="400" height="200" />
         <ChartDownloadMenu
           containerRef={ref}
-          attributionText="Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl"
-          filenameBase="checkdecijfers-12345NED"
+          attributionText="Bron: CBS StatLine, tabel 12345NED. graphmaker.studio"
+          filenameBase="graphmaker-12345NED"
         />
       </div>,
     );
@@ -412,13 +412,13 @@ describe('ChartDownloadMenu — PDF export (#215)', () => {
     const [element, , options] = pdfMocks.svg2pdf.mock.calls[0];
     // Same attributed markup the SVG download would serialize — a PDF can
     // never show different text than the SVG (#215's own requirement).
-    expect((element as Element).textContent).toContain('Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl');
+    expect((element as Element).textContent).toContain('Bron: CBS StatLine, tabel 12345NED. graphmaker.studio');
     expect(options).toMatchObject({ x: 0, y: 0, width: 400, height: 224 }); // 224 = 200 + FOOTER_HEIGHT, same as attributedSvgMarkup's own height test
 
     expect(pdfMocks.jsPDF).toHaveBeenCalledWith(
       expect.objectContaining({ unit: 'pt', format: [400, 224], orientation: 'l' }),
     );
-    await waitFor(() => expect(pdfMocks.save).toHaveBeenCalledWith('checkdecijfers-12345NED.pdf'));
+    await waitFor(() => expect(pdfMocks.save).toHaveBeenCalledWith('graphmaker-12345NED.pdf'));
   });
 
   it('shows the failure message when svg2pdf rejects', async () => {
@@ -428,7 +428,7 @@ describe('ChartDownloadMenu — PDF export (#215)', () => {
       <div ref={ref}>
         {/* eslint-disable-next-line react/no-unknown-property */}
         <svg data-testid="chart-svg" width="400" height="200" />
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
@@ -452,7 +452,7 @@ describe('ChartDownloadMenu — accessibility (#197)', () => {
         <button type="button">elders</button>
         <div ref={ref}>
           <svg data-testid="chart-svg" width="400" height="200" />
-          <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+          <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
         </div>
       </div>,
     );
@@ -513,7 +513,7 @@ describe('ChartDownloadMenu — accessibility (#197)', () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <div ref={ref}>
-        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="graphmaker-12345NED" />
       </div>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));

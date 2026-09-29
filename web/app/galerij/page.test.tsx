@@ -57,7 +57,7 @@ describe('GaleryPage — nl', () => {
   it('sets noindex metadata', async () => {
     getLang.mockResolvedValue('nl');
     expect(await generateMetadata()).toMatchObject({
-      title: 'Galerij — Check de Cijfers',
+      title: 'Galerij — graphmaker.studio',
       robots: { index: false, follow: false },
     });
   });
@@ -80,7 +80,7 @@ describe('GaleryPage — en', () => {
   it('sets noindex metadata', async () => {
     getLang.mockResolvedValue('en');
     expect(await generateMetadata()).toMatchObject({
-      title: 'Gallery — Check de Cijfers',
+      title: 'Gallery — graphmaker.studio',
       robots: { index: false, follow: false },
     });
   });

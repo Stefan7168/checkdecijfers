@@ -2326,8 +2326,8 @@ function UserChartCard({
           {!tabularForm && !smallMultiplesOn && !publicMode ? (
             <ChartDownloadMenu
               containerRef={containerRef}
-              attributionText={`${activeSpec.disclaimerLine} · checkdecijfers.nl`}
-              filenameBase={`checkdecijfers-your-data-${activeSpec.provenance.datasetId}`}
+              attributionText={`${activeSpec.disclaimerLine} · graphmaker.studio`}
+              filenameBase={`graphmaker-your-data-${activeSpec.provenance.datasetId}`}
               lang={chartLang}
               frame={pres}
               frameImage={null}

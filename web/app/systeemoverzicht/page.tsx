@@ -8,8 +8,8 @@ import type { Metadata } from 'next';
 import { SystemMapContent } from './system-map-content.tsx';
 
 export const metadata: Metadata = {
-  title: 'System map — Check de Cijfers',
-  description: 'How Check de Cijfers is built: the components, every external service, and the journey of one question.',
+  title: 'System map — graphmaker.studio',
+  description: 'How graphmaker.studio is built: the components, every external service, and the journey of one question.',
   // Belt-and-suspenders: the whole site is already blanket-noindexed via
   // web/app/layout.tsx + web/app/robots.ts (Phase 0, pre-launch). This page
   // should stay noindexed even after that global flag is eventually lifted —

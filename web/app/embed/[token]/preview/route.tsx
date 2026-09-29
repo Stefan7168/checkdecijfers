@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     'Cache-Control': 'public, max-age=0, s-maxage=3600',
   };
   if (query.get('download') === '1') {
-    const base = model === null ? 'checkdecijfers' : `checkdecijfers-${chart!.spec.attribution.tableId}`;
+    const base = model === null ? 'graphmaker' : `graphmaker-${chart!.spec.attribution.tableId}`;
     headers['Content-Disposition'] = `attachment; filename="${base}-deelafbeelding.png"`;
   }
   // The fonts are the one thing that may fail on a misconfigured host; the

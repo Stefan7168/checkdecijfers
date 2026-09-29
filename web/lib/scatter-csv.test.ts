@@ -36,7 +36,7 @@ describe('buildScatterCsv — Dutch', () => {
       'Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.',
       'Definitie bevolking op 1 januari: inwoners op 1 januari.',
       scatterLineNl(spec),
-      'Bestand aangemaakt door checkdecijfers.nl',
+      'Bestand aangemaakt door graphmaker.studio',
     ]);
   });
 
@@ -69,7 +69,7 @@ describe('buildScatterCsv — Dutch', () => {
   });
 
   it('filename names both tables and the period', () => {
-    expect(csv.filename).toBe('checkdecijfers-84639NED-03759ned-2024.csv');
+    expect(csv.filename).toBe('graphmaker-84639NED-03759ned-2024.csv');
   });
 });
 
@@ -96,7 +96,7 @@ describe('buildScatterCsv — provisional, staleness, nothing left out', () => {
     const spec = fakeScatterSpec({ x: { ...base.x, tableId: base.y.tableId, attributionLine: base.y.attributionLine } });
     const csv = buildScatterCsv(spec, 'nl');
     expect(lines(csv.content).filter((r) => r === base.y.attributionLine)).toHaveLength(1);
-    expect(csv.filename).toBe('checkdecijfers-84639NED-2024.csv');
+    expect(csv.filename).toBe('graphmaker-84639NED-2024.csv');
   });
 });
 

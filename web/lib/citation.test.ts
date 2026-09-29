@@ -36,7 +36,7 @@ describe('buildCitation', () => {
     const citation = buildCitation(response);
     expect(citation).toContain(DERIVED_DATA_MARKING);
     // Pin the user-visible copy too, not only equality with the constant.
-    expect(citation).toContain('bewerking van CBS-gegevens door checkdecijfers.nl');
+    expect(citation).toContain('bewerking van CBS-gegevens door graphmaker.studio');
   });
 
   it('never adds flags on a plain definitive, underived answer', () => {

@@ -54,7 +54,7 @@ export function StatCard({ data }: { data: StatCardData }) {
         }
         const link = document.createElement('a');
         link.href = URL.createObjectURL(png);
-        link.download = `checkdecijfers-${data.tableId}.png`;
+        link.download = `graphmaker-${data.tableId}.png`;
         link.click();
         URL.revokeObjectURL(link.href);
       }, 'image/png');

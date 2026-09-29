@@ -288,7 +288,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
 
   it('renders the header: wordmark, live balance chip, Credits kopen (Geschiedenis lives in the account menu — owner punch-list item 5)', () => {
     renderWorkspace();
-    expect(screen.getAllByRole('link', { name: 'Check de Cijfers' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'graphmaker.studio' }).length).toBeGreaterThan(0);
     expect(screen.getByText('100 credits')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Credits kopen' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Account' }));
@@ -487,7 +487,7 @@ describe('SiteHeader — WP135 presence rules', () => {
     expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
 
     rerender(<SiteHeader stripped />);
-    expect(screen.getByRole('link', { name: 'Check de Cijfers' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'graphmaker.studio' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Geschiedenis' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Account' })).toBeNull();
     expect(screen.queryByText(/credits/)).toBeNull();

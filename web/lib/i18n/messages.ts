@@ -54,7 +54,7 @@ const nl = {
   'chat.copyCitationCopied': 'Gekopieerd!',
   'chat.downloadCsv': 'CSV',
   'chat.downloadCsvFailed': 'Downloaden lukte niet in deze browser.',
-  'chat.webSectionHeader': 'Van het web (niet door checkdecijfers geverifieerd)',
+  'chat.webSectionHeader': 'Van het web (niet door graphmaker.studio geverifieerd)',
   'chat.webSectionFailedInsufficientBalance':
     'De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.',
   'chat.webSectionFailedGeneric': 'De webzoekopdracht is niet gelukt — geen extra kosten.',
@@ -198,11 +198,11 @@ const nl = {
   // the digit-free "gone" message (a deleted/unpublished/never-existed
   // publication, or one whose dataset/turn no longer qualifies) and the
   // outbound backlink sentence, mirroring the CBS embed's own "Bevroren
-  // op"/"checkdecijfers.nl" footer shape but as ONE translated sentence
+  // op"/"graphmaker.studio" footer shape but as ONE translated sentence
   // (this route owns no split link text of its own, unlike ChartView's
   // embedFooter).
   'ownChart.public.unavailable': 'Deze grafiek is niet meer beschikbaar.',
-  'ownChart.public.footer': 'Gemaakt met checkdecijfers — gegevens van de maker, niet door ons gecontroleerd',
+  'ownChart.public.footer': 'Gemaakt met graphmaker.studio — gegevens van de maker, niet door ons gecontroleerd',
   // #319 (session 128): web/app/embed/error.tsx — the shared route-segment
   // error boundary for BOTH public embed routes (/embed/[token], CBS/ADR
   // 041, and /embed/own/[publicId], own-data/ADR 057). Deliberately its own
@@ -279,7 +279,7 @@ const nl = {
   'userCsv.cellHeader': 'Cel',
   'userCsv.noteHeader': 'Opmerking',
   'userCsv.incompleteNote': 'onvolledige groep: lege of niet-numerieke cellen overgeslagen',
-  'userCsv.fileCreatedBy': 'Bestand aangemaakt door checkdecijfers.nl',
+  'userCsv.fileCreatedBy': 'Bestand aangemaakt door graphmaker.studio',
 
 
   // chart-data-panel.tsx — co-pilot phase 2 (session 113, Task 6): doorway A
@@ -653,7 +653,7 @@ const nl = {
   'statCard.provisional': 'voorlopig',
   'statCard.downloadPng': 'Download als afbeelding',
   'statCard.downloadFailed': 'Downloaden lukte niet in deze browser.',
-  'statCard.attributionLine': '{source} · tabel {table} · gesynchroniseerd {date} · checkdecijfers.nl',
+  'statCard.attributionLine': '{source} · tabel {table} · gesynchroniseerd {date} · graphmaker.studio',
 
   // theme-toggle.tsx — English today, Dutch added as the nl default (design
   // §3): the pins move from the literal English strings to these nl values.
@@ -663,7 +663,7 @@ const nl = {
   'themeToggle.system': 'Systeemthema',
 
   // app/layout.tsx metadata (generateMetadata).
-  'meta.title': 'Check de Cijfers',
+  'meta.title': 'graphmaker.studio',
   'meta.description': 'Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.',
 
   // WP218 phase 4 (#219), Task 4 (design §4): the chart card — chart.tsx,
@@ -1267,7 +1267,7 @@ const nl = {
   'footer.werkwijzeLabel': 'Werkwijze',
   'footer.privacyLabel': 'Privacy',
   'trust.draftNote': 'Concept — wordt nog nagekeken.',
-  'werkwijze.pageTitle': 'Werkwijze — Check de Cijfers',
+  'werkwijze.pageTitle': 'Werkwijze — graphmaker.studio',
   'werkwijze.heading': 'Hoe we werken',
   'werkwijze.publicClaim':
     'Elk getal dat we tonen is herleidbaar naar een officiële CBS-cel, met bron en datum erbij getoond.',
@@ -1289,7 +1289,7 @@ const nl = {
   'werkwijze.notCoveredHeading': 'Wat de claim niet dekt',
   'werkwijze.notCoveredBody':
     'De herleidbaarheidsclaim geldt voor CBS-cijfers uit ons register. Ze geldt niet voor je eigen geüploade data, voor internetresultaten (apart gemarkeerd als niet geverifieerd), of voor andere bronnen — die kunnen in de toekomst worden toegevoegd, maar zijn dat vandaag niet.',
-  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.pageTitle': 'Privacy — graphmaker.studio',
   'privacy.heading': 'Privacy',
   'privacy.storedHeading': 'Wat we bewaren',
   'privacy.storedBody':
@@ -1318,11 +1318,11 @@ const nl = {
   // /about — owner punch-list item 6 (session 102). Same shell as /privacy;
   // NOT the placeholder above (that one is unrelated, privacy-specific and
   // deliberately left as a TODO) — this contact line has a real address.
-  'about.pageTitle': 'Over ons — Check de Cijfers',
+  'about.pageTitle': 'Over ons — graphmaker.studio',
   'about.heading': 'Over ons',
-  'about.introHeading': 'Over Check de Cijfers',
+  'about.introHeading': 'Over graphmaker.studio',
   'about.introBody':
-    'Check de Cijfers beantwoordt vragen over officiële CBS-statistieken. Een taalmodel leest je vraag, maar rekent zelf nooit: elk cijfer komt uit een database met CBS-data en is te herleiden tot de brontabel en de datum. We maken het voor journalisten, onderzoekers en studenten die snel een betrouwbaar cijfer nodig hebben, met een bron die ze kunnen verantwoorden.',
+    'graphmaker.studio beantwoordt vragen over officiële CBS-statistieken. Een taalmodel leest je vraag, maar rekent zelf nooit: elk cijfer komt uit een database met CBS-data en is te herleiden tot de brontabel en de datum. We maken het voor journalisten, onderzoekers en studenten die snel een betrouwbaar cijfer nodig hebben, met een bron die ze kunnen verantwoorden.',
   'about.contactHeading': 'Contact',
   'about.contactIntro': 'Vragen, opmerkingen of feedback? Mail ons op',
 
@@ -1418,7 +1418,7 @@ const nl = {
   'landing.heroExampleLabel': 'Echt antwoord, live uit onze database',
   'gallery.teaserHeading': 'Verhalen uit de galerij',
   'gallery.teaserAllLink': 'Alle verhalen',
-  'gallery.pageTitle': 'Galerij — Check de Cijfers',
+  'gallery.pageTitle': 'Galerij — graphmaker.studio',
   'gallery.heading': 'De galerij',
   // Fix-wave finding 7: "gesourcete" is not Dutch, and the claim must match
   // what actually ships on this branch — built from real CBS-cijfers, with
@@ -1448,7 +1448,7 @@ const nl = {
   'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
 
   // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
-  'lab3d.pageTitle': 'Demo: 3D-gemeentekaart (fictieve data) — Check de Cijfers',
+  'lab3d.pageTitle': 'Demo: 3D-gemeentekaart (fictieve data) — graphmaker.studio',
   'lab3d.title': 'Nederland groeit, maar niet overal',
   'lab3d.intro': 'Een demonstratie van een 3D-kaart: elke gemeente is een kolom, de hoogte staat voor het aantal inwoners en de kleur voor de groei sinds het startjaar. Alle cijfers zijn verzonnen; alleen de gemeentegrenzen en -namen zijn echt.',
   'lab3d.badge': 'DEMO — FICTIEVE DATA',
@@ -1650,7 +1650,7 @@ const en: Messages = {
   'chat.copyCitationCopied': 'Copied!',
   'chat.downloadCsv': 'CSV',
   'chat.downloadCsvFailed': 'Download did not work in this browser.',
-  'chat.webSectionHeader': 'From the web (not verified by checkdecijfers)',
+  'chat.webSectionHeader': 'From the web (not verified by graphmaker.studio)',
   'chat.webSectionFailedInsufficientBalance':
     'The web search was not run (insufficient balance) — no extra cost.',
   'chat.webSectionFailedGeneric': 'The web search failed — no extra cost.',
@@ -1755,7 +1755,7 @@ const en: Messages = {
   'ownChart.public.sourceLine': 'Source: {source}',
   'ownChart.public.sourceDefault': 'data supplied by the author',
   'ownChart.public.unavailable': 'This chart is no longer available.',
-  'ownChart.public.footer': 'Made with checkdecijfers — the author’s own data, not checked by us',
+  'ownChart.public.footer': 'Made with graphmaker.studio — the author’s own data, not checked by us',
   'embed.error.unavailable': 'This chart is not available right now.',
   'ownChart.publish.trigger': 'Publish',
   'ownChart.publish.dialogTitle': 'Publish this chart',
@@ -1808,7 +1808,7 @@ const en: Messages = {
   'userCsv.cellHeader': 'Cell',
   'userCsv.noteHeader': 'Note',
   'userCsv.incompleteNote': 'incomplete group: empty or non-numeric cells skipped',
-  'userCsv.fileCreatedBy': 'File created by checkdecijfers.nl',
+  'userCsv.fileCreatedBy': 'File created by graphmaker.studio',
 
 
   'chart.data.trigger': 'Data',
@@ -2103,14 +2103,14 @@ const en: Messages = {
   'statCard.provisional': 'provisional',
   'statCard.downloadPng': 'Download as image',
   'statCard.downloadFailed': 'Download did not work in this browser.',
-  'statCard.attributionLine': '{source} · table {table} · synced {date} · checkdecijfers.nl',
+  'statCard.attributionLine': '{source} · table {table} · synced {date} · graphmaker.studio',
 
   'themeToggle.groupLabel': 'Theme',
   'themeToggle.light': 'Light theme',
   'themeToggle.dark': 'Dark theme',
   'themeToggle.system': 'System theme',
 
-  'meta.title': 'Check de Cijfers',
+  'meta.title': 'graphmaker.studio',
   'meta.description': 'Chat with official CBS statistics — every figure traceable to a CBS table.',
 
   'chart.weergaveLabel': 'View',
@@ -2528,7 +2528,7 @@ const en: Messages = {
   'footer.werkwijzeLabel': 'How we work',
   'footer.privacyLabel': 'Privacy',
   'trust.draftNote': 'Draft — under review.',
-  'werkwijze.pageTitle': 'How we work — Check de Cijfers',
+  'werkwijze.pageTitle': 'How we work — graphmaker.studio',
   'werkwijze.heading': 'How we work',
   'werkwijze.publicClaim':
     'Every number we show is traceable to an official CBS cell, with source and date shown alongside it.',
@@ -2550,7 +2550,7 @@ const en: Messages = {
   'werkwijze.notCoveredHeading': 'What the claim does not cover',
   'werkwijze.notCoveredBody':
     'The traceability claim applies to CBS figures from our registry. It does not apply to your own uploaded data, to internet results (marked separately as unverified), or to other sources — those may be added later, but are not covered today.',
-  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.pageTitle': 'Privacy — graphmaker.studio',
   'privacy.heading': 'Privacy',
   'privacy.storedHeading': 'What we store',
   'privacy.storedBody':
@@ -2571,11 +2571,11 @@ const en: Messages = {
   'privacy.contactBody': 'Questions about your data? Email [contact email — owner fills in].',
 
   // Mirrors the Dutch /about block above.
-  'about.pageTitle': 'About us — Check de Cijfers',
+  'about.pageTitle': 'About us — graphmaker.studio',
   'about.heading': 'About us',
-  'about.introHeading': 'About Check de Cijfers',
+  'about.introHeading': 'About graphmaker.studio',
   'about.introBody':
-    'Check de Cijfers answers questions about official CBS statistics. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
+    'graphmaker.studio answers questions about official CBS statistics. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
   'about.contactHeading': 'Contact',
   'about.contactIntro': 'Questions, comments or feedback? Email us at',
 
@@ -2623,7 +2623,7 @@ const en: Messages = {
   'landing.heroExampleLabel': 'A real answer, live from our database',
   'gallery.teaserHeading': 'Stories from the gallery',
   'gallery.teaserAllLink': 'All stories',
-  'gallery.pageTitle': 'Gallery — Check de Cijfers',
+  'gallery.pageTitle': 'Gallery — graphmaker.studio',
   'gallery.heading': 'The gallery',
   // Fix-wave finding 7: matches the truer, on-message nl copy — built from
   // real CBS figures, with source and date, never vague "real/sourced"
@@ -2649,7 +2649,7 @@ const en: Messages = {
   'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
 
   // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
-  'lab3d.pageTitle': 'Demo: 3D municipality map (fictional data) — Check de Cijfers',
+  'lab3d.pageTitle': 'Demo: 3D municipality map (fictional data) — graphmaker.studio',
   'lab3d.title': 'The Netherlands is growing, but not everywhere',
   'lab3d.intro': 'A demonstration of a 3D map: every municipality is a column, height stands for population and colour for growth since the start year. Every figure is made up; only the municipal boundaries and names are real.',
   'lab3d.badge': 'DEMO — FICTIONAL DATA',

@@ -81,7 +81,7 @@ export function buildScatterCsv(
     scatterLineNl(spec),
     ...card.stalenessLines,
     ...(spec.provisionalNote !== null ? [spec.provisionalNote] : []),
-    'Bestand aangemaakt door checkdecijfers.nl',
+    'Bestand aangemaakt door graphmaker.studio',
   ].map((line) => csvRow([line]));
 
   const header = csvRow([
@@ -125,7 +125,7 @@ export function buildScatterCsv(
 
   const tables = [...new Set([spec.y.tableId, spec.x.tableId])];
   return {
-    filename: `checkdecijfers-${tables.join('-')}-${slug(spec.y.periodLabel)}.csv`,
+    filename: `graphmaker-${tables.join('-')}-${slug(spec.y.periodLabel)}.csv`,
     content: BOM + out.join(CRLF) + CRLF,
   };
 }

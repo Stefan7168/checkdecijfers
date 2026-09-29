@@ -13,7 +13,7 @@ describe('GET /llms.txt', () => {
   });
 
   it('200 text/plain with the generated body', async () => {
-    loadLlmsTxtBody.mockResolvedValue('# Check de Cijfers\n\n- CBS 86141NED — titel\n');
+    loadLlmsTxtBody.mockResolvedValue('# graphmaker.studio\n\n- CBS 86141NED — titel\n');
     const { GET } = await import('./llms.txt/route.ts');
     const res = await GET();
     expect(res.status).toBe(200);

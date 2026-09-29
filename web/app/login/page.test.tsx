@@ -40,7 +40,7 @@ describe('/login stripped header (#135 residual)', () => {
     getLang.mockResolvedValue('nl');
     process.env.WORKSPACE_ENABLED = '1';
     render(await LoginPage());
-    expect(screen.getByRole('link', { name: 'Check de Cijfers' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'graphmaker.studio' })).toBeInTheDocument();
     // Row 14 (session 110 UX audit): the h1 is just "Inloggen" — the site
     // name already appears once, in the header link asserted above.
     expect(screen.getByRole('heading', { level: 1, name: 'Inloggen' })).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('/login stripped header (#135 residual)', () => {
     getLang.mockResolvedValue('nl');
     delete process.env.WORKSPACE_ENABLED;
     render(await LoginPage());
-    expect(screen.queryByRole('link', { name: 'Check de Cijfers' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'graphmaker.studio' })).toBeNull();
     expect(screen.getByRole('heading', { level: 1, name: 'Inloggen' })).toBeInTheDocument();
   });
 });

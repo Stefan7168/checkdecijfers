@@ -122,7 +122,7 @@ function spec(kind: 'line' | 'bar', series: { label: string; points: ReturnType<
       capturedAt: '2026-09-18T00:00:00.000Z',
       contentSha256: 'x',
     },
-    disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
+    disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.',
   };
 }
 

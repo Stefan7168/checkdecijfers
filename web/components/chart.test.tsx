@@ -3172,7 +3172,7 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
         explicit: true,
         sourceResultIds: ['nl-2020', 'nl-2021'],
         unit: '%',
-        marking: 'bewerking van CBS-gegevens door checkdecijfers.nl',
+        marking: 'bewerking van CBS-gegevens door graphmaker.studio',
         value: MEAN_VALUE,
       },
     });
@@ -6488,7 +6488,7 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
 // component owns — the Weergave tablist, the Opmaak/Inzichten triggers, the
 // Vanaf/Tot zoom selects, the small-multiples toggle, click-to-annotate
 // notes, and Download — replacing them with the route-built `embedFooter`
-// sentence plus a checkdecijfers.nl backlink. The chart itself, its title/
+// sentence plus a graphmaker.studio backlink. The chart itself, its title/
 // unit, the R4 attribution line and the SourceBadge are UNCHANGED. The
 // `embed` prop (Task 4's own ChartEmbedButton, mounted at the comment-marked
 // point in the footer below) does not exist as a component yet — the
@@ -6579,7 +6579,7 @@ describe('embed mode (spec Part B3)', () => {
   it('renders the embedFooter sentence with a backlink to the real app URL, not the hardcoded parked domain', () => {
     render(<ChartView spec={threePointSpec()} embedMode embedFooter="Frozen on 10 September 2026 ·" />);
     expect(screen.getByText(/Frozen on 10 September 2026/)).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /checkdecijfers\.nl/i });
+    const link = screen.getByRole('link', { name: /graphmaker\.studio/i });
     // Final review (Important #1): the file-top vi.hoisted stub set
     // NEXT_PUBLIC_APP_URL to a distinctive, non-default value BEFORE
     // chart-embed-dialog.tsx's module-scope APP_URL constant was computed —
@@ -6593,7 +6593,7 @@ describe('embed mode (spec Part B3)', () => {
     expect(link.getAttribute('href')).not.toBe('https://checkdecijfers.nl');
     // Review fix: this link is the ONE way out of a third-party <iframe> (the
     // whole point of the embed feature) -- without target="_blank" it loads
-    // checkdecijfers.nl INTO the iframe box instead of the reader's top page,
+    // graphmaker.studio INTO the iframe box instead of the reader's top page,
     // trapping the site in a chart-sized frame. Same convention as
     // SourceBadge's own outbound link (source-badge.tsx).
     expect(link).toHaveAttribute('target', '_blank');

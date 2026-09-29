@@ -281,7 +281,7 @@ describe('buildEnglishLines: markingLine', () => {
 
   it('states the derived-data marking for a result with derivations', () => {
     const lines = buildEnglishLines(cpiSeries(), { definition: null, alternates: [] });
-    expect(lines.markingLine).toBe('— adaptation of CBS data by checkdecijfers.nl');
+    expect(lines.markingLine).toBe('— adaptation of CBS data by graphmaker.studio');
   });
 });
 

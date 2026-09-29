@@ -85,7 +85,7 @@ const CHART_SPEC = {
   yHeaders: ['Revenue'],
   series: [],
   provenance: { datasetId: 1, sourceKind: 'file_csv' as const, displayName: 'x.csv', sourceUrlHost: null, capturedAt: '2026-01-01', contentSha256: 'x' },
-  disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.' as const,
+  disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.' as const,
 };
 
 describe('replayDatasetTurns — pure function', () => {

@@ -50,8 +50,8 @@ describe('AboutPage — en', () => {
 
 describe('AboutPage — metadata', () => {
   it('titles the page from the catalogue in each language', async () => {
-    expect((await generateMetadata()).title).toBe('Over ons — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('Over ons — graphmaker.studio');
     getLang.mockResolvedValue('en');
-    expect((await generateMetadata()).title).toBe('About us — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('About us — graphmaker.studio');
   });
 });

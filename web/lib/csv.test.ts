@@ -50,12 +50,12 @@ describe('buildAnswerCsv', () => {
     const { filename, content } = buildAnswerCsv(
       fakeAnswerResponse({ shape: 'single', cells: [fakeCell()] }),
     );
-    expect(filename).toBe('checkdecijfers-86141NED-2024JJ00.csv');
+    expect(filename).toBe('graphmaker-86141NED-2024JJ00.csv');
     expect(content).toBe(
       BOM +
         '"Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; prijsindex 2015=100. ' +
         'Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."\r\n' +
-        'Bestand aangemaakt door checkdecijfers.nl\r\n' +
+        'Bestand aangemaakt door graphmaker.studio\r\n' +
         '\r\n' +
         'onderwerp;regio;regiocode;periode;periodecode;waarde;eenheid;status;bijzonderheid;cel-id\r\n' +
         'Inflatie (CPI);;;2024;2024JJ00;3,3;%;Definitief;;86141NED:CPI000000:NL01:2024JJ00\r\n',
@@ -303,7 +303,7 @@ describe('buildAnswerCsv', () => {
     expect(lines[1]).toBe('Definitie: werkloosheidspercentage, seizoengecorrigeerd');
     expect(lines[2]).toBe('Periodebetekenis: jaargemiddelde');
     expect(lines[3]).toBe('Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.');
-    expect(lines[4]).toBe('Bestand aangemaakt door checkdecijfers.nl');
+    expect(lines[4]).toBe('Bestand aangemaakt door graphmaker.studio');
   });
 
   it('omits the optional preamble rows when absent', () => {
@@ -320,7 +320,7 @@ describe('buildAnswerCsv', () => {
         attribution: { coveredPeriods: { from: '2022MM01', to: '2022MM12' } },
       }),
     );
-    expect(filename).toBe('checkdecijfers-86141NED-2022MM01-2022MM12.csv');
+    expect(filename).toBe('graphmaker-86141NED-2022MM01-2022MM12.csv');
   });
 
   // ---- Adversarial-review round (2026-07-05): every test below closes a
@@ -490,7 +490,7 @@ describe('buildAnswerCsv — lang (open-questions #324 gap 2)', () => {
     );
     // The preamble sentence (R4/CC BY) and the "file created by" line stay
     // Dutch on every language — they are provenance prose, not column names.
-    expect(content).toContain('Bestand aangemaakt door checkdecijfers.nl');
+    expect(content).toContain('Bestand aangemaakt door graphmaker.studio');
   });
 
   it('the English and Dutch files differ ONLY in the two header rows — every data row is byte-identical', () => {

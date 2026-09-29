@@ -81,9 +81,9 @@ describe('PrivacyPage — cookies/usage disclosure', () => {
 
 describe('PrivacyPage — metadata', () => {
   it('titles the page from the catalogue in each language', async () => {
-    expect((await generateMetadata()).title).toBe('Privacy — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('Privacy — graphmaker.studio');
     getLang.mockResolvedValue('en');
-    expect((await generateMetadata()).title).toBe('Privacy — Check de Cijfers');
+    expect((await generateMetadata()).title).toBe('Privacy — graphmaker.studio');
   });
 });
 

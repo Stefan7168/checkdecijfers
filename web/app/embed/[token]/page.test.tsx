@@ -297,14 +297,14 @@ describe('/embed/[token] — frozen render', () => {
     verifyEmbedToken.mockReturnValue(null);
     const missing = await generateMetadata({ params: params('nope'), searchParams: Promise.resolve({}) });
     expect(missing.robots).toEqual({ index: false, follow: false });
-    expect(missing.title).toBe('checkdecijfers.nl');
+    expect(missing.title).toBe('graphmaker.studio');
 
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     loadAuditRecord.mockResolvedValue(answerRecord());
     const valid = await generateMetadata({ params: params('42.sig'), searchParams: Promise.resolve({ form: 'bar' }) });
     expect(valid.robots).toEqual({ index: false, follow: false });
-    expect(valid.title).toBe('Testreeks · checkdecijfers.nl');
+    expect(valid.title).toBe('Testreeks · graphmaker.studio');
     expect(valid.description).toBe('Bron: CBS StatLine, tabel 83693NED.');
     expect(valid.openGraph?.title).toBe('Testreeks');
     // Round 2 (session 144): the picture is the preview route, carrying the

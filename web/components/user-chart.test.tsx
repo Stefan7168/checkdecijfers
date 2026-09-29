@@ -108,7 +108,7 @@ function spec(overrides: Partial<UserChartSpec> = {}): UserChartSpec {
       capturedAt: '2026-09-06T12:00:00.000Z',
       contentSha256: 'deadbeef',
     },
-    disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
+    disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.',
     ...overrides,
   };
 }
@@ -356,7 +356,7 @@ describe('UserChartView — H2 structural distinction from ChartView', () => {
 
   it('shows the exact disclaimer line the spec carries, verbatim', () => {
     render(<UserChartView spec={spec()} />);
-    expect(screen.getByText('User-uploaded data — not verified by checkdecijfers.')).toBeInTheDocument();
+    expect(screen.getByText('User-uploaded data — not verified by graphmaker.studio.')).toBeInTheDocument();
   });
 
   it('shows a provenance line built from the file name, upload date, and points plotted', () => {
@@ -452,7 +452,7 @@ describe('UserChartView — CSV download (#318 own-data parity)', () => {
       fireEvent.click(screen.getByRole('button', { name: CSV_BUTTON }));
       expect(clickSpy).toHaveBeenCalledTimes(1);
       const anchor = clickSpy.mock.contexts[0] as HTMLAnchorElement;
-      expect(anchor.download).toBe('checkdecijfers-your-data-7.csv');
+      expect(anchor.download).toBe('graphmaker-your-data-7.csv');
       const text = await blobs[0]!.text();
       expect(text).toContain('Amsterdam;42;42,0;r2:c1');
       expect(text).toContain('Rotterdam;20;20,0;r1:c2');

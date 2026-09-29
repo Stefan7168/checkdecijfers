@@ -743,7 +743,7 @@ describe('Chat — WP23 display smalls', () => {
     // the zero-loss claim said).
     const body = 'De inflatie in 2024 was 3,3%.';
     const definitionLine = 'Definitie: consumentenprijsindex (CPI), alle bestedingen.';
-    const markingLine = 'bewerking van CBS-gegevens door checkdecijfers.nl';
+    const markingLine = 'bewerking van CBS-gegevens door graphmaker.studio';
     const attributionLine =
       'Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; prijsindex 2015=100. Gegevens gesynchroniseerd op 2026-07-03. Licentie: CC BY 4.0.';
     const stalenessWarning = 'Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.';
@@ -2100,7 +2100,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     askQuestion.mockResolvedValue(outcome(answerWithSection('Nederland telt 18.044.027 inwoners.', okSection())));
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
-    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    const header = await screen.findByText('Van het web (niet door graphmaker.studio geverifieerd)');
     const block = header.parentElement!;
     expect(block).toHaveTextContent('Een bevinding van het web.');
     // Domain-only (www stripped), full URL in href, opened safely.
@@ -2120,7 +2120,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     );
     render(<Chat />);
     await submit('Vraag?');
-    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    const header = await screen.findByText('Van het web (niet door graphmaker.studio geverifieerd)');
     expect(within(header.parentElement!).getAllByRole('listitem')).toHaveLength(4);
   });
 
@@ -2149,7 +2149,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     );
     render(<Chat />);
     await submit('Vraag?');
-    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    const header = await screen.findByText('Van het web (niet door graphmaker.studio geverifieerd)');
     const item = within(header.parentElement!).getByRole('listitem');
     const links = within(item).getAllByRole('link');
     expect(links.map((l) => l.textContent)).toEqual(['cbs.nl', 'nos.nl']);
@@ -2187,7 +2187,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     await submit('Wordt de inflatie volgend jaar hoger?');
     expect(await screen.findByText('Ik kan geen voorspellingen doen.')).toBeInTheDocument();
     expect(screen.getByText('Dit kon ik niet beantwoorden')).toBeInTheDocument();
-    expect(screen.getByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeInTheDocument();
+    expect(screen.getByText('Van het web (niet door graphmaker.studio geverifieerd)')).toBeInTheDocument();
   });
 
   it('renders the section under a web_only refusal (the web-only mode)', async () => {
@@ -2205,7 +2205,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     expect(
       await screen.findByText(/Je hebt CBS-data uitgeschakeld voor deze vraag/),
     ).toBeInTheDocument();
-    expect(screen.getByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeInTheDocument();
+    expect(screen.getByText('Van het web (niet door graphmaker.studio geverifieerd)')).toBeInTheDocument();
   });
 
   it('renders NOTHING web-shaped when webSection is absent (the ?? null deploy-skew guard)', async () => {
@@ -2214,7 +2214,7 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
     await screen.findByText('Nederland telt 18.044.027 inwoners.');
-    expect(screen.queryByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeNull();
+    expect(screen.queryByText('Van het web (niet door graphmaker.studio geverifieerd)')).toBeNull();
   });
 });
 
@@ -3850,7 +3850,7 @@ describe('Chat — scatter answer card (#296)', () => {
     const assistant = (calls[calls.length - 1]?.[0] ?? []).find((m) => m.role === 'assistant');
     expect(assistant?.scatter).toEqual(response.scatter);
     expect(assistant?.chart).toBeNull();
-    expect(assistant?.csv?.filename).toBe('checkdecijfers-84639NED-03759ned-2024.csv');
+    expect(assistant?.csv?.filename).toBe('graphmaker-84639NED-03759ned-2024.csv');
   });
 
   it('English: the English body, coverage, definition and staleness lines — no Dutch sentence anywhere on the card', async () => {

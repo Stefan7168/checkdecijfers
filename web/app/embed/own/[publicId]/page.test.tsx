@@ -419,10 +419,10 @@ describe('/embed/own/[publicId] — happy path', () => {
     getDatasetTurnById.mockResolvedValue(turn());
     getDataset.mockResolvedValue(DATASET);
     render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
-    expect(screen.getByText(/gemaakt met checkdecijfers/i)).toBeInTheDocument();
+    expect(screen.getByText(/gemaakt met graphmaker\.studio/i)).toBeInTheDocument();
     cleanup();
     render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
-    expect(screen.getByText(/made with checkdecijfers/i)).toBeInTheDocument();
+    expect(screen.getByText(/made with graphmaker\.studio/i)).toBeInTheDocument();
   });
 });
 

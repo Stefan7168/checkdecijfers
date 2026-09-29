@@ -31,7 +31,7 @@ describe('StatCard', () => {
     expect(screen.getByText('Werklozen')).toBeInTheDocument();
     expect(screen.getByText('Rotterdam · 2023')).toBeInTheDocument();
     expect(
-      screen.getByText('CBS StatLine · tabel 82931NED · gesynchroniseerd 2026-07-03 · checkdecijfers.nl'),
+      screen.getByText('CBS StatLine · tabel 82931NED · gesynchroniseerd 2026-07-03 · graphmaker.studio'),
     ).toBeInTheDocument();
   });
 
@@ -152,6 +152,6 @@ describe('StatCard — en (WP218 phase 4)', () => {
         <StatCard data={data()} />
       </LangProvider>,
     );
-    expect(screen.getByText('CBS StatLine · table 82931NED · synced 2026-07-03 · checkdecijfers.nl')).toBeInTheDocument();
+    expect(screen.getByText('CBS StatLine · table 82931NED · synced 2026-07-03 · graphmaker.studio')).toBeInTheDocument();
   });
 });

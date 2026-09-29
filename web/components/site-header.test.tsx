@@ -30,7 +30,7 @@ describe('SiteHeader — Dutch by default', () => {
 
   it('renders the stripped variant with just the wordmark and the switch', () => {
     render(<SiteHeader stripped />);
-    expect(screen.getByRole('link', { name: 'Check de Cijfers' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'graphmaker.studio' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
   });
 });
@@ -43,7 +43,7 @@ describe('SiteHeader — phone layout (R9.1, #238)', () => {
   // prevents the wrap — a real browser check that the classes are present.
   it('keeps the wordmark and balance chip from wrapping', () => {
     render(<SiteHeader balance={42} />);
-    const wordmark = screen.getByRole('link', { name: 'Check de Cijfers' });
+    const wordmark = screen.getByRole('link', { name: 'graphmaker.studio' });
     expect(wordmark.className).toContain('whitespace-nowrap');
     expect(wordmark.className).toContain('shrink-0');
     expect(screen.getByText('42 credits').className).toContain('whitespace-nowrap');
@@ -112,7 +112,7 @@ describe('SiteHeader — R9.2 phone header (#214)', () => {
 
   it('wordmark, balance badge and the NL|EN switch stay unconditionally visible (no phone-hidden class)', () => {
     render(<SiteHeader balance={10} />);
-    expect(screen.getByRole('link', { name: 'Check de Cijfers' }).className.split(/\s+/)).not.toContain('hidden');
+    expect(screen.getByRole('link', { name: 'graphmaker.studio' }).className.split(/\s+/)).not.toContain('hidden');
     expect(screen.getByText('10 credits').className.split(/\s+/)).not.toContain('hidden');
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
   });

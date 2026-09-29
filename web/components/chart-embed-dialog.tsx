@@ -351,7 +351,7 @@ function ChartEmbedDialog({
       : buildEmbedCode(
           result.token,
           { lang: embedLang, colour, chartType, currentForm, live, defaultIsTable },
-          `checkdecijfers.nl — ${tableId}`,
+          `graphmaker.studio — ${tableId}`,
         );
 
   // #229 (ADR 041 addendum, session 110): when the spec's own default form

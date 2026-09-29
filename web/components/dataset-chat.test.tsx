@@ -84,7 +84,7 @@ const CHART_SPEC = {
   yHeaders: ['Revenue'],
   series: [{ label: 'Revenue', points: [{ rowRef: 'r1:c1', xKey: '2020', xLabel: '2020', value: 100, formattedValue: '100,0', sourceText: '100,0' }] }],
   provenance: { datasetId: 1, sourceKind: 'file_csv' as const, displayName: 'verkoop.csv', sourceUrlHost: null, capturedAt: '2026-01-01', contentSha256: 'x' },
-  disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.' as const,
+  disclaimerLine: 'User-uploaded data — not verified by graphmaker.studio.' as const,
 };
 
 describe('DatasetChat — normal turn flow', () => {

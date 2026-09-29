@@ -5031,8 +5031,8 @@ export function ChartView({
             <div className="contents" data-slot="chart-footer-actions">
               <ChartDownloadMenu
                 containerRef={chartContainerRef}
-                attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-                filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
+                attributionText={`${displayAttributionLine} graphmaker.studio${viewDisclosure}`}
+                filenameBase={`graphmaker-${activeSpec.attribution.tableId}`}
                 lang={chartLang}
                 // Round 2 of part (a2) (session 144): the share-link picture as
                 // a file — offered exactly when the Share button is (an audit
@@ -5120,7 +5120,7 @@ export function ChartView({
             * ..."` attribute, independent of what APP_URL actually
             * resolves to). */}
           <a href={APP_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            checkdecijfers.nl
+            graphmaker.studio
           </a>
         </p>
       ) : null}

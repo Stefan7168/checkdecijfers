@@ -173,7 +173,7 @@ export function buildAnswerCsv(response: AnswerResponse, lang: Lang = 'nl'): Ans
   if (showDerivedMarking) {
     preamble.push(csvRow([`Bewerking: ${DERIVED_DATA_MARKING}`]));
   }
-  preamble.push(csvRow(['Bestand aangemaakt door checkdecijfers.nl']));
+  preamble.push(csvRow(['Bestand aangemaakt door graphmaker.studio']));
 
   // Data table: one row per validated cell, order preserved (the result is
   // already period-ascending, then intent region order).
@@ -233,7 +233,7 @@ export function buildAnswerCsv(response: AnswerResponse, lang: Lang = 'nl'): Ans
   const { from, to } = result.attribution.coveredPeriods;
   const span = from === to ? from : `${from}-${to}`;
   return {
-    filename: `checkdecijfers-${result.attribution.tableId}-${span}.csv`,
+    filename: `graphmaker-${result.attribution.tableId}-${span}.csv`,
     content: BOM + lines.join(CRLF) + CRLF,
   };
 }

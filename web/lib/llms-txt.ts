@@ -36,7 +36,7 @@ export function renderLlmsTxt(report: CoverageReport, generatedAt: string): stri
   const inReview = report.tables.length - served.length;
 
   const lines: string[] = [
-    '# Check de Cijfers',
+    '# graphmaker.studio',
     '',
     '> Chat-antwoorden over officiële CBS-statistieken. Deterministische code berekent elk cijfer;',
     '> het taalmodel parseert alleen de vraag en verwoordt gevalideerde resultaten. Elk getal is',
@@ -100,7 +100,7 @@ export function renderLlmsTxt(report: CoverageReport, generatedAt: string): stri
     '',
     '- Alle data: CBS (Centraal Bureau voor de Statistiek), via StatLine — https://opendata.cbs.nl.',
     '  Licentie: CC BY 4.0.',
-    '- Antwoorden zijn bewerkingen van CBS-gegevens door checkdecijfers.nl.',
+    '- Antwoorden zijn bewerkingen van CBS-gegevens door graphmaker.studio.',
     '',
   );
   return lines.join('\n');

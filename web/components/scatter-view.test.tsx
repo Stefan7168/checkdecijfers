@@ -520,7 +520,7 @@ describe('ScatterView — the card around the plot (Dutch)', () => {
     expect(screen.queryByRole('button', { name: /Download/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
     expect(screen.getByText(/Bevroren op 20 september 2026/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'checkdecijfers.nl' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'graphmaker.studio' })).toBeInTheDocument();
   });
 
   // Final-review fix M3: Recharts' ScatterChart keyboard navigation is not

@@ -865,8 +865,8 @@ export function ScatterView({
             <div className="flex shrink-0 items-center gap-2" data-slot="chart-footer-actions">
               <ChartDownloadMenu
                 containerRef={containerRef}
-                attributionText={`${attributionLines.join(' ')} checkdecijfers.nl`}
-                filenameBase={`checkdecijfers-${tableIds.join('-')}`}
+                attributionText={`${attributionLines.join(' ')} graphmaker.studio`}
+                filenameBase={`graphmaker-${tableIds.join('-')}`}
                 lang={lang}
                 titleText={title}
               />
@@ -892,7 +892,7 @@ export function ScatterView({
             * it never loads the site inside the chart-sized frame
             * (chart.tsx's own embed footer, same APP_URL). */}
           <a href={APP_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            checkdecijfers.nl
+            graphmaker.studio
           </a>
         </p>
       ) : null}

@@ -46,7 +46,7 @@ function outcome(
   return { gated, context, threadId, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
 }
 
-const WEB_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';
+const WEB_HEADER = 'Van het web (niet door graphmaker.studio geverifieerd)';
 const SUGGESTION = 'Wat was de inflatie in 2025?';
 const BODY = 'De inflatie in 2024 was 3,3%.';
 const ATTRIBUTION = /Bron: CBS StatLine, tabel 86141NED/;
