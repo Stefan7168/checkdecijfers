@@ -17,6 +17,10 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 147 (2026-09-29 evening, owner present) — VERIFY-ONLY, WRAPPED:** no code or data changed. Tree clean at `62896015`,
+  CI green, prod 200, DNS records for graphmaker.studio still absent. Nothing scheduled can run before 2026-10-01 (spend roof
+  resets 02:00 CEST). Kickoff: [session-briefs/2026-09-29-session-147-kickoff.md](session-briefs/2026-09-29-session-147-kickoff.md).
+
 **▶ SESSION 146 (2026-09-29, owner present) — OWN DATA IMPORT BUILT + LIVE-PUSHED ([#354](open-questions.md)):** Excel/ODS/JSON
   uploads, pasted tables, Google Sheet share links, starter questions, euro/percent + quarter columns, readable dense lines.
   Migration 039 applied live (constraint verified read-only). Tried 7 fake sheets (`npm run` n/a — `node scripts/make-fake-sheets.ts`
@@ -24,7 +28,7 @@
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-146-kickoff.md](session-briefs/2026-09-29-session-146-kickoff.md).**
+trusting this). Kickoff: [session-briefs/2026-09-29-session-147-kickoff.md](session-briefs/2026-09-29-session-147-kickoff.md).**
 
 - **⚑ BREADTH RESUMED (session 145, owner pick): migrations 037 + 038 APPLIED on the live database** (owner present;
   exactly those two; `slice_fetches`, `table_lane_requests`, the `cbs_tables` columns, 8 indexes, RLS, the widened

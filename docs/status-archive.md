@@ -1,5 +1,15 @@
 # STATUS archive — the session log
 
+**Session 147 (2026-09-29 evening, owner present; verify-only, zero spend, no code or data changed).**
+
+1. Read CLAUDE.md, STATUS top block and the session-146 kickoff. Verified: clean tree and pushed at `62896015`; CI 36576714588
+   green on `175a20ea`; no open PRs; no stray worktrees; prod `checkdecijfers.vercel.app` 200.
+2. Domain re-checked: `vercel domains inspect graphmaker.studio` still warns (nameservers Cloudflare's, no A record;
+   `dig +short A graphmaker.studio` empty). Today is before 2026-10-01, so the recording run cannot start and the Eurostat page
+   cannot be built (no curated series). Owner chose "wrap up now" over adding the DNS records or tooling cleanup.
+3. Wrote [session-briefs/2026-09-29-session-147-kickoff.md](session-briefs/2026-09-29-session-147-kickoff.md) (supersedes the 146
+   kickoff; next = the 1 October recording plan). No lessons this session.
+
 **Session 146 (2026-09-29, owner present; ~ $0.3 real AI spend, inside the $2 the owner OK'd).**
 
 1. Owner asked for own-data import: more sheet types, Google Drive sheets, fake sheets to try end to end. Dialog decisions: Google
