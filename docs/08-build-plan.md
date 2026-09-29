@@ -1208,7 +1208,7 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
-## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), STEP 6 NEXT
+## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), STEP 6 PAUSED until the look gate (ADR 063, session 141)
 
 Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.md)) chose breadth over depth. Design:
 [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
@@ -1271,3 +1271,43 @@ Plan: [superpowers/plans/2026-09-27-two-measure-scatter.md](superpowers/plans/20
   envelope `pairedResult?`/`scatter?`, template text nl/en, left-out line, reconstruction), the chip (`plotAgainst`, click
   validation accepting `regionSet` + `pairWith` gated on `REGIONAL_KEYS`), the web `ScatterView`, docs (ADR 060).
   Carry-overs from Part 1's review are in the plan's Part 2 section.
+
+## WP-LOOK — "The Look": chart-first surface, one Edit popup, homepage (owner decision 2026-09-29, session 141; ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)) — ▶ THE ONLY OPEN WORK PACKAGE
+
+**Why:** the vision interview ([review](session-briefs/2026-09-29-vision-vs-build-review.md)) found three positionings
+layered in the code, no launch gate, zero outside users, and a chart surface where the chart is a quarter of the card
+under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: "our current interface is too cluttered
+… I like how simple Competitor G is … we don't have to copy them one-on-one … we need to use some design skill."
+
+**Scope — three parts, in order, each iterated with screenshots shown to the owner side by side with Competitor G:**
+
+- **(a) The answer chart** (`web/components/chart.tsx` and the chat card in `web/components/chat.tsx`): after a question
+  the reader sees a headline, one big number, the chart as the hero (target: 70 % or more of the card), one source line,
+  and three buttons — Edit, Download, Share. Everything else that is on the card today (the 11 form tabs, the period
+  dropdowns, undo/redo/history, Insights, goal lines, period ranges, notes/caption, derived overlays, the co-pilot input)
+  moves INTO the Edit popup. Nothing is removed. Also the gallery card, which renders the same component.
+- **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
+  session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
+  and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the
+  design skills available to the session (interface design, data-visualisation, component-library guidance) — a
+  required step, not optional. Light and dark. Keyboard and screen-reader behaviour at least as today.
+- **(c) The homepage** (`web/components/landing.tsx`): a real chart above the fold; the gallery must never show empty
+  skeletons on a cold visit ([#347](open-questions.md): the curated feed's first request took over 5 s on 2026-09-29 —
+  pre-warm, pre-render or cache it).
+
+**Invariants at stake:** none in the answer pipeline — this is presentation only. Every number still comes from the
+stored envelope (R1–R3, R5, R8–R10); the source line stays on every chart and every download/embed (R4); the "not CBS
+data" marking of goal lines and period ranges stays visible wherever they render, including downloads and embeds
+(ADR 043 decision on reader annotations) — it may move into the popup and the legend, it may not disappear.
+
+**Design decisions already taken (do not re-open):** keep every feature (owner); one Edit button, one popup (owner,
+session 101 + 141); Competitor G as the simplicity reference, not a copy (owner); light theme is not mandated — the
+owner said nothing about it, so both themes must look finished; templates stay, but the default must look finished with
+no template chosen.
+
+**Done-definition:** the owner says "I would share this" for (a), then (b), then (c) — recorded in open-questions
+[#346](open-questions.md) with the date. Then the owner invites people (sanity-check move 1). Verification block +
+`/code-review` LOW + green CI per change as always; no prompt bytes, no AI spend, no DDL.
+
+**Explicitly paused until the gate:** breadth step 6 / `TABLE_LANE_ENABLED`, regional statistics Part 2, Eurostat in
+chat, Pro plan, brand colours, and every owner-supervised item in STATUS's top block.

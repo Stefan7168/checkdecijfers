@@ -1,5 +1,7 @@
 # MVP scope — Phase 0
 
+> **Current direction (2026-09-29, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):** the Phase 0 gate below is passed. The only open work package is "The Look" ([08-build-plan.md](08-build-plan.md) WP-LOOK); every other feature is paused until the owner says "I would share this" and invites people. Nothing here changes the pipeline scope.
+
 **Decision (interview Q4, delegated to and confirmed by the architect):** Phase 0 is a thin prototype of *only the hard part* — proving that a question can travel from natural language to a validated, attributed, deterministic answer. Everything else is commodity work that proves nothing.
 
 **This document is the phase gate.** Any AI session or contributor proposing to add something must check it against this page first (see [CLAUDE.md](../CLAUDE.md)). If it's not in scope below, it goes to [06-roadmap.md](06-roadmap.md), not into the build.

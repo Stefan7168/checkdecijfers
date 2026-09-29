@@ -1,5 +1,26 @@
 # Product vision
 
+## Current direction (owner decision, 2026-09-29, session 141 — binding; ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md))
+
+**The product, in one sentence:** a beautiful, sourced chart of official Dutch and European statistics. You ask in
+plain language; you get a chart you would put in your article, post or report, with its source and date on it. The chat
+is how you ask; the chart is what you get.
+
+**The user, in one sentence:** anyone who has to publish a number — a journalist, a communication officer at a
+municipality or a company, a teacher, a blogger, someone posting on LinkedIn — with no data team and no time. Within
+sixty seconds of opening the site they must have something they want to use, without training and without an account
+for the first chart.
+
+**What this replaces:** the three positionings that had accumulated in the code and the docs (the July fact-check chat
+for journalists, the September "embedded, sourced chart" tool, and the graphmaker.studio general chart maker) collapse
+into this one. The ICP section below is kept as the detailed segment order and the July paragraph as history; where
+they differ from this block, this block wins. The public claim ("every number traceable to an official CBS cell, with
+source and date shown") and principles (a)/(b)/(c) are unchanged.
+
+**The gate to inviting people:** the owner says "I would share this" about the answer chart, the Edit popup and the
+homepage. Until then, no new feature work — see [STATUS.md](STATUS.md) and the "The Look" work package in
+[08-build-plan.md](08-build-plan.md).
+
 ## The problem
 
 Official Dutch statistics are free, authoritative — and effectively locked away. CBS StatLine is *"berucht ingewikkeld"*: finding one number means knowing which of thousands of cryptically named tables (`85552NED`, `RegioS='GM0344'`) holds it, decoding dimension codes, and hoping the table wasn't redesigned mid-year. A journalist on deadline spends 45 minutes clicking, or — worse — asks a general-purpose AI chatbot that confidently invents a number. In journalism a wrong number is a *doodszonde*: a public correction, a damaged reputation, possibly a legal claim.

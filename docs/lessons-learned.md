@@ -6,6 +6,29 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 141 — a vision review that starts from the live site, not from the docs
+
+1. **Look at the live product before reading the plan.** Ninety sessions of docs said the product was on track; five
+   minutes in the browser showed a homepage with no chart, a gallery that renders empty placeholders on a cold visit
+   (5.4 s first request, cards only on the third), and a chart that is a quarter of its own card. The docs were
+   internally consistent and still wrong about the thing that matters. Do the browser check first in every review.
+2. **"Beautiful" was never a work package with a done-definition, so it never got done.** Templates, fonts, forms and
+   a co-pilot all shipped with engineering done-criteria ("the system exists"). Nobody had written "the owner would
+   paste this into an article untouched". A quality goal without a finish line turns into options. Write the finish
+   line first.
+3. **Count the positionings.** Three coexisted (July chat, September embed tool, mid-September chart maker) because
+   each pivot was recorded additively. A vision review should list every positioning still alive in code + docs and
+   force ONE to win; the interview took five questions once the list existed.
+4. **The owner answered two of five questions in free text, against the recommendation.** Both times the free text was
+   clearer than any option offered (no removals, but "the editing UI looks very messy — use design skill"). Keep the
+   "Other" path open and read it carefully; the recommended option is a proposal, not a default.
+5. **A finished session's branch can sit unmerged while its own docs say "merged".** The step-5 build plan entry said
+   "merged DARK" while the 17 commits were on `breadth-step-5` only. Check `git log origin/main..HEAD` before believing a
+   doc's merge claim — the Golden Rule applies to the previous session's docs too.
+6. **Renumber early.** This session first called itself 140 (the step-5 session already was 140) and had to rename
+   across eight files. Check `docs/status-archive.md` and the latest kickoff for the current session number before
+   writing the first doc.
+
 ## Session 139 — a closed-choice parser is only as safe as its weakest escape hatch
 
 1. **Write down how a measurement was counted, not just the result.** Step 3's plan quoted "1,363 of 1,785 eligible

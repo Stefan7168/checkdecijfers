@@ -17,28 +17,28 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 141 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-142-kickoff.md](session-briefs/2026-09-29-session-142-kickoff.md).**
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29 local, session 139 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-140-kickoff.md](session-briefs/2026-09-29-session-140-kickoff.md).**
-
-- **`main` is live and green**: last code merge `461920e6` (breadth step 4b, CI 36483049274 green incl. deploy, prod 200).
-  Full session log: [status-archive.md](status-archive.md).
-- **⚑ DIRECTION (owner sanity check, session 138, [#335](open-questions.md)): BREADTH FIRST — make any current CBS table
-  answerable in the same chat.** Design: [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md),
-  ADR [062](decisions/062-breadth-table-lane-slice-cache.md) (as-built sections per step).
-  - Step 1 ✅ measured (reach ≈ 88%). Step 2 ✅ slice cache (migration 037 FILE-ONLY). Step 3 ✅ breakdown resolver
-    (1,362 of 1,785 breakdowns resolved; 575 of 923 tables need no follow-up question). Step 4 + 4b ✅ table-scoped
-    parser, built and reviewed hermetically — **never called the AI yet**. None of it is wired to chat.
-  - **Next (session 140): step 5** — wire the table lane into chat, dark behind a flag: curated miss → table finder →
-    table parse → breakdown resolver → slice fetch job + in-chat progress → audited answer. Design items:
-    [#336](open-questions.md) (slice cache) + [#339](open-questions.md) 5–11 (parser). Needs a plan first.
-  - **After 2026-10-01, owner-supervised:** the step-4 recording run (~102k input tokens, cheap tier —
-    [RUNBOOK](RUNBOOK.md) "Table-parser recording run"); apply migration 037 before step 5 goes live.
-  - Then step 6 (table-lane benchmark → switch on), then invite ~10 journalists (sanity-check move 1).
-- **Parked (built, not merged):** regional statistics Part 2 on branch `regional-stats-part2` (ADR [061](decisions/061-regional-statistics-70072ned.md)).
-- **Spend:** the $50 monthly roof is nearly used until **2026-10-01** (sessions 138–139 spent nothing on AI).
-- **Waiting on the owner (not urgent):** migration 037; the step-4 recording run; #245, #275, own-data publishing
-  spot-check, Eurostat E2a ([#313](open-questions.md)). After 10-01: #328, live benchmark (#330).
+- **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
+  ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
+  number. Ask a question, see the chart. ONE Edit button opens ONE popup holding ALL editing. Nothing removed, everything
+  tidied. Competitor G is the reference for simplicity, not a template.** Review that fed the interview:
+  [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
+- **THE GATE:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
+  Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
+- **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
+  with screenshots shown next to Competitor G until the owner says done:
+  - (a) the answer chart: headline, one number, the chart as hero, one source line, buttons Edit / Download / Share;
+    every other control moves into the popup;
+  - (b) the Edit popup, redesigned with the design skills (interface, data-viz, component library), light + dark;
+  - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).
+- **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
+  dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch
+  `regional-stats-part2`), Eurostat in chat, Pro plan, brand colours. Owner-supervised items (migrations 037 + 038, the
+  table-parser recording run after 2026-10-01, #245, #275, #313, #328, #330) also wait.
+- **Spend:** the $50 monthly roof resets 2026-10-01; The Look needs no AI spend (UI work, hermetic tests).
+- **Phase 0 gate** (below) is passed and unchanged; principles (a)/(b)/(c) untouched by ADR 063.
 
 ---
 

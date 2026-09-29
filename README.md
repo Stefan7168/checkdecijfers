@@ -1,8 +1,8 @@
 # checkdecijfers.nl
 
-**Chat your way from official-statistics research to an embedded, sourced chart — where the AI
-never does the math.** ([ADR 047](docs/decisions/047-repositioning-embedded-sourced-chart.md), the
-current specialization statement.) A user asks a question in plain Dutch; deterministic code
+**A beautiful, sourced chart of official Dutch and European statistics — you ask in plain language,
+you get a chart you would publish, and the AI never does the math.** ([ADR 063](docs/decisions/063-chart-first-refocus-look-is-the-gate.md),
+the current direction, 2026-09-29; positioning detail in [ADR 047](docs/decisions/047-repositioning-embedded-sourced-chart.md).) A user asks a question in plain Dutch; deterministic code
 computes the answer from CBS data ingested into our own database; the AI only parses the question
 and phrases the result. Every number is traceable to an official CBS cell, with source table and
 freshness date shown. When data is missing, ambiguous, or stale, the product refuses or asks — it

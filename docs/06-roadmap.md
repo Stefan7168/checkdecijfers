@@ -2,7 +2,7 @@
 
 Phases 0→3, anchored in the interview decisions ([01-product-vision.md](01-product-vision.md), Decision log). Later-phase candidates mined from the notes are **slotted or explicitly rejected** below — per Stefan's Q1 instruction, nothing gets silently lost. Dates are deliberately absent; phases advance on their gates, not on the calendar.
 
-## Phase 0 — Prove the hard part (current)
+## Phase 0 — Prove the hard part (gate PASSED; since 2026-09-29 the current phase is "The Look" → invite, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md))
 
 Scope and gate live in [03-mvp-scope.md](03-mvp-scope.md). One sentence: question → validated, attributed, deterministic answer (+ simple chart), over 5–10 ingested CBS tables, with refusal behavior — measured by the 20-task benchmark.
 
