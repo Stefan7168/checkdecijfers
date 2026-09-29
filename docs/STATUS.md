@@ -33,7 +33,9 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
 - **THE GATE:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
   Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
   **⚑ THE GATE IS PASSED (session 144, 2026-09-29): (a) done s143, (b) signed off s144 round 2, (c) signed off s144.
-  ADR 063's consequence is now due: the owner invites people. (a2) share-image verdict still pending.**
+  ADR 063 says the owner now invites people — **the owner chose "Keep building, no launch yet" (same session, after the
+  gate passed; [#352](open-questions.md)); the launch recommendation returns at the 2026-10-27 revisit trigger, not
+  before.** (a2) share-image verdict still pending.**
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
   - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
