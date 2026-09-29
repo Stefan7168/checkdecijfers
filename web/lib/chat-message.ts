@@ -7,6 +7,7 @@
 // reference the type and the reclassifier without pulling the client Chat
 // component into the server bundle.
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { BreakdownQuestion } from '../backend/query/breakdowns.ts';
 import type { ScatterSpec } from '../backend/chart/scatter.ts';
 import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
@@ -228,6 +229,92 @@ export interface ChatMessage {
    * byte-untouched either way; chat.tsx picks between them and this field,
    * never merging the two. */
   nonAnswerEnglish: NonAnswerEnglish | null;
+  /** Breadth step 5 (Task 6): present ONLY on the live progress bubble of a
+   * table-lane job (AskOutcome.tableLane / a started breakdown reply) - the
+   * poller swaps the whole message for the audited outcome once the job is
+   * done. `phase` turns 'slow' after 60 s (the over-budget line). Optional so
+   * every other message literal stays byte-identical; never set on replay (a
+   * resumed thread shows the job's landed outcome, not a live bubble). */
+  tableLane?: { rowId: number; phase: 'fetching' | 'slow' } | null;
+  /** Breadth step 5 (Task 6): the table lane's open breakdown question - the
+   * buttons under a clarification. Live only, like `carrier`: a resumed thread
+   * shows the question text with no buttons (ADR 033 A6). */
+  tableLaneQuestion?: { rowId: number; question: BreakdownQuestion } | null;
+  /** Breadth step 5 (Task 6): the deterministic "Selectie: ... / Uitgangspunt:
+   * ..." line (TableLaneEnvelope.selectionNote) under a table-lane answer -
+   * straight off the stored envelope, live and on replay alike. Absent/null on
+   * every other message. */
+  tableLaneNote?: string | null;
+}
+
+/** Breadth step 5 (Task 6): a table-lane ANSWER's selection note, read off the
+ * response envelope (present-only `tableLane` key, docs/13: `?? null`). Only an
+ * answer shows it; other kinds carry no note the reader needs. */
+export function tableLaneNoteOf(response: ComposedResponse): string | null {
+  if (response.kind !== 'answer') return null;
+  return response.tableLane?.selectionNote ?? null;
+}
+
+/** Breadth step 5 (Task 6): the button question of a table-lane clarification,
+ * or null (any other response, or a table-lane clarification with no question). */
+export function tableLaneQuestionOfResponse(
+  response: ComposedResponse,
+): { rowId: number; question: BreakdownQuestion } | null {
+  if (response.kind !== 'clarification') return null;
+  const lane = response.tableLane;
+  if (!lane || !lane.question) return null;
+  return { rowId: lane.rowId, question: lane.question };
+}
+
+/** A table-lane button question is answered ONLY by the lane's own buttons.
+ * The job's clarification also carries the member titles as `suggestions` /
+ * English chips (and a stripped rescue carrier), and a generic chip click would
+ * send a bare title as a fresh, paid question - so on such a response the chip
+ * surfaces are emptied, live and on replay alike (one definition). Any other
+ * response passes through untouched. */
+export function withoutLaneQuestionChips(
+  response: ComposedResponse,
+  suggestions: string[],
+  nonAnswerEnglish: NonAnswerEnglish | null,
+): { suggestions: string[]; nonAnswerEnglish: NonAnswerEnglish | null } {
+  if (tableLaneQuestionOfResponse(response) === null) return { suggestions, nonAnswerEnglish };
+  return {
+    suggestions: [],
+    nonAnswerEnglish: nonAnswerEnglish === null ? null : { ...nonAnswerEnglish, chips: [] },
+  };
+}
+
+/** A plain assistant info line (no chart, no card, no cost). */
+export function infoChatMessage(text: string): ChatMessage {
+  return {
+    role: 'assistant',
+    kind: 'info',
+    text,
+    chart: null,
+    scatter: null,
+    chartAlternates: [],
+    cost: null,
+    citation: null,
+    card: null,
+    csv: null,
+    proof: null,
+    proofRequestUrls: null,
+    answerView: null,
+    provisional: false,
+    suggestions: [],
+    auditId: null,
+    webSection: null,
+    carrier: null,
+    insufficientCredits: null,
+    onboardingOffer: null,
+    english: null,
+    nonAnswerEnglish: null,
+  };
+}
+
+/** The progress bubble a table-lane job shows until its outcome lands. */
+export function tableLaneProgressMessage(rowId: number, text: string): ChatMessage {
+  return { ...infoChatMessage(text), tableLane: { rowId, phase: 'fetching' } };
 }
 
 /** open-questions #324 gap 1: a reloaded thread's user bubble, for an

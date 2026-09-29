@@ -4,7 +4,10 @@
 ([#335](../open-questions.md), [brief](../session-briefs/2026-09-28-sanity-check.md)) chose breadth as the next priority;
 the owner approved the design ("Yes, write the plan (Recommended)"). Design:
 [superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md](../superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md).
-**Steps 2 (slice cache), 3 (breakdown resolver) and 4 (table-scoped parser, hermetic) built** — see the "As built" sections. Step 4b settled the parser before recording. Step 4's recording + calibration run and steps 5–6 not done.
+**Steps 2 (slice cache), 3 (breakdown resolver), 4/4b (table-scoped parser, hermetic) and 5 (the table lane wired into
+the workspace chat, DARK behind `TABLE_LANE_ENABLED`) built** — see the "As built" sections. Step 4's recording +
+calibration run (after 2026-10-01) and step 6 (the table-lane benchmark, then the flag flip) are not done: the parser has
+still never called the AI.
 
 **Relates to:** ADR [003](003-cbs-access-layer.md) (bulk ingestion, principle b), ADRs [025](025-cbs-catalog-table-discovery.md)/
 [026](026-on-demand-fetch-job-architecture.md)/[027](027-finder-shape-fit-gate.md) (today's on-demand onboarding, which
@@ -67,7 +70,7 @@ on-demand onboarding only delivers time-only tables (7% of current tables), cost
 
 - Adapter: `CbsDimension.title` (CBS `Title` verbatim; Eurostat's dimension `label`; `''` when absent). Not in the
   fingerprint and not stored in `expected_dimensions` — fingerprints byte-identical (pinned by a test).
-- `src/query/breakdowns.ts` (pure, not wired): `classifyDimension` (time / geo / geo_like — ≥80% region-prefixed codes /
+- `src/query/breakdowns.ts` (pure; not wired in step 3, used by the table lane since step 5): `classifyDimension` (time / geo / geo_like — ≥80% region-prefixed codes /
   margins / breakdown), `findGrandTotal`, `marginsValueMember`, `resolveBreakdowns(dimensions, named)` → coordinates +
   stated defaults + `callerDimensions` (time/geo/geo-like left to the caller), or ONE button question (CBS order, at most
   12 options + the true member count). `statedDefaultsText` → `Uitgangspunt: <dimension>: <member>` / `Assumed: …`, CBS
@@ -88,8 +91,9 @@ on-demand onboarding only delivers time-only tables (7% of current tables), cost
 
 ## As built — step 4 (session 139, 2026-09-29, branch `breadth-step-4`)
 
-- `src/answer/table-parse/` (not wired; no live LLM call yet — the recording + calibration run is owner-supervised after
-  2026-10-01, estimated ~90k input tokens on the cheap tier over the 34 labelled cases):
+- `src/answer/table-parse/` (not wired in step 4, used by the table lane since step 5; still no live LLM call — the
+  recording + calibration run is owner-supervised after 2026-10-01, estimated ~90k input tokens on the cheap tier over the
+  34 labelled cases then; ~114k over 39 cases with prompt v3 now, see step 5):
   - `input.ts` — pure builder from `CbsTableSchema` + code lists: numeric measures only; step 3's classes decide which
     dimensions are offered (breakdowns only); lists over 40 members are pre-filtered deterministically (the grand total
     + members sharing a ≥ 4-letter word or a number with the question, CBS order, marked "shortened"); refuses tables
@@ -125,14 +129,126 @@ still ask); the pre-filter always offers region-coded members the reader named. 
 (the first normalization discarded the kind — "gemeente Utrecht" matched the province) — fixed before merge. Dry run: 35
 cases, ~102k estimated input tokens for the recording run.
 
-## Trade-offs and open points (step 5)
+## As built — step 5 (session 140, 2026-09-29, branch `breadth-step-5`)
+
+The table lane is wired into the workspace chat and is **dark**: with `TABLE_LANE_ENABLED` unset, `askQuestion` behaves
+exactly as before (pinned by the existing suites). Nothing here has run against the live AI or the live database.
+
+**The flow.**
+1. **Routing (request path, our database only).** A curated miss in a thread-aware turn (the workspace chat) that the
+   existing table finder matches to a CBS table used to become the 100-credit onboarding offer. With the flag on it
+   becomes a **table-lane request** instead: `createTableLaneRequest` reserves the normal question price and inserts a
+   `table_lane_requests` row in ONE transaction (migration **038**, FILE-ONLY; a failed insert rolls the charge back). The
+   routing turn itself stays free (the gate already refunded it) and is not attached to the thread; the row links it
+   (`routing_audit_id`) so the question history hides it and per-conversation deletion redacts it (final review I2/I3).
+   A web add-on on that turn is settled before the row is created (final review M1). If queueing throws,
+   nothing was charged and the turn falls back to today's offer path. The finder is only injected when
+   `ONBOARDING_ENABLED=1` (already set in production), so both flags are needed. (A follow-up link routes without it: the
+   linked table stands in for the finder.)
+2. **The job (the only place that contacts CBS).** `runTableLaneJob` (`src/ingestion/table-lane-job.ts`) is a route,
+   `/api/table-lane-job`, kicked right after a row is queued (`web/lib/table-lane-kick.ts`, fail-soft through the shared
+   `web/lib/cron-kick.ts`) and swept once a day by the existing `/api/onboarding-cron`. Per row: load the table's live CBS
+   schema and code lists, `registerSchemaOnly`, `planTableLane` (the table-scoped parse plus every safety gate in one fixed
+   order), `ensureSlice` for the planned slice, then `respondTableLane` writes exactly ONE audited response, then
+   `finishTableLaneRequest` ends the row and settles the money in one transaction, then the audited answer is attached to
+   the reader's thread. `ensureSlice` and `registerSchemaOnly` run strictly before `respondTableLane`, so they never run
+   under `resolveIntent`'s per-table lock ([#336](../open-questions.md) (1)).
+3. **Reader side.** A progress bubble polls `pollTableLane` (our database only) every 2 s for the first minute, then every
+   15 s up to 10 minutes; after 60 s it adds a "this is taking longer" line. A breakdown or region question comes back with
+   buttons (`replyToTableLane`); a typed reply is matched against ALL members of that dimension (normalized exact title
+   or exact code, must be unique; no nearest match). A lane question takes ONE reply (`is_reply` + a unique index in 038,
+   checked in the store under the user's lock): a retry, a second tab or a stale client gets the existing child and is
+   not charged again (final review I1). Replies, like routing and follow-up links, need `TABLE_LANE_ENABLED` (final
+   review I4). A follow-up in the same conversation reuses the previous answer's table.
+
+**Money.** The same 'simple' question price and the Pro-bucket-first split as a normal turn; the ledger debit is filed under
+a derived request id (`deriveAddonRequestId(requestId, 'table-lane')`) because the routing turn already used the raw id. An
+answer keeps the price; a clarification is refunded down to the clarification price; a refusal, a failure and a give-up are
+refunded in full. Status and refund move in one transaction, so a row is never finished-but-unsettled or settled twice; a
+superseded job invocation's finish is rejected (attempt fencing). Thread and history captions read the derived debit.
+
+**Job robustness.** Job budget 240 s (route `maxDuration` 300 s), no new row claimed with under 120 s left; at most 2
+attempts per row; a `running` row older than 5 minutes is reclaimed; a row a crashed invocation left at the cap gets an
+audited `table_lane_failed` refusal plus a full refund (claimed atomically first, so it is audited once). A CBS
+metadata failure retries once after 2 s, then refuses `cbs_unreachable` (audited, full refund). `ensureSlice` failing at
+stage `fetch` retries once after 2 s; if it still fails, a stored copy of that exact slice confirmed within the last **24
+hours** may answer (disclosed in the envelope as `fromCachedSlice`), else `cbs_unreachable`. Logs carry the row id, table
+id, attempt and error class only, never the question.
+
+**Refusals (all typed and audited, principle c).** `table_lane_ineligible`, `_no_measure`, `_unsure` (confidence below
+`acceptThreshold`, an ambiguous measure, or a validator refusal), `_period_unsupported`, `_period_grain`, `_period_missing`,
+`_region_class`, `region_unknown`, `region_unavailable`, `_too_large` (over 2,000 cells), `cbs_unreachable`,
+`table_lane_failed`. One deterministic Dutch template each, with the English sibling for an English reader; no AI wording.
+Deliberately refused in step 5 (each tracked in [open-questions](../open-questions.md) #340–#345): region classes ("per
+provincie"); a table with BOTH a region dimension and region-coded breakdown members when a place is named; the period
+kinds `change_over_year`, `now_vs_ago`, `date_range` and `relative`; a period precision the table does not publish (strict,
+no fallback to another grain).
+
+**Audit (R8).** Every outcome writes one `audit_answers` row carrying a present-only `tableLane` envelope key (row id,
+table, finder confidence, the validated parse, the parse audit, the offered-menu hash, prompt/schema versions, the fixed
+selection, the button question, the previous-question context). `reconstruct.ts` re-checks its shape and re-derives the
+selection note byte-identically; the table parse is recorded in `llm_calls` as role `table_parse`, on every outcome
+where the model was called (Ruling R6). Finished `table_lane_requests` rows (they hold the question text and the
+table id a second time) are hard-deleted by the GDPR self-service deletion, per-thread deletion and the retention purge;
+an in-flight row is swept by the next run once it ends (the same documented residual as `pending_table_requests`).
+Per-thread deletion also redacts each lane row's thread-less routing turn through `routing_audit_id` (collected before
+the lane rows are deleted; skipped while 038 is unapplied). The question history hides every linked routing turn (probe
+on the table, never on the flag), so a lane question is one entry; one still in flight appears once it is answered.
+
+**Copy.** Under each lane answer a deterministic line lists every fixed breakdown coordinate, named ones as "Selectie:"
+and stated defaults as "Uitgangspunt:", CBS titles verbatim; it is never part of the model-written answer text.
+
+**Parser prompt v3.** The parse gained one optional line with the previous question(s) in the conversation (at most two,
+oldest first), so a follow-up ("En voor vrouwen?") can carry the topic over. The version bump happened before the first
+recording; the labelled set is now 39 cases (34 → 35 in 4b → 39 with the follow-up cases); the dry run estimates ~114,136
+input tokens for the recording run.
+
+**Rulings taken while building** (recorded so the next session does not re-decide them):
+- **R1** `TableLaneChoice` lives in `src/answer/table-lane/types.ts` so `src/answer` needs no runtime import from
+  `src/ingestion` (the `bridge.ts` precedent). **R5** `plan.ts` does import the constant `SLICE_MAX_CELLS` from
+  `src/ingestion/slice-cache.ts`; accepted, it runs only in the job.
+- **R2/R6** the parser stayed byte-identical until the one task that bumped its version; the parse audit is kept on every
+  outcome where a model call happened, including refusals (overruling the plan's "null on step-2 refusals").
+- **R3** the job writes the thread id it attached to back onto the row, so a first question in a new chat gets a thread and
+  child rows (button replies, follow-ups) inherit it.
+- **R4** "Nederland" / "heel Nederland" on a national-only table (no region dimension, no region-coded member): the same
+  model output is re-validated with only those terms removed (`absorbNationalTerms`), the answer states "Regio: Nederland
+  (landelijke tabel)", and a table whose title names Caribisch Nederland is never absorbed. Any other place there still
+  refuses. **Assumption:** only the exact names are removed, so a mis-tagged place cannot hide behind it.
+- **R7** table-lane copy uses the informal "je" like every other refusal. **R8** the envelope stores the fixed selection
+  itself, so the reader-visible note is re-derivable.
+- **R9** a CBS metadata failure retries once, then refuses `cbs_unreachable`. **R10** the daily sweep works through open
+  rows even with the flag off (the flag gates only NEW work: routing, follow-up links and replies — final review I4), so
+  held credits never wait on a flag flip.
+- **R11** one shared kick helper (`cron-kick.ts`) for the onboarding and table-lane kicks.
+- **R12** only thread-aware turns (the workspace chat) route to the lane; the Dashboard chat keeps the onboarding offer,
+  because the job needs a thread to attach to.
+- **R13** while a lane question is open, typed text that matches no member closes the question and is sent as a fresh
+  question (never traps the reader; costs a paid question on a typo).
+- **R14** the follow-up link is a fallback, not an override: the real finder runs first and a confident pick of a
+  DIFFERENT table wins, so a topic change is never answered from the old table. **R15** a bare follow-up with no topic
+  term ("En in 2020?") still gets today's curated "which topic?" question in step 5; measure in step 6.
+- **R16** the old onboarding offer never targets a slice-cache table, flag on or off, Dashboard or workspace
+  (`sliceCacheTableIds`, read through `to_jsonb(row)` so it is safe without migration 037): a slice-cache pick gets the
+  honest "not available right now" text with nothing charged, and slice-cache alternates are dropped from the signed
+  candidate chain. The finder itself is unchanged, because the lane needs it to keep routing to slice-cache tables.
+
+**Process.** Subagent-driven development: seven build tasks, each reviewed by the most capable tier, six with a fix round.
+
+**Go-live needs ALL of:** migrations 037 + 038 applied (owner, `npm run db:migrate`); `TABLE_LANE_ENABLED=1`;
+`ONBOARDING_ENABLED=1` (already set); `CRON_SECRET` (already set — the job route and the daily sweep both refuse to run
+without it, so a queued row would hold the reader's credits with nothing to answer or refund it); the parser recording + calibration run (after 2026-10-01, [#338](../open-questions.md));
+and step 6's benchmark. Sequence and manual job kick: RUNBOOK "Table lane (breadth step 5)".
+
+## Trade-offs and open points (after step 5)
 
 - A quarantined slice-cache table has no rebaseline path yet (syncTable refuses it) — recovery = eviction or a supervised
   DB edit (RUNBOOK).
-- Step 5 must not call `ensureSlice` while holding resolveIntent's shared per-table lock (self-deadlock); the 180 s lock
-  timeout would land on a user request; `ensureSlice` fails when CBS is unreachable even for cached slices; slice tables get
-  no cadence staleness warning; onboarding/coverage treat slice tables as never synced; wide member lists may exceed CBS's
-  URL length. Tracked in [#336](../open-questions.md).
+- Step 5 settled the design points step 2 left ([#336](../open-questions.md) (1), (2), (3), (9), (10) in part): the
+  job never holds the lock while fetching, the 180 s lock timeout lands on the job and not on a request, a
+  fresh-enough cached slice may answer when CBS is down, and a lagging mirror retries once. Still open: slice tables get
+  no cadence staleness warning; the coverage page treats slice tables as never synced (the old onboarding offer no longer
+  targets them, R16); wide member lists may exceed CBS's URL length.
 
 ## Revisit triggers
 

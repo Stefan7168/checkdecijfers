@@ -1,0 +1,22 @@
+Volledige vraag van de gebruiker: "Wat was de uitstoot van de landbouw?"
+Tabel: 85669NED — Emissies van broeikasgassen berekend volgens IPCC-voorschriften
+
+Maten in deze tabel:
+1. measureCode=D003040 | eenheid=miljard kg CO2-equivalent
+   titel: Emissie broeikasgassen
+   omschrijving: De emissies van gasvormige stoffen in Nederland die in de atmosfeer bijdragen aan het broeikaseffect; uitgedrukt in kilogrammen CO2-equivalent en uitgesplitst naar klimaatsectoren.
+
+Uitsplitsingen in deze tabel:
+- dimensie=EmissiesNaarLucht | titel: Emissies naar lucht
+    T001372 — Totaal broeikasgassen
+    A044109 — Kooldioxide (CO2)
+    A044110 — Distikstofoxide (N20)
+    A044107 — Methaan (CH4)
+    A052484 — F-gassen
+- dimensie=Klimaatsectoren | titel: Klimaatsectoren (ingekort: 3 van 52)
+    T001616 — Totaal klimaatsectoren
+    301100 — 01 Landbouw (stationaire bronnen)
+    A025430 — Mobiele werktuigen; landbouw
+
+Beschikbare periode-precisies: JJ (jaar)
+Regio's: deze tabel kent geen regio's.

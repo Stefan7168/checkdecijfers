@@ -48,8 +48,11 @@ function structuralLines(view: AnswerView): string[] {
 export function buildAnswerCopy(
   view: AnswerView,
   sourceUrl: string | null,
+  extraLines: string[] = [],
 ): { text: string; html: string } {
-  const lines = structuralLines(view);
+  // `extraLines` (the table lane's selection note) follow the answer's own
+  // structural lines, ahead of the attribution.
+  const lines = [...structuralLines(view), ...extraLines.filter((line) => line !== '')];
 
   // #296: a scatter answer cites its second table's sentence right after
   // the first (plain in HTML — the deep link is the first table's).

@@ -112,6 +112,12 @@ const AUDIT_PURGE_WHERE =
  * always the cutoff ISO string in both callers. */
 const PENDING_PURGE_WHERE = `created_at < $1` as const;
 
+/** Breadth step 5 (migration 038): the ONE place the "finished" table-lane
+ * statuses are written for the three erasure/purge legs below. Only a finished
+ * row is deleted; a pending/running row's job still needs its question and
+ * table id to finish (the same in-flight residual as pending_table_requests). */
+const TABLE_LANE_TERMINAL = `status in ('done', 'failed')` as const;
+
 /** #151 (session-47 GDPR hunt): the ONE place the pending_table_requests
  * redaction SET clause is written — both legs (self-service + purge) apply it,
  * so the scope can only ever widen in one place (same discipline as AUDIT_SCOPE).
@@ -236,6 +242,18 @@ interface HardDelete {
   params: unknown[];
 }
 
+/** Breadth step 5 (final review I3): extra audit rows a caller's scope reaches
+ * only through a stored link in a possibly FILE-ONLY table — the table lane's
+ * routing turns, which carry no thread_id. `sql` returns an `id` column of
+ * audit_answers ids (itself user-scoped); it is guarded by its table's own
+ * to_regclass check like a HardDelete, and runs BEFORE the hard-deletes (which
+ * remove the very rows holding the link). */
+interface LinkedTargets {
+  table: string;
+  sql: string;
+  params: unknown[];
+}
+
 async function redactMatchingRows(
   db: Db,
   whereClause: string,
@@ -243,6 +261,7 @@ async function redactMatchingRows(
   feedbackDelete?: FeedbackDelete,
   pendingRedaction?: PendingRedaction,
   hardDeletes: HardDelete[] = [],
+  linkedTargets?: LinkedTargets,
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -260,6 +279,16 @@ async function redactMatchingRows(
         await tx.query(feedbackDelete.sql, feedbackDelete.params);
       }
     }
+    // Linked targets first (see LinkedTargets): collected before the
+    // hard-deletes below remove the rows that hold the link.
+    let linkedIds: number[] = [];
+    if (linkedTargets) {
+      const { rows: reg } = await tx.query(`select to_regclass($1) as t`, [`public.${linkedTargets.table}`]);
+      if (reg[0]?.t != null) {
+        const { rows: linked } = await tx.query(linkedTargets.sql, linkedTargets.params);
+        linkedIds = linked.map((r) => Number(r.id));
+      }
+    }
     // Each entry's own guard, same discipline as feedbackDelete above: its
     // table may be FILE-ONLY at commit time, so it may not exist yet in a
     // given environment. The guard must be a check, not a catch — an error
@@ -270,10 +299,13 @@ async function redactMatchingRows(
       const { rows: reg } = await tx.query(`select to_regclass($1) as t`, [`public.${del.table}`]);
       if (reg[0]?.t != null) await tx.query(del.sql, del.params);
     }
-    const { rows } = await tx.query(
-      `select id, kind from audit_answers where ${whereClause} for update`,
-      params,
-    );
+    const { rows } =
+      linkedIds.length === 0
+        ? await tx.query(`select id, kind from audit_answers where ${whereClause} for update`, params)
+        : await tx.query(
+            `select id, kind from audit_answers where (${whereClause}) or id = any($${params.length + 1}::bigint[]) for update`,
+            [...params, linkedIds],
+          );
     const targets: RedactedRow[] = rows.map((r) => ({
       id: Number(r.id),
       kind: r.kind as RedactedRow['kind'],
@@ -379,6 +411,17 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
             (select id from audit_answers where user_id = $1)`,
         params: [userId],
       },
+      {
+        // Breadth step 5 (migration 038): this user's finished table-lane
+        // requests carry the question text and the CBS table id a SECOND
+        // time — hard-delete. TERMINAL rows only: an in-flight job still needs
+        // its row (the same documented in-flight residual as
+        // pending_table_requests; the next deletion/purge sweeps it once it
+        // ends). Money lives in the ledger, untouched.
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests where user_id = $1 and ${TABLE_LANE_TERMINAL}`,
+        params: [userId],
+      },
     ],
   );
 }
@@ -451,7 +494,30 @@ export async function deleteThreadQuestionHistory(
             (select id from audit_answers where user_id = $1 and thread_id = $2)`,
         params: [userId, threadId],
       },
+      {
+        // Breadth step 5 (migration 038): this thread's finished table-lane
+        // requests (see the whole-history leg above for the terminal-only rule).
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests
+              where user_id = $1 and thread_id = $2 and ${TABLE_LANE_TERMINAL}`,
+        params: [userId, threadId],
+      },
     ],
+    {
+      // Breadth step 5 (final review I3): a lane question's free routing turn
+      // is deliberately NOT attached to a thread (the job attaches the lane's
+      // own answer), so `thread_id = $2` above never reaches it. The lane row
+      // links it (routing_audit_id); every lane row of this thread — finished
+      // or still in flight — has its routing turn redacted too. Both sides
+      // re-bind this user (audit_answers.user_id is text, the lane row's is
+      // uuid), so a link can never reach another user's row.
+      table: 'table_lane_requests',
+      sql: `select a.id
+            from audit_answers a
+            join table_lane_requests t on t.routing_audit_id = a.id
+            where a.user_id = $1 and t.user_id::text = $1 and t.thread_id = $2 and ${AUDIT_SCOPE}`,
+      params: [userId, threadId],
+    },
   );
 }
 
@@ -521,6 +587,14 @@ export async function purgeExpiredQuestionHistory(
         sql: `delete from chart_edits where audit_answer_id in
             (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
         params: [cutoffIso, anonIso],
+      },
+      {
+        // Breadth step 5 (migration 038): finished table-lane requests older
+        // than the ACCOUNT cutoff (a lane row always has a user, so there is no
+        // anonymous window here, like pending_table_requests).
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests where created_at < $1 and ${TABLE_LANE_TERMINAL}`,
+        params: [cutoffIso],
       },
     ],
   );

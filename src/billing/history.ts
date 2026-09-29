@@ -180,8 +180,65 @@ function collectBucketCandidateIds(rows: readonly QueryResultRow[]): string[] {
     ids.add(requestId);
     ids.add(deriveAddonRequestId(requestId, 'websearch'));
     ids.add(deriveAddonRequestId(requestId, 'dataset'));
+    // Breadth step 5: a table-lane row's debit (both legs) lives under this
+    // derived id — see tableLaneLedgerIds below.
+    if (Boolean(row.is_table_lane)) ids.add(deriveAddonRequestId(requestId, TABLE_LANE_SUFFIX));
   }
   return [...ids];
+}
+
+/** Breadth step 5 (Task 5): the table lane's question debit is written under
+ * deriveAddonRequestId(requestId, 'table-lane') — the routing turn already
+ * used (and refunded) the raw request id's question_cost debit, and that
+ * index is unique per (user, request_id) — while the lane's audit row keeps
+ * the raw request id. So a lane row (its envelope carries the `tableLane`
+ * key) also nets the derived id; the free routing row that shares the raw id
+ * has no `tableLane` key and never picks up the lane's cost. Must equal the
+ * suffix src/ingestion/table-lane-store.ts derives the debit under. */
+const TABLE_LANE_SUFFIX = 'table-lane';
+
+function tableLaneLedgerIds(rows: readonly QueryResultRow[]): string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (!Boolean(row.is_table_lane) || Boolean(row.is_onboarding_delivery)) continue;
+    if (row.request_id === null || row.request_id === undefined) continue;
+    ids.add(deriveAddonRequestId(String(row.request_id), TABLE_LANE_SUFFIX));
+  }
+  return [...ids];
+}
+
+/** The credit_transactions side of a derived table-lane debit: each
+ * 'question_cost' debit under one of `requestIds` minus the compensations
+ * that reversed it (the same debit-minus-compensations rule as the main
+ * query's ledger_net). Batched, one round trip; skipped entirely when the
+ * page has no table-lane row, so a page without one runs exactly the queries
+ * it always did. */
+async function getTableLaneLedgerNetCosts(
+  db: Db,
+  userId: string,
+  requestIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (requestIds.length === 0) return new Map();
+  const { rows } = await db.query(
+    `select
+       d.request_id as request_id,
+       (-d.delta) - coalesce(
+         (select sum(c.delta) from credit_transactions c
+           where c.reason = 'compensation' and c.related_transaction_id = d.id),
+         0
+       ) as net
+     from credit_transactions d
+     where d.user_id::text = $1
+       and d.reason = 'question_cost'
+       and d.request_id = any($2::uuid[])`,
+    [userId, requestIds],
+  );
+  const result = new Map<string, number>();
+  for (const row of rows) {
+    const id = String(row.request_id);
+    result.set(id, (result.get(id) ?? 0) + Number(row.net));
+  }
+  return result;
 }
 
 /** #246 fix (session 109): the null-or-number decision the SQL used to make
@@ -196,20 +253,33 @@ function collectBucketCandidateIds(rows: readonly QueryResultRow[]): string[] {
  * never has a pro_bucket_ledger row at all, so `bucketNetCosts` is always
  * empty for them and this collapses to exactly the pre-#246 ledger-only
  * formula. */
-function resolveCreditsCharged(row: QueryResultRow, bucketNetCosts: Map<string, number>): number | null {
+function resolveCreditsCharged(
+  row: QueryResultRow,
+  bucketNetCosts: Map<string, number>,
+  tableLaneLedgerNetCosts: Map<string, number>,
+): number | null {
   if (Boolean(row.is_onboarding_delivery)) {
     return row.onboarding_delivery_credits === null ? null : Number(row.onboarding_delivery_credits);
   }
-  const ledgerNet = Number(row.ledger_net);
-  const ledgerHasDebit = Boolean(row.ledger_has_debit);
+  let ledgerNet = Number(row.ledger_net);
+  let ledgerHasDebit = Boolean(row.ledger_has_debit);
   let bucketNet = 0;
   let bucketHasDebit = false;
   if (row.request_id !== null && row.request_id !== undefined) {
     const requestId = String(row.request_id);
+    const laneId = Boolean(row.is_table_lane) ? deriveAddonRequestId(requestId, TABLE_LANE_SUFFIX) : null;
+    if (laneId !== null) {
+      const laneLedgerNet = tableLaneLedgerNetCosts.get(laneId);
+      if (laneLedgerNet !== undefined) {
+        ledgerHasDebit = true;
+        ledgerNet += laneLedgerNet;
+      }
+    }
     for (const candidate of [
       requestId,
       deriveAddonRequestId(requestId, 'websearch'),
       deriveAddonRequestId(requestId, 'dataset'),
+      ...(laneId !== null ? [laneId] : []),
     ]) {
       const net = bucketNetCosts.get(candidate);
       if (net !== undefined) {
@@ -229,6 +299,13 @@ function isRedacted(question: string): boolean {
   return question === REDACTED_QUESTION_TEXT;
 }
 
+/** Whether migration 038's table_lane_requests exists (it carries the
+ * routing_audit_id link the history scan hides routing turns by). */
+async function tableLaneRequestsExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.table_lane_requests') as t`, []);
+  return rows[0]?.t != null;
+}
+
 /** The pairing signature a reply row shares with the clarification row it
  * answered. NUL (\u0000) as separator: it cannot occur in either component (Postgres
  * text never contains NUL), so distinct pairs can never collide. */
@@ -245,6 +322,11 @@ export async function getQuestionHistory(
   userId: string,
   { limit = 20, includeOnboarding = false }: { limit?: number; includeOnboarding?: boolean } = {},
 ): Promise<QuestionHistoryEntry[]> {
+  // Breadth step 5 (final review I2): see the table-lane exclusion below.
+  // Check-not-catch on the table itself (the threads/index.ts
+  // userDatasetsTableExists precedent): migration 038 may not be applied yet,
+  // and then no lane row can exist, so the scan is exactly today's.
+  const laneTableExists = await tableLaneRequestsExists(db);
   const { rows } = await db.query(
     `select
        a.id,
@@ -279,6 +361,9 @@ export async function getQuestionHistory(
        -- reserveOnboardingDebit doc comment) -- this column is untouched by
        -- #246's bucket fix, unlike the two below.
        (a.source_tag = 'onboarding_delivery') as is_onboarding_delivery,
+       -- Breadth step 5: a table-lane row (its envelope carries the
+       -- present-only tableLane key) — see tableLaneLedgerIds.
+       (a.response->'tableLane') is not null as is_table_lane,
        case when onboarding_debit.id is null then null else -onboarding_debit.delta end
          as onboarding_delivery_credits,
        -- Ordinary question turn: net EVERY request-scoped LEDGER debit -- the
@@ -371,6 +456,19 @@ export async function getQuestionHistory(
          ? 'and not exists (select 1 from pending_table_requests p where p.ack_audit_answer_id = a.id)'
          : ''
      }
+     ${
+       // Breadth step 5 (final review I2), the same stored-link dedupe for the
+       // table lane: a lane question's free routing turn (the audited
+       // 'onboarding_pending' refusal, whose text promises an e-mail the lane
+       // never sends) is linked from its table_lane_requests row
+       // (routing_audit_id) and hidden — the lane's own audited answer /
+       // question / refusal is the entry that represents the question. Keyed
+       // on the table's existence, never on TABLE_LANE_ENABLED, so switching
+       // the lane off can't bring the duplicates back.
+       laneTableExists
+         ? 'and not exists (select 1 from table_lane_requests t where t.routing_audit_id = a.id)'
+         : ''
+     }
      -- id as the tie-breaker: two questions asked close enough together can
      -- share a created_at timestamp (observed under PGlite's clock
      -- resolution in tests), and "most recent first" should still mean
@@ -384,13 +482,16 @@ export async function getQuestionHistory(
   // resolveCreditsCharged's doc comment for why a request_id alone isn't
   // enough for the websearch/dataset add-on legs.
   const bucketNetCosts = await getBucketNetCosts(db, userId, collectBucketCandidateIds(rows));
+  // Breadth step 5: the derived table-lane debits' ledger side (no query when
+  // the page has no table-lane row).
+  const tableLaneLedgerNetCosts = await getTableLaneLedgerNetCosts(db, userId, tableLaneLedgerIds(rows));
   const fetched: HistoryRow[] = rows.map((row) => ({
     id: Number(row.id),
     kind: row.kind as QuestionHistoryEntry['kind'],
     question: String(row.question),
     finalText: String(row.final_text),
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
-    creditsCharged: resolveCreditsCharged(row, bucketNetCosts),
+    creditsCharged: resolveCreditsCharged(row, bucketNetCosts, tableLaneLedgerNetCosts),
     replyText: row.reply_text === null ? null : String(row.reply_text),
     repliedQuestionNl: row.replied_question_nl === null ? null : String(row.replied_question_nl),
     offeredQuestionNl: row.offered_question_nl === null ? null : String(row.offered_question_nl),

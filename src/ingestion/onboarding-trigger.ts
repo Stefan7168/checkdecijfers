@@ -80,6 +80,25 @@ export async function onboardingPrice(db: Db): Promise<number> {
   return getActionClassPrice(db, 'heavy');
 }
 
+/** Ruling R16 (breadth step 5 final review): the ids among `tableIds` that are
+ * slice-cache tables (migration 037's `cbs_tables.ingest_mode =
+ * 'slice_cache'`, filled per question by the table lane). The onboarding offer
+ * must never target one — its whole-table sync refuses such a table, so the
+ * offer could only ever fail and refund.
+ *
+ * Safe while migration 037 is unapplied: the column is read through
+ * `to_jsonb(row)`, which yields NULL for a column that does not exist instead
+ * of erroring, so every table then reads as a whole-table one (today's
+ * behaviour) — one statement, no schema probe. */
+export async function sliceCacheTableIds(db: Db, tableIds: readonly string[]): Promise<Set<string>> {
+  if (tableIds.length === 0) return new Set();
+  const { rows } = await db.query(
+    `select t.id from cbs_tables t where t.id = any($1) and to_jsonb(t)->>'ingest_mode' = 'slice_cache'`,
+    [tableIds],
+  );
+  return new Set(rows.map((r) => String(r.id)));
+}
+
 /**
  * Charge + queue, atomically. Money boundary lives here (ingestion), not in
  * the answer module. The unique indexes from migration 012 are the structural

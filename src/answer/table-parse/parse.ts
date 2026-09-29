@@ -68,8 +68,19 @@ export const TABLE_PARSE_MODEL = 'claude-haiku-4-5';
 /** Documentation constant — the re-record is forced by the prompt BYTES
  * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION).
  * Bumped to 2 (breadth step 4b, Task 2): the prompt now describes measure
- * groups and shows a `groep:` line per measure. */
-export const TABLE_PARSE_PROMPT_VERSION = 2;
+ * groups and shows a `groep:` line per measure. Bumped to 3 (breadth step 5,
+ * Task 7 — before the first recorded run): follow-ups. The system prompt
+ * gains TABLE_PARSE_PREVIOUS_QUESTION_RULE and the user turn an optional
+ * "Vorige vraag in dit gesprek" line; without a previous question the user
+ * turn is byte-identical to version 2's (pinned against
+ * tests/fixtures/tableparse/prompt-v2/). */
+export const TABLE_PARSE_PROMPT_VERSION = 3;
+
+/** Breadth step 5, Task 7: the one system-prompt rule for a follow-up in the
+ * same conversation (the only change to the system prompt in version 3). */
+export const TABLE_PARSE_PREVIOUS_QUESTION_RULE =
+  'Is er een vorige vraag, lees de nieuwe vraag dan als vervolg daarop: wat de nieuwe vraag niet noemt ' +
+  '(onderwerp, periode, plaats, uitsplitsing), neem je over uit de vorige vraag.';
 
 /** Bumped whenever the output contract shape changes (forces a fixture
  * re-record) — mirrors MEASURE_FIT_SCHEMA_VERSION. Bumped to 2 alongside
@@ -585,6 +596,7 @@ Geef de periode ALTIJD exact met de precisie die de vraag zelf noemt — OOK wan
 Je kent de datum van vandaag niet — reken relatieve periodes nooit zelf om naar een absoluut jaar.
 
 OVERIG
+- ${TABLE_PARSE_PREVIOUS_QUESTION_RULE}
 - derivation: 'none' voor een gewone opvraging, 'difference' voor een expliciete veranderingsvraag met bedrag, 'max' voor een vraag naar het hoogste/meeste, 'series' voor een ontwikkeling over een periode.
 - confidence is een getal tussen 0 en 1 en moet eerlijk zijn: hoog alleen bij een duidelijke, ondubbelzinnige match tussen de vraag en je keuzes.
 - reading: één korte Nederlandse zin die je keuzes samenvat.
@@ -610,12 +622,30 @@ function condense(text: string): string {
   return flat.length > DESCRIPTION_MAX ? `${flat.slice(0, DESCRIPTION_MAX)}…` : flat;
 }
 
+/** Breadth step 5, Task 7: the text the member pre-filter
+ * (buildTableParseSchema) reads for a follow-up — the previous question and
+ * the new one, so a member only the previous question names (e.g. a sector
+ * the reader asked about before "en in 2020?") stays in the offered menu the
+ * follow-up rule tells the model to carry over. Without a previous question
+ * it is the question itself (byte-identical menus). The pre-filter only
+ * decides what is OFFERED; every choice is still validated against it. */
+export function tableParsePrefilterText(question: string, previousQuestion: string | null | undefined): string {
+  return previousQuestion ? `${previousQuestion}\n${question}` : question;
+}
+
 /** The user-turn payload: the full question, the table's identity, its
  * numbered measure list, every offered breakdown (with its members and a
  * truncation note when the pre-filter cut it), the available period grains,
  * and whether the table has regions at all. Metadata + the offered menu
- * only — never a data cell (R1). */
-export function serializeTableParseInput(question: string, input: TableParseSchema): string {
+ * only — never a data cell (R1). Breadth step 5, Task 7: a follow-up gets one
+ * extra first line quoting the previous question in the same conversation
+ * (JSON-quoted like the question itself); without one (null, undefined or
+ * empty) the output is byte-identical to prompt version 2's. */
+export function serializeTableParseInput(
+  question: string,
+  input: TableParseSchema,
+  previousQuestion?: string | null,
+): string {
   const measureLines = input.measures.map((m, i) => {
     const blurb = condense(m.description);
     return (
@@ -644,6 +674,7 @@ export function serializeTableParseInput(question: string, input: TableParseSche
     : "Regio's: deze tabel kent geen regio's.";
 
   return (
+    (previousQuestion ? `Vorige vraag in dit gesprek: ${JSON.stringify(previousQuestion)}\n` : '') +
     `Volledige vraag van de gebruiker: ${JSON.stringify(question)}\n` +
     `Tabel: ${input.tableId} — ${input.title}\n\n` +
     `Maten in deze tabel:\n${measureLines.join('\n')}\n\n` +
@@ -658,12 +689,16 @@ export interface TableParseOptions {
   client: LlmClient;
   model?: string;
   maxTokens?: number;
+  /** Breadth step 5, Task 7: the previous table-lane question in the same
+   * conversation, for a follow-up ("en voor vrouwen?"). Absent/null ⇒ the
+   * version-2 user turn, byte-identical. */
+  previousQuestion?: string | null;
 }
 
 export function buildTableParseRequest(
   question: string,
   input: TableParseSchema,
-  options: Pick<TableParseOptions, 'model' | 'maxTokens'> = {},
+  options: Pick<TableParseOptions, 'model' | 'maxTokens' | 'previousQuestion'> = {},
 ): LlmRequest {
   return {
     model: options.model ?? TABLE_PARSE_MODEL,
@@ -673,7 +708,7 @@ export function buildTableParseRequest(
     maxTokens: options.maxTokens ?? 1024,
     temperature: 0,
     system: buildTableParseSystemPrompt(),
-    question: serializeTableParseInput(question, input),
+    question: serializeTableParseInput(question, input, options.previousQuestion),
     jsonSchema: tableParseJsonSchema(),
   };
 }

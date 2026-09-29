@@ -453,7 +453,10 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
            and d.request_id = a.request_id
            and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
        ) as ledger_has_debit,
-       a.request_id as request_id
+       a.request_id as request_id,
+       -- Breadth step 5: a table-lane row (present-only tableLane envelope
+       -- key) — its debit lives under a derived id, see tableLaneLedgerIds.
+       (a.response->'tableLane') is not null as is_table_lane
      from audit_answers a
      where a.thread_id = $1
        and a.user_id = $2
@@ -468,6 +471,9 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
   // threads/billing module-boundary convention (see decodeResponse's own
   // duplicate, and this file's local deriveAddonRequestId duplicate).
   const bucketNetCosts = await queryBucketNetCosts(db, userId, collectBucketCandidateIds(rows));
+  // Breadth step 5: the derived table-lane debits' ledger side (no query when
+  // the thread has no table-lane row).
+  const tableLaneLedgerNetCosts = await queryTableLaneLedgerNetCosts(db, userId, tableLaneLedgerIds(rows));
   return rows.map((row) => ({
     id: Number(row.id),
     kind: row.kind as ThreadRow['kind'],
@@ -476,7 +482,7 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
     replyText: row.reply_text === null ? null : String(row.reply_text),
     createdAt: toIso(row.created_at),
     response: decodeResponse(row.response),
-    creditsCharged: resolveThreadRowCreditsCharged(row, bucketNetCosts),
+    creditsCharged: resolveThreadRowCreditsCharged(row, bucketNetCosts, tableLaneLedgerNetCosts),
   }));
 }
 
@@ -500,8 +506,65 @@ function collectBucketCandidateIds(rows: readonly QueryResultRow[]): string[] {
     ids.add(requestId);
     ids.add(deriveAddonRequestId(requestId, 'websearch'));
     ids.add(deriveAddonRequestId(requestId, 'dataset'));
+    // Breadth step 5: a table-lane row's debit (both legs) lives under this
+    // derived id — see tableLaneLedgerIds below.
+    if (Boolean(row.is_table_lane)) ids.add(deriveAddonRequestId(requestId, TABLE_LANE_SUFFIX));
   }
   return [...ids];
+}
+
+/** Breadth step 5 (Task 5): the table lane's question debit is written under
+ * deriveAddonRequestId(requestId, 'table-lane') (src/ingestion/
+ * table-lane-store.ts — the routing turn already used and refunded the raw
+ * id's question_cost debit), while the lane's audit row keeps the raw request
+ * id. A lane row (its envelope carries the `tableLane` key) therefore also
+ * nets the derived id. The routing turn's own audit row is never attached to
+ * a thread, and has no `tableLane` key anyway. Same suffix as the store's;
+ * a local copy per this module's never-import-billing boundary. */
+const TABLE_LANE_SUFFIX = 'table-lane';
+
+function tableLaneLedgerIds(rows: readonly QueryResultRow[]): string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (!Boolean(row.is_table_lane)) continue;
+    if (row.request_id === null || row.request_id === undefined) continue;
+    ids.add(deriveAddonRequestId(String(row.request_id), TABLE_LANE_SUFFIX));
+  }
+  return [...ids];
+}
+
+/** The credit_transactions side of a derived table-lane debit: each
+ * 'question_cost' debit under one of `requestIds` minus the compensations
+ * that reversed it — the same debit-minus-compensations rule as
+ * getThreadRows' ledger_net, a local query per this module's boundary (the
+ * sibling of src/billing/history.ts's getTableLaneLedgerNetCosts). Skipped
+ * when the thread has no table-lane row. */
+async function queryTableLaneLedgerNetCosts(
+  db: Db,
+  userId: string,
+  requestIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (requestIds.length === 0) return new Map();
+  const { rows } = await db.query(
+    `select
+       d.request_id as request_id,
+       (-d.delta) - coalesce(
+         (select sum(c.delta) from credit_transactions c
+           where c.reason = 'compensation' and c.related_transaction_id = d.id),
+         0
+       ) as net
+     from credit_transactions d
+     where d.user_id::text = $1
+       and d.reason = 'question_cost'
+       and d.request_id = any($2::uuid[])`,
+    [userId, requestIds],
+  );
+  const result = new Map<string, number>();
+  for (const row of rows) {
+    const id = String(row.request_id);
+    result.set(id, (result.get(id) ?? 0) + Number(row.net));
+  }
+  return result;
 }
 
 /** #246 fix (session 109): the local, threads-module copy of
@@ -541,17 +604,30 @@ async function queryBucketNetCosts(db: Db, userId: string, requestIds: readonly 
  * matching debit; non-Pro byte-identity holds because a non-Pro user never
  * has a pro_bucket_ledger row at all, so `bucketNetCosts` is always empty
  * for them and this collapses to exactly the pre-#246 ledger-only value. */
-function resolveThreadRowCreditsCharged(row: QueryResultRow, bucketNetCosts: Map<string, number>): number | null {
-  const ledgerNet = Number(row.ledger_net);
-  const ledgerHasDebit = Boolean(row.ledger_has_debit);
+function resolveThreadRowCreditsCharged(
+  row: QueryResultRow,
+  bucketNetCosts: Map<string, number>,
+  tableLaneLedgerNetCosts: Map<string, number>,
+): number | null {
+  let ledgerNet = Number(row.ledger_net);
+  let ledgerHasDebit = Boolean(row.ledger_has_debit);
   let bucketNet = 0;
   let bucketHasDebit = false;
   if (row.request_id !== null && row.request_id !== undefined) {
     const requestId = String(row.request_id);
+    const laneId = Boolean(row.is_table_lane) ? deriveAddonRequestId(requestId, TABLE_LANE_SUFFIX) : null;
+    if (laneId !== null) {
+      const laneLedgerNet = tableLaneLedgerNetCosts.get(laneId);
+      if (laneLedgerNet !== undefined) {
+        ledgerHasDebit = true;
+        ledgerNet += laneLedgerNet;
+      }
+    }
     for (const candidate of [
       requestId,
       deriveAddonRequestId(requestId, 'websearch'),
       deriveAddonRequestId(requestId, 'dataset'),
+      ...(laneId !== null ? [laneId] : []),
     ]) {
       const net = bucketNetCosts.get(candidate);
       if (net !== undefined) {

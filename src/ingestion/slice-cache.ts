@@ -95,6 +95,17 @@ export async function registerSchemaOnly(
   db: Db,
   source: CbsSource,
   tableId: string,
+  /** Breadth step 5 (the table-lane job): the schema the caller JUST fetched
+   * from this same `source` for this table, and its code lists — either
+   * already fetched, or a loader this function calls only AFTER its
+   * schema-only refusals (so `no_cbs_modified` / `no_time_dimension` still
+   * refuse before any code-list fetch; the caller memoizes the loader and
+   * reuses the lists). A first registration then fetches nothing twice.
+   * Absent ⇒ fetched here, exactly as before. */
+  prefetched?: {
+    schema: CbsTableSchema;
+    codeLists?: Record<string, CbsCode[]> | (() => Promise<Record<string, CbsCode[]>>);
+  },
 ): Promise<SchemaOnlyResult> {
   const existing = await db.query('select ingest_mode, units from cbs_tables where id = $1', [tableId]);
   if (existing.rows.length > 0) {
@@ -112,7 +123,10 @@ export async function registerSchemaOnly(
     return { ok: true, tableId, numericMeasures: Object.keys(units).sort(), alreadyRegistered: true };
   }
 
-  const schema = await source.fetchTableSchema(tableId);
+  if (prefetched !== undefined && prefetched.schema.tableId !== tableId) {
+    throw new Error(`registerSchemaOnly: prefetched schema is for "${prefetched.schema.tableId}", not "${tableId}"`);
+  }
+  const schema = prefetched?.schema ?? (await source.fetchTableSchema(tableId));
 
   // Controller ruling, fix round 1: a slice-cache table's ONLY freshness
   // signal is CBS's own 'Modified' date — a source that cannot state one
@@ -141,7 +155,13 @@ export async function registerSchemaOnly(
     };
   }
 
-  const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+  const given = prefetched?.codeLists;
+  const codeLists =
+    given === undefined
+      ? await fetchAllCodeLists(source, tableId, schema.dimensions)
+      : typeof given === 'function'
+        ? await given()
+        : given;
   const periodCodes: CbsCode[] = codeLists[periodDim.name] ?? [];
   if (periodCodes.length === 0) {
     return {

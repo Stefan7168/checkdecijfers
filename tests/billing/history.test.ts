@@ -30,6 +30,12 @@ import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import { debitBucket, grantBucket } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createPendingRequest, finalizeDelivered, finalizeFailed } from '../../src/ingestion/onboarding-store.ts';
+import {
+  claimTableLaneRequest,
+  createTableLaneRequest,
+  finishTableLaneRequest,
+  readTableLaneNetCost,
+} from '../../src/ingestion/table-lane-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { resetTestDb } from '../helpers/reset-db.ts';
 
@@ -1318,6 +1324,155 @@ describe('getQuestionHistory — Pro bucket cost display (#246 fix, session 109)
       await getQuestionHistory(db, userId);
       const after = { ledger: await countRows('credit_transactions'), bucket: await countRows('pro_bucket_ledger') };
       expect(after).toEqual(before);
+    });
+  });
+});
+
+// Breadth step 5 (Task 5): a table-lane row's question debit is stored under
+// the DERIVED ledger id deriveAddonRequestId(requestId, 'table-lane') (the
+// routing turn already debited-and-refunded the raw id). The lane's audit row
+// carries the raw request id plus a `tableLane` envelope key, so the caption
+// must net that derived debit for lane rows — and only for them, so the free
+// routing row sharing the raw id never shows the lane's cost too.
+describe('getQuestionHistory — table-lane rows (breadth step 5)', () => {
+  async function laneTurn(
+    db: Db,
+    userId: string,
+    outcome: 'answer' | 'clarification' | 'refusal',
+    opts: { routed: boolean; link?: boolean; finish?: boolean },
+  ): Promise<{ routingAuditId: number | null; laneAuditId: number | null; rowId: number }> {
+    const requestId = randomUUID();
+    let routingAuditId: number | null = null;
+    if (opts.routed) {
+      // the routing turn: the curated onboarding_pending refusal, free (gate refund)
+      routingAuditId = await insertAuditRow(db, userId, {
+        kind: 'refusal',
+        question: 'Hoeveel woningen?',
+        finalText: 'wordt voorbereid',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'refusal', question: 'q', text: 'x' } as unknown as AuditedResponse['response'],
+        auditId: routingAuditId,
+      }));
+      expect(gated).toMatchObject({ kind: 'ok', netCost: 0 });
+    }
+    const created = await createTableLaneRequest(db, {
+      userId,
+      requestId,
+      threadId: null,
+      lang: 'nl',
+      question: 'Hoeveel woningen?',
+      tableId: '85000NED',
+      finderConfidence: 0.9,
+      // final review I2: the stored link from the lane row to its routing turn
+      ...(opts.link === false ? {} : { routingAuditId }),
+    });
+    if (created.kind !== 'created') throw new Error(created.kind);
+    if (opts.finish === false) return { routingAuditId, laneAuditId: null, rowId: created.row.id };
+    const claimed = await claimTableLaneRequest(db);
+    expect(claimed!.id).toBe(created.row.id);
+    const laneAuditId = await insertAuditRow(db, userId, {
+      kind: outcome,
+      question: 'Hoeveel woningen?',
+      finalText: 'lane',
+      requestId,
+      envelope: { tableLane: { rowId: created.row.id } },
+    });
+    await finishTableLaneRequest(db, created.row.id, 1, { kind: outcome, auditId: laneAuditId });
+    return { routingAuditId, laneAuditId, rowId: created.row.id };
+  }
+
+  for (const outcome of ['answer', 'clarification', 'refusal'] as const) {
+    it(`a lane ${outcome} is ONE entry with the settled lane cost; the linked routing row is hidden (final review I2)`, async () => {
+      await withDb(async (db) => {
+        await applyPricingDefaults(db);
+        const userId = randomUUID();
+        await db.query('update signup_grant_config set credits = 100');
+        await db.query('select public.grant_signup_credits($1)', [userId]);
+        const { routingAuditId, laneAuditId, rowId } = await laneTurn(db, userId, outcome, { routed: true });
+        const history = await getQuestionHistory(db, userId);
+        expect(history).toHaveLength(1);
+        const lane = history.find((h) => h.id === laneAuditId);
+        expect(lane!.creditsCharged).toBe(await readTableLaneNetCost(db, rowId, userId));
+        expect(lane!.creditsCharged).toBe({ answer: 20, clarification: 10, refusal: 0 }[outcome]);
+        // the routing turn (onboarding wait text promising an e-mail the lane
+        // never sends) is never listed as a second entry
+        expect(history.find((h) => h.id === routingAuditId)).toBeUndefined();
+      });
+    });
+  }
+
+  it('an UNLINKED routing row (no stored link) stays its own free entry — it never shows the lane cost', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const { routingAuditId } = await laneTurn(db, userId, 'answer', { routed: true, link: false });
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(2);
+      expect(history.find((h) => h.id === routingAuditId)!.creditsCharged).toBe(0);
+    });
+  });
+
+  it('while the lane row is still pending the routing row is hidden too (no false e-mail promise)', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      await laneTurn(db, userId, 'answer', { routed: true, finish: false });
+      expect(await getQuestionHistory(db, userId)).toEqual([]);
+    });
+  });
+
+  it('without migration 038 (table absent) the scan never references table_lane_requests', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await insertAuditRow(db, userId, { kind: 'refusal', question: 'q', finalText: 'x', requestId: randomUUID() });
+      const seen: string[] = [];
+      const pre038: Db = {
+        query: async (sql, params) => {
+          seen.push(sql);
+          if (/to_regclass\('public\.table_lane_requests'\)/.test(sql)) return { rows: [{ t: null }] };
+          return db.query(sql, params);
+        },
+        withTransaction: (fn) => db.withTransaction(fn),
+      };
+      const history = await getQuestionHistory(pre038, userId);
+      expect(history).toHaveLength(1);
+      const scans = seen.filter((sql) => /from audit_answers a/.test(sql));
+      expect(scans).toHaveLength(1);
+      expect(scans[0]).not.toMatch(/table_lane_requests/);
+    });
+  });
+
+  it('a button-reply child row (no routing debit on its raw id) shows its own lane cost', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const { laneAuditId } = await laneTurn(db, userId, 'answer', { routed: false });
+      const history = await getQuestionHistory(db, userId);
+      expect(history.find((h) => h.id === laneAuditId)!.creditsCharged).toBe(20);
+    });
+  });
+
+  it('a Pro split lane debit (bucket + ledger, both under the derived id) is netted in full', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
+      const { laneAuditId, rowId } = await laneTurn(db, userId, 'clarification', { routed: false });
+      const history = await getQuestionHistory(db, userId);
+      expect(history.find((h) => h.id === laneAuditId)!.creditsCharged).toBe(10);
+      expect(await readTableLaneNetCost(db, rowId, userId)).toBe(10);
     });
   });
 });

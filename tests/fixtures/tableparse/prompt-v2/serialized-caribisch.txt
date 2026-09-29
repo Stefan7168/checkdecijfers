@@ -1,0 +1,141 @@
+Volledige vraag van de gebruiker: "Hoe gezond voelen mensen zich?"
+Tabel: 82291NED — Caribisch NL: gezondheid en aandoeningen; persoonskenmerken
+
+Maten in deze tabel:
+1. measureCode=D005390 | eenheid=%
+   titel: Zeer goed/goed
+   groep: Ervaren gezondheid
+   omschrijving: % personen met antwoordcategorie 'zeer goed' of 'goed' op de vraag naar de algemene gezondheid.
+2. measureCode=D000109 | eenheid=%
+   titel: Minder dan goed
+   groep: Ervaren gezondheid
+   omschrijving: % personen met de antwoordcategorie 'gaat wel', 'slecht' of 'zeer slecht' op de vraag naar de algemene gezondheid.
+3. measureCode=M005476_2 | eenheid=%
+   titel: Suikerziekte totaal
+   groep: Suikerziekte
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte?
+4. measureCode=A026144 | eenheid=%
+   titel: Suikerziekte type 1
+   groep: Suikerziekte
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? En met 'ja' op twee vervolgvragen: Gebruikt u hiervoor op dit moment insuline? én Bent u insuline gaan gebruiken binnen 6 maanden nadat bij u suikerziekte was vastg…
+5. measureCode=A026145 | eenheid=%
+   titel: Suikerziekte type 2
+   groep: Suikerziekte
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? en niet behorend tot de suikerziekte type1 personen.
+6. measureCode=D005213 | eenheid=%
+   titel: Aandoeningen van de nek of schouder
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van nek of schouder?
+7. measureCode=D005351 | eenheid=%
+   titel: Astma, chronische bronchitis, CARA
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van astma of COPD, hieronder valt ook chronische bronchitis, longemfyseem?
+8. measureCode=D008020 | eenheid=%
+   titel: Chikungunya
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden chikungunya gehad?
+9. measureCode=D005372 | eenheid=%
+   titel: Chronisch eczeem
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronisch eczeem?
+10. measureCode=D005373 | eenheid=%
+   titel: Chronische gewrichtsontsteking
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronische gewrichtsontsteking, bijvoorbeeld ontstekingsreuma, chronische reuma of reumatoïde artritis?
+11. measureCode=D005378 | eenheid=%
+   titel: Darmstoornissen langer dan 3 maanden
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van ernstige of hardnekkige darmstoornissen?
+12. measureCode=D005385 | eenheid=%
+   titel: Duizeligheid met vallen
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van duizeligheid met vallen?
+13. measureCode=D005396 | eenheid=%
+   titel: Gewrichtsslijtage van heupen of knieën
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van gewrichtsslijtage van heupen of knieën, bijvoorbeeld artrose of slijtagereuma?
+14. measureCode=D005402 | eenheid=%
+   titel: Hoge bloeddruk
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van hoge bloeddruk?
+15. measureCode=D005424 | eenheid=%
+   titel: Knokkelkoorts
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van knokkelkoorts?
+16. measureCode=D005435 | eenheid=%
+   titel: Migraine of ernstige hoofdpijn
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van migraine of regelmatig ernstige hoofdpijn?
+17. measureCode=D005444 | eenheid=%
+   titel: Onvrijwillig urineverlies, incontinentie
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van onvrijwillig urineverlies, ook wel incontinentie genoemd?
+18. measureCode=D005470 | eenheid=%
+   titel: Rugaandoening
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van de rug?
+19. measureCode=D005487 | eenheid=%
+   titel: Vernauwing bloedvaten in buik of benen
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van vernauwing van de bloedvaten in de buik of de benen, geen spataderen?
+20. measureCode=D008021 | eenheid=%
+   titel: Zika
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden het zikavirus gehad? In de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psorias…
+21. measureCode=D005448 | eenheid=%
+   titel: Overige aandoeningen
+   groep: Aandoeningen afgelopen 12 maanden
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van nog een andere langdurige ziekte of aandoening?
+22. measureCode=M005361 | eenheid=%
+   titel: Beroerte, hersenbloeding, herseninfarct
+   groep: Langdurige aandoeningen, ooit gehad
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een beroerte, hersenbloeding of herseninfarct gehad?
+23. measureCode=M005401 | eenheid=%
+   titel: Hartinfarct
+   groep: Langdurige aandoeningen, ooit gehad
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een hartinfarct of hartaanval gehad?
+24. measureCode=M005400 | eenheid=%
+   titel: Hartaandoening
+   groep: Langdurige aandoeningen, ooit gehad
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een andere ernstige hartaandoening gehad, zoals hartfalen of angina pectoris. Dit laatste wordt ook wel hartkramp genoemd?
+25. measureCode=M005422 | eenheid=%
+   titel: Kanker
+   groep: Langdurige aandoeningen, ooit gehad
+   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een vorm van kanker gehad?
+26. measureCode=D001530 | eenheid=%
+   titel: % geen langdurige aandoeningen
+   groep: % personen met aandoeningen
+   omschrijving: Het percentage personen dat geen van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…
+27. measureCode=D001406 | eenheid=%
+   titel: % 1 langdurige aandoening
+   groep: % personen met aandoeningen
+   omschrijving: Het percentage personen dat één van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontstekin…
+28. measureCode=D001448 | eenheid=%
+   titel: % 2 langdurige aandoeningen
+   groep: % personen met aandoeningen
+   omschrijving: Het percentage personen dat twee van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…
+29. measureCode=D008022 | eenheid=%
+   titel: % 3 of meer langdurige aandoeningen
+   groep: % personen met aandoeningen
+   omschrijving: Het percentage personen dat drie of meer van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichts…
+
+Uitsplitsingen in deze tabel:
+- dimensie=CaribischNederland | titel: Caribisch Nederland
+    CN01 — Caribisch Nederland
+    GM9001 — Bonaire
+    GM9002 — Sint-Eustatius
+    GM9003 — Saba
+- dimensie=Persoonskenmerken | titel: Persoonskenmerken
+    T009002 — Totaal personen
+    3000 — Geslacht: mannen
+    4000 — Geslacht: vrouwen
+    53050 — Leeftijd: 15 tot 25 jaar
+    53310 — Leeftijd: 25 tot 45 jaar
+    53715 — Leeftijd: 45 tot 65 jaar
+    80200 — Leeftijd: 65 jaar of ouder
+    2018700 — Onderwijsniveau: Laag
+    2018740 — Onderwijsniveau: Middelbaar
+    2018790 — Onderwijsniveau: Hoog
+
+Beschikbare periode-precisies: JJ (jaar)
+Regio's: deze tabel kent geen regio's.

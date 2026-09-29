@@ -31,6 +31,8 @@ import type { TableParseSchema } from '../../../src/answer/table-parse/input.ts'
 import { findGrandTotal } from '../../../src/query/breakdowns.ts';
 import {
   buildTableParseRequest,
+  serializeTableParseInput,
+  tableParsePrefilterText,
   validateTableParseOutput,
   TableParseAmbiguousMeasureError,
   TableParseRegionUnavailableError,
@@ -39,6 +41,7 @@ import {
 import {
   buildDryRunRows,
   buildLabelIndex,
+  caseParseInput,
   expectedErrorClass,
   loadLabelledSet,
   loadTableFixture,
@@ -144,7 +147,9 @@ describe('tableparse-labelled-set.json — integrity', () => {
       expect(schemaFixtureExists(c.table)).toBe(true);
 
       const { schema, codeLists } = loadTableFixture(c.table);
-      const input = buildTableParseSchema(schema, codeLists, c.question);
+      // Task 7: the menu planTableLane builds — a follow-up's pre-filter also
+      // reads its previous question.
+      const { input } = caseParseInput(c);
 
       // --- measure -------------------------------------------------------
       const measureCodes = schema.measures.map((m) => m.code);
@@ -347,14 +352,54 @@ describe('tableparse-labelled-set.json — integrity', () => {
   });
 });
 
+// Breadth step 5, Task 7: follow-ups reuse the previous answer's table; the
+// parser reads the previous question (prompt version 3).
+describe('tableparse-labelled-set.json — follow-up cases (Task 7)', () => {
+  const followUps = set.cases.filter((c) => c.id.startsWith('followup-'));
+
+  it('has at least 4 follow-up cases, each with a previous question, and only follow-up cases carry one', () => {
+    expect(followUps.length).toBeGreaterThanOrEqual(4);
+    for (const c of set.cases) {
+      if (c.id.startsWith('followup-')) {
+        expect(typeof c.previousQuestion).toBe('string');
+        expect(c.previousQuestion!.length).toBeGreaterThan(0);
+      } else {
+        expect(c.previousQuestion).toBeUndefined();
+      }
+    }
+  });
+
+  it("covers the four follow-up shapes: another breakdown member, another year, another place, and a topic change → 'geen'", () => {
+    const byQuestion = new Map(followUps.map((c) => [c.question.toLowerCase(), c]));
+    expect(byQuestion.get('en voor vrouwen?')).toBeDefined();
+    expect(byQuestion.get('en in 2020?')).toBeDefined();
+    expect(byQuestion.get('en in utrecht?')).toBeDefined();
+    expect(followUps.some((c) => c.expect.measureCode === 'geen')).toBe(true);
+  });
+
+  it("a follow-up case's request carries the previous-question line (the eval sends exactly what planTableLane sends)", () => {
+    for (const c of followUps) {
+      const { input, request } = caseParseInput(c);
+      expect(request.question).toBe(serializeTableParseInput(c.question, input, c.previousQuestion));
+      expect(request.question.split('\n')[0]).toBe(`Vorige vraag in dit gesprek: ${JSON.stringify(c.previousQuestion)}`);
+    }
+  });
+
+  it('a standalone case builds the version-2 user turn (no previous-question line)', () => {
+    for (const c of set.cases.filter((x) => x.previousQuestion === undefined)) {
+      expect(caseParseInput(c).request.question.startsWith('Volledige vraag van de gebruiker: ')).toBe(true);
+    }
+  });
+});
+
 describe('tableparse-eval.ts — recorded-fixture labels (F7)', () => {
   it('maps every case\'s exact serialized user turn back to its own case id', () => {
     const index = buildLabelIndex(set.cases);
     expect(index.size).toBe(set.cases.length);
     for (const c of set.cases) {
       const { schema, codeLists } = loadTableFixture(c.table);
-      const input = buildTableParseSchema(schema, codeLists, c.question);
-      expect(index.get(buildTableParseRequest(c.question, input).question)).toBe(c.id);
+      const input = buildTableParseSchema(schema, codeLists, tableParsePrefilterText(c.question, c.previousQuestion ?? null));
+      expect(index.get(buildTableParseRequest(c.question, input, { previousQuestion: c.previousQuestion ?? null }).question)).toBe(c.id);
     }
   });
 

@@ -36,6 +36,10 @@ export type { ClickOption } from '../intent/types.ts';
 // PURE LEAF (never the module barrel) so the Anthropic SDK never enters this
 // widely-consumed types graph.
 import type { SourceSelection, WebSection } from '../../websearch/types.ts';
+// Breadth step 5 (table lane): the lane's present-only envelope key. A pure-
+// type import from the lane's LEAF types file (never respond.ts), so this
+// widely-consumed contract gains no runtime edge and no cycle.
+import type { TableLaneEnvelope } from '../table-lane/types.ts';
 
 export const RESPONSE_SCHEMA_VERSION = 1 as const;
 
@@ -138,6 +142,24 @@ export type RefusalReason =
    * our store (not CBS) and that asking again re-onboards them. Not in the
    * ⟨W3⟩ skip-list — like scope/freshness, the web section may still help. */
   | 'evicted'
+  /** Breadth step 5 (table lane, src/answer/table-lane/): the typed refusals
+   * of a question answered from a CBS table that is not (fully) in our
+   * database — one per TableLanePlan refusal reason (plan.ts), plus the job's
+   * two (`cbs_unreachable`, `table_lane_failed`). Deterministic nl + en
+   * templates (table-lane/templates.ts), no data value; every one carries the
+   * `tableLane` envelope key. Not 'internal': none pages the owner. */
+  | 'table_lane_ineligible'
+  | 'table_lane_no_measure'
+  | 'table_lane_unsure'
+  | 'table_lane_period_unsupported'
+  | 'table_lane_period_grain'
+  | 'table_lane_period_missing'
+  | 'table_lane_region_class'
+  | 'region_unknown'
+  | 'region_unavailable'
+  | 'table_lane_too_large'
+  | 'cbs_unreachable'
+  | 'table_lane_failed'
   /** Loud internal problems (data gap, failed derivation, inconsistency,
    * invalid intent, unparseable LLM output) — an honest "cannot answer this
    * reliably right now", never a partial or guessed answer. */
@@ -322,6 +344,10 @@ export interface AnswerResponse extends ResponseBase {
    * additive sibling, never a replacement (principle a: the Dutch pipeline
    * stays the one ground truth). */
   english?: EnglishRendering;
+  /** Breadth step 5 (table lane, Task 3): PRESENT-ONLY (docs/13) — set only
+   * by respondTableLane on the response it produces for a table-lane row;
+   * absent on every other envelope ⇒ byte-identical. Readers use `?? null`. */
+  tableLane?: TableLaneEnvelope;
 }
 
 export interface ClarificationResponse extends ResponseBase {
@@ -348,6 +374,10 @@ export interface ClarificationResponse extends ResponseBase {
    * every Dutch or lang-less envelope (benchmark, CLI, tests) — byte-
    * identical to a pre-#332-phase-2 run. */
   english?: NonAnswerEnglish;
+  /** Breadth step 5 (table lane, Task 3): PRESENT-ONLY (docs/13) — set only
+   * by respondTableLane on the response it produces for a table-lane row;
+   * absent on every other envelope ⇒ byte-identical. Readers use `?? null`. */
+  tableLane?: TableLaneEnvelope;
 }
 
 export interface RefusalResponse extends ResponseBase {
@@ -404,6 +434,10 @@ export interface RefusalResponse extends ResponseBase {
    * every Dutch or lang-less envelope (benchmark, CLI, tests) — byte-
    * identical to a pre-#332-phase-2 run. */
   english?: NonAnswerEnglish;
+  /** Breadth step 5 (table lane, Task 3): PRESENT-ONLY (docs/13) — set only
+   * by respondTableLane on the response it produces for a table-lane row;
+   * absent on every other envelope ⇒ byte-identical. Readers use `?? null`. */
+  tableLane?: TableLaneEnvelope;
 }
 
 export type ComposedResponse = AnswerResponse | ClarificationResponse | RefusalResponse;

@@ -74,6 +74,16 @@ const nl = {
   // byte-pinned pipeline copy (ONBOARDING_OFFER_TEXT) it sits next to, since
   // it's chrome (a button caption), not the CBS pipeline's own Dutch output.
   'chat.onboardingOfferButton': 'Haal op voor {n} credits',
+  // Breadth step 5 (Task 6): the table lane's chat chrome - progress bubble,
+  // over-budget and gave-up lines, and the breakdown question's hint/no-match
+  // lines. The over-budget wording is fixed by the plan's Global Constraints.
+  'tableLane.progress': 'CBS-tabel ophalen…',
+  'tableLane.slow': 'Dit duurt langer dan normaal. Het antwoord verschijnt in dit gesprek zodra het klaar is.',
+  'tableLane.notReady': 'Het antwoord is nog niet klaar. Het verschijnt in dit gesprek zodra het er is.',
+  'tableLane.moreOptionsHint': 'Staat je keuze er niet bij? Typ de naam.',
+  'tableLane.noMatch':
+    'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+  'tableLane.replyGone': 'Deze keuzevraag staat niet meer open. Stel je vraag opnieuw.',
   'chat.dockedChipChart': 'Grafiek in het paneel →',
   'chat.dockedChipCard': 'Kaart in het paneel →',
   // The owner-mandated busy-text honesty distinction (CBS vs web vs both) —
@@ -1604,6 +1614,14 @@ const en: Messages = {
   'chat.replyCostSuffix': ' · answering the follow-up question costs ~{price} credits',
   'chat.costCredits': '{n} credits',
   'chat.onboardingOfferButton': 'Fetch for {n} credits',
+  'tableLane.progress': 'Fetching the CBS table…',
+  'tableLane.slow':
+    'This is taking longer than usual. The answer will appear in this conversation as soon as it is ready.',
+  'tableLane.notReady': 'The answer is not ready yet. It will appear in this conversation as soon as it is.',
+  'tableLane.moreOptionsHint': 'Not listed? Type the name.',
+  'tableLane.noMatch':
+    'That name is not in this table\'s list. Pick a button or type the name exactly as CBS calls it.',
+  'tableLane.replyGone': 'This question is no longer open. Please ask your question again.',
   'chat.dockedChipChart': 'Chart in panel →',
   'chat.dockedChipCard': 'Card in panel →',
   'chat.busyBoth': 'Searching CBS figures and the web…',

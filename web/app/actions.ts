@@ -7,6 +7,8 @@
 // to this one file.
 'use server';
 
+import { randomUUID } from 'node:crypto';
+
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
@@ -36,8 +38,7 @@ import type { RequestUrlsByBatch } from '../lib/answer-proof.ts';
 import { deleteUserChartStyle } from '../backend/chart/user-styles.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
-import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
-import type { PendingClarification } from '../backend/answer/respond/types.ts';
+import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 // WP26 mechanism A (ADR 024): the click-option trust boundary — the reply
 // turn's counterpart to validateConversationContext above.
 import { withValidatedClickOptions } from '../backend/answer/respond/validate-pending.ts';
@@ -66,7 +67,7 @@ import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts
 // FROM yet), a different case from #148's drift bug — the real charge at
 // confirm time always re-reads the live price itself, same as any other
 // price display in this product.
-import { onboardingPrice, triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
+import { onboardingPrice, sliceCacheTableIds, triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
 import {
   signOnboardingOffer,
   verifyOnboardingOffer,
@@ -84,6 +85,9 @@ import {
   ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN,
   ONBOARDING_PENDING_TEXT,
   ONBOARDING_PENDING_TEXT_EN,
+  // Breadth step 5 (Task 5): pollTableLane's fail-closed refusal for a
+  // finished row whose audit write failed (the same one the pipeline shows).
+  toInternalRefusal,
 } from '../backend/answer/respond/refusals.ts';
 import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
 import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
@@ -124,6 +128,24 @@ import { getLang } from '../lib/i18n/server.ts';
 // contract (reportError never throws) — see web/lib/error-report.ts.
 import { reportError } from '../lib/error-report.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
+// Breadth step 5 (Task 5): the table lane — its store (our db only), its job
+// kick (post-response, like the onboarding kick) and its request-path helpers.
+import {
+  createTableLaneRequest,
+  readTableLaneAuditResult,
+  readTableLaneDimensionMembers,
+  readTableLaneNetCost,
+  readTableLaneRequest,
+} from '../backend/ingestion/table-lane-store.ts';
+import type { TableLaneEnvelope } from '../backend/answer/table-lane/types.ts';
+import type { TableLaneRow } from '../backend/ingestion/table-lane-store.ts';
+import { buildTableLaneRefusal } from '../backend/answer/table-lane/templates.ts';
+import type { OnboardingRouting, TableFinder } from '../backend/answer/intent/policy.ts';
+import { kickTableLaneJob } from '../lib/table-lane-kick.ts';
+import { matchBreakdownReply, tableLaneEnabled } from '../lib/table-lane.ts';
+import type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
+export type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
+import { referenceDate, semanticCheckOptions } from '../lib/turn-options.ts';
 import { createClient } from '../lib/supabase-server.ts';
 // #149 (session-47 hunt): the SAME UUID-shape check the trial action already
 // uses (trial-actions.ts) — reused, not duplicated, to close the identical
@@ -137,20 +159,9 @@ import { isUuid } from '../lib/trial.ts';
 // covered by Proxy without anyone noticing, so every Server Function must
 // verify itself (web/lib/current-user.ts).
 
-// The one legitimate un-pinned clock in the codebase — every other call site
-// (tests, hermetic CI, the benchmark runner) injects a fixed reference date.
-// Computed in the product's own timezone (WP12 review): a plain UTC date is
-// still yesterday for up to two hours after midnight in the Netherlands,
-// which would skew relative-period resolution ("vorige maand").
-function referenceDate(): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Amsterdam',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
+// referenceDate() — 'today' in Europe/Amsterdam, the one un-pinned clock —
+// and semanticCheckOptions() (#144) live in web/lib/turn-options.ts, shared
+// with the onboarding-cron delivery re-run and the table-lane job.
 
 // Infra guard, not a pipeline rule: bounds single-request token spend on the
 // public endpoint (the client input caps at 500 chars; this is the belt
@@ -341,14 +352,6 @@ function validateSelection(raw: unknown): SourceSelection | undefined {
   return { sources, web: obj.web === true };
 }
 
-// #144 (ADR 034): the semantic checker's construction seam — DORMANT until the
-// owner-supervised go-live sets SEMANTIC_CHECK_ENABLED='1' (fixture-recorded
-// calibration first; the RUNBOOK step). SEMANTIC_CHECK_FAILMODE carries the
-// recorded owner decision on checker-call failures: 'closed' → a checker error
-// rejects the body down the R3 ladder (template fallback); anything else →
-// fail open (the body already passed the FULL deterministic validator — the
-// checker is defense-in-depth, not the primary gate). While dormant, no path
-// constructs the client and zero extra LLM calls or spend exist.
 // WP26 mechanism A (ADR 024): the clickable-clarification rollout flag —
 // DORMANT until the owner-supervised go-live sets CLARIFY_CLICK_ENABLED='1'
 // (the #53/#144 dormancy pattern). While unset, policy.ts builds no options,
@@ -367,16 +370,6 @@ function clickOptionsEnabled(): boolean {
 // and roll back, each mechanism on its own.
 function answerFirstEnabled(): boolean {
   return process.env.ANSWER_FIRST_ENABLED === '1';
-}
-
-function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Record<string, never> {
-  if (process.env.SEMANTIC_CHECK_ENABLED !== '1') return {};
-  return {
-    semanticCheck: {
-      client: new AnthropicLlmClient(),
-      mode: process.env.SEMANTIC_CHECK_FAILMODE === 'closed' ? 'fail_closed' : 'fail_open',
-    },
-  };
 }
 
 // #162 (ADR-DRAFT slot-filling, hermetic half): the number-free-phrasing
@@ -447,6 +440,12 @@ export interface AskOutcome {
    * `buildAnswerProof` call sites ADR 048 Amendment 6 named, see
    * open-questions #252). */
   proofRequestUrls: RequestUrlsByBatch | null;
+  /** Breadth step 5 (Task 5): present only on the turn askQuestion routed to
+   * the table lane (TABLE_LANE_ENABLED, a thread-aware curated miss the finder
+   * matched to a CBS table): the queued table_lane_requests row the client
+   * polls (pollTableLane) while it shows a progress bubble instead of this
+   * turn's routing refusal. Null on every other outcome. */
+  tableLane: { rowId: number } | null;
 }
 
 // WP135 ⟨A1⟩: the ONLY thread write from the request path — a post-hoc UPDATE
@@ -535,6 +534,11 @@ export async function askQuestion(
   // (Dashboard/benchmark/runner) and NO thread work happens at all — today's
   // behavior byte-identical; benchmark rows keep thread_id NULL.
   rawThreadId?: unknown,
+  // Breadth step 5 (Task 7): the row id of the previous table-lane ANSWER in
+  // this conversation (untrusted, client-held — see validateTableLaneFollowUp).
+  // Read only behind TABLE_LANE_ENABLED on a thread-aware turn; absent or
+  // invalid ⇒ today's path exactly.
+  rawTableLaneFollowUp?: unknown,
 ): Promise<AskOutcome> {
   guardLength(question);
   guardRequestId(requestId);
@@ -544,7 +548,7 @@ export async function askQuestion(
   const lang = await getLang();
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
   }
   // ⟨A1⟩ READ-ONLY ownership check (never an INSERT); a forged/foreign id
   // coerces to null → a fresh thread, never a cross-attach, never a leak.
@@ -556,6 +560,12 @@ export async function askQuestion(
   // WP129+130 (#129, ADR 032): validate the untrusted selection payload BEFORE
   // the gate (never throws; forced undefined while the flag is off).
   const selection = validateSelection(rawSelection);
+  // Breadth step 5 (Task 7): the follow-up link, validated BEFORE the gate
+  // (read-only, never throws). Flag off or not thread-aware ⇒ never read.
+  const followUp =
+    threadAware && tableLaneEnabled() && rawTableLaneFollowUp !== undefined
+      ? await validateTableLaneFollowUp(userId, requestId, rawTableLaneFollowUp, validatedThreadId)
+      : null;
   // ⟨W4⟩ Upfront affordability (UX only, race-tolerated): a web-opted turn
   // transiently needs simple + web_addon = 30 in BOTH modes — the untouched
   // gate holds the base 20 before the pipeline, and the web reserve of 10
@@ -572,7 +582,7 @@ export async function askQuestion(
     if (balance < required) {
       // ⟨W4⟩/⟨A1⟩ early return: no gate, no audit id ⇒ no thread (lazy by
       // construction — an empty thread is never created here).
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
     }
   }
   // #112: loaded BEFORE the billing gate — the load is read-only and must
@@ -647,21 +657,93 @@ export async function askQuestion(
         // applies migrations 012+013 and sets the env vars, production
         // behaves byte-identically pre-WP16 — no finder, no per-question
         // rerank spend, no path that can touch the not-yet-migrated tables.
-        ...(process.env.ONBOARDING_ENABLED === '1'
+        //
+        // Breadth step 5 (Task 7, fix round 1 Ruling R14): a validated
+        // follow-up link wraps the finder slot as a FALLBACK — the real finder
+        // (when ONBOARDING_ENABLED) runs first and a confident pick of a
+        // DIFFERENT table wins; otherwise the previous lane answer's table is
+        // used. The slot is consulted only on a curated miss (the unmatched
+        // exit), so a curated hit always wins. `followUp` is null whenever the
+        // flag is off, so the ONBOARDING_ENABLED branch below is then exactly
+        // today's.
+        ...(followUp !== null
           ? {
-              tableFinder: buildOnboardingFinder({
-                db: getDb(),
-                userId,
-                rerankClient: new AnthropicLlmClient(),
-              }),
+              tableFinder: tableLaneFollowUpFinder(
+                followUp,
+                process.env.ONBOARDING_ENABLED === '1'
+                  ? buildOnboardingFinder({ db: getDb(), userId, rerankClient: new AnthropicLlmClient() })
+                  : undefined,
+              ),
             }
-          : {}),
+          : process.env.ONBOARDING_ENABLED === '1'
+            ? {
+                tableFinder: buildOnboardingFinder({
+                  db: getDb(),
+                  userId,
+                  rerankClient: new AnthropicLlmClient(),
+                }),
+              }
+            : {}),
         // ADR 058 (English answers, Task 8): dormant unless
         // ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English — {} ⇒
         // byte-identical to today (englishAnswerOptions's own dormancy).
         ...englishAnswerOptions(lang),
       }),
     );
+    // Breadth step 5 (Task 5): behind TABLE_LANE_ENABLED, a thread-aware
+    // curated miss the finder matched to a CBS table goes to the table lane
+    // (answered at the normal question price by the background job) instead
+    // of the 100-credit onboarding offer below. The routing turn itself stays
+    // free (the gate already refunded its refusal) and is NOT attached to the
+    // thread — the job attaches the lane's own audited answer. Only
+    // thread-aware callers (the workspace chat): the job creates a thread when
+    // the row has none, which a threadless caller (Dashboard) would never
+    // show. Flag off (or not thread-aware) ⇒ this block is skipped and the
+    // code below runs exactly as before.
+    // Fix round 1 (review Minor 1): set when a FOLLOW-UP LINK routing could
+    // not be queued while onboarding is dormant (see below).
+    let dormantLinkFailure = false;
+    // Final review M1: on a routable turn the web add-on is settled FIRST —
+    // before the lane row (and its debit) is created and before the kick —
+    // so a throwing settlement leaves nothing queued or charged. The holder is
+    // cleared once settled, so no later path (nor the catch) settles it again.
+    // Flag off (or not routable) ⇒ laneGated is `gated` itself and the code
+    // below runs exactly as before.
+    let laneGated: GatedResponse = gated;
+    if (threadAware && tableLaneEnabled() && tableLaneRoutable(gated) !== null) {
+      laneGated = await settleWebAddon(gated, webDebitHolder.split, webAddonPrice, userId);
+      webDebitHolder.split = null;
+      const routed = await routeToTableLane(laneGated, { userId, requestId, question, lang, validatedThreadId, followUp });
+      if (routed !== null && routed.kind === 'failed') {
+        // Nothing was charged (one transaction). A finder routing falls back
+        // to today's offer path (Task 5). A LINK routing exists even with
+        // ONBOARDING_ENABLED off, so there it must never reach the offer
+        // path: the turn becomes the lane's own free failure text instead.
+        dormantLinkFailure = routed.fromLink && process.env.ONBOARDING_ENABLED !== '1';
+      } else if (routed !== null) {
+        if (routed.kind === 'insufficient') {
+          // The routing refusal was refunded by the gate; the (normally
+          // absent) web add-on was already settled above.
+          return {
+            gated: { kind: 'insufficient_credits', balance: routed.balance, required: routed.required },
+            context: null,
+            threadId: null,
+            onboardingOffer: null,
+            proofRequestUrls: null,
+            tableLane: null,
+          };
+        }
+        after(() => kickTableLaneJob());
+        return {
+          gated: laneGated,
+          context: null,
+          threadId: validatedThreadId,
+          onboardingOffer: null,
+          proofRequestUrls: null,
+          tableLane: { rowId: routed.rowId },
+        };
+      }
+    }
     // WP16 sub-part 2 (ADR 026, design §2; confirm-first addendum, session
     // 101): if the pipeline acknowledged an onboarding fetch, the gate already
     // fully refunded the 20-credit question debit (net 0). Since #109's
@@ -671,11 +753,13 @@ export async function askQuestion(
     // never fabricates: it only reads a refusal the pipeline already produced
     // and audited, and its own failure (secret unset) degrades to an honest
     // "not available right now" with nothing charged or queued.
-    const { gated: finalGated, offer } = await maybeTriggerOnboarding(gated, {
-      userId,
-      requestId,
-      question,
-    });
+    const { gated: finalGated, offer } = dormantLinkFailure
+      ? { gated: withTableLaneFailedText(laneGated), offer: null }
+      : await maybeTriggerOnboarding(laneGated, {
+          userId,
+          requestId,
+          question,
+        });
     // ⟨W3⟩ Web add-on settlement on the FINAL gated object (post-onboarding) —
     // keep the +10 iff a cited web section shipped on an audited 'ok' turn,
     // else refund the taken debit (a no-op when none was taken).
@@ -683,7 +767,7 @@ export async function askQuestion(
     // WP135 ⟨A1⟩: attach the audited answer to its thread (created lazily if
     // this is a fresh chat). Only runs on a gated-ok outcome with an audit id.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
-    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: offer, proofRequestUrls: await outcomeProofRequestUrls(settled) };
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: offer, proofRequestUrls: await outcomeProofRequestUrls(settled), tableLane: null };
   } catch (error) {
     // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
     // compensated here (the base question debit is already compensated inside
@@ -768,6 +852,38 @@ async function maybeTriggerOnboarding(
     };
   }
 
+  // Ruling R16 (breadth step 5 final review): never offer a slice-cache
+  // table (filled per question by the table lane — its whole-table sync
+  // refuses, so the offer could only fail and refund). Flag on or off,
+  // Dashboard or workspace. A slice-cache pick gets the same honest
+  // "not available right now" text as the fail-closed branch above (nothing
+  // charged, nothing queued); slice-cache alternates are dropped from the
+  // candidate chain. Safe while migration 037 is unapplied: nothing then reads
+  // as slice-cache and the offer is exactly today's.
+  const sliceTables = await sliceCacheTableIds(getDb(), [
+    response.onboarding.tableId,
+    ...response.onboarding.candidateIds,
+  ]);
+  if (sliceTables.has(response.onboarding.tableId)) {
+    return {
+      gated: {
+        ...gated,
+        response: {
+          ...response,
+          text: ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+          ...(response.english
+            ? { english: { ...response.english, text: ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN } }
+            : {}),
+        },
+      },
+      offer: null,
+    };
+  }
+  const candidateIds =
+    sliceTables.size === 0
+      ? response.onboarding.candidateIds
+      : response.onboarding.candidateIds.filter((id) => !sliceTables.has(id));
+
   const token = signOnboardingOffer(
     {
       userId: ctx.userId,
@@ -778,7 +894,7 @@ async function maybeTriggerOnboarding(
       // WP27 stage B: the candidate chain rides the envelope into the token —
       // the same last in-memory link that used to go straight into the
       // trigger now waits inside the token for confirmOnboardingFetch instead.
-      candidateIds: response.onboarding.candidateIds,
+      candidateIds,
       questionText: ctx.question,
       ackAuditAnswerId: gated.auditId,
     },
@@ -800,6 +916,170 @@ async function maybeTriggerOnboarding(
       },
     },
     offer: { token, priceCredits },
+  };
+}
+
+// Breadth step 5 (Task 5): queue a table-lane request for a routable curated
+// miss. Routable = a gated-ok 'onboarding_pending' / 'onboarding_already_pending'
+// refusal whose onboarding envelope names a table (in practice only
+// 'onboarding_pending' carries one — buildOnboardingRefusal sets it null on the
+// 'already' copy). Returns null when the turn is not routable, AND when the
+// queue insert throws: createTableLaneRequest debits and inserts in ONE
+// transaction, so a throw has charged nothing, and the turn falls back to
+// today's offer path rather than failing (reported durably, #65). Reads and
+// writes only our own database — never CBS (principle b); the job does that.
+async function routeToTableLane(
+  gated: GatedResponse,
+  ctx: {
+    userId: string;
+    requestId: string;
+    question: string;
+    lang: 'nl' | 'en';
+    validatedThreadId: number | null;
+    /** Task 7: the validated previous lane answer (validateTableLaneFollowUp). */
+    followUp?: TableLaneRow | null;
+  },
+): Promise<
+  | { kind: 'queued'; rowId: number }
+  | { kind: 'insufficient'; balance: number; required: number }
+  | { kind: 'failed'; fromLink: boolean }
+  | null
+> {
+  const onboarding = tableLaneRoutable(gated);
+  if (onboarding === null || gated.kind !== 'ok') return null;
+  // Task 7: a follow-up (the routing came from the link's finder, so the
+  // table IS the previous answer's) continues that row: the job's parser reads
+  // the previous question (prompt version 3). Checked on the table id too, so
+  // only the link's own routing can ever carry it.
+  const followUp =
+    ctx.followUp != null && ctx.followUp.tableId === onboarding.tableId ? ctx.followUp : null;
+  try {
+    const result = await createTableLaneRequest(getDb(), {
+      userId: ctx.userId,
+      requestId: ctx.requestId,
+      threadId: ctx.validatedThreadId,
+      lang: ctx.lang,
+      question: ctx.question,
+      tableId: onboarding.tableId,
+      finderConfidence: onboarding.confidence,
+      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUpPreviousQuestion(followUp) } : {}),
+      // Final review I2/I3: the free routing turn this row replaces — the
+      // question history hides it, per-conversation deletion redacts it.
+      routingAuditId: gated.auditId,
+    });
+    if (result.kind === 'insufficient') return result;
+    return { kind: 'queued', rowId: result.row.id };
+  } catch (error) {
+    console.error('table-lane routing failed (falling back):', error);
+    await reportError('askQuestion.tableLane', error, { requestId: ctx.requestId, userId: ctx.userId });
+    return { kind: 'failed', fromLink: followUp !== null };
+  }
+}
+
+/** The onboarding envelope of a turn the table lane can take — a gated-ok
+ * 'onboarding_pending' / 'onboarding_already_pending' refusal that names a
+ * table — else null (see routeToTableLane). */
+function tableLaneRoutable(gated: GatedResponse): { tableId: string; confidence: number } | null {
+  if (gated.kind !== 'ok') return null;
+  const response = gated.response;
+  if (
+    response.kind !== 'refusal' ||
+    (response.reason !== 'onboarding_pending' && response.reason !== 'onboarding_already_pending') ||
+    response.onboarding === null ||
+    !response.onboarding.tableId
+  ) {
+    return null;
+  }
+  return response.onboarding;
+}
+
+/** Fix round 1 (review Minor 4): the previous-question context a follow-up
+ * row carries — the parent's own context plus the parent's question, keeping
+ * at most the TWO most recent prior questions, one per line (oldest first).
+ * Each question's own line breaks are flattened to spaces so the window is
+ * exact; the parser reads the result verbatim (JSON-quoted). */
+const FOLLOW_UP_MAX_PRIOR_QUESTIONS = 2;
+function followUpPreviousQuestion(parent: TableLaneRow): string {
+  const flat = (q: string) => q.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  const prior = parent.previousQuestion ? parent.previousQuestion.split('\n') : [];
+  return [...prior, flat(parent.question)].slice(-FOLLOW_UP_MAX_PRIOR_QUESTIONS).join('\n');
+}
+
+/** Fix round 1 (review Minor 1): the audited, gate-refunded routing refusal
+ * (net 0) shown with the table lane's own failure wording
+ * ('table_lane_failed' — "… niet gelukt. Je betaalt hier niets voor.") instead
+ * of an onboarding offer. The audited row is unchanged (the same text-only
+ * override the offer path applies); the reason stays the audited one. */
+function withTableLaneFailedText(gated: GatedResponse): GatedResponse {
+  if (gated.kind !== 'ok' || gated.response.kind !== 'refusal') return gated;
+  const response = gated.response;
+  const failed = buildTableLaneRefusal('table_lane_failed', {
+    tableId: response.onboarding?.tableId ?? '',
+    tableTitle: null,
+    detail: 'follow-up routing could not be queued',
+  });
+  return {
+    ...gated,
+    response: {
+      ...response,
+      text: failed.text,
+      ...(response.english && failed.en ? { english: { ...response.english, text: failed.en.text } } : {}),
+    },
+  };
+}
+
+// Breadth step 5 (Task 7): the follow-up link askQuestion received — the row
+// id of the previous table-lane ANSWER in this conversation, untrusted. Usable
+// only when it is the reader's own row (owner-scoped read), finished ('done')
+// with an ANSWER (a lane question, refusal or failure never becomes a
+// follow-up), and in the very thread this turn continues. Anything else — or a
+// failing read (reported, #65) — returns null: the link is ignored and the turn
+// takes today's path. Reads only our own database (principle b).
+async function validateTableLaneFollowUp(
+  userId: string,
+  requestId: string,
+  raw: unknown,
+  validatedThreadId: number | null,
+): Promise<TableLaneRow | null> {
+  if (!isTableLaneRowId(raw) || validatedThreadId === null) return null;
+  try {
+    const row = await readTableLaneRequest(getDb(), raw, userId);
+    if (row === null || row.status !== 'done' || row.outcomeKind !== 'answer' || row.threadId !== validatedThreadId) {
+      return null;
+    }
+    return row;
+  } catch (error) {
+    console.error('table-lane follow-up read failed (link ignored):', error);
+    await reportError('askQuestion.tableLaneFollowUp', error, { requestId, userId, extra: { rowId: raw } });
+    return null;
+  }
+}
+
+// Breadth step 5 (Task 7): the finder a validated follow-up link stands in
+// for. The pipeline consults a finder ONLY on its unmatched exit (a curated
+// miss — src/answer/intent/policy.ts resolveUnmatched), so this can never
+// override a curated answer; it answers the previous lane answer's table
+// without a catalog search (no rerank spend), as a fresh (never
+// already-pending) routing — routeToTableLane then queues the follow-up row.
+//
+// Fix round 1 (Ruling R14): the link is a FALLBACK, not an override. The real
+// finder (when available) runs first; a confident pick of a DIFFERENT table
+// wins and routes as a new question (routeToTableLane adds follow-up fields
+// only for the linked table), so a topic change is never answered from the
+// old table. No pick, no finder, or the same table ⇒ the linked table.
+function tableLaneFollowUpFinder(parent: TableLaneRow, finder: TableFinder | undefined): TableFinder {
+  return async (term: string, question: string): Promise<OnboardingRouting> => {
+    if (finder !== undefined) {
+      const pick = await finder(term, question);
+      if (pick !== null && pick.tableId !== parent.tableId) return pick;
+    }
+    return {
+      tableId: parent.tableId,
+      topicTerm: term,
+      confidence: parent.finderConfidence,
+      alreadyPending: false,
+      candidateIds: [parent.tableId],
+    };
   };
 }
 
@@ -865,7 +1145,7 @@ export async function replyToClarification(
   guardPending(pending);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
   }
   const threadAware = rawThreadId !== undefined;
   const validatedThreadId = threadAware
@@ -898,7 +1178,7 @@ export async function replyToClarification(
     const required = simplePrice + webAddonPrice;
     const balance = await getBalance(getDb(), userId);
     if (balance < required) {
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
     }
   }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
@@ -963,7 +1243,7 @@ export async function replyToClarification(
     // The reply path never injects a finder (see the comment above this
     // function's pipeline call), so no turn here can ever be an onboarding
     // offer — always null, never computed.
-    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: null, proofRequestUrls: await outcomeProofRequestUrls(settled) };
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: null, proofRequestUrls: await outcomeProofRequestUrls(settled), tableLane: null };
   } catch (error) {
     // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
     // base debit is already compensated inside chargeAndRun — ADR 020).
@@ -1077,6 +1357,190 @@ export async function confirmOnboardingFetch(token: string): Promise<ConfirmOnbo
       };
     case 'insufficient':
       return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
+  }
+}
+
+// Breadth step 5 (Task 5): the table lane's two Server Actions. Both read
+// ONLY our own database (principle b — CBS is contacted inside the job, never
+// here), both require the session user, and both treat an unknown id and
+// another user's row alike ('gone'), so a row's existence never leaks.
+
+const TABLE_LANE_GONE = { status: 'gone' } as const;
+
+/** A just-finished row's thread can lag its terminal status by a moment: the
+ * job settles first and attaches the thread after (fix round 1 of Task 4, so a
+ * superseded invocation never surfaces its answer). Within this window a done
+ * row with no thread read yet is reported as still running, so the client
+ * adopts the real thread instead of none; after it, the row is reported done
+ * with threadId null (a failed attach — never an invented id). */
+const TABLE_LANE_ATTACH_GRACE_MS = 15_000;
+
+function isTableLaneRowId(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+/** The client polls this while it shows the table lane's progress bubble. */
+export async function pollTableLane(rowId: number): Promise<PollTableLaneOutcome> {
+  if (!isTableLaneRowId(rowId)) return TABLE_LANE_GONE;
+  const userId = await currentUserId();
+  if (userId === null) return TABLE_LANE_GONE;
+  try {
+    const row = await readTableLaneRequest(getDb(), rowId, userId);
+    if (row === null) return TABLE_LANE_GONE;
+    if (row.status === 'pending' || row.status === 'running') return { status: row.status };
+    // done or failed: the row is settled (status and money move in one
+    // transaction), so the ledger now holds this turn's final cost.
+    const netCost = await readTableLaneNetCost(getDb(), row.id, userId);
+    if (netCost === null) return TABLE_LANE_GONE;
+    if (row.auditId === null) {
+      // The job's audit write failed twice; the row was settled as a refusal
+      // (full refund) with no audit row. Show the same fail-closed refusal
+      // the pipeline shows in that case — never an unrecorded answer.
+      return {
+        status: 'done',
+        gated: {
+          kind: 'ok',
+          netCost,
+          response: toInternalRefusal(row.question, 'table-lane: the outcome has no audit row', row.lang),
+          auditId: null,
+        },
+        threadId: row.threadId,
+      };
+    }
+    const audited = await readTableLaneAuditResult(getDb(), row.auditId, userId);
+    if (audited === null) return TABLE_LANE_GONE;
+    const threadId = audited.threadId ?? row.threadId;
+    if (
+      threadId === null &&
+      row.finishedAt !== null &&
+      Date.now() - row.finishedAt.getTime() < TABLE_LANE_ATTACH_GRACE_MS
+    ) {
+      return { status: 'running' };
+    }
+    return {
+      status: 'done',
+      gated: { kind: 'ok', netCost, response: audited.response as ComposedResponse, auditId: row.auditId },
+      threadId,
+    };
+  } catch (error) {
+    console.error('pollTableLane failed:', error);
+    await reportError('pollTableLane', error, { userId, extra: { rowId } });
+    throw error;
+  }
+}
+
+/** The table-lane button question a clarification row's audited envelope
+ * carries (TableLaneEnvelope.question), or null. */
+function tableLaneQuestionOf(response: unknown): NonNullable<TableLaneEnvelope['question']> | null {
+  if (response === null || typeof response !== 'object') return null;
+  const envelope = response as { kind?: unknown; tableLane?: { question?: unknown } };
+  if (envelope.kind !== 'clarification') return null;
+  const question = envelope.tableLane?.question;
+  if (question === null || question === undefined || typeof question !== 'object') return null;
+  const dimension = (question as { dimension?: unknown }).dimension;
+  if (typeof dimension !== 'string' || dimension.length === 0) return null;
+  return question as NonNullable<TableLaneEnvelope['question']>;
+}
+
+/** Server Action arguments are attacker-controlled: a reply is exactly one of
+ * `{ code }` or `{ text }`, each a bounded string; anything else is malformed
+ * (null → no match, free). An over-long text THROWS, like every other
+ * top-level text argument (guardLength). */
+function parseTableLaneChoice(choice: unknown): { code: string } | { text: string } | null {
+  if (choice === null || typeof choice !== 'object') return null;
+  const c = choice as { code?: unknown; text?: unknown };
+  if (typeof c.text === 'string' && c.code === undefined) {
+    guardLength(c.text);
+    return { text: c.text };
+  }
+  if (typeof c.code === 'string' && c.text === undefined && c.code.length <= MAX_INPUT_LENGTH) {
+    return { code: c.code };
+  }
+  return null;
+}
+
+/** A reader's reply to a table-lane button question — a clicked member code
+ * or typed text. Binding ruling (plan Global Constraints, verbatim): "A typed
+ * reply to a breakdown question is matched against ALL members of that
+ * dimension from `dimension_labels` (normalized exact title match, or exact
+ * code); no match → the same question again, free; never a nearest match."
+ * A clicked code is checked against the same FULL member list. A match queues
+ * a child row (the parent's question, table and choices plus this one, in the
+ * same thread) at the normal question price; no match creates nothing. */
+export async function replyToTableLane(
+  rowId: number,
+  choice: ReplyTableLaneChoice,
+  requestId: string,
+): Promise<ReplyTableLaneOutcome> {
+  const parsed = parseTableLaneChoice(choice);
+  if (!isTableLaneRowId(rowId)) return { kind: 'gone' };
+  // Final review I4: the kill switch covers replies too — a reply is new
+  // paid work (a fresh debit, parse and answer). Flag off ⇒ nothing is read or
+  // queued; the client shows its "no longer open" text for a click and sends
+  // typed text as a fresh question (Ruling R13). Rows that already hold
+  // credits are still finished by the daily sweep (Ruling R10).
+  if (!tableLaneEnabled()) return { kind: 'gone' };
+  const lang = await getLang();
+  const userId = await currentUserId();
+  if (userId === null) return { kind: 'gone' };
+  // The child row's request id: the client's own UUID (its idempotency key
+  // against a double click), else a fresh server-side one — audit_answers.
+  // request_id is a uuid column, so a non-UUID can never be stored.
+  const childRequestId =
+    typeof requestId === 'string' && requestId.length <= MAX_REQUEST_ID_LENGTH && isUuid(requestId)
+      ? requestId
+      : randomUUID();
+  try {
+    const db = getDb();
+    const parent = await readTableLaneRequest(db, rowId, userId);
+    if (parent === null || parent.status !== 'done' || parent.outcomeKind !== 'clarification' || parent.auditId === null) {
+      return { kind: 'gone' };
+    }
+    const audited = await readTableLaneAuditResult(db, parent.auditId, userId);
+    const question = audited === null ? null : tableLaneQuestionOf(audited.response);
+    if (audited === null || question === null) return { kind: 'gone' };
+    if (parsed === null) return { kind: 'no_match' };
+
+    const members = await readTableLaneDimensionMembers(db, parent.tableId, question.dimension);
+    const match =
+      'code' in parsed
+        ? members.some((m) => m.code === parsed.code)
+          ? { code: parsed.code }
+          : null
+        : matchBreakdownReply(parsed.text, members);
+    if (match === null) return { kind: 'no_match' };
+
+    const result = await createTableLaneRequest(db, {
+      userId,
+      requestId: childRequestId,
+      // The thread the job attached the question to (the audit row's), else
+      // the row's own — both read from the database, never from the client.
+      threadId: audited.threadId ?? parent.threadId,
+      lang,
+      question: parent.question,
+      tableId: parent.tableId,
+      finderConfidence: parent.finderConfidence,
+      parentId: parent.id,
+      previousQuestion: parent.previousQuestion,
+      choices: [...parent.choices, { dimension: question.dimension, code: match.code }],
+      // Final review I1: a lane question takes ONE reply — if it already has
+      // a child (a retry after a lost response, a second tab, a stale client),
+      // the store returns that child as a duplicate and charges nothing.
+      isReply: true,
+    });
+    if (result.kind === 'insufficient') {
+      return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
+    }
+    // A duplicate is this same reply retried, or this question's existing
+    // reply child (I1) — either way `started` with that row. A request id that
+    // already belongs to a row of another parent is never reused across rows.
+    if (result.kind === 'duplicate' && result.row.parentId !== parent.id) return { kind: 'gone' };
+    after(() => kickTableLaneJob());
+    return { kind: 'started', rowId: result.row.id };
+  } catch (error) {
+    console.error('replyToTableLane failed:', error);
+    await reportError('replyToTableLane', error, { requestId: childRequestId, userId });
+    throw error;
   }
 }
 

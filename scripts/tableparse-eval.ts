@@ -38,9 +38,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../src/cbs-adapter/types.ts';
 import { buildTableParseSchema } from '../src/answer/table-parse/input.ts';
+import type { TableParseSchema } from '../src/answer/table-parse/input.ts';
 import {
   buildTableParseRequest,
   tableParse,
+  tableParsePrefilterText,
   TableParseValidationError,
   TableParseRegionUnavailableError,
   TableParseAmbiguousMeasureError,
@@ -51,6 +53,7 @@ import {
   ReplayLlmClient,
   requestHash,
   type LlmClient,
+  type LlmRequest,
 } from '../src/answer/llm/client.ts';
 
 const SCHEMAS_DIR = fileURLToPath(new URL('../tests/fixtures/tableparse/schemas', import.meta.url));
@@ -66,6 +69,11 @@ export interface LabelledCase {
   id: string;
   table: string;
   question: string;
+  /** Breadth step 5, Task 7: a follow-up case — the previous table-lane
+   * question in the same conversation, sent as the parser's "Vorige vraag"
+   * line (prompt version 3) and read by the member pre-filter, exactly as
+   * planTableLane does. Absent on every standalone case. */
+  previousQuestion?: string;
   note?: string;
   expect: {
     /** A real measure code, 'geen', or LABEL_AMBIGUOUS_MEASURE. Exactly one
@@ -143,6 +151,19 @@ export function loadTableFixture(tableId: string): { schema: CbsTableSchema; cod
   return JSON.parse(readFileSync(path, 'utf8')) as { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> };
 }
 
+/** One case's parser input and request, built exactly as planTableLane
+ * builds them (src/answer/table-lane/plan.ts): the member pre-filter reads
+ * tableParsePrefilterText(question, previousQuestion), and the request
+ * carries the previous question. The one builder every mode and the
+ * integrity test use, so a case's offered menu and request hash can never
+ * drift from production's. */
+export function caseParseInput(c: LabelledCase): { input: TableParseSchema; request: LlmRequest } {
+  const { schema, codeLists } = loadTableFixture(c.table);
+  const previousQuestion = c.previousQuestion ?? null;
+  const input = buildTableParseSchema(schema, codeLists, tableParsePrefilterText(c.question, previousQuestion));
+  return { input, request: buildTableParseRequest(c.question, input, { previousQuestion }) };
+}
+
 export interface DryRunRow {
   id: string;
   table: string;
@@ -164,9 +185,7 @@ export interface DryRunSummary {
  * the static system prompt plus this case's serialized user turn. */
 export function buildDryRunRows(cases: LabelledCase[]): DryRunRow[] {
   return cases.map((c) => {
-    const { schema, codeLists } = loadTableFixture(c.table);
-    const input = buildTableParseSchema(schema, codeLists, c.question);
-    const request = buildTableParseRequest(c.question, input);
+    const { request } = caseParseInput(c);
     const promptChars = request.system.length + request.question.length;
     return {
       id: c.id,
@@ -203,9 +222,7 @@ export function summarizeDryRun(rows: DryRunRow[]): DryRunSummary {
 export function buildLabelIndex(cases: LabelledCase[]): Map<string, string> {
   const index = new Map<string, string>();
   for (const c of cases) {
-    const { schema, codeLists } = loadTableFixture(c.table);
-    const input = buildTableParseSchema(schema, codeLists, c.question);
-    index.set(buildTableParseRequest(c.question, input).question, c.id);
+    index.set(caseParseInput(c).request.question, c.id);
   }
   return index;
 }
@@ -255,8 +272,7 @@ function choiceLabel(choice: { kind: 'member' | 'not_named' | 'other'; code?: st
 }
 
 async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase> {
-  const { schema, codeLists } = loadTableFixture(c.table);
-  const input = buildTableParseSchema(schema, codeLists, c.question);
+  const { input, request } = caseParseInput(c);
   const problems: string[] = [];
   const expectedError = expectedErrorClass(c);
   const scored: Omit<ScoredCase, 'pass' | 'problems'> = {
@@ -264,10 +280,10 @@ async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase
     confidence: null,
     periodGrainUnavailable: null,
     errorClass: null,
-    requestHash: requestHash(buildTableParseRequest(c.question, input)),
+    requestHash: requestHash(request),
   };
   try {
-    const { result } = await tableParse(c.question, input, { client });
+    const { result } = await tableParse(c.question, input, { client, previousQuestion: c.previousQuestion ?? null });
     scored.confidence = result.confidence;
     scored.periodGrainUnavailable = result.periodGrainUnavailable;
     if (expectedError !== null) {

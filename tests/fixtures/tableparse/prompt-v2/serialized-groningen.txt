@@ -1,0 +1,27 @@
+Volledige vraag van de gebruiker: "Hoeveel megawatt aan opgesteld vermogen was er in Groningen in 2021?"
+Tabel: 85004NED — Hernieuwbare energie; zonnestroom, windenergie, RES-regio
+
+Maten in deze tabel:
+1. measureCode=M002199 | eenheid=megawatt(piek)
+   titel: Opgesteld elektrisch vermogen
+   omschrijving: Het vermogen dat op 31 december van het verslagjaar in gebruik is. Voor windenergie is de eenheid megawatt, MW. Voor zonnestroom is de eenheid megawattpiek, MWp. Het elektrisch vermogen is de hoeveelheid elektriciteit die per tijdseenheid k…
+2. measureCode=M002195 | eenheid=mln kWh
+   titel: Niet-genormaliseerde productie
+   omschrijving: Bruto productie (niet-genormaliseerd): Daadwerkelijke (gemeten) hernieuwbare elektriciteitsproductie in een verslagperiode, niet gecorrigeerd voor weersomstandigheden.
+3. measureCode=M002194 | eenheid=mln kWh
+   titel: Genormaliseerde productie
+   omschrijving: Bruto productie (genormaliseerd): De genormaliseerde elektriciteitsproductie is uitgerekend volgens definities uit de EU-Richtlijn Hernieuwbare Energie, dit is alleen voor windenergie van toepassing. Het doel is de productie te corrigeren v…
+
+Uitsplitsingen in deze tabel:
+- dimensie=BronEnTechniek | titel: Bron en techniek
+    E006590 — Zonnestroom, totaal
+    A050176 — Zonnestroom, klein vermogen
+    A050177 — Zonnestroom, groot vermogen
+    E006637 — Windenergie op land
+- dimensie=RegioS | titel: Regio's (ingekort: 3 van 86)
+    PV20 — Groningen (PV)
+    ES01 — Groningen (ES)
+    ET0101 — Groningen (ET)
+
+Beschikbare periode-precisies: JJ (jaar)
+Regio's: deze tabel kent geen regio's.

@@ -4,7 +4,7 @@
 ([#335](../../open-questions.md), [brief](../../session-briefs/2026-09-28-sanity-check.md)) chose breadth as the next
 priority, the owner answered "Yes, write the plan (Recommended)" on the plain-English design (find the table → pick the
 slice from CBS's own breakdowns, total by default → fetch just those numbers, check, store, answer in the same chat →
-normal price). **ADR:** [062](../../decisions/062-breadth-table-lane-slice-cache.md). **Step 1 ✅ measured, step 2 ✅ built (session 138), step 3 ✅ built (session 139), step 4 ✅ built hermetically (session 139; recording run pending).** Supersedes, when live, the 100-credit e-mail flow of
+normal price). **ADR:** [062](../../decisions/062-breadth-table-lane-slice-cache.md). **Step 1 ✅ measured, step 2 ✅ built (session 138), step 3 ✅ built (session 139), step 4 ✅ built hermetically (session 139; recording run pending), step 5 ✅ built and wired dark behind `TABLE_LANE_ENABLED` (session 140, 2026-09-29; D6's old-flow fallback deliberately NOT wired — [#343](../../open-questions.md)); step 6 (benchmark, then the flip) pending.** Supersedes, when live, the 100-credit e-mail flow of
 ADR [026](../../decisions/026-on-demand-fetch-job-architecture.md) as the default path.
 
 ## 1. The goal in one sentence
@@ -75,6 +75,8 @@ every number still a stored, validated CBS cell with source and date; ask or ref
 - **D6 — Price: the normal question price, charged only on an answer.** Refusal free; clarification its usual small
   price. The 100-credit tier and the confirm-offer step retire for tables the table lane can serve; the old async flow
   stays only as a fallback for tables it cannot (e.g. above a slice size cap) until measured otherwise.
+  **As built (step 5):** the fallback is NOT wired — with the flag on, a table the lane cannot serve is refused free; step 6
+  measures whether the fallback is worth wiring ([#343](../../open-questions.md)).
 - **D7 — Fail closed.** Unknown dimension shapes, a table without machine period status (unless it has a reviewed
   period-note map, ADR 061), a unit the formatter doesn't know, a finder pick below its calibrated floor, a code outside
   the table's lists → clarify or refuse; never a guessed number. Every answer is audited as today (R8), including the
@@ -108,6 +110,6 @@ R8 (audit), R9 (completeness for class answers), R11 (status per cell), principl
 - **Assumption:** a question's slice fetch returns in a few seconds via CBS's `$filter` (measured for single-table
   filters in session 138; not yet measured for multi-member filters across large tables) — step 1/2 measures it.
 - **Assumption:** the curated lane's "no match" signal (`unmatchedMeasureTerm`) is reliable enough to route to the
-  table lane; measured in step 5 on the labelled sets.
+  table lane; step 5 only wired it — measured in step 6 on the labelled sets.
 - Finder calibration (#172) matters more once every miss goes through it — re-measure in step 4.
 - Real-user launch (sanity-check move 1) remains recommended once the table lane is live.

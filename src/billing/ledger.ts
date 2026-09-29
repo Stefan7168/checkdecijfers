@@ -711,17 +711,31 @@ export async function compensateSplit(
   refundCredits: number,
   auditAnswerId: number | null,
 ): Promise<void> {
-  await db.withTransaction(async (tx) => {
-    let remaining = refundCredits;
-    if (split.bucketEntry !== null && remaining > 0) {
-      const amount = Math.min(remaining, split.fromBucket);
-      await compensateBucket(tx, userId, split.bucketEntry.id, amount);
-      remaining -= amount;
-    }
-    if (split.ledgerEntry !== null && remaining > 0) {
-      const amount = Math.min(remaining, split.fromLedger);
-      await compensate(tx, userId, split.ledgerEntry.id, amount, auditAnswerId);
-      remaining -= amount;
-    }
-  });
+  await db.withTransaction((tx) => compensateSplitInTx(tx, userId, split, refundCredits, auditAnswerId));
+}
+
+/** compensateSplit's refund logic on a transaction the CALLER already holds.
+ * withTransaction cannot nest, so a caller that must refund in the same
+ * transaction as its own writes (the table lane's finish-and-settle,
+ * src/ingestion/table-lane-store.ts) calls this instead of compensateSplit.
+ * ONE body for both, so the refund order (bucket first) and per-leg capping
+ * can never drift between the gate's path and the table lane's. */
+export async function compensateSplitInTx(
+  tx: Db,
+  userId: string,
+  split: SplitDebitResult,
+  refundCredits: number,
+  auditAnswerId: number | null,
+): Promise<void> {
+  let remaining = refundCredits;
+  if (split.bucketEntry !== null && remaining > 0) {
+    const amount = Math.min(remaining, split.fromBucket);
+    await compensateBucket(tx, userId, split.bucketEntry.id, amount);
+    remaining -= amount;
+  }
+  if (split.ledgerEntry !== null && remaining > 0) {
+    const amount = Math.min(remaining, split.fromLedger);
+    await compensate(tx, userId, split.ledgerEntry.id, amount, auditAnswerId);
+    remaining -= amount;
+  }
 }
