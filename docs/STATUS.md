@@ -49,7 +49,11 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
     Share link unfurls with a 1200×630 picture of the chart (`/embed/<token>/opengraph-image`, Next's built-in image
     tool around the ADR 014 server SVG); the embed page has title/description metadata. Owner's look at the picture
     pending; residuals in 08-build-plan (fallback font, reader's form, no Download button yet);
-  - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).
+  - (c) the homepage — **round 1 BUILT (session 144, 2026-09-29, `8afcd17a`):** a real chart above the fold (the
+    inflation story as question bubble + the product's own answer card), new hero copy nl/en, the frozen text example
+    retired, teaser three-in-a-row minus the hero's story, how-it-works one row of four; **#347 fixed** — the built
+    story set persists in Next's Data Cache across instances (30 min, SWR), empty outcomes never persisted, the deploy
+    smoke warms `/galerij`. Screenshots sent to the owner; reaction pending; CI run 36551609780 in flight at writing.
 - **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
   dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch
   `regional-stats-part2`), Eurostat in chat, Pro plan, brand colours. Owner-supervised items (migrations 037 + 038, the

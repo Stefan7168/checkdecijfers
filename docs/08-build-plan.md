@@ -1337,6 +1337,21 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
 - **(c) The homepage** (`web/components/landing.tsx`): a real chart above the fold; the gallery must never show empty
   skeletons on a cold visit ([#347](open-questions.md): the curated feed's first request took over 5 s on 2026-09-29 —
   pre-warm, pre-render or cache it).
+  **Round 1 BUILT (session 144, 2026-09-29, `8afcd17a`; owner chose "keep building" over launch-to-ten, #352):** the
+  page leads with a REAL chart — one story's question as a chat bubble ("Wat deed de inflatie?") and the product's own
+  answer card under it (`HeroStory` in `web/components/gallery.tsx`: the same ChartView, the same curated pipeline,
+  every digit bound to a spec string; inflation preferred, first built story as fallback, one honest placeholder card
+  on a cold read). Left of it the pitch: new title "Stel een vraag. Deel de grafiek." / "Ask a question. Share the
+  chart.", a lead, two buttons, and the public claim as the trust line (i18n keys `landing.heroTitleV3`,
+  `heroLeadV3`, `heroClaim`, `heroExampleLabel`). The frozen text-only "real example" block (consumentenvertrouwen
+  −39) is retired — a live sourced chart is the stronger version of the same promise and cannot go stale. The teaser
+  skips the hero's story (`GalleryTeaser excludeSlug`), shows three cards in one row, how-it-works is one row of four,
+  the page is `max-w-6xl`. **#347 fixed:** `web/lib/ontdek.ts` persists the built story set in Next's Data Cache
+  (`unstable_cache`, 30 min, stale-while-revalidate, cross-instance on Vercel; confirmed writing an 80 KB entry in the
+  harness's `.next/dev/cache/fetch-cache`), an outcome with zero charts is never persisted (code-review finding), and
+  the post-deploy smoke warms `/galerij` three times. Measured before: cold `/galerij` 5.6 s TTFB on production
+  (placeholder shown). After: measure on the first deploys (the smoke logs `warm-up N: ttfb`). Screenshots to the
+  owner at desktop dark + light, phone, full page; awaiting the owner's reaction.
 
 **Invariants at stake:** none in the answer pipeline — this is presentation only. Every number still comes from the
 stored envelope (R1–R3, R5, R8–R10); the source line stays on every chart and every download/embed (R4); the "not CBS
