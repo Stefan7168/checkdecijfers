@@ -139,7 +139,9 @@ exactly as before (pinned by the existing suites). Nothing here has run against 
    existing table finder matches to a CBS table used to become the 100-credit onboarding offer. With the flag on it
    becomes a **table-lane request** instead: `createTableLaneRequest` reserves the normal question price and inserts a
    `table_lane_requests` row in ONE transaction (migration **038**, FILE-ONLY; a failed insert rolls the charge back). The
-   routing turn itself stays free (the gate already refunded it) and is not attached to the thread. If queueing throws,
+   routing turn itself stays free (the gate already refunded it) and is not attached to the thread; the row links it
+   (`routing_audit_id`) so the question history hides it and per-conversation deletion redacts it (final review I2/I3).
+   A web add-on on that turn is settled before the row is created (final review M1). If queueing throws,
    nothing was charged and the turn falls back to today's offer path. The finder is only injected when
    `ONBOARDING_ENABLED=1` (already set in production), so both flags are needed. (A follow-up link routes without it: the
    linked table stands in for the finder.)
@@ -154,7 +156,10 @@ exactly as before (pinned by the existing suites). Nothing here has run against 
 3. **Reader side.** A progress bubble polls `pollTableLane` (our database only) every 2 s for the first minute, then every
    15 s up to 10 minutes; after 60 s it adds a "this is taking longer" line. A breakdown or region question comes back with
    buttons (`replyToTableLane`); a typed reply is matched against ALL members of that dimension (normalized exact title
-   or exact code, must be unique; no nearest match). A follow-up in the same conversation reuses the previous answer's table.
+   or exact code, must be unique; no nearest match). A lane question takes ONE reply (`is_reply` + a unique index in 038,
+   checked in the store under the user's lock): a retry, a second tab or a stale client gets the existing child and is
+   not charged again (final review I1). Replies, like routing and follow-up links, need `TABLE_LANE_ENABLED` (final
+   review I4). A follow-up in the same conversation reuses the previous answer's table.
 
 **Money.** The same 'simple' question price and the Pro-bucket-first split as a normal turn; the ledger debit is filed under
 a derived request id (`deriveAddonRequestId(requestId, 'table-lane')`) because the routing turn already used the raw id. An
@@ -186,6 +191,9 @@ selection note byte-identically; the table parse is recorded in `llm_calls` as r
 where the model was called (Ruling R6). Finished `table_lane_requests` rows (they hold the question text and the
 table id a second time) are hard-deleted by the GDPR self-service deletion, per-thread deletion and the retention purge;
 an in-flight row is swept by the next run once it ends (the same documented residual as `pending_table_requests`).
+Per-thread deletion also redacts each lane row's thread-less routing turn through `routing_audit_id` (collected before
+the lane rows are deleted; skipped while 038 is unapplied). The question history hides every linked routing turn (probe
+on the table, never on the flag), so a lane question is one entry; one still in flight appears once it is answered.
 
 **Copy.** Under each lane answer a deterministic line lists every fixed breakdown coordinate, named ones as "Selectie:"
 and stated defaults as "Uitgangspunt:", CBS titles verbatim; it is never part of the model-written answer text.
@@ -210,7 +218,8 @@ input tokens for the recording run.
 - **R7** table-lane copy uses the informal "je" like every other refusal. **R8** the envelope stores the fixed selection
   itself, so the reader-visible note is re-derivable.
 - **R9** a CBS metadata failure retries once, then refuses `cbs_unreachable`. **R10** the daily sweep works through open
-  rows even with the flag off (the flag gates only NEW routing), so held credits never wait on a flag flip.
+  rows even with the flag off (the flag gates only NEW work: routing, follow-up links and replies — final review I4), so
+  held credits never wait on a flag flip.
 - **R11** one shared kick helper (`cron-kick.ts`) for the onboarding and table-lane kicks.
 - **R12** only thread-aware turns (the workspace chat) route to the lane; the Dashboard chat keeps the onboarding offer,
   because the job needs a thread to attach to.
@@ -219,11 +228,16 @@ input tokens for the recording run.
 - **R14** the follow-up link is a fallback, not an override: the real finder runs first and a confident pick of a
   DIFFERENT table wins, so a topic change is never answered from the old table. **R15** a bare follow-up with no topic
   term ("En in 2020?") still gets today's curated "which topic?" question in step 5; measure in step 6.
+- **R16** the old onboarding offer never targets a slice-cache table, flag on or off, Dashboard or workspace
+  (`sliceCacheTableIds`, read through `to_jsonb(row)` so it is safe without migration 037): a slice-cache pick gets the
+  honest "not available right now" text with nothing charged, and slice-cache alternates are dropped from the signed
+  candidate chain. The finder itself is unchanged, because the lane needs it to keep routing to slice-cache tables.
 
 **Process.** Subagent-driven development: seven build tasks, each reviewed by the most capable tier, six with a fix round.
 
 **Go-live needs ALL of:** migrations 037 + 038 applied (owner, `npm run db:migrate`); `TABLE_LANE_ENABLED=1`;
-`ONBOARDING_ENABLED=1` (already set); the parser recording + calibration run (after 2026-10-01, [#338](../open-questions.md));
+`ONBOARDING_ENABLED=1` (already set); `CRON_SECRET` (already set — the job route and the daily sweep both refuse to run
+without it, so a queued row would hold the reader's credits with nothing to answer or refund it); the parser recording + calibration run (after 2026-10-01, [#338](../open-questions.md));
 and step 6's benchmark. Sequence and manual job kick: RUNBOOK "Table lane (breadth step 5)".
 
 ## Trade-offs and open points (after step 5)
@@ -233,8 +247,8 @@ and step 6's benchmark. Sequence and manual job kick: RUNBOOK "Table lane (bread
 - Step 5 settled the design points step 2 left ([#336](../open-questions.md) (1), (2), (3), (9), (10) in part): the
   job never holds the lock while fetching, the 180 s lock timeout lands on the job and not on a request, a
   fresh-enough cached slice may answer when CBS is down, and a lagging mirror retries once. Still open: slice tables get
-  no cadence staleness warning; the coverage page and the old onboarding path treat slice tables as never synced; wide
-  member lists may exceed CBS's URL length.
+  no cadence staleness warning; the coverage page treats slice tables as never synced (the old onboarding offer no longer
+  targets them, R16); wide member lists may exceed CBS's URL length.
 
 ## Revisit triggers
 
