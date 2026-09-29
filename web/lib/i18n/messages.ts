@@ -1397,6 +1397,16 @@ const nl = {
   'landing.heroSubtitleV2':
     'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een grafiek met bron erbij, klaar om te delen.',
   'landing.ctaGallery': 'Bekijk de galerij',
+  // WP-LOOK part (c), session 144 (ADR 063): the homepage leads with a real
+  // chart. The title says the product in one breath; the claim line is the
+  // public claim from CLAUDE.md verbatim in spirit ("every number traceable
+  // to an official CBS cell, with source and date shown") — never an
+  // absolute slogan. Digit-free, like the rest of this block.
+  'landing.heroTitleV3': 'Stel een vraag. Deel de grafiek.',
+  'landing.heroLeadV3':
+    'Vraag in gewone taal naar de officiële cijfers van Nederland. Je krijgt een grafiek met bron en datum erbij, klaar om te publiceren.',
+  'landing.heroClaim': 'Elk getal is herleidbaar tot een officiële CBS-cel, met bron en datum erbij.',
+  'landing.heroExampleLabel': 'Echt antwoord, live uit onze database',
   'gallery.teaserHeading': 'Verhalen uit de galerij',
   'gallery.teaserAllLink': 'Alle verhalen',
   'gallery.pageTitle': 'Galerij — Check de Cijfers',
@@ -2591,6 +2601,11 @@ const en: Messages = {
   'landing.heroSubtitleV2':
     'Ask your question in plain language and chat your way from official CBS research to a sourced chart, ready to share.',
   'landing.ctaGallery': 'See the gallery',
+  'landing.heroTitleV3': 'Ask a question. Share the chart.',
+  'landing.heroLeadV3':
+    "Ask in plain language about the Netherlands' official statistics. You get a chart with its source and date, ready to publish.",
+  'landing.heroClaim': 'Every number is traceable to an official CBS cell, with source and date shown.',
+  'landing.heroExampleLabel': 'A real answer, live from our database',
   'gallery.teaserHeading': 'Stories from the gallery',
   'gallery.teaserAllLink': 'All stories',
   'gallery.pageTitle': 'Gallery — Check de Cijfers',

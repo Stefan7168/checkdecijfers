@@ -22,12 +22,57 @@
 // more. The factory stayed generic (parameterised by definition list and
 // cache slot) rather than being collapsed into one hardcoded function, since
 // a second public curated surface has needed it once already.
+import { unstable_cache } from 'next/cache';
 import { buildCuratedCharts, GALLERY_STORIES } from '../backend/chart/index.ts';
-import type { CuratedChart } from '../backend/chart/index.ts';
+import type { CuratedChart, CuratedChartsOutcome } from '../backend/chart/index.ts';
 import { getDb } from './db.ts';
 import { ANONYMOUS_READ_DEADLINE_MS, withDeadline } from './deadline.ts';
 
 const TTL_MS = 30 * 60 * 1000;
+const TTL_S = TTL_MS / 1000;
+
+// #347 (WP-LOOK part c, session 144): the in-process cache above is cold on
+// EVERY new serverless instance, and a cold build of the twelve stories runs
+// ~30 queries through a two-client pool (src/db/client.ts) — measured 5.6 s
+// on production on 2026-09-29, past the 5 s anonymous deadline, so the
+// first visitor on a fresh instance saw the loading placeholder. This second
+// layer stores the built outcome in Next's Data Cache (Vercel's shared,
+// cross-instance store; the file-system cache under `.next/cache` locally)
+// for the same 30 minutes, stale-while-revalidate: a fresh instance fetches
+// the last built set in tens of milliseconds instead of rebuilding it, and
+// an expired entry is served once more while the rebuild runs behind it.
+// The page stays `force-dynamic` (the language cookie); only this read is
+// cached. The outcome is plain JSON (specs, slugs, reasons) — the store
+// requires that. Outside a Next runtime (vitest, the CLI) `NEXT_RUNTIME` is
+// unset and `unstable_cache` would throw for want of an incremental cache,
+// so the build runs uncached there — the mechanism tests below pin the
+// in-process layer, which is unchanged.
+// An outcome with ZERO charts is never persisted (code-review finding,
+// session 144): buildCuratedCharts does not throw on a saturated pooler, it
+// resolves with every story in `skipped` — and a cached empty set would have
+// emptied the gallery on every instance for the full 30 minutes, where the
+// in-process cache only ever poisoned the one instance. The wrapper throws
+// instead (the store keeps nothing on a throw) and rebuild() unwraps the
+// outcome so the skip reasons are still logged exactly as before.
+type Build = () => Promise<CuratedChartsOutcome>;
+class EmptyOutcome extends Error {
+  constructor(readonly outcome: CuratedChartsOutcome) {
+    super('curated feed built zero charts — not persisting');
+  }
+}
+function persisted(label: string, build: Build): Build {
+  if (!process.env.NEXT_RUNTIME) return build;
+  const guarded = async (): Promise<CuratedChartsOutcome> => {
+    const outcome = await build();
+    if (outcome.charts.length === 0) throw new EmptyOutcome(outcome);
+    return outcome;
+  };
+  const cached = unstable_cache(guarded, ['curated-feed', label], {
+    revalidate: TTL_S,
+    tags: [`curated-feed:${label}`],
+  });
+  return () => cached().catch((err: unknown) => (err instanceof EmptyOutcome ? err.outcome : Promise.reject(err)));
+}
 
 interface CuratedFeed {
   get: () => Promise<CuratedChart[]>;
@@ -42,13 +87,17 @@ function makeCuratedFeed(label: string, definitions: () => Parameters<typeof bui
   // prevent — and concurrent builds would race last-writer-wins into `cache`.
   // One build per instance at a time; everyone else awaits the same promise.
   let inflight: Promise<CuratedChart[]> | null = null;
+  // `getDb()` is evaluated INSIDE the persisted build so a cached outcome
+  // never needs a database at all; its synchronous throw (no DATABASE_URL)
+  // surfaces as this promise's rejection, which the catch below degrades.
+  const build = persisted(label, () => buildCuratedCharts(getDb(), definitions()));
 
   async function rebuild(): Promise<CuratedChart[]> {
     try {
       // toggleSkipped defaults to [] defensively: the real buildCuratedCharts
       // always sets it, but this keeps the destructure safe against any test
       // double that only supplies { charts, skipped }.
-      const { charts, skipped, toggleSkipped = [] } = await buildCuratedCharts(getDb(), definitions());
+      const { charts, skipped, toggleSkipped = [] } = await build();
       for (const skip of skipped) {
         console.warn(`[${label}] chart '${skip.slug}' skipped: ${skip.reason}`);
       }

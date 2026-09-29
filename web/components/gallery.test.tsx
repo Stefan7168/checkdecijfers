@@ -20,7 +20,7 @@ const chartInsightsActions = vi.hoisted(() => ({
 }));
 vi.mock('../app/chart-insights-actions.ts', () => chartInsightsActions);
 
-import { GalleryGrid, GalleryTeaser } from './gallery.tsx';
+import { GalleryGrid, GalleryTeaser, HERO_STORY_SLUG, HeroStory, heroStoryFor } from './gallery.tsx';
 
 function testSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   return {
@@ -229,5 +229,67 @@ describe('GalleryTeaser', () => {
     expect(screen.getByText('Verhalen uit de galerij')).toBeInTheDocument();
     expect(screen.getByText('Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Alle verhalen' })).toHaveAttribute('href', '/galerij');
+  });
+});
+
+// WP-LOOK part (c), session 144: the landing's hero — one story's question
+// as a chat bubble and the product's REAL answer card under it.
+describe('HeroStory', () => {
+  it('prefers the inflation story and renders its question + the real ChartView', async () => {
+    const { container } = render(await HeroStory());
+    expect(HERO_STORY_SLUG).toBe('inflatie');
+    expect(screen.getByText('Wat deed de inflatie?')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Wat deed de inflatie?' })).toBeInTheDocument();
+    expect(screen.getByText('Andere reeks')).toBeInTheDocument();
+    expect(screen.queryByText('Testreeks')).toBeNull();
+    const spec = FOUR_CHARTS[1]!.spec;
+    scanForUnboundDigits(container, [
+      spec.title,
+      spec.unit,
+      spec.attributionLine,
+      spec.attribution.tableId,
+      spec.attribution.syncedAt,
+      ...spec.series.flatMap((s) => s.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ]);
+  });
+
+  it('falls back to the first built story when inflation did not build', async () => {
+    getGalleryStories.mockResolvedValue([FOUR_CHARTS[2]]);
+    render(await HeroStory());
+    expect(screen.getByText('Wat kostte een huis?')).toBeInTheDocument();
+    expect(heroStoryFor([FOUR_CHARTS[2]!])?.slug).toBe('huizenprijzen');
+    expect(heroStoryFor([])).toBeNull();
+  });
+
+  it('renders one honest placeholder card, never an empty column, on a cold read', async () => {
+    getGalleryStories.mockResolvedValue([]);
+    render(await HeroStory());
+    expect(screen.getByText('Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.')).toBeInTheDocument();
+    expect(screen.queryByRole('article')).toBeNull();
+  });
+
+  it('never triggers generateInsights or a usage event for an anonymous visitor', async () => {
+    const sink = vi.fn();
+    setChartUsageSink(sink);
+    render(await HeroStory());
+    expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
+    expect(sink).not.toHaveBeenCalled();
+    setChartUsageSink(null);
+  });
+
+  it('renders in English too', async () => {
+    getLang.mockResolvedValue('en');
+    render(await HeroStory());
+    expect(screen.getByText('What did inflation do?')).toBeInTheDocument();
+  });
+});
+
+describe('GalleryTeaser — excludeSlug (the hero story never shows twice)', () => {
+  it('skips the excluded story and still shows three others', async () => {
+    render(await GalleryTeaser({ excludeSlug: 'inflatie' }));
+    expect(screen.queryByText('Wat deed de inflatie?')).toBeNull();
+    expect(screen.getByText('Hoe optimistisch zijn Nederlanders?')).toBeInTheDocument();
+    expect(screen.getByText('Wat kostte een huis?')).toBeInTheDocument();
+    expect(screen.getByText('Hoeveel stroom kwam er uit zonnepanelen?')).toBeInTheDocument();
   });
 });

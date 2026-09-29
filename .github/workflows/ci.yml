@@ -367,3 +367,19 @@ jobs:
           status=$(printf '%s' "$health" | tail -n 1)
           echo "GET /api/health -> ${status} (no redirects followed): $(printf '%s' "$health" | head -n 1)"
           test "$status" = "200"
+          # #347 (WP-LOOK part c): warm the curated gallery right after the
+          # deploy. The first build of the twelve stories on a fresh instance
+          # takes longer than the 5 s anonymous deadline (5.6 s measured
+          # 2026-09-29), so the very first visitor after a deploy saw the
+          # loading placeholder. web/lib/ontdek.ts now stores the built set
+          # in Next's Data Cache (shared across instances, 30 min, stale-
+          # while-revalidate) — these requests are what put it there, so the
+          # first real visitor never pays the cold build. Three spaced reads:
+          # the first starts the build, the later ones land after it finishes
+          # (the in-process build keeps running past the deadline). Never a
+          # gate: a slow warm-up is logged, not failed.
+          for i in 1 2 3; do
+            sleep 8
+            t=$(curl -sL -o /dev/null -w "%{time_starttransfer}" --max-time 60 "https://checkdecijfers.vercel.app/galerij" || echo "n/a")
+            echo "warm-up ${i}: GET /galerij ttfb=${t}s"
+          done

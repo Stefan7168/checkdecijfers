@@ -88,7 +88,10 @@ function GalleryCard({
 function GalleryLoadingRow({ lang, count }: { lang: Lang; count: number }) {
   return (
     <div>
-      <div className={`grid gap-6 ${count > 1 ? 'lg:grid-cols-2' : ''}`} aria-hidden="true">
+      <div
+        className={`grid gap-6 ${count > 2 ? 'lg:grid-cols-3' : count > 1 ? 'lg:grid-cols-2' : ''}`}
+        aria-hidden="true"
+      >
         {Array.from({ length: count }, (_, i) => (
           <div key={i} className="rounded-xl border border-border bg-card p-5 sm:p-6">
             <Skeleton className="h-4 w-2/3" />
@@ -106,14 +109,19 @@ function CardGrid({
   lang,
   compact = false,
   headingLevel,
+  columns = 2,
 }: {
   charts: CuratedChart[];
   lang: Lang;
   compact?: boolean;
   headingLevel?: 2 | 3;
+  /** Wide-screen column count: two on /galerij, three for the landing's
+   * teaser (WP-LOOK part c — the landing is max-w-6xl now, so three compact
+   * cards fit in one row). */
+  columns?: 2 | 3;
 }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className={`grid gap-6 ${columns === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
       {charts.map((chart, i) => (
         <GalleryCard
           key={chart.slug}
@@ -145,21 +153,72 @@ export async function GalleryGrid({ headingLevel }: { headingLevel?: 2 | 3 } = {
  * always renders now — only the card area degrades to GalleryLoadingRow —
  * so a cold read no longer makes the whole teaser vanish from the landing
  * page. */
-export async function GalleryTeaser() {
+export async function GalleryTeaser({ excludeSlug }: { excludeSlug?: string } = {}) {
   const [charts, lang] = await Promise.all([getGalleryStories(), getLang()]);
+  // WP-LOOK part (c): the landing's hero already shows one story as the
+  // real answer; the teaser skips that one so the page never shows the same
+  // chart twice.
+  const rest = excludeSlug === undefined ? charts : charts.filter((c) => c.slug !== excludeSlug);
   return (
     <section className="border-b border-border py-12">
       <h2 className="text-2xl text-foreground">{t(lang, 'gallery.teaserHeading')}</h2>
       <div className="mt-6">
-        {charts.length === 0 ? (
+        {rest.length === 0 ? (
           <GalleryLoadingRow lang={lang} count={3} />
         ) : (
-          <CardGrid charts={charts.slice(0, 3)} lang={lang} compact />
+          <CardGrid charts={rest.slice(0, 3)} lang={lang} compact columns={3} />
         )}
       </div>
       <Link href="/galerij" className="mt-6 inline-block font-medium text-primary hover:underline">
         {t(lang, 'gallery.teaserAllLink')}
       </Link>
     </section>
+  );
+}
+
+/** The slug the landing's hero prefers (WP-LOOK part c): inflation is the
+ * one series every reader has an opinion about. If it did not build (a cold
+ * database, a freshness refusal), the first built story stands in — the
+ * hero is "a real chart above the fold", not "the inflation chart". */
+export const HERO_STORY_SLUG = 'inflatie';
+
+/** Which story the hero shows for a given built set — exported so the
+ * landing can hand the SAME slug to the teaser's `excludeSlug`. `null` when
+ * nothing is built yet (the hero then renders its loading placeholder). */
+export function heroStoryFor(charts: CuratedChart[]): CuratedChart | null {
+  return charts.find((c) => c.slug === HERO_STORY_SLUG) ?? charts[0] ?? null;
+}
+
+/** WP-LOOK part (c), the homepage's hero: a real question and the product's
+ * REAL answer card — the same ChartView, the same curated pipeline (ADR 035/
+ * 046), the same digits-bound-to-a-spec rule — above the fold, so a visitor
+ * sees what they get before reading a word about it. The question is the
+ * story's own gallery title, set as a chat bubble the way the workspace
+ * shows a sent question; the card below it is the part-(a) answer card
+ * as-is (title, headline figure, chart, caveats, source line, action row).
+ * Nothing is pre-opened, nothing is tracked, no generateInsights for an
+ * anonymous visitor (ChartView's own public-page rule). A cold read renders
+ * one honest placeholder card instead of an empty column. */
+export async function HeroStory() {
+  const [charts, lang] = await Promise.all([getGalleryStories(), getLang()]);
+  const chart = heroStoryFor(charts);
+  if (chart === null) return <GalleryLoadingRow lang={lang} count={1} />;
+  const titleKey = `gallery.story.${chart.slug}.title` as MessageKey;
+  return (
+    <div>
+      <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-foreground">
+        {t(lang, titleKey)}
+      </p>
+      <article
+        aria-label={t(lang, titleKey)}
+        className="mt-3 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6"
+      >
+        <ChartView
+          spec={chart.spec}
+          frameless
+          initialPresentation={templateById(lookFor(chart.slug)).overrides}
+        />
+      </article>
+    </div>
   );
 }

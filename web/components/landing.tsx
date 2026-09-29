@@ -4,121 +4,87 @@
 // data reads are the deterministic curated-chart pipeline (session 52,
 // ADR 035 — cached, fail-safe, LLM-free; they amend the original "no data
 // reads" framing of #98, see the reconciled row), served here through
-// GalleryTeaser/getGalleryStories (#237/ADR 046) rather than the original
-// Ontdek section, which mounted the same pipeline directly and is now
-// deleted (#240). The example answer below is
-// a REAL, live-verified CBS cell (frozen verification task CC1:
-// consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
-// re-verified LLM-free on production 2026-07-17) rendered in the product's
-// real answer shape; refresh it CONSCIOUSLY when the frozen key ever changes,
-// never invent one (principle a).
+// HeroStory / GalleryTeaser / getGalleryStories (#237/ADR 046).
 //
-// ⚠ #193 (2026-08-07, corrected 2026-08-26): NEITHER the body NOR the source
-// line carries a status suffix, and that is correct — do not "helpfully" add
-// one back anywhere. `provisionalDisplay` (src/sources/registry.ts) maps only
-// Voorlopig and NaderVoorlopig, so the real pipeline renders a definitive
-// cell with no status text at all — not in the body (fixed here originally),
-// and not in the source line either: `buildAttributionLine`
-// (src/answer/compose/format.ts) is the ONE builder for that sentence on
-// every surface, and its shape is fixed — Bron/tabel, sync date, period,
-// license — with no status field, for any status value. An earlier version
-// of this fix moved the fabricated "(definitief cijfer)" suffix INTO the
-// source line ("Status bij CBS: definitief.") instead of removing it,
-// re-introducing the exact bug it was fixing one line down — a claim about
-// where the pipeline shows the status that the pipeline does not do anywhere.
-// The anonymous-trial chat (#53, ADR 036) is
-// built and DORMANT: <TrialSectie /> renders nothing until the supervised
-// go-live sets TRIAL_ENABLED + the trial key + the ip-hash secret and seeds
-// the pot — until then the CTA routes to /login, byte-identically.
+// WP-LOOK part (c), session 144 (2026-09-29, ADR 063): the page leads with a
+// REAL chart above the fold — one story's question as a chat bubble and the
+// product's own answer card under it (the part-(a) card, same ChartView, same
+// pipeline, every digit bound to a spec string). That hero replaces the old
+// frozen text-only "real example" block (the consumentenvertrouwen juni 2026
+// = −39 cell, sessions 51–86, #193): a live, sourced chart is a stronger
+// version of the same promise, and it can never go stale against the frozen
+// benchmark key. The gallery teaser skips the hero's story so no chart shows
+// twice. The frozen block's two rules still hold for anything rendered here:
+// never invent a number (principle a), and never add a status suffix the real
+// pipeline does not render (#193).
 //
-// WP218 phase 4 (#219), Task 3 (Sweep B): every visible string now goes
-// through the i18n catalogue via getLang()/t() (Server Component). The ONE
-// deliberate exception is the "real example" answer block below — it mimics
-// the product's own real answer shape (body + R4 attribution line), and the
-// backend answer pipeline that produces that shape stays Dutch-only (out of
-// scope per the design doc's own owner decision) — translating this frozen
-// demo to English would show a shape the live product cannot actually
-// produce in English, which is a worse inaccuracy than a Dutch demo on an
-// English page. It stays Dutch verbatim in both languages, same as
-// FOOTER_ATTRIBUTION and the other backend-built strings this sweep leaves
-// untouched (see docs/superpowers/specs/2026-09-09-language-switch-design.md
-// §1).
+// The anonymous-trial chat (#53, ADR 036) is built and DORMANT: <TrialSectie />
+// renders nothing until the supervised go-live sets TRIAL_ENABLED + the trial
+// key + the ip-hash secret and seeds the pot — until then the CTA routes to
+// /login, byte-identically.
+//
+// WP218 phase 4 (#219), Task 3 (Sweep B): every visible string goes through
+// the i18n catalogue via getLang()/t() (Server Component). The hero chart's
+// own text (title, source line, caveats) is the backend-built Dutch the real
+// pipeline produces, in both languages, same as every chart on the site.
 import Link from 'next/link';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t } from '../lib/i18n/messages.ts';
+import { getGalleryStories } from '../lib/ontdek.ts';
 import { CoverageDisclosureView } from './coverage-disclosure.tsx';
-import { GalleryTeaser } from './gallery.tsx';
+import { GalleryTeaser, HeroStory, heroStoryFor } from './gallery.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
-const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
+const PRIMARY_CTA =
+  'rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+const SECONDARY_CTA =
+  'rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 export async function Landing({ coverage = null }: { coverage?: CoverageDisclosure | null } = {}) {
-  const lang = await getLang();
+  // One cached read (web/lib/ontdek.ts) serves the hero AND tells the teaser
+  // which story to skip; HeroStory/GalleryTeaser read the same in-process
+  // promise, so this costs nothing extra.
+  const [lang, stories] = await Promise.all([getLang(), getGalleryStories()]);
+  const heroSlug = heroStoryFor(stories)?.slug;
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader stripped />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4">
-        {/* Masthead */}
-        <section className="border-b border-border py-14 text-center sm:py-20">
-          <h1 className="mx-auto max-w-2xl text-4xl leading-tight text-foreground sm:text-5xl">
-            {t(lang, 'landing.heroTitle')}
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
-            {t(lang, 'landing.heroSubtitleV2')}
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/login"
-              className="rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {t(lang, 'landing.ctaStart')}
-            </Link>
-            <Link
-              href="/galerij"
-              className="rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted"
-            >
-              {t(lang, 'landing.ctaGallery')}
-            </Link>
-            <a
-              href="#hoe-het-werkt"
-              className="rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted"
-            >
-              {t(lang, 'landing.ctaHowItWorks')}
-            </a>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4">
+        {/* Hero: the pitch on the left, the real thing on the right. On a
+            phone the pitch comes first and the chart is one swipe down —
+            the chart still opens above the fold's second screen. */}
+        <section className="grid gap-10 border-b border-border py-12 lg:grid-cols-12 lg:items-start lg:gap-12 lg:py-16">
+          <div className="lg:col-span-5 lg:pt-10">
+            <h1 className="max-w-xl text-4xl leading-[1.1] tracking-tight text-foreground sm:text-5xl">
+              {t(lang, 'landing.heroTitleV3')}
+            </h1>
+            <p className="mt-5 max-w-xl text-lg text-muted-foreground">{t(lang, 'landing.heroLeadV3')}</p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/login" className={PRIMARY_CTA}>
+                {t(lang, 'landing.ctaStart')}
+              </Link>
+              <Link href="/galerij" className={SECONDARY_CTA}>
+                {t(lang, 'landing.ctaGallery')}
+              </Link>
+            </div>
+            <p className="mt-6 max-w-xl text-sm text-muted-foreground">{t(lang, 'landing.heroClaim')}</p>
+          </div>
+          <div className="min-w-0 lg:col-span-7">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t(lang, 'landing.heroExampleLabel')}
+            </p>
+            <HeroStory />
           </div>
         </section>
 
         {/* The #53 anonymous trial — dormant until the supervised go-live (ADR 036) */}
         <TrialSectie />
 
-        {/* A real answer, in the product's real shape — Dutch verbatim always, see the file-header note. */}
-        <section className="border-b border-border py-12">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t(lang, 'landing.exampleLabel')}
-          </p>
-          <div className="mt-4 space-y-3">
-            <div className="ml-auto max-w-md rounded-lg bg-muted px-4 py-3 text-foreground">
-              {EXAMPLE_QUESTION}
-            </div>
-            <div className="max-w-xl rounded-lg border border-border bg-card px-4 py-3">
-              <p className="text-foreground">
-                Het consumentenvertrouwen in Nederland was in juni 2026{' '}
-                <span className="tnum font-semibold">−39</span>.
-              </p>
-              <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-                Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen,
-                economisch klimaat en koopbereidheid; gecorrigeerd. Periode: juni
-                2026. Licentie: CC BY 4.0.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* How it works — the honest mechanism, now in four steps
-            (WP-B, journey programme phase 3 R5.4: a fourth "Publiceer"/
-            "Publish" step). 2x2 on `sm`+ so the grid stays balanced at 4. */}
+        {/* How it works — the honest mechanism in four steps (WP-B, journey
+            programme phase 3 R5.4). One row of four on a wide screen, 2x2 on
+            a tablet, a list on a phone. */}
         <section id="hoe-het-werkt" className="border-b border-border py-12">
           {/* `over-dit-project` is the site footer's "Over dit project" anchor
               (site-footer.tsx renders it on "/"): the logged-in workspace has
@@ -127,7 +93,7 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
           <h2 id="over-dit-project" className="text-2xl text-foreground">
             {t(lang, 'landing.howItWorksHeading')}
           </h2>
-          <ol className="mt-6 grid gap-6 sm:grid-cols-2">
+          <ol className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <li>
               <p className="tnum text-sm font-semibold text-primary">1</p>
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step1Title')}</h3>
@@ -151,14 +117,9 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
           </ol>
         </section>
 
-        {/* #237/ADR 046: the gallery teaser replaces the old Ontdek section
-            on the landing — same deterministic, LLM-free curated-chart
-            pipeline (ADR 035), now presented as sourced stories around the
-            positioning sentence rather than a bare discovery grid. The old
-            component (web/components/ontdek.tsx), its test suite,
-            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys were
-            dead code and are now deleted (#240). */}
-        <GalleryTeaser />
+        {/* #237/ADR 046: three more stories from the same deterministic,
+            LLM-free curated pipeline (ADR 035), minus the hero's own. */}
+        <GalleryTeaser excludeSlug={heroSlug} />
 
         {/* WP-E (R4): the coverage disclosure — no example handler is passed
           * here, so CoverageDisclosureView renders each example as plain
@@ -177,10 +138,7 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
         <section className="py-12">
           <h2 className="text-2xl text-foreground">{t(lang, 'landing.pricingHeading')}</h2>
           <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'landing.pricingBody')}</p>
-          <Link
-            href="/login"
-            className="mt-6 inline-block rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
+          <Link href="/login" className={`mt-6 inline-block ${PRIMARY_CTA}`}>
             {t(lang, 'common.createFreeAccount')}
           </Link>
         </section>

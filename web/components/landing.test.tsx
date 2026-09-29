@@ -11,10 +11,28 @@
 // itself stays compiling (still used elsewhere) but is no longer mounted
 // here, so this suite no longer mocks it.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('./gallery.tsx', () => ({ GalleryTeaser: () => null }));
+// WP-LOOK part (c): the landing reads the story set itself (to pick the
+// hero and tell the teaser what to skip); HeroStory/GalleryTeaser are
+// mocked like before — gallery.test.tsx covers them — but heroStoryFor is
+// the real one, since the exclusion is the landing's own logic.
+const galleryProps = vi.hoisted(() => ({ teaser: [] as unknown[] }));
+vi.mock('./gallery.tsx', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./gallery.tsx')>();
+  return {
+    heroStoryFor: real.heroStoryFor,
+    HERO_STORY_SLUG: real.HERO_STORY_SLUG,
+    HeroStory: () => <div data-testid="hero-story" />,
+    GalleryTeaser: (props: unknown) => {
+      galleryProps.teaser.push(props);
+      return null;
+    },
+  };
+});
+const { getGalleryStories } = vi.hoisted(() => ({ getGalleryStories: vi.fn() }));
+vi.mock('../lib/ontdek.ts', () => ({ getGalleryStories }));
 vi.mock('./trial.tsx', () => ({ TrialSectie: () => null }));
 
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
@@ -22,26 +40,54 @@ vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
 
 import { Landing } from './landing.tsx';
 
+beforeEach(() => {
+  getGalleryStories.mockResolvedValue([
+    { slug: 'consumentenvertrouwen', spec: {} },
+    { slug: 'inflatie', spec: {} },
+  ]);
+});
+
 afterEach(() => {
   cleanup();
   getLang.mockReset();
+  getGalleryStories.mockReset();
+  galleryProps.teaser.length = 0;
 });
 
 describe('Landing — nl (default)', () => {
-  it('keeps the owner-pinned Dutch headline verbatim', async () => {
+  it('leads with the chart-first headline and the public claim (ADR 063, WP-LOOK part c)', async () => {
     getLang.mockResolvedValue('nl');
     render(await Landing());
-    expect(
-      screen.getByRole('heading', { name: 'Chat met de officiële cijfers van Nederland', level: 1 }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stel een vraag. Deel de grafiek.', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Begin met vragen' })).toBeInTheDocument();
+    expect(screen.getByText(/herleidbaar tot een officiële CBS-cel/)).toBeInTheDocument();
   });
 
-  it('renders the frozen example answer in Dutch (mirrors the Dutch-only answer pipeline)', async () => {
+  it('shows a REAL chart above the fold (HeroStory) and no frozen text example any more', async () => {
     getLang.mockResolvedValue('nl');
     render(await Landing());
-    expect(screen.getByText(/Het consumentenvertrouwen in Nederland was in juni 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/Bron: CBS StatLine, tabel 83693NED/)).toBeInTheDocument();
+    expect(screen.getByTestId('hero-story')).toBeInTheDocument();
+    expect(screen.queryByText(/Het consumentenvertrouwen in Nederland was in juni 2026/)).not.toBeInTheDocument();
+  });
+
+  it('tells the teaser to skip the hero story so no chart shows twice', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await Landing());
+    expect(galleryProps.teaser).toEqual([{ excludeSlug: 'inflatie' }]);
+  });
+
+  it('falls back to the first built story for the teaser exclusion when inflation did not build', async () => {
+    getLang.mockResolvedValue('nl');
+    getGalleryStories.mockResolvedValue([{ slug: 'huizenprijzen', spec: {} }]);
+    render(await Landing());
+    expect(galleryProps.teaser).toEqual([{ excludeSlug: 'huizenprijzen' }]);
+  });
+
+  it('passes no exclusion when nothing is built yet (the hero shows its placeholder)', async () => {
+    getLang.mockResolvedValue('nl');
+    getGalleryStories.mockResolvedValue([]);
+    render(await Landing());
+    expect(galleryProps.teaser).toEqual([{ excludeSlug: undefined }]);
   });
 
   it('renders the fourth "Publiceer" step', async () => {
@@ -56,23 +102,18 @@ describe('Landing — en', () => {
   it('renders the English chrome via getLang() -> "en"', async () => {
     getLang.mockResolvedValue('en');
     render(await Landing());
-    expect(
-      screen.getByRole('heading', { name: "Chat with the Netherlands' official statistics", level: 1 }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask a question. Share the chart.', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start asking' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'How it works' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See the gallery' })).toBeInTheDocument();
     expect(screen.getByText('No guesswork, just computation')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Create a free account' })).toBeInTheDocument();
   });
 
-  // The demo answer block deliberately stays Dutch on the English page too
-  // (see landing.tsx's file-header note) — a leftover worth pinning so it
-  // never gets "helpfully" translated by a later session.
-  it('still renders the frozen example answer in Dutch on the English page', async () => {
+  it('shows the real hero chart on the English page too', async () => {
     getLang.mockResolvedValue('en');
     render(await Landing());
-    expect(screen.getByText(/Het consumentenvertrouwen in Nederland was in juni 2026/)).toBeInTheDocument();
-    expect(screen.queryByText(/Consumer confidence/)).toBeNull();
+    expect(screen.getByTestId('hero-story')).toBeInTheDocument();
+    expect(screen.getByText('A real answer, live from our database')).toBeInTheDocument();
   });
 
   // WP-B (journey programme phase 3 R5.4): the fourth "Publish" step joins

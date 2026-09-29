@@ -58,7 +58,15 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRout
 // anchor-target probe) never run. In production Landing is server-rendered
 // HTML, so the probe simply finds the section. Stub it here; the Landing
 // assertions that matter (the anchor target, the copy) live outside it.
-vi.mock('./gallery.tsx', () => ({ GalleryTeaser: () => null }));
+// WP-LOOK part (c), session 144: Landing now also mounts HeroStory and reads
+// the story set itself (web/lib/ontdek.ts) to pick the hero — both stubbed
+// the same way; heroStoryFor is pure, so the real one is kept.
+vi.mock('./gallery.tsx', () => ({
+  GalleryTeaser: () => null,
+  HeroStory: () => null,
+  heroStoryFor: () => null,
+}));
+vi.mock('../lib/ontdek.ts', () => ({ getGalleryStories: async () => [] }));
 // WP218 phase 4 (#219): Landing is now an async Server Component (await
 // getLang()) — jsdom has no Next.js request context for the real
 // cookies()/headers() reads, so it's mocked here the way every other
