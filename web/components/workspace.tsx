@@ -9,7 +9,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteMyThread, listMyThreads, loadMyThread } from '../app/actions.ts';
-import { ingestFile } from '../app/dataset-actions.ts';
+import { ingestFile, ingestGoogleSheet, ingestPastedTable, type IngestOutcome } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
@@ -326,11 +326,10 @@ export function Workspace({
   // never renders a success state itself because it is about to unmount.
   // On a refusal/auth failure, returns the message for Chat's own inline
   // display instead — the handoff is untouched.
-  const handleUploadFile = useCallback(
-    async (file: File): Promise<{ ok: boolean; message?: string }> => {
-      const formData = new FormData();
-      formData.set('file', file);
-      const result = await ingestFile(formData);
+  // Every import route (file, Google Sheet link, pasted table) ends the same
+  // way: the server stores it and hands back a dataset thread to switch to.
+  const openImportedDataset = useCallback(
+    (result: IngestOutcome): { ok: boolean; message?: string } => {
       if (result.kind === 'unauthenticated') {
         return { ok: false, message: t('common.sessionExpired') };
       }
@@ -358,6 +357,27 @@ export function Workspace({
       return { ok: true };
     },
     [refreshThreads, t],
+  );
+
+  const handleUploadFile = useCallback(
+    async (file: File): Promise<{ ok: boolean; message?: string }> => {
+      const formData = new FormData();
+      formData.set('file', file);
+      return openImportedDataset(await ingestFile(formData));
+    },
+    [openImportedDataset],
+  );
+
+  const handleImportSheet = useCallback(
+    async (url: string): Promise<{ ok: boolean; message?: string }> =>
+      openImportedDataset(await ingestGoogleSheet(url)),
+    [openImportedDataset],
+  );
+
+  const handlePasteTable = useCallback(
+    async (text: string): Promise<{ ok: boolean; message?: string }> =>
+      openImportedDataset(await ingestPastedTable(text)),
+    [openImportedDataset],
   );
 
   // The chat reports its dockable visuals here (an EVENT, not an effect): set the
@@ -460,7 +480,7 @@ export function Workspace({
             balance,
             ...(websearch ? { websearch } : {}),
           }}
-          {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile } } : {})}
+          {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile, onImportSheet: handleImportSheet, onPasteTable: handlePasteTable } } : {})}
           dockMode={isWide}
           initialMessages={handoff.messages}
           initialContext={handoff.context}

@@ -148,6 +148,12 @@ export interface ChatPricing {
 export interface ChatAttachments {
   enabled: true;
   onUploadFile: (file: File) => Promise<{ ok: boolean; message?: string }>;
+  /** A Google Sheet shared as "anyone with the link" (session 146). Absent ⇒
+   * the "Link sheet" chip stays the honest "coming soon" it always was. */
+  onImportSheet?: (url: string) => Promise<{ ok: boolean; message?: string }>;
+  /** A table pasted into the composer (session 146). Absent ⇒ pasting is a
+   * plain text paste, exactly as before. */
+  onPasteTable?: (text: string) => Promise<{ ok: boolean; message?: string }>;
 }
 
 /** R2.2 (WP-D, #69/#75/#211): the plain, serialisable pack shape threaded
@@ -1059,6 +1065,11 @@ export function Chat({
   const [linkRowOpen, setLinkRowOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkComingSoon, setLinkComingSoon] = useState(false);
+  // Session 146: the working "Link sheet" row (Google Sheets share link) and a
+  // pasted table awaiting the reader's yes. Appended after the hooks above.
+  const [sheetRowOpen, setSheetRowOpen] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState('');
+  const [pastedTable, setPastedTable] = useState<string | null>(null);
 
   // #15 (session 110 UX audit): the "coming soon" chips below (Upload file
   // when attachments is absent, Link sheet, Connect data) used to be native
@@ -1076,14 +1087,45 @@ export function Chat({
     setLinkComingSoon(true);
   }
 
+  /** Session 146: paste detection. A multi-line, tab-separated clipboard is a
+   * table copied from Excel/Sheets — offer to chart it instead of dumping the
+   * raw text into the question box. Anything else pastes normally. */
+  function handleComposerPaste(e: React.ClipboardEvent<HTMLTextAreaElement>): void {
+    if (!attachments?.onPasteTable) return;
+    const text = e.clipboardData.getData('text/plain');
+    const lines = text.split(/\r\n|\r|\n/).filter((line) => line.trim() !== '');
+    if (lines.length >= 3 && lines.every((line) => line.includes('\t'))) {
+      e.preventDefault();
+      setUploadError(null);
+      setPastedTable(text);
+    }
+  }
+
+  async function handleImportSheet(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    if (!attachments?.onImportSheet || !sheetUrl.trim()) return;
+    await runImport(() => attachments.onImportSheet!(sheetUrl.trim()));
+  }
+
+  async function handleUsePastedTable(): Promise<void> {
+    const text = pastedTable;
+    if (text === null || !attachments?.onPasteTable) return;
+    setPastedTable(null);
+    await runImport(() => attachments.onPasteTable!(text));
+  }
+
   async function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-choosing the same file name later
     if (!file || !attachments) return;
+    await runImport(() => attachments.onUploadFile(file));
+  }
+
+  async function runImport(run: () => Promise<{ ok: boolean; message?: string }>): Promise<void> {
     setUploadBusy(true);
     setUploadError(null);
     try {
-      const result = await attachments.onUploadFile(file);
+      const result = await run();
       if (!result.ok) {
         setUploadError(result.message ?? t('chat.fileReadError'));
       }
@@ -2308,7 +2350,7 @@ export function Chat({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.tsv,text/csv,text/tab-separated-values"
+              accept=".csv,.tsv,.xlsx,.xlsm,.ods,.json,text/csv,text/tab-separated-values,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet"
               onChange={(e) => void handleFileChosen(e)}
               className="hidden"
             />
@@ -2353,19 +2395,36 @@ export function Chat({
           * and "Connect database") so the "sits directly before" adjacency
           * test below stays true — aria-describedby doesn't care about DOM
           * order, only that the id resolves somewhere. */}
-        <span id={linkWithSheetHintId} className="sr-only">
-          {t('chat.linkWithSheetComingSoonTitle')}
-        </span>
-        <button
-          type="button"
-          aria-disabled="true"
-          aria-describedby={linkWithSheetHintId}
-          title={t('chat.linkWithSheetComingSoonTitle')}
-          className={CHIP_SOON}
-        >
-          <FileSpreadsheet aria-hidden="true" className="size-3.5" />
-          {t('chat.linkWithSheet')}
-        </button>
+        {attachments?.onImportSheet ? (
+          <button
+            type="button"
+            onClick={() => {
+              setUploadError(null);
+              setSheetRowOpen((open) => !open);
+            }}
+            aria-expanded={sheetRowOpen}
+            className={CHIP_ACTION}
+          >
+            <FileSpreadsheet aria-hidden="true" className="size-3.5" />
+            {t('chat.linkWithSheet')}
+          </button>
+        ) : (
+          <>
+            <span id={linkWithSheetHintId} className="sr-only">
+              {t('chat.linkWithSheetComingSoonTitle')}
+            </span>
+            <button
+              type="button"
+              aria-disabled="true"
+              aria-describedby={linkWithSheetHintId}
+              title={t('chat.linkWithSheetComingSoonTitle')}
+              className={CHIP_SOON}
+            >
+              <FileSpreadsheet aria-hidden="true" className="size-3.5" />
+              {t('chat.linkWithSheet')}
+            </button>
+          </>
+        )}
         <button
           type="button"
           aria-disabled="true"
@@ -2403,6 +2462,47 @@ export function Chat({
           </Button>
         </form>
       ) : null}
+      {attachments?.onImportSheet && sheetRowOpen ? (
+        <div className="flex flex-col gap-1">
+          <form onSubmit={(e) => void handleImportSheet(e)} className="flex flex-wrap items-center gap-2">
+            <Input
+              type="url"
+              value={sheetUrl}
+              onChange={(e) => setSheetUrl(e.target.value)}
+              placeholder={t('chat.sheetUrlPlaceholder')}
+              aria-label={t('chat.sheetUrlLabel')}
+              className="min-w-0 flex-1 bg-background"
+            />
+            <Button type="submit" variant="outline" disabled={!sheetUrl.trim() || uploadBusy}>
+              {t('chat.sheetImportButton')}
+            </Button>
+          </form>
+          <p className="text-xs text-muted-foreground">{t('chat.sheetHint')}</p>
+        </div>
+      ) : null}
+      {attachments?.onPasteTable && pastedTable !== null ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1">
+            {t('chat.pastedTablePrompt', {
+              rows: pastedTable.split(/\r\n|\r|\n/).filter((line) => line.trim() !== '').length - 1,
+            })}
+          </span>
+          <Button type="button" size="sm" onClick={() => void handleUsePastedTable()} disabled={uploadBusy}>
+            {t('chat.pastedTableUse')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setInput((current) => (current ? `${current}\n${pastedTable}` : pastedTable).slice(0, 500));
+              setPastedTable(null);
+            }}
+          >
+            {t('chat.pastedTableAsText')}
+          </Button>
+        </div>
+      ) : null}
       {linkComingSoon ? (
         <p className="text-xs text-muted-foreground">
           {t('chat.linkComingSoonMessage')}
@@ -2428,6 +2528,7 @@ export function Chat({
             ref={composerInputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={handleComposerPaste}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

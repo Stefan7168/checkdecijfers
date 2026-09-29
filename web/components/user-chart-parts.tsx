@@ -140,8 +140,41 @@ export const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: '
  * `formattedValue`, carried into the row by `buildRows` — so a drawn label
  * is a spec string, never a number this card formatted (the whole-card digit
  * scan pins that). */
-export function valueLabels(seriesKey: string, position: 'top' | 'right'): ReactNode {
-  return <LabelList dataKey={`${seriesKey}_display`} position={position} fill="var(--foreground)" {...VALUE_LABEL_PROPS} />;
+export function valueLabels(seriesKey: string, position: 'top' | 'right', onlyIndex?: number): ReactNode {
+  const displayKey = `${seriesKey}_display`;
+  // Dense lines/areas (session 146, found trying real 24-60-point sheets): a
+  // label on every point is a pile of overlapping digits. Past
+  // DENSE_LABEL_POINTS only the LAST point's own label is drawn — still that
+  // point's spec string, never a computed one; the tooltip and Data panel
+  // carry every other value.
+  if (onlyIndex !== undefined) {
+    return (
+      // No `dataKey` here on purpose: Recharts ignores `valueAccessor` whenever
+      // a `dataKey` is set, so the accessor reads the row's display string itself.
+      <LabelList
+        position={position}
+        fill="var(--foreground)"
+        valueAccessor={(entry, index) =>
+          index === onlyIndex ? ((entry as { payload?: Record<string, string> }).payload?.[displayKey] ?? '') : ''
+        }
+        {...VALUE_LABEL_PROPS}
+      />
+    );
+  }
+  return <LabelList dataKey={displayKey} position={position} fill="var(--foreground)" {...VALUE_LABEL_PROPS} />;
+}
+
+/** Points per series above which a line/area chart labels only its last point. */
+export const DENSE_LABEL_POINTS = 12;
+
+/** Index of a series' last non-null point, or undefined when the chart is
+ * sparse enough to label every point. */
+export function lastLabelIndex(rows: readonly Record<string, unknown>[], seriesKey: string): number | undefined {
+  if (rows.length <= DENSE_LABEL_POINTS) return undefined;
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i]![seriesKey] !== null && rows[i]![seriesKey] !== undefined) return i;
+  }
+  return undefined;
 }
 
 /** The plot's own dot: the click-to-annotate target (#212) and the marker

@@ -120,29 +120,12 @@ function sniffDelimiter(text: string): Delimiter {
   return ';';
 }
 
-export interface ParsedCsv {
-  /** Verbatim raw cell text, header row included at index 0 — the exact
-   * `cells` shape user_datasets.cells stores (D3). */
-  cells: string[][];
-  delimiter: Delimiter;
-}
-
 /**
- * Parses untrusted CSV/TSV bytes. Every cap is a hard refusal (thrown),
- * never silent truncation — the caller (`ingestFile`,
- * web/app/dataset-actions.ts) catches `CsvTooLargeError` and shows the fixed
- * English `ingestFileTooLargeText()` template (templates.ts); this error's
- * own Dutch message is server-side diagnostic detail only, never shown
- * verbatim (pre-dates #206's English-copy decision). Never a
- * partially-charted file the user doesn't know is incomplete.
+ * The size caps every import format shares (CSV/TSV, Excel, OpenDocument,
+ * JSON, a Google Sheet): rows, columns, header length, cell length. Throws
+ * `CsvTooLargeError` — never truncates. `rawRows[0]` is the header row.
  */
-export function parseCsv(text: string): ParsedCsv {
-  const stripped = stripBom(text);
-  const delimiter = sniffDelimiter(stripped);
-  const rawRows = parseDelimited(stripped, delimiter).filter(
-    (row) => !(row.length === 1 && row[0] === ''),
-  );
-
+export function enforceTableCaps(rawRows: string[][]): void {
   if (rawRows.length === 0) {
     throw new CsvTooLargeError('het bestand bevat geen rijen');
   }
@@ -171,6 +154,32 @@ export function parseCsv(text: string): ParsedCsv {
       }
     }
   }
+}
+
+export interface ParsedCsv {
+  /** Verbatim raw cell text, header row included at index 0 — the exact
+   * `cells` shape user_datasets.cells stores (D3). */
+  cells: string[][];
+  delimiter: Delimiter;
+}
+
+/**
+ * Parses untrusted CSV/TSV bytes. Every cap is a hard refusal (thrown),
+ * never silent truncation — the caller (`ingestFile`,
+ * web/app/dataset-actions.ts) catches `CsvTooLargeError` and shows the fixed
+ * English `ingestFileTooLargeText()` template (templates.ts); this error's
+ * own Dutch message is server-side diagnostic detail only, never shown
+ * verbatim (pre-dates #206's English-copy decision). Never a
+ * partially-charted file the user doesn't know is incomplete.
+ */
+export function parseCsv(text: string): ParsedCsv {
+  const stripped = stripBom(text);
+  const delimiter = sniffDelimiter(stripped);
+  const rawRows = parseDelimited(stripped, delimiter).filter(
+    (row) => !(row.length === 1 && row[0] === ''),
+  );
+
+  enforceTableCaps(rawRows);
 
   return { cells: rawRows, delimiter };
 }

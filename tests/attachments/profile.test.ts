@@ -45,6 +45,14 @@ describe('buildDatasetProfile — type classification', () => {
     expect(profile.columns[0]!.type).toBe('date');
   });
 
+  it('classifies quarter labels (2023-Q1, 2023 Q2, 2023q3) as an ordered period, i.e. date', () => {
+    const profile = buildDatasetProfile([['Kwartaal'], ['2023-Q1'], ['2023 Q2'], ['2023q3']]);
+    expect(profile.columns[0]!.type).toBe('date');
+    // A near-miss stays text — never guessed into a period.
+    expect(buildDatasetProfile([['K'], ['2023-Q5']]).columns[0]!.type).toBe('text');
+    expect(buildDatasetProfile([['K'], ['Q1 2023']]).columns[0]!.type).toBe('text');
+  });
+
   it('does NOT classify a 4-digit column outside 1900-2100 as year — falls through to number, not text (it IS still numeric)', () => {
     const profile = buildDatasetProfile([['Code'], ['1899'], ['2101']]);
     expect(profile.columns[0]!.type).toBe('number');

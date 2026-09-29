@@ -2657,7 +2657,8 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(button).not.toHaveAttribute('title');
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     expect(input).not.toBeNull();
-    expect(input).toHaveAttribute('accept', '.csv,.tsv,text/csv,text/tab-separated-values');
+    expect(input.getAttribute('accept')).toContain('.xlsx');
+    expect(input.getAttribute('accept')).toContain('.csv');
 
     const file = new File(['Year\n2020\n'], 'x.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
@@ -2683,6 +2684,48 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     const file = new File(['x'.repeat(10)], 'x.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
+  });
+
+  it('Link sheet is a working chip when onImportSheet is wired: opens the row and imports the pasted link', async () => {
+    const onImportSheet = vi.fn().mockResolvedValue({ ok: true });
+    render(<Chat attachments={{ enabled: true, onUploadFile: vi.fn(), onImportSheet }} />);
+    const chip = screen.getByRole('button', { name: 'Sheet koppelen' });
+    expect(chip).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(chip);
+    const input = screen.getByLabelText('Google Sheets-link');
+    fireEvent.change(input, { target: { value: 'https://docs.google.com/spreadsheets/d/abc/edit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Importeren' }));
+    await waitFor(() => expect(onImportSheet).toHaveBeenCalledWith('https://docs.google.com/spreadsheets/d/abc/edit'));
+  });
+
+  it('shows the import refusal for a sheet link inline', async () => {
+    const onImportSheet = vi.fn().mockResolvedValue({ ok: false, message: 'Share the sheet first.' });
+    render(<Chat attachments={{ enabled: true, onUploadFile: vi.fn(), onImportSheet }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sheet koppelen' }));
+    fireEvent.change(screen.getByLabelText('Google Sheets-link'), { target: { value: 'https://docs.google.com/spreadsheets/d/abc/edit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Importeren' }));
+    expect(await screen.findByText('Share the sheet first.')).toBeInTheDocument();
+  });
+
+  it('a pasted tab-separated table offers "Tabel gebruiken"; a plain paste is untouched', async () => {
+    const onPasteTable = vi.fn().mockResolvedValue({ ok: true });
+    render(<Chat attachments={{ enabled: true, onUploadFile: vi.fn(), onPasteTable }} />);
+    const box = screen.getByRole('textbox');
+    const table = 'a\tb\n1\t2\n3\t4\n';
+    fireEvent.paste(box, { clipboardData: { getData: () => table } });
+    expect(await screen.findByText(/Dit lijkt een tabel met 2 rijen/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tabel gebruiken' }));
+    await waitFor(() => expect(onPasteTable).toHaveBeenCalledWith(table));
+
+    // One line of ordinary text is left to the browser: no prompt appears.
+    fireEvent.paste(box, { clipboardData: { getData: () => 'gewoon een vraag' } });
+    expect(screen.queryByText(/Dit lijkt een tabel/)).not.toBeInTheDocument();
+  });
+
+  it('without onPasteTable a table paste is an ordinary paste', () => {
+    render(<Chat attachments={{ enabled: true, onUploadFile: vi.fn() }} />);
+    fireEvent.paste(screen.getByRole('textbox'), { clipboardData: { getData: () => 'a\tb\n1\t2\n3\t4\n' } });
+    expect(screen.queryByText(/Dit lijkt een tabel/)).not.toBeInTheDocument();
   });
 
   it('"Connect data" stays aria-disabled even when attachments is present; "Add link" stays clickable', () => {

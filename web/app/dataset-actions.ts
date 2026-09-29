@@ -13,7 +13,16 @@ import { createHash } from 'node:crypto';
 import { chargeAndRunDataset } from '../backend/billing/dataset-gate.ts';
 import type { GatedDatasetResponse } from '../backend/billing/types.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
-import { CsvTooLargeError, parseCsv } from '../backend/attachments/ingest/csv.ts';
+import {
+  CsvTooLargeError,
+  isLegacyExcel,
+  parsePastedTable,
+  parseUpload,
+  sniffUploadKind,
+  UnreadableFileError,
+} from '../backend/attachments/ingest/formats.ts';
+import { fetchGoogleSheet, GSheetFetchError, parseGoogleSheetUrl } from '../backend/attachments/ingest/gsheet.ts';
+import { parseCsv } from '../backend/attachments/ingest/csv.ts';
 import { buildDatasetProfile, resolveAmbiguousFormats } from '../backend/attachments/ingest/profile.ts';
 import { MAX_DATASETS_PER_USER, MAX_FILE_BYTES, MAX_TOTAL_BYTES_PER_USER } from '../backend/attachments/limits.ts';
 import { deleteOneDataset } from '../backend/attachments/retention.ts';
@@ -23,7 +32,11 @@ import { renderInstructionForDataset, type RenderInstructionFailure } from '../b
 import { activeDatasetUsage, getDataset, insertDataset, resolveDatasetDecision } from '../backend/attachments/store.ts';
 import {
   ingestFileTooLargeText,
+  ingestGoogleSheetText,
+  ingestLegacyExcelText,
+  ingestNothingToReadText,
   ingestQuotaExceededText,
+  ingestUnreadableFileText,
   ingestUnsupportedFileTypeText,
 } from '../backend/attachments/templates.ts';
 import type { ColumnId, DatasetProfile, DatasetStatus, NumberFormat, SourceKind, UserChartSpec } from '../backend/attachments/types.ts';
@@ -64,18 +77,6 @@ function guardPositiveInteger(value: unknown, name: string): number {
   return value;
 }
 
-/** A CSV/TSV-only sniff by extension for v1 — XLSX/HTML/PDF ingest (WP202b/c)
- * have no parser in src/attachments/ingest/ yet, so this is deliberately not
- * a MIME check: browsers report wildly inconsistent `File.type` values for
- * CSV (often empty, or `application/vnd.ms-excel`), while the extension is
- * exactly what the deterministic parser downstream (`parseCsv`) commits to. */
-function sniffSourceKind(fileName: string): SourceKind | null {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith('.csv')) return 'file_csv';
-  if (lower.endsWith('.tsv')) return 'file_tsv';
-  return null;
-}
-
 /** Untrusted, client-echoed displayName cap — this module's own
  * MAX_HEADER_CHARS-style discipline (limits.ts), applied to the one
  * ingest-time string that ISN'T bounded by a database column constraint
@@ -112,6 +113,69 @@ export type IngestOutcome =
  * quota), unlike the guard functions above, which reject shapes the real UI
  * can never actually produce.
  */
+interface ImportToStore {
+  sourceKind: SourceKind;
+  displayName: string;
+  sourceUrl: string | null;
+  mimeSniffed: string;
+  bytes: Uint8Array;
+  cells: string[][];
+}
+
+/** The one place every import route ends: quota check, profile, store, the
+ * eager dataset thread. Routes differ only in how they READ their table —
+ * everything after `cells` exists is identical, so a new format can add no new
+ * trust rule (ADR 037 D5/D10). */
+async function storeImport(userId: string, imp: ImportToStore): Promise<IngestOutcome> {
+  const db = getDb();
+  const usage = await activeDatasetUsage(db, userId);
+  if (usage.count + 1 > MAX_DATASETS_PER_USER) {
+    return { kind: 'refused', message: ingestQuotaExceededText('count') };
+  }
+  if (usage.totalBytes + imp.bytes.length > MAX_TOTAL_BYTES_PER_USER) {
+    return { kind: 'refused', message: ingestQuotaExceededText('bytes') };
+  }
+
+  const profile = buildDatasetProfile(imp.cells);
+  const ambiguousColumnIds = profile.columns.filter((c) => c.numberFormat === 'ambiguous').map((c) => c.id);
+  const status: DatasetStatus = ambiguousColumnIds.length > 0 ? 'needs_decision' : 'ready';
+  const contentSha256 = createHash('sha256').update(Buffer.from(imp.bytes)).digest('hex');
+  const displayName = imp.displayName.trim().slice(0, MAX_DISPLAY_NAME_CHARS) || 'bestand';
+
+  const dataset = await insertDataset(db, {
+    userId,
+    sourceKind: imp.sourceKind,
+    displayName,
+    sourceUrl: imp.sourceUrl,
+    mimeSniffed: imp.mimeSniffed,
+    byteSize: imp.bytes.length,
+    contentSha256,
+    requestId: null,
+    fileBytes: imp.bytes,
+    cells: imp.cells,
+    profile,
+    status,
+  });
+  const threadId = await createDatasetThread(db, userId, dataset.id);
+
+  return { kind: 'ok', datasetId: dataset.id, threadId, displayName: dataset.displayName, status, profile, ambiguousColumnIds };
+}
+
+/** A route's read failure → the refusal the reader sees (never a thrown 500). */
+function readFailure(error: unknown): IngestOutcome | null {
+  if (error instanceof CsvTooLargeError) return { kind: 'refused', message: ingestFileTooLargeText() };
+  if (error instanceof UnreadableFileError) return { kind: 'refused', message: ingestUnreadableFileText() };
+  return null;
+}
+
+const MIME_BY_KIND: Record<string, string> = {
+  file_csv: 'text/csv',
+  file_tsv: 'text/tab-separated-values',
+  file_xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  file_ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  file_json: 'application/json',
+};
+
 export async function ingestFile(formData: FormData): Promise<IngestOutcome> {
   const userId = await currentUserId();
   if (userId === null) {
@@ -126,61 +190,125 @@ export async function ingestFile(formData: FormData): Promise<IngestOutcome> {
   if (file.size > MAX_FILE_BYTES) {
     return { kind: 'refused', message: ingestFileTooLargeText() };
   }
-  const sourceKind = sniffSourceKind(file.name);
-  if (sourceKind === null) {
-    return { kind: 'refused', message: ingestUnsupportedFileTypeText() };
-  }
-
-  const db = getDb();
-  const usage = await activeDatasetUsage(db, userId);
-  if (usage.count + 1 > MAX_DATASETS_PER_USER) {
-    return { kind: 'refused', message: ingestQuotaExceededText('count') };
-  }
-  if (usage.totalBytes + file.size > MAX_TOTAL_BYTES_PER_USER) {
-    return { kind: 'refused', message: ingestQuotaExceededText('bytes') };
+  const uploadKind = sniffUploadKind(file.name);
+  if (uploadKind === null) {
+    return {
+      kind: 'refused',
+      message: isLegacyExcel(file.name) ? ingestLegacyExcelText() : ingestUnsupportedFileTypeText(),
+    };
   }
 
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const text = new TextDecoder('utf-8').decode(bytes);
-    let cells: string[][];
+    let parsed;
     try {
-      ({ cells } = parseCsv(text));
+      parsed = parseUpload(uploadKind, bytes);
     } catch (error) {
-      if (error instanceof CsvTooLargeError) {
-        return { kind: 'refused', message: ingestFileTooLargeText() };
-      }
+      const refused = readFailure(error);
+      if (refused) return refused;
       throw error;
     }
-
-    const profile = buildDatasetProfile(cells);
-    const ambiguousColumnIds = profile.columns
-      .filter((c) => c.numberFormat === 'ambiguous')
-      .map((c) => c.id);
-    const status: DatasetStatus = ambiguousColumnIds.length > 0 ? 'needs_decision' : 'ready';
-    const contentSha256 = createHash('sha256').update(Buffer.from(bytes)).digest('hex');
-    const displayName = file.name.trim().slice(0, MAX_DISPLAY_NAME_CHARS) || 'bestand';
-
-    const dataset = await insertDataset(db, {
-      userId,
-      sourceKind,
+    // A workbook with several tabs: the first table tab is imported and the
+    // tab's name is part of the display name, so nobody mistakes which one.
+    const displayName =
+      parsed.sheetName !== null && parsed.sheetNames.length > 1 ? `${file.name.trim()} · ${parsed.sheetName}` : file.name;
+    return await storeImport(userId, {
+      sourceKind: uploadKind,
       displayName,
       sourceUrl: null,
-      mimeSniffed: file.type || (sourceKind === 'file_tsv' ? 'text/tab-separated-values' : 'text/csv'),
-      byteSize: bytes.length,
-      contentSha256,
-      requestId: null,
-      fileBytes: bytes,
-      cells,
-      profile,
-      status,
+      mimeSniffed: file.type || MIME_BY_KIND[uploadKind]!,
+      bytes,
+      cells: parsed.cells,
     });
-    const threadId = await createDatasetThread(db, userId, dataset.id);
-
-    return { kind: 'ok', datasetId: dataset.id, threadId, displayName: dataset.displayName, status, profile, ambiguousColumnIds };
   } catch (error) {
     console.error('ingestFile failed:', error);
     await reportError('ingestFile', error, { userId });
+    throw error;
+  }
+}
+
+/** A table pasted straight into the chat box (tab-separated from Excel/Sheets,
+ * or comma/semicolon text). Stored as text exactly like an uploaded CSV. */
+export async function ingestPastedTable(text: string): Promise<IngestOutcome> {
+  const userId = await currentUserId();
+  if (userId === null) return { kind: 'unauthenticated' };
+  if (typeof text !== 'string') throw new Error('input rejected: text must be a string');
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length > MAX_FILE_BYTES) return { kind: 'refused', message: ingestFileTooLargeText() };
+  if (text.trim() === '') return { kind: 'refused', message: ingestNothingToReadText() };
+
+  try {
+    let cells: string[][];
+    try {
+      cells = parsePastedTable(text);
+    } catch (error) {
+      const refused = readFailure(error);
+      if (refused) return refused;
+      throw error;
+    }
+    if (cells.length < 2 || cells[0]!.length < 2) return { kind: 'refused', message: ingestNothingToReadText() };
+    return await storeImport(userId, {
+      sourceKind: 'paste_text',
+      displayName: 'Pasted table',
+      sourceUrl: null,
+      mimeSniffed: 'text/plain',
+      bytes,
+      cells,
+    });
+  } catch (error) {
+    console.error('ingestPastedTable failed:', error);
+    await reportError('ingestPastedTable', error, { userId });
+    throw error;
+  }
+}
+
+/** A Google Sheet shared as "anyone with the link can view": fetched once as a
+ * snapshot (no Google login, no OAuth) and stored like an uploaded file. */
+export async function ingestGoogleSheet(url: string): Promise<IngestOutcome> {
+  const userId = await currentUserId();
+  if (userId === null) return { kind: 'unauthenticated' };
+  if (typeof url !== 'string' || url.length > 2000) throw new Error('input rejected: url must be a string within 2000 chars');
+  const ref = parseGoogleSheetUrl(url);
+  if (ref === null) return { kind: 'refused', message: ingestGoogleSheetText('not_a_sheet_link') };
+
+  try {
+    let bytes: Uint8Array;
+    let format: 'csv' | 'xlsx';
+    try {
+      ({ bytes, format } = await fetchGoogleSheet(ref));
+    } catch (error) {
+      if (error instanceof GSheetFetchError) return { kind: 'refused', message: ingestGoogleSheetText(error.reason) };
+      const refused = readFailure(error);
+      if (refused) return refused;
+      throw error;
+    }
+    let cells: string[][];
+    let sheetName: string | null = null;
+    try {
+      if (format === 'xlsx') {
+        const parsed = parseUpload('file_xlsx', bytes);
+        cells = parsed.cells;
+        sheetName = parsed.sheetNames.length > 1 ? parsed.sheetName : null;
+      } else {
+        cells = parseCsv(new TextDecoder('utf-8').decode(bytes)).cells;
+      }
+    } catch (error) {
+      const refused = readFailure(error);
+      if (refused) return refused;
+      throw error;
+    }
+    return await storeImport(userId, {
+      sourceKind: 'url_gsheet',
+      displayName: sheetName ? `Google Sheet · ${sheetName}` : 'Google Sheet',
+      // Canonical, credential-free URL rebuilt from the validated id.
+      sourceUrl: `https://docs.google.com/spreadsheets/d/${ref.id}/`,
+      mimeSniffed: format === 'xlsx' ? MIME_BY_KIND.file_xlsx! : 'text/csv',
+      bytes,
+      cells,
+    });
+  } catch (error) {
+    console.error('ingestGoogleSheet failed:', error);
+    await reportError('ingestGoogleSheet', error, { userId });
     throw error;
   }
 }

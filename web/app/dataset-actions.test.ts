@@ -5,6 +5,8 @@
 // gating, ownership double-binding (dataset AND thread), the ingest-time
 // business rules (file type/size/quota), and correct wiring to the backend,
 // mirroring the mocked-module convention of actions.test.ts/trial-actions.test.ts.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../backend/db/types.ts';
 import type { DatasetProfile, UserDataset } from '../backend/attachments/types.ts';
@@ -51,6 +53,8 @@ import {
   decideDatasetFormat,
   deleteMyDataset,
   ingestFile,
+  ingestGoogleSheet,
+  ingestPastedTable,
 } from './dataset-actions.ts';
 
 const fakeDb = {} as Db;
@@ -102,9 +106,30 @@ describe('ingestFile', () => {
   });
 
   it('refuses an unsupported file extension without touching the db', async () => {
-    const result = await ingestFile(csvFile('a,b\n1,2\n', 'x.xlsx'));
+    const result = await ingestFile(csvFile('a,b\n1,2\n', 'x.pdf'));
     expect(result).toMatchObject({ kind: 'refused' });
     expect(store.insertDataset).not.toHaveBeenCalled();
+  });
+
+  it('tells people to re-save an old .xls as .xlsx', async () => {
+    const result = await ingestFile(csvFile('a,b\n1,2\n', 'old.xls'));
+    expect(result).toMatchObject({ kind: 'refused', message: expect.stringContaining('.xlsx') });
+    expect(store.insertDataset).not.toHaveBeenCalled();
+  });
+
+  it('refuses a fake .xlsx that is not a workbook, without storing anything', async () => {
+    const result = await ingestFile(csvFile('a,b\n1,2\n', 'x.xlsx'));
+    expect(result).toMatchObject({ kind: 'refused', message: expect.stringContaining("couldn't read") });
+    expect(store.insertDataset).not.toHaveBeenCalled();
+  });
+
+  it('stores a real Excel workbook as file_xlsx, naming the tab when there are several', async () => {
+    const bytes = readFileSync(resolve(__dirname, '..', '..', 'tests', 'fixtures', 'attachments', 'sheets', 'koffie_verkoop_2023_2024.xlsx'));
+    const fd = new FormData();
+    fd.set('file', new File([bytes], 'koffie.xlsx'));
+    const result = await ingestFile(fd);
+    expect(result).toMatchObject({ kind: 'ok' });
+    expect(store.insertDataset.mock.calls[0]![1]).toMatchObject({ sourceKind: 'file_xlsx', sourceUrl: null });
   });
 
   it('refuses when the file exceeds MAX_FILE_BYTES', async () => {
@@ -288,5 +313,49 @@ describe('deleteMyDataset', () => {
   it('returns deleted: false for a nonexistent/foreign id, never throws', async () => {
     retention.deleteOneDataset.mockResolvedValue(false);
     expect(await deleteMyDataset(999)).toEqual({ deleted: false });
+  });
+});
+
+describe('ingestPastedTable', () => {
+  it('stores a tab-separated paste as paste_text', async () => {
+    const result = await ingestPastedTable('Team\tPunten\nA\t3\nB\t5\n');
+    expect(result).toMatchObject({ kind: 'ok' });
+    expect(store.insertDataset.mock.calls[0]![1]).toMatchObject({ sourceKind: 'paste_text' });
+  });
+  it('refuses text with no table in it', async () => {
+    expect(await ingestPastedTable('just one line')).toMatchObject({ kind: 'refused' });
+    expect(await ingestPastedTable('   ')).toMatchObject({ kind: 'refused' });
+    expect(store.insertDataset).not.toHaveBeenCalled();
+  });
+  it('needs a session', async () => {
+    currentUserId.mockResolvedValue(null);
+    expect(await ingestPastedTable('a\tb\n1\t2\n')).toEqual({ kind: 'unauthenticated' });
+  });
+});
+
+describe('ingestGoogleSheet', () => {
+  const ID = '1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde';
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('refuses anything that is not a Google Sheets link before any network call', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    expect(await ingestGoogleSheet('http://169.254.169.254/latest')).toMatchObject({ kind: 'refused' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+  it('stores a shared sheet as url_gsheet with a credential-free source URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('Jaar,Waarde\n2020,1\n2021,2\n', { status: 200, headers: { 'content-type': 'text/csv' } })));
+    const result = await ingestGoogleSheet(`https://docs.google.com/spreadsheets/d/${ID}/edit?gid=5&usp=sharing`);
+    expect(result).toMatchObject({ kind: 'ok' });
+    expect(store.insertDataset.mock.calls[0]![1]).toMatchObject({
+      sourceKind: 'url_gsheet',
+      sourceUrl: `https://docs.google.com/spreadsheets/d/${ID}/`,
+    });
+  });
+  it('explains how to share when the sheet is private', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location: 'https://accounts.google.com/ServiceLogin' } })));
+    const result = await ingestGoogleSheet(`https://docs.google.com/spreadsheets/d/${ID}/edit`);
+    expect(result).toMatchObject({ kind: 'refused', message: expect.stringContaining('Anyone with the link') });
+    expect(store.insertDataset).not.toHaveBeenCalled();
   });
 });

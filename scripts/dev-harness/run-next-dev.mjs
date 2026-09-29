@@ -16,8 +16,15 @@ process.env.NODE_OPTIONS = `--import ${pathToFileURL(resolve(root, 'scripts/dev-
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:9911';
 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_local_dummy';
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3102';
-process.env.ANTHROPIC_BASE_URL = 'http://127.0.0.1:9912';
-process.env.ANTHROPIC_API_KEY = 'sk-ant-local-stub';
+// HARNESS_REAL_LLM=1 (session 146): talk to the REAL Anthropic API with the key
+// from the environment (start with `node --env-file=.env ...`) instead of the
+// fixture stub — for trying new uploads with real answers. Costs real money.
+if (process.env.HARNESS_REAL_LLM === '1' && process.env.ANTHROPIC_API_KEY) {
+  delete process.env.ANTHROPIC_BASE_URL;
+} else {
+  process.env.ANTHROPIC_BASE_URL = 'http://127.0.0.1:9912';
+  process.env.ANTHROPIC_API_KEY = 'sk-ant-local-stub';
+}
 process.env.WORKSPACE_ENABLED = '1';
 process.env.CLARIFY_CLICK_ENABLED = '1';
 process.env.ANSWER_FIRST_ENABLED = '1';

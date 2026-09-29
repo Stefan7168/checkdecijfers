@@ -44,7 +44,16 @@ export const USER_DATA_BADGE = 'Your data · unverified' as const;
  * English, per the same #206 decision. */
 export const REDACTED_DATASET_TEXT = '[deleted question]' as const;
 
-export type SourceKind = 'file_csv' | 'file_tsv' | 'file_xlsx' | 'url_html' | 'file_pdf';
+export type SourceKind =
+  | 'file_csv'
+  | 'file_tsv'
+  | 'file_xlsx'
+  | 'file_ods'
+  | 'file_json'
+  | 'paste_text'
+  | 'url_gsheet'
+  | 'url_html'
+  | 'file_pdf';
 
 export type DatasetStatus = 'ready' | 'needs_decision' | 'failed' | 'redacted';
 

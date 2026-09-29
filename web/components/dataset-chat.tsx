@@ -28,6 +28,7 @@ import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import { ambiguousFormatClarificationText, AMBIGUOUS_FORMAT_OPTIONS } from '../backend/attachments/templates.ts';
 import type { ColumnProfile, DatasetProfile, DatasetStatus, NumberFormat } from '../backend/attachments/types.ts';
 import { replayChips } from '../lib/chart-copilot-reply.ts';
+import { starterQuestions } from '../lib/dataset-starters.ts';
 import { datasetMessageHasVisual, deriveDatasetVisuals, visualId, type DockVisual } from '../lib/dock-visuals.ts';
 import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import { RecipeChips } from './chart-copilot-input.tsx';
@@ -235,6 +236,33 @@ export function DatasetChat({
     <section aria-label={displayName} className="flex h-full min-h-0 w-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 tnum">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+        {messages.length === 0 && !busy ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-muted-foreground">
+              {t('datasetChat.overview', { rows: profile.rowCount, columns: profile.columns.length })}
+            </p>
+            {starterQuestions(profile).length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-foreground">{t('datasetChat.starterHeading')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {starterQuestions(profile).map((starter) => {
+                    const text = t(`datasetChat.starter.${starter.kind}`, starter.params);
+                    return (
+                      <button
+                        key={text}
+                        type="button"
+                        onClick={() => setInput(text)}
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+                      >
+                        {text}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {messages.map((message, i) => {
           if (message.role === 'redacted') {
             return (

@@ -156,6 +156,7 @@ import {
   failureMessage,
   FORM_TABS,
   valueLabels,
+  lastLabelIndex,
   UserSeriesDot,
   derivedOverlayElements,
   userHeatmapModel,
@@ -1296,6 +1297,12 @@ function UserChartCard({
   // flattens the `.map()` over series below, but cannot see through a
   // Fragment — so the shared axis/grid/tooltip elements are listed here with
   // their own keys instead of being wrapped.
+  // Session 146: a fixed 48 px clipped real magnitudes ("249.335.499" lost its
+  // leading digits). Width follows the longest tick text actually drawn.
+  const yAxisWidth = Math.min(
+    110,
+    Math.max(48, Math.ceil(plan.axisTicks.reduce((w, tick) => Math.max(w, tick.display.length), 0) * 7.5) + 14),
+  );
   const verticalAxes = [
     pres.grid !== 'none' ? <CartesianGrid key="grid" {...GRID_LINE_PROPS} horizontal vertical={pres.grid === 'both'} /> : null,
     <XAxis
@@ -1312,7 +1319,7 @@ function UserChartCard({
       ticks={plan.axisTicks.map((tick) => tick.value)}
       interval={0}
       tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
-      width={plan.axisTicks.length > 0 ? 48 : 16}
+      width={plan.axisTicks.length > 0 ? yAxisWidth : 16}
       domain={pres.zeroBaseline === 'zero' ? [0, 'auto'] : yAxisDomain(activeSpec.kind)}
       stroke={AXIS_COLOR}
       axisLine={pres.axisLines === 'shown'}
@@ -1400,7 +1407,7 @@ function UserChartCard({
             * Lijn branch verbatim, exactly as chart.tsx's own Helling tab
             * reuses its Lijn branch. Nothing new is drawn. */}
           {activeForm === 'line' || activeForm === 'slope' ? (
-            <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
+            <LineChart data={rows} margin={{ top: showValueLabels ? 20 : 8, right: showValueLabels ? 44 : 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
               {verticalAxes}
               {visibleSeries.map((s) => (
                 <Line
@@ -1417,7 +1424,7 @@ function UserChartCard({
                   activeDot={false}
                   isAnimationActive={false}
                 >
-                  {showValueLabels ? valueLabels(s.key, 'top') : null}
+                  {showValueLabels ? valueLabels(s.key, 'top', lastLabelIndex(rows, s.key)) : null}
                 </Line>
               ))}
               {/* Era shading bands, positioned by period label — same
@@ -1439,7 +1446,7 @@ function UserChartCard({
               {derivedOverlayElements(resolvedOverlays, state.derivedOverlayRequests, allPlottablePoints)}
             </LineChart>
           ) : activeForm === 'area' ? (
-            <AreaChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
+            <AreaChart data={rows} margin={{ top: showValueLabels ? 20 : 8, right: showValueLabels ? 44 : 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
               <defs>
                 {seriesMeta.map((s) => (
                   <linearGradient key={s.key} id={`fill-${domId}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -1480,7 +1487,7 @@ function UserChartCard({
                   activeDot={false}
                   isAnimationActive={false}
                 >
-                  {showValueLabels ? valueLabels(s.key, 'top') : null}
+                  {showValueLabels ? valueLabels(s.key, 'top', lastLabelIndex(rows, s.key)) : null}
                 </Area>
               );
               })}

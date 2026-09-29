@@ -119,7 +119,34 @@ export function reconstructChartText(_instruction: ChartInstruction): string {
 // Dutch — pre-dating #206, never user-facing), never surfaced verbatim here.
 
 export function ingestUnsupportedFileTypeText(): string {
-  return 'Only CSV and TSV files are supported right now.';
+  return 'We can read Excel (.xlsx), OpenDocument (.ods), CSV, TSV and JSON files.';
+}
+
+export function ingestLegacyExcelText(): string {
+  return 'Old Excel files (.xls) are not supported. In Excel, choose Save As and pick .xlsx, then upload that.';
+}
+
+export function ingestUnreadableFileText(): string {
+  return "We couldn't read this file. It may be damaged, password-protected, or not a table.";
+}
+
+export function ingestNothingToReadText(): string {
+  return 'We could not find a table there: it needs a header row and at least one row of data.';
+}
+
+export function ingestGoogleSheetText(
+  reason: 'not_a_sheet_link' | 'not_shared' | 'not_found' | 'unreachable',
+): string {
+  switch (reason) {
+    case 'not_a_sheet_link':
+      return 'That does not look like a Google Sheets link. Paste the link from your browser while the sheet is open.';
+    case 'not_shared':
+      return 'We cannot open that sheet. In Google Sheets, choose Share, then set General access to "Anyone with the link" (Viewer), and try again.';
+    case 'not_found':
+      return 'Google says that sheet does not exist. Check the link.';
+    case 'unreachable':
+      return 'We could not reach Google just now. Try again in a minute.';
+  }
 }
 
 export function ingestFileTooLargeText(): string {

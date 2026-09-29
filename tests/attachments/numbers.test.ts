@@ -9,6 +9,7 @@ import {
   detectNumberFormat,
   parseNumber,
 } from '../../src/attachments/ingest/numbers.ts';
+import { buildDatasetProfile } from '../../src/attachments/ingest/profile.ts';
 
 describe('detectNumberFormat', () => {
   it('decides nl (dot=thousands, comma=decimal) from a mixed-separator cell', () => {
@@ -122,5 +123,20 @@ describe('decimalsOf', () => {
   it('is 0 for an integer with no decimal part', () => {
     expect(decimalsOf('2024', 'nl')).toBe(0);
     expect(decimalsOf('1.234.567', 'nl')).toBe(0);
+  });
+});
+
+describe('currency and percent decoration (session 146)', () => {
+  it('reads "€ 1.234,56", "$1,200", "12,5%" and "5 €" as numbers', () => {
+    expect(parseNumber('€ 1.234,56', 'nl')).toBe(1234.56);
+    expect(parseNumber('$1,200', 'en')).toBe(1200);
+    expect(parseNumber('12,5%', 'nl')).toBe(12.5);
+    expect(parseNumber('5 €', 'nl')).toBe(5);
+    expect(parseNumber('-€ 5', 'nl')).toBe(-5);
+    expect(parseNumber('n.v.t.', 'nl')).toBeNull();
+  });
+  it('lets a euro-formatted column be a number column with a decided format', () => {
+    const profile = buildDatasetProfile([['Bedrag'], ['€ 1.234.567'], ['€ 2.000'], ['€ 30.001']]);
+    expect(profile.columns[0]).toMatchObject({ type: 'number', numberFormat: 'nl' });
   });
 });

@@ -11,11 +11,25 @@ import type { NumberFormat } from '../types.ts';
 
 type CellSignal = 'nl' | 'en' | 'ambiguous-single' | 'no-signal';
 
+/** Session 146: real exports write "€ 1.234,56", "$1,200", "12,5%", "5 €".
+ * The currency sign and a trailing percent sign are display decoration, not
+ * part of the number — stripped here (and ONLY here, at read time; the stored
+ * cell text stays verbatim) so such a column is a number column instead of
+ * silently text. Anything else non-numeric still is not a number. */
+export function stripNumberDecoration(raw: string): string {
+  return raw
+    .replace(/[€$£¥\u00a0]/g, '')
+    .trim()
+    .replace(/%$/, '')
+    .trim()
+    .replace(/^-\s+/, '-');
+}
+
 /** Digits-only body after stripping an optional leading sign, or null if the
  * text isn't number-shaped at all (contains anything other than digits,
  * '.', ',', an optional leading '-'). */
 function numericBody(raw: string): string | null {
-  const trimmed = raw.trim();
+  const trimmed = stripNumberDecoration(raw);
   const body = trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
   if (body.length === 0 || !/^[\d.,]+$/.test(body) || !/\d/.test(body)) return null;
   return body;
@@ -121,7 +135,7 @@ export class AmbiguousNumberFormatError extends Error {
  */
 export function parseNumber(raw: string, format: NumberFormat): number | null {
   if (format === 'ambiguous') throw new AmbiguousNumberFormatError();
-  const trimmed = raw.trim();
+  const trimmed = stripNumberDecoration(raw);
   if (trimmed.length === 0) return null;
   const normalized =
     format === 'en' ? trimmed.replaceAll(',', '') : trimmed.replaceAll('.', '').replace(',', '.');
@@ -133,7 +147,7 @@ export function parseNumber(raw: string, format: NumberFormat): number | null {
  * value) — so display via the shared formatValueNl never rounds beyond
  * what the source file actually contained. */
 export function decimalsOf(raw: string, format: NumberFormat): number {
-  const trimmed = raw.trim();
+  const trimmed = stripNumberDecoration(raw);
   const decimalChar = format === 'en' ? '.' : ',';
   const index = trimmed.lastIndexOf(decimalChar);
   if (index === -1) return 0;

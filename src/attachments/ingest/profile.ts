@@ -6,7 +6,7 @@
 import type { ColumnId, ColumnProfile, ColumnType, DatasetProfile, NumberFormat } from '../types.ts';
 import { columnIndex } from '../columns.ts';
 import { MAX_DISTINCT_VALUES } from '../limits.ts';
-import { detectNumberFormat, parseNumber } from './numbers.ts';
+import { detectNumberFormat, parseNumber, stripNumberDecoration } from './numbers.ts';
 
 /** Missing-value markers that don't disqualify a column from being
  * classified 'number'/'year'/'date' — the U11 "n.v.t." fixture plus the
@@ -20,6 +20,10 @@ function isMissing(cell: string): boolean {
 
 const YEAR_RE = /^\d{4}$/;
 const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?$/;
+// Session 146: "2023-Q1" / "2023 Q1" / "2023Q1" — the everyday quarterly period
+// format in survey and finance exports. Classified as a 'date' (an ordered
+// period) so a line chart can run over it; these strings sort correctly as text.
+const QUARTER_RE = /^\d{4}[- ]?[Qq][1-4]$/;
 const NUMBER_SHAPE_RE = /^-?[\d.,]+$/;
 
 function isYear(cell: string): boolean {
@@ -29,11 +33,12 @@ function isYear(cell: string): boolean {
 }
 
 function isDate(cell: string): boolean {
-  return DATE_RE.test(cell);
+  return DATE_RE.test(cell) || QUARTER_RE.test(cell);
 }
 
 function isNumberShaped(cell: string): boolean {
-  return NUMBER_SHAPE_RE.test(cell) && /\d/.test(cell);
+  const stripped = stripNumberDecoration(cell);
+  return NUMBER_SHAPE_RE.test(stripped) && /\d/.test(stripped);
 }
 
 /** All non-empty, non-missing-marker values match `test` — the column
