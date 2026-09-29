@@ -27,7 +27,7 @@
    a "share picture" item in the card's Download menu, CDN cache one hour (review finding). Tests: `render-plot`,
    `share-preview`, `preview/route` (real PNGs), `chart-download`. **Owner: "Fine, and keep going" → (a2) signed off.**
 5. **Rebrand (`66197f14` + test fixes `35b69c73`; CI 36563648186 RED on a typecheck error the session's truncated `tsc`
-   output hid, re-run 36564105092 — see the top block for its result):** owner mid-turn: "we've rebranded, remember?
+   output hid, re-run 36564105092 GREEN incl. deploy):** owner mid-turn: "we've rebranded, remember?
    graphmaker.studio". Checked #7 (domain bought 09-17, "not the focus, no copy"), stated the facts (25 strings / 69
    files; the domain resolves nowhere), one dialog → **rename everything visible**. Done per ADR 064: wordmark, titles,
    footer credits, embed titles/backlink, share picture, CSV/PNG names (`graphmaker-…`), derived-data marking, upload
