@@ -1351,7 +1351,8 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   harness's `.next/dev/cache/fetch-cache`), an outcome with zero charts is never persisted (code-review finding), and
   the post-deploy smoke warms `/galerij` three times. Measured before: cold `/galerij` 5.6 s TTFB on production
   (placeholder shown). After: measure on the first deploys (the smoke logs `warm-up N: ttfb`). Screenshots to the
-  owner at desktop dark + light, phone, full page; awaiting the owner's reaction.
+  owner at desktop dark + light, phone, full page. **SIGNED OFF — owner: "I would share this" (session 144,
+  2026-09-29).** The landing e2e (`web/e2e/landing.spec.ts`) now pins the new headline and the hero card (`3c72d922`).
 
 **Invariants at stake:** none in the answer pipeline — this is presentation only. Every number still comes from the
 stored envelope (R1–R3, R5, R8–R10); the source line stays on every chart and every download/embed (R4); the "not CBS

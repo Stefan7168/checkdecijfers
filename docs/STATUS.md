@@ -32,6 +32,7 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
   [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
 - **THE GATE:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
   Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
+  **Score at end of session 144: (a) done, (c) signed off, (b) not yet ("good enough for now"), (a2) verdict pending.**
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
   - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
@@ -53,7 +54,8 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
     inflation story as question bubble + the product's own answer card), new hero copy nl/en, the frozen text example
     retired, teaser three-in-a-row minus the hero's story, how-it-works one row of four; **#347 fixed** — the built
     story set persists in Next's Data Cache across instances (30 min, SWR), empty outcomes never persisted, the deploy
-    smoke warms `/galerij`. Screenshots sent to the owner; reaction pending; CI run 36551609780 in flight at writing.
+    smoke warms `/galerij`. **SIGNED OFF — the owner: "I would share this" (session 144, 2026-09-29).** CI 36551609780
+    went red on the old headline in `web/e2e/landing.spec.ts` (fixed `3c72d922`, run 36554179148).
 - **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
   dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch
   `regional-stats-part2`), Eurostat in chat, Pro plan, brand colours. Owner-supervised items (migrations 037 + 038, the
