@@ -603,6 +603,98 @@ describe('parent link and thread', () => {
     expect(child.parentId).toBe(parent.id);
     expect(child.threadId).toBe(threadId);
   });
+
+  it('stores the routing turn link (routingAuditId); a reply child has none', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const routingAuditId = await insertAuditRow(userId);
+    const parent = await created(userId, { routingAuditId });
+    expect(parent.routingAuditId).toBe(routingAuditId);
+    expect(parent.isReply).toBe(false);
+    const child = await created(userId, { parentId: parent.id, isReply: true });
+    expect(child.routingAuditId).toBeNull();
+    expect(child.isReply).toBe(true);
+  });
+});
+
+describe('one reply child per lane question (final review I1)', () => {
+  it('a second reply to the same parent returns the existing child and charges nothing, whatever its request id', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const parent = await created(userId);
+    expect(await getBalance(db, userId)).toBe(80);
+    const first = await createTableLaneRequest(
+      db,
+      input(userId, { parentId: parent.id, isReply: true, choices: [{ dimension: 'Geslacht', code: 'T001038' }] }),
+    );
+    expect(first.kind).toBe('created');
+    expect(await getBalance(db, userId)).toBe(60);
+    // a retry after a lost response / a second tab: fresh request id, even a different choice
+    const second = await createTableLaneRequest(
+      db,
+      input(userId, { parentId: parent.id, isReply: true, choices: [{ dimension: 'Geslacht', code: '3000' }] }),
+    );
+    expect(second.kind).toBe('duplicate');
+    if (first.kind !== 'created' || second.kind !== 'duplicate') return;
+    expect(second.row.id).toBe(first.row.id);
+    expect(await getBalance(db, userId)).toBe(60);
+    expect(
+      await countRows('select count(*) as n from table_lane_requests where parent_id = $1', [parent.id]),
+    ).toBe(1);
+  });
+
+  it('follow-ups (not replies) on the same answer are not limited', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const parent = await created(userId);
+    await created(userId, { parentId: parent.id });
+    await created(userId, { parentId: parent.id });
+    expect(
+      await countRows('select count(*) as n from table_lane_requests where parent_id = $1', [parent.id]),
+    ).toBe(2);
+  });
+
+  it('the database refuses a second reply child even past the store check (unique index)', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const parent = await created(userId);
+    const child = await created(userId, { parentId: parent.id, isReply: true });
+    await expect(
+      db.query(
+        `insert into table_lane_requests
+           (user_id, request_id, lang, question, table_id, finder_confidence, parent_id, is_reply, debit_transaction_id)
+         values ($1, $2, 'nl', 'q', '85000NED', 0.9, $3, true, $4)`,
+        [userId, randomUUID(), parent.id, child.debitTransactionId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('a unique-index race returns the existing child as a duplicate and charges nothing', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const parent = await created(userId);
+    const winner = await created(userId, { parentId: parent.id, isReply: true });
+    expect(await getBalance(db, userId)).toBe(60);
+    // Simulate a racer that passed the store's own lookup before the winner
+    // committed: the lookup is made blind to the winner, so only the index
+    // can catch the second insert.
+    const blind: Db = {
+      query: (sql, params) => db.query(sql, params),
+      withTransaction: (fn) =>
+        db.withTransaction((tx) =>
+          fn({
+            query: (sql, params) =>
+              /where parent_id = \$1 and is_reply/.test(sql) ? Promise.resolve({ rows: [] }) : tx.query(sql, params),
+            withTransaction: (inner) => tx.withTransaction(inner),
+          }),
+        ),
+    };
+    const raced = await createTableLaneRequest(blind, input(userId, { parentId: parent.id, isReply: true }));
+    expect(raced.kind).toBe('duplicate');
+    if (raced.kind !== 'duplicate') return;
+    expect(raced.row.id).toBe(winner.id);
+    expect(await getBalance(db, userId)).toBe(60);
+  });
 });
 
 describe('setTableLaneThread (Ruling R3)', () => {

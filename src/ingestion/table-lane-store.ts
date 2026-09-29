@@ -55,6 +55,13 @@ export interface TableLaneRow {
   parentId: number | null;
   /** Follow-up context (Task 7). */
   previousQuestion: string | null;
+  /** True for a reply to a lane question (parent = a clarification row); a
+   * clarification has at most one reply child (final review I1). */
+  isReply: boolean;
+  /** The free routing turn's audit row that queued this row (null for
+   * replies, or when that turn went unrecorded) — final review I2/I3: the
+   * question history hides it and per-conversation deletion redacts it. */
+  routingAuditId: number | null;
   /** Accumulated reader answers to breakdown/region questions. */
   choices: TableLaneChoice[];
   status: TableLaneStatus;
@@ -82,6 +89,8 @@ interface RawRow extends QueryResultRow {
   finder_confidence: number | string;
   parent_id: number | string | null;
   previous_question: string | null;
+  is_reply: boolean;
+  routing_audit_id: number | string | null;
   choices: unknown;
   status: TableLaneStatus;
   attempts: number | string;
@@ -122,6 +131,8 @@ function fromRow(row: QueryResultRow): TableLaneRow {
     finderConfidence: Number(r.finder_confidence),
     parentId: numOrNull(r.parent_id),
     previousQuestion: r.previous_question,
+    isReply: Boolean(r.is_reply),
+    routingAuditId: numOrNull(r.routing_audit_id),
     choices: parseChoices(r.choices),
     status: r.status,
     attempts: Number(r.attempts),
@@ -162,6 +173,12 @@ export interface CreateTableLaneInput {
   parentId?: number | null;
   previousQuestion?: string | null;
   choices?: TableLaneChoice[];
+  /** A reply to the lane question `parentId` (final review I1): at most one
+   * such child per parent — a second one returns the existing child as a
+   * duplicate and charges nothing. Requires parentId. */
+  isReply?: boolean;
+  /** The routing turn's audit row id (final review I2/I3). */
+  routingAuditId?: number | null;
 }
 
 /** Reserves the normal question price and queues the row, atomically.
@@ -174,8 +191,53 @@ export interface CreateTableLaneInput {
  * there is no window in which credits are held without a row. The Pro bucket
  * is spent first, exactly like chargeAndRun's debit. */
 export async function createTableLaneRequest(db: Db, input: CreateTableLaneInput): Promise<CreateTableLaneResult> {
+  const isReply = input.isReply === true;
+  if (isReply && (input.parentId === undefined || input.parentId === null)) {
+    throw new Error('createTableLaneRequest: a reply needs its parent row id');
+  }
   const required = await getActionClassPrice(db, 'simple');
   const ledgerRequestId = deriveAddonRequestId(input.requestId, 'table-lane');
+  try {
+    return await createInTransaction(db, input, isReply, required, ledgerRequestId);
+  } catch (error) {
+    // The belt behind the in-transaction check below: the one-reply unique
+    // index (migration 038) caught a second reply child. The transaction
+    // rolled back, debit included, so nothing was charged — report the
+    // existing child exactly like the in-transaction check would have.
+    if (isReply && isUniqueViolation(error)) {
+      const existing = await findReplyChild(db, input.userId, input.parentId!);
+      if (existing !== null) return { kind: 'duplicate', row: existing };
+    }
+    throw error;
+  }
+}
+
+/** The reply child of lane question `parentId`, owner-scoped, or null. */
+async function findReplyChild(db: Db, userId: string, parentId: number): Promise<TableLaneRow | null> {
+  const { rows } = await db.query(
+    'select * from table_lane_requests where parent_id = $1 and is_reply and user_id = $2',
+    [parentId, userId],
+  );
+  return rows[0] === undefined ? null : fromRow(rows[0]);
+}
+
+/** Postgres unique_violation (SQLSTATE 23505): pg surfaces err.code, PGlite a
+ * message naming the violation — match both (same rule as
+ * onboarding-trigger.ts's isUniqueViolation). */
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  if ((error as { code?: unknown }).code === '23505') return true;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' && /unique|23505|duplicate key/i.test(message);
+}
+
+async function createInTransaction(
+  db: Db,
+  input: CreateTableLaneInput,
+  isReply: boolean,
+  required: number,
+  ledgerRequestId: string,
+): Promise<CreateTableLaneResult> {
   return db.withTransaction(async (tx): Promise<CreateTableLaneResult> => {
     await tx.query('select pg_advisory_xact_lock(hashtext($1))', [input.userId]);
 
@@ -186,6 +248,16 @@ export async function createTableLaneRequest(db: Db, input: CreateTableLaneInput
       input.requestId,
     ]);
     if (existing.rows[0] !== undefined) return { kind: 'duplicate', row: fromRow(existing.rows[0]) };
+
+    // Final review I1: a lane question takes ONE reply. A retry after a lost
+    // response, a second tab or a stale client sends a fresh request id; under
+    // the user's advisory lock (all children of a parent belong to its owner)
+    // this lookup is exact, so the existing child is returned and nothing is
+    // charged. The unique index in migration 038 backs it up.
+    if (isReply) {
+      const child = await findReplyChild(tx, input.userId, input.parentId!);
+      if (child !== null) return { kind: 'duplicate', row: child };
+    }
 
     const grantId = await getCurrentGrantId(tx, input.userId);
     const balance = await getSpendableBalance(tx, input.userId, grantId);
@@ -206,8 +278,9 @@ export async function createTableLaneRequest(db: Db, input: CreateTableLaneInput
       `insert into table_lane_requests
          (user_id, request_id, thread_id, lang, question, table_id, finder_confidence,
           parent_id, previous_question, choices,
-          debit_transaction_id, debit_bucket_entry_id, debit_from_bucket, debit_from_ledger)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14)
+          debit_transaction_id, debit_bucket_entry_id, debit_from_bucket, debit_from_ledger,
+          is_reply, routing_audit_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16)
        returning *`,
       [
         input.userId,
@@ -224,6 +297,8 @@ export async function createTableLaneRequest(db: Db, input: CreateTableLaneInput
         split.bucketEntry?.id ?? null,
         split.fromBucket,
         split.fromLedger,
+        isReply,
+        input.routingAuditId ?? null,
       ],
     );
     return { kind: 'created', row: fromRow(rows[0]!) };

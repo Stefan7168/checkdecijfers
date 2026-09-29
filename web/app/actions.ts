@@ -67,7 +67,7 @@ import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts
 // FROM yet), a different case from #148's drift bug — the real charge at
 // confirm time always re-reads the live price itself, same as any other
 // price display in this product.
-import { onboardingPrice, triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
+import { onboardingPrice, sliceCacheTableIds, triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
 import {
   signOnboardingOffer,
   verifyOnboardingOffer,
@@ -703,8 +703,17 @@ export async function askQuestion(
     // Fix round 1 (review Minor 1): set when a FOLLOW-UP LINK routing could
     // not be queued while onboarding is dormant (see below).
     let dormantLinkFailure = false;
-    if (threadAware && tableLaneEnabled()) {
-      const routed = await routeToTableLane(gated, { userId, requestId, question, lang, validatedThreadId, followUp });
+    // Final review M1: on a routable turn the web add-on is settled FIRST —
+    // before the lane row (and its debit) is created and before the kick —
+    // so a throwing settlement leaves nothing queued or charged. The holder is
+    // cleared once settled, so no later path (nor the catch) settles it again.
+    // Flag off (or not routable) ⇒ laneGated is `gated` itself and the code
+    // below runs exactly as before.
+    let laneGated: GatedResponse = gated;
+    if (threadAware && tableLaneEnabled() && tableLaneRoutable(gated) !== null) {
+      laneGated = await settleWebAddon(gated, webDebitHolder.split, webAddonPrice, userId);
+      webDebitHolder.split = null;
+      const routed = await routeToTableLane(laneGated, { userId, requestId, question, lang, validatedThreadId, followUp });
       if (routed !== null && routed.kind === 'failed') {
         // Nothing was charged (one transaction). A finder routing falls back
         // to today's offer path (Task 5). A LINK routing exists even with
@@ -713,9 +722,8 @@ export async function askQuestion(
         dormantLinkFailure = routed.fromLink && process.env.ONBOARDING_ENABLED !== '1';
       } else if (routed !== null) {
         if (routed.kind === 'insufficient') {
-          // The routing refusal was refunded by the gate; settle a (normally
-          // absent) web add-on the same way before returning.
-          await settleWebAddon(gated, webDebitHolder.split, webAddonPrice, userId);
+          // The routing refusal was refunded by the gate; the (normally
+          // absent) web add-on was already settled above.
           return {
             gated: { kind: 'insufficient_credits', balance: routed.balance, required: routed.required },
             context: null,
@@ -726,9 +734,8 @@ export async function askQuestion(
           };
         }
         after(() => kickTableLaneJob());
-        const settledRouting = await settleWebAddon(gated, webDebitHolder.split, webAddonPrice, userId);
         return {
-          gated: settledRouting,
+          gated: laneGated,
           context: null,
           threadId: validatedThreadId,
           onboardingOffer: null,
@@ -747,8 +754,8 @@ export async function askQuestion(
     // and audited, and its own failure (secret unset) degrades to an honest
     // "not available right now" with nothing charged or queued.
     const { gated: finalGated, offer } = dormantLinkFailure
-      ? { gated: withTableLaneFailedText(gated), offer: null }
-      : await maybeTriggerOnboarding(gated, {
+      ? { gated: withTableLaneFailedText(laneGated), offer: null }
+      : await maybeTriggerOnboarding(laneGated, {
           userId,
           requestId,
           question,
@@ -845,6 +852,38 @@ async function maybeTriggerOnboarding(
     };
   }
 
+  // Ruling R16 (breadth step 5 final review): never offer a slice-cache
+  // table (filled per question by the table lane — its whole-table sync
+  // refuses, so the offer could only fail and refund). Flag on or off,
+  // Dashboard or workspace. A slice-cache pick gets the same honest
+  // "not available right now" text as the fail-closed branch above (nothing
+  // charged, nothing queued); slice-cache alternates are dropped from the
+  // candidate chain. Safe while migration 037 is unapplied: nothing then reads
+  // as slice-cache and the offer is exactly today's.
+  const sliceTables = await sliceCacheTableIds(getDb(), [
+    response.onboarding.tableId,
+    ...response.onboarding.candidateIds,
+  ]);
+  if (sliceTables.has(response.onboarding.tableId)) {
+    return {
+      gated: {
+        ...gated,
+        response: {
+          ...response,
+          text: ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+          ...(response.english
+            ? { english: { ...response.english, text: ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN } }
+            : {}),
+        },
+      },
+      offer: null,
+    };
+  }
+  const candidateIds =
+    sliceTables.size === 0
+      ? response.onboarding.candidateIds
+      : response.onboarding.candidateIds.filter((id) => !sliceTables.has(id));
+
   const token = signOnboardingOffer(
     {
       userId: ctx.userId,
@@ -855,7 +894,7 @@ async function maybeTriggerOnboarding(
       // WP27 stage B: the candidate chain rides the envelope into the token —
       // the same last in-memory link that used to go straight into the
       // trigger now waits inside the token for confirmOnboardingFetch instead.
-      candidateIds: response.onboarding.candidateIds,
+      candidateIds,
       questionText: ctx.question,
       ackAuditAnswerId: gated.auditId,
     },
@@ -906,6 +945,41 @@ async function routeToTableLane(
   | { kind: 'failed'; fromLink: boolean }
   | null
 > {
+  const onboarding = tableLaneRoutable(gated);
+  if (onboarding === null || gated.kind !== 'ok') return null;
+  // Task 7: a follow-up (the routing came from the link's finder, so the
+  // table IS the previous answer's) continues that row: the job's parser reads
+  // the previous question (prompt version 3). Checked on the table id too, so
+  // only the link's own routing can ever carry it.
+  const followUp =
+    ctx.followUp != null && ctx.followUp.tableId === onboarding.tableId ? ctx.followUp : null;
+  try {
+    const result = await createTableLaneRequest(getDb(), {
+      userId: ctx.userId,
+      requestId: ctx.requestId,
+      threadId: ctx.validatedThreadId,
+      lang: ctx.lang,
+      question: ctx.question,
+      tableId: onboarding.tableId,
+      finderConfidence: onboarding.confidence,
+      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUpPreviousQuestion(followUp) } : {}),
+      // Final review I2/I3: the free routing turn this row replaces — the
+      // question history hides it, per-conversation deletion redacts it.
+      routingAuditId: gated.auditId,
+    });
+    if (result.kind === 'insufficient') return result;
+    return { kind: 'queued', rowId: result.row.id };
+  } catch (error) {
+    console.error('table-lane routing failed (falling back):', error);
+    await reportError('askQuestion.tableLane', error, { requestId: ctx.requestId, userId: ctx.userId });
+    return { kind: 'failed', fromLink: followUp !== null };
+  }
+}
+
+/** The onboarding envelope of a turn the table lane can take — a gated-ok
+ * 'onboarding_pending' / 'onboarding_already_pending' refusal that names a
+ * table — else null (see routeToTableLane). */
+function tableLaneRoutable(gated: GatedResponse): { tableId: string; confidence: number } | null {
   if (gated.kind !== 'ok') return null;
   const response = gated.response;
   if (
@@ -916,30 +990,7 @@ async function routeToTableLane(
   ) {
     return null;
   }
-  // Task 7: a follow-up (the routing came from the link's finder, so the
-  // table IS the previous answer's) continues that row: the job's parser reads
-  // the previous question (prompt version 3). Checked on the table id too, so
-  // only the link's own routing can ever carry it.
-  const followUp =
-    ctx.followUp != null && ctx.followUp.tableId === response.onboarding.tableId ? ctx.followUp : null;
-  try {
-    const result = await createTableLaneRequest(getDb(), {
-      userId: ctx.userId,
-      requestId: ctx.requestId,
-      threadId: ctx.validatedThreadId,
-      lang: ctx.lang,
-      question: ctx.question,
-      tableId: response.onboarding.tableId,
-      finderConfidence: response.onboarding.confidence,
-      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUpPreviousQuestion(followUp) } : {}),
-    });
-    if (result.kind === 'insufficient') return result;
-    return { kind: 'queued', rowId: result.row.id };
-  } catch (error) {
-    console.error('table-lane routing failed (falling back):', error);
-    await reportError('askQuestion.tableLane', error, { requestId: ctx.requestId, userId: ctx.userId });
-    return { kind: 'failed', fromLink: followUp !== null };
-  }
+  return response.onboarding;
 }
 
 /** Fix round 1 (review Minor 4): the previous-question context a follow-up
@@ -1423,6 +1474,12 @@ export async function replyToTableLane(
 ): Promise<ReplyTableLaneOutcome> {
   const parsed = parseTableLaneChoice(choice);
   if (!isTableLaneRowId(rowId)) return { kind: 'gone' };
+  // Final review I4: the kill switch covers replies too — a reply is new
+  // paid work (a fresh debit, parse and answer). Flag off ⇒ nothing is read or
+  // queued; the client shows its "no longer open" text for a click and sends
+  // typed text as a fresh question (Ruling R13). Rows that already hold
+  // credits are still finished by the daily sweep (Ruling R10).
+  if (!tableLaneEnabled()) return { kind: 'gone' };
   const lang = await getLang();
   const userId = await currentUserId();
   if (userId === null) return { kind: 'gone' };
@@ -1466,12 +1523,17 @@ export async function replyToTableLane(
       parentId: parent.id,
       previousQuestion: parent.previousQuestion,
       choices: [...parent.choices, { dimension: question.dimension, code: match.code }],
+      // Final review I1: a lane question takes ONE reply — if it already has
+      // a child (a retry after a lost response, a second tab, a stale client),
+      // the store returns that child as a duplicate and charges nothing.
+      isReply: true,
     });
     if (result.kind === 'insufficient') {
       return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
     }
-    // A duplicate is this same reply retried — unless the request id already
-    // belongs to a different row, which is never reused across rows.
+    // A duplicate is this same reply retried, or this question's existing
+    // reply child (I1) — either way `started` with that row. A request id that
+    // already belongs to a row of another parent is never reused across rows.
     if (result.kind === 'duplicate' && result.row.parentId !== parent.id) return { kind: 'gone' };
     after(() => kickTableLaneJob());
     return { kind: 'started', rowId: result.row.id };

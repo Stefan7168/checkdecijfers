@@ -299,6 +299,13 @@ function isRedacted(question: string): boolean {
   return question === REDACTED_QUESTION_TEXT;
 }
 
+/** Whether migration 038's table_lane_requests exists (it carries the
+ * routing_audit_id link the history scan hides routing turns by). */
+async function tableLaneRequestsExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.table_lane_requests') as t`, []);
+  return rows[0]?.t != null;
+}
+
 /** The pairing signature a reply row shares with the clarification row it
  * answered. NUL (\u0000) as separator: it cannot occur in either component (Postgres
  * text never contains NUL), so distinct pairs can never collide. */
@@ -315,6 +322,11 @@ export async function getQuestionHistory(
   userId: string,
   { limit = 20, includeOnboarding = false }: { limit?: number; includeOnboarding?: boolean } = {},
 ): Promise<QuestionHistoryEntry[]> {
+  // Breadth step 5 (final review I2): see the table-lane exclusion below.
+  // Check-not-catch on the table itself (the threads/index.ts
+  // userDatasetsTableExists precedent): migration 038 may not be applied yet,
+  // and then no lane row can exist, so the scan is exactly today's.
+  const laneTableExists = await tableLaneRequestsExists(db);
   const { rows } = await db.query(
     `select
        a.id,
@@ -442,6 +454,19 @@ export async function getQuestionHistory(
        // until migration 012 (the session-27 GET / 500 incident).
        includeOnboarding
          ? 'and not exists (select 1 from pending_table_requests p where p.ack_audit_answer_id = a.id)'
+         : ''
+     }
+     ${
+       // Breadth step 5 (final review I2), the same stored-link dedupe for the
+       // table lane: a lane question's free routing turn (the audited
+       // 'onboarding_pending' refusal, whose text promises an e-mail the lane
+       // never sends) is linked from its table_lane_requests row
+       // (routing_audit_id) and hidden — the lane's own audited answer /
+       // question / refusal is the entry that represents the question. Keyed
+       // on the table's existence, never on TABLE_LANE_ENABLED, so switching
+       // the lane off can't bring the duplicates back.
+       laneTableExists
+         ? 'and not exists (select 1 from table_lane_requests t where t.routing_audit_id = a.id)'
          : ''
      }
      -- id as the tie-breaker: two questions asked close enough together can

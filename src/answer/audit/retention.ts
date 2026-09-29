@@ -242,6 +242,18 @@ interface HardDelete {
   params: unknown[];
 }
 
+/** Breadth step 5 (final review I3): extra audit rows a caller's scope reaches
+ * only through a stored link in a possibly FILE-ONLY table — the table lane's
+ * routing turns, which carry no thread_id. `sql` returns an `id` column of
+ * audit_answers ids (itself user-scoped); it is guarded by its table's own
+ * to_regclass check like a HardDelete, and runs BEFORE the hard-deletes (which
+ * remove the very rows holding the link). */
+interface LinkedTargets {
+  table: string;
+  sql: string;
+  params: unknown[];
+}
+
 async function redactMatchingRows(
   db: Db,
   whereClause: string,
@@ -249,6 +261,7 @@ async function redactMatchingRows(
   feedbackDelete?: FeedbackDelete,
   pendingRedaction?: PendingRedaction,
   hardDeletes: HardDelete[] = [],
+  linkedTargets?: LinkedTargets,
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -266,6 +279,16 @@ async function redactMatchingRows(
         await tx.query(feedbackDelete.sql, feedbackDelete.params);
       }
     }
+    // Linked targets first (see LinkedTargets): collected before the
+    // hard-deletes below remove the rows that hold the link.
+    let linkedIds: number[] = [];
+    if (linkedTargets) {
+      const { rows: reg } = await tx.query(`select to_regclass($1) as t`, [`public.${linkedTargets.table}`]);
+      if (reg[0]?.t != null) {
+        const { rows: linked } = await tx.query(linkedTargets.sql, linkedTargets.params);
+        linkedIds = linked.map((r) => Number(r.id));
+      }
+    }
     // Each entry's own guard, same discipline as feedbackDelete above: its
     // table may be FILE-ONLY at commit time, so it may not exist yet in a
     // given environment. The guard must be a check, not a catch — an error
@@ -276,10 +299,13 @@ async function redactMatchingRows(
       const { rows: reg } = await tx.query(`select to_regclass($1) as t`, [`public.${del.table}`]);
       if (reg[0]?.t != null) await tx.query(del.sql, del.params);
     }
-    const { rows } = await tx.query(
-      `select id, kind from audit_answers where ${whereClause} for update`,
-      params,
-    );
+    const { rows } =
+      linkedIds.length === 0
+        ? await tx.query(`select id, kind from audit_answers where ${whereClause} for update`, params)
+        : await tx.query(
+            `select id, kind from audit_answers where (${whereClause}) or id = any($${params.length + 1}::bigint[]) for update`,
+            [...params, linkedIds],
+          );
     const targets: RedactedRow[] = rows.map((r) => ({
       id: Number(r.id),
       kind: r.kind as RedactedRow['kind'],
@@ -477,6 +503,21 @@ export async function deleteThreadQuestionHistory(
         params: [userId, threadId],
       },
     ],
+    {
+      // Breadth step 5 (final review I3): a lane question's free routing turn
+      // is deliberately NOT attached to a thread (the job attaches the lane's
+      // own answer), so `thread_id = $2` above never reaches it. The lane row
+      // links it (routing_audit_id); every lane row of this thread — finished
+      // or still in flight — has its routing turn redacted too. Both sides
+      // re-bind this user (audit_answers.user_id is text, the lane row's is
+      // uuid), so a link can never reach another user's row.
+      table: 'table_lane_requests',
+      sql: `select a.id
+            from audit_answers a
+            join table_lane_requests t on t.routing_audit_id = a.id
+            where a.user_id = $1 and t.user_id::text = $1 and t.thread_id = $2 and ${AUDIT_SCOPE}`,
+      params: [userId, threadId],
+    },
   );
 }
 

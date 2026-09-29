@@ -70,6 +70,8 @@ vi.mock('../backend/billing/index.ts', () => billing);
 const onboardingTrigger = vi.hoisted(() => ({
   onboardingPrice: vi.fn(),
   triggerOnboarding: vi.fn(),
+  // Ruling R16: the offer's slice-cache guard — no slice-cache tables here.
+  sliceCacheTableIds: vi.fn().mockResolvedValue(new Set()),
 }));
 vi.mock('../backend/ingestion/onboarding-trigger.ts', () => onboardingTrigger);
 

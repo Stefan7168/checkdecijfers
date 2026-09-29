@@ -5,7 +5,9 @@
 //
 //   - tableLaneEnabled(): the master switch. Read ONLY through this helper.
 //     Unset / anything but exactly '1' ⇒ off: askQuestion routes nothing to
-//     the lane and behaves exactly as before. (The daily sweep in
+//     the lane and behaves exactly as before, and replyToTableLane queues no
+//     reply (final review I4). pollTableLane stays open so a reader still sees
+//     a row that was already queued. (The daily sweep in
 //     /api/onboarding-cron is deliberately NOT gated on it — Ruling R10 — so
 //     held credits never wait on a flag flip.)
 //   - the client contract of the two table-lane Server Actions

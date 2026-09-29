@@ -16,7 +16,11 @@ import type { GatedResponse } from '../backend/billing/index.ts';
 import type { AuditedResponse } from '../backend/answer/audit/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { TableLaneRow } from '../backend/ingestion/table-lane-store.ts';
-import { ONBOARDING_OFFER_TEXT, ONBOARDING_PENDING_TEXT } from '../backend/answer/respond/refusals.ts';
+import {
+  ONBOARDING_OFFER_TEXT,
+  ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+  ONBOARDING_PENDING_TEXT,
+} from '../backend/answer/respond/refusals.ts';
 
 const { currentUserId, getDb } = vi.hoisted(() => ({
   currentUserId: vi.fn<() => Promise<string | null>>(),
@@ -68,7 +72,11 @@ const threads = vi.hoisted(() => ({
 }));
 vi.mock('../backend/threads/index.ts', () => threads);
 
-const onboarding = vi.hoisted(() => ({ onboardingPrice: vi.fn(), triggerOnboarding: vi.fn() }));
+const onboarding = vi.hoisted(() => ({
+  onboardingPrice: vi.fn(),
+  triggerOnboarding: vi.fn(),
+  sliceCacheTableIds: vi.fn(),
+}));
 vi.mock('../backend/ingestion/onboarding-trigger.ts', () => onboarding);
 const offerToken = vi.hoisted(() => ({ signOnboardingOffer: vi.fn(), verifyOnboardingOffer: vi.fn() }));
 vi.mock('../backend/ingestion/onboarding-offer-token.ts', () => offerToken);
@@ -104,6 +112,7 @@ beforeEach(() => {
   threads.validateThreadOwnership.mockResolvedValue(null);
   threads.attachOrCreateThread.mockResolvedValue(7);
   onboarding.onboardingPrice.mockResolvedValue(100);
+  onboarding.sliceCacheTableIds.mockResolvedValue(new Set());
   offerToken.signOnboardingOffer.mockReturnValue('signed-offer');
   vi.stubEnv('WEBSEARCH_ENABLED', '0');
   vi.stubEnv('ONBOARDING_ENABLED', '0');
@@ -151,6 +160,8 @@ function laneRow(overrides: Partial<TableLaneRow> = {}): TableLaneRow {
     finderConfidence: 0.91,
     parentId: null,
     previousQuestion: null,
+    isReply: false,
+    routingAuditId: null,
     choices: [],
     status: 'pending',
     attempts: 0,
@@ -201,6 +212,53 @@ describe('askQuestion — flag off: byte-identical to today', () => {
   });
 });
 
+// Ruling R16 (breadth step 5 final review): the onboarding offer never
+// targets a slice-cache table — flag on or off, Dashboard or workspace.
+describe('the onboarding offer never targets a slice-cache table (Ruling R16)', () => {
+  const withAlternates = (): ComposedResponse =>
+    ({ ...routingRefusal(), onboarding: { ...ONBOARDING, candidateIds: ['85000NED', 'SLICE02', '83625NED'] } }) as unknown as ComposedResponse;
+
+  for (const [label, flag, threadArg] of [
+    ['flag off, workspace', '', null],
+    ['flag on, Dashboard (not thread-aware)', '1', undefined],
+  ] as const) {
+    it(`${label}: a slice-cache pick → the honest "not available" text, no offer, nothing charged or queued`, async () => {
+      vi.stubEnv('TABLE_LANE_ENABLED', flag);
+      onboarding.sliceCacheTableIds.mockResolvedValue(new Set(['85000NED']));
+      drive(routingRefusal(), 11);
+      const outcome =
+        threadArg === undefined
+          ? await askQuestion('Hoeveel woningen?', RID, null)
+          : await askQuestion('Hoeveel woningen?', RID, null, undefined, threadArg);
+      expect(onboarding.sliceCacheTableIds).toHaveBeenCalledWith(fakeDb, ['85000NED', '85000NED']);
+      expect(outcome.onboardingOffer).toBeNull();
+      expect(offerToken.signOnboardingOffer).not.toHaveBeenCalled();
+      expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+      expect(outcome.gated).toMatchObject({ kind: 'ok', netCost: 0, response: { text: ONBOARDING_OFFER_UNAVAILABLE_TEXT } });
+    });
+  }
+
+  it('slice-cache alternates are dropped from the signed candidate chain; the offer itself stands', async () => {
+    onboarding.sliceCacheTableIds.mockResolvedValue(new Set(['SLICE02']));
+    drive(withAlternates(), 11);
+    const outcome = await askQuestion('Hoeveel woningen?', RID, null, undefined, null);
+    expect(outcome.onboardingOffer).toEqual({ token: 'signed-offer', priceCredits: 100 });
+    expect(offerToken.signOnboardingOffer).toHaveBeenCalledWith(
+      expect.objectContaining({ tableId: '85000NED', candidateIds: ['85000NED', '83625NED'] }),
+      'offer-secret',
+    );
+  });
+
+  it('no slice-cache table involved (e.g. migration 037 unapplied): the chain is signed verbatim', async () => {
+    drive(withAlternates(), 11);
+    await askQuestion('Hoeveel woningen?', RID, null, undefined, null);
+    expect(offerToken.signOnboardingOffer).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateIds: ['85000NED', 'SLICE02', '83625NED'] }),
+      'offer-secret',
+    );
+  });
+});
+
 describe('askQuestion — flag on: routed to the table lane', () => {
   beforeEach(() => vi.stubEnv('TABLE_LANE_ENABLED', '1'));
 
@@ -217,6 +275,8 @@ describe('askQuestion — flag on: routed to the table lane', () => {
       question: 'Hoeveel woningen?',
       tableId: '85000NED',
       finderConfidence: 0.91,
+      // final review I2/I3: the free routing turn's audit row, linked
+      routingAuditId: 11,
     });
     expect(outcome.tableLane).toEqual({ rowId: 42 });
     expect(outcome.onboardingOffer).toBeNull();
@@ -303,6 +363,58 @@ describe('askQuestion — flag on: routed to the table lane', () => {
     expect(store.createTableLaneRequest).not.toHaveBeenCalled();
     expect(outcome.tableLane).toBeNull();
     expect(outcome.gated).toEqual({ kind: 'ok', netCost: 0, auditId: 12, response: already });
+  });
+
+  it('an unrecorded routing turn (auditId null) links no routing row', async () => {
+    drive(routingRefusal(), null);
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow() });
+    await askQuestion('Hoeveel woningen?', RID, null, undefined, null);
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(fakeDb, expect.objectContaining({ routingAuditId: null }));
+  });
+
+  it('M1: the web add-on is settled BEFORE the lane row is created; a throwing settlement queues and kicks nothing', async () => {
+    vi.stubEnv('WEBSEARCH_ENABLED', '1');
+    const webSplit = { fromBucket: 0, fromLedger: 10, bucketEntry: null, ledgerEntry: { id: 99 } };
+    billing.reserveWebSearchDebit.mockResolvedValue({ kind: 'debited', split: webSplit });
+    audit.answerQuestionAudited.mockImplementation(async (_db: Db, _q: string, opts: { webBilling?: { reserve: () => Promise<boolean> } }) => {
+      await opts.webBilling?.reserve();
+      return { response: routingRefusal(), auditId: 11 } as AuditedResponse;
+    });
+    billing.chargeAndRun.mockImplementation(
+      async (_db: Db, _uid: string, _rid: string, run: () => Promise<AuditedResponse>) =>
+        ({ kind: 'ok', ...(await run()), netCost: 0 }) as GatedResponse,
+    );
+    const order: string[] = [];
+    billing.compensateSplit.mockImplementation(async () => {
+      order.push('web-refund');
+    });
+    store.createTableLaneRequest.mockImplementation(async () => {
+      order.push('lane-row');
+      return { kind: 'created', row: laneRow() };
+    });
+    const outcome = await askQuestion('Hoeveel woningen?', RID, null, { sources: [], web: true }, null);
+    if (billing.reserveWebSearchDebit.mock.calls.length === 0) {
+      throw new Error('test setup: the web chip was not selected (validateSelection flag)');
+    }
+    expect(order).toEqual(['web-refund', 'lane-row']);
+    expect(billing.compensateSplit).toHaveBeenCalledTimes(1); // never refunded twice
+    expect(outcome.tableLane).toEqual({ rowId: 42 });
+
+    // a throwing settlement: no lane row, no lane debit, no kick
+    vi.clearAllMocks();
+    currentUserId.mockResolvedValue('user-1');
+    getDb.mockReturnValue(fakeDb);
+    getLang.mockResolvedValue('nl');
+    billing.getActionClassPrice.mockResolvedValue(20);
+    billing.getBalance.mockResolvedValue(100);
+    threads.validateThreadOwnership.mockResolvedValue(null);
+    billing.reserveWebSearchDebit.mockResolvedValue({ kind: 'debited', split: webSplit });
+    billing.compensateSplit.mockRejectedValue(new Error('ledger down'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(askQuestion('Hoeveel woningen?', RID, null, { sources: [], web: true }, null)).rejects.toThrow('ledger down');
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(after).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('a failing queue insert falls back to today\'s offer path and is reported (nothing charged: one transaction)', async () => {
@@ -400,6 +512,7 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
       finderConfidence: 0.88,
       parentId: 50,
       previousQuestion: 'Hoeveel ziekenhuisopnamen waren er in 2019?',
+      routingAuditId: 11,
     });
     // Same money path and shape as a finder-routed question (Task 5).
     expect(outcome.tableLane).toEqual({ rowId: 51 });
@@ -520,6 +633,7 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
       question: 'En de huizenprijzen?',
       tableId: '83625NED',
       finderConfidence: 0.93,
+      routingAuditId: 11,
     });
     expect(outcome.tableLane).toEqual({ rowId: 52 });
   });
@@ -776,6 +890,7 @@ describe('pollTableLane', () => {
 });
 
 describe('replyToTableLane', () => {
+  beforeEach(() => vi.stubEnv('TABLE_LANE_ENABLED', '1'));
   // 14 members; a question shows the first 12 (BREAKDOWN_OPTION_CAP).
   const members = [
     { code: 'T001038', title: 'Totaal' },
@@ -824,6 +939,8 @@ describe('replyToTableLane', () => {
         { dimension: 'Geslacht', code: '3000' },
         { dimension: 'Leeftijd', code },
       ],
+      // final review I1: a reply — the store allows one per lane question
+      isReply: true,
     });
 
   it('a clicked code beyond the first 12 shown is accepted (ALL members count)', async () => {
@@ -895,6 +1012,25 @@ describe('replyToTableLane', () => {
   it('a duplicate of this same reply (client retry) → started with the existing row', async () => {
     store.createTableLaneRequest.mockResolvedValue({ kind: 'duplicate', row: laneRow({ id: 43, parentId: 42 }) });
     expect(await replyToTableLane(42, { code: 'L90' }, RID2)).toEqual({ kind: 'started', rowId: 43 });
+  });
+
+  it('I1: the question already has a reply child (retry after a lost response, second tab) → started with THAT child, kicked, no new charge', async () => {
+    // the store returns the existing child (fresh request id, same parent)
+    store.createTableLaneRequest.mockResolvedValue({
+      kind: 'duplicate',
+      row: laneRow({ id: 44, requestId: RID, parentId: 42, isReply: true }),
+    });
+    expect(await replyToTableLane(42, { code: 'L1' }, RID2)).toEqual({ kind: 'started', rowId: 44 });
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(fakeDb, expect.objectContaining({ parentId: 42, isReply: true }));
+  });
+
+  it('I4: flag off (kill switch) → gone, nothing read, created or kicked', async () => {
+    vi.stubEnv('TABLE_LANE_ENABLED', '');
+    expect(await replyToTableLane(42, { code: 'L90' }, RID2)).toEqual({ kind: 'gone' });
+    expect(await replyToTableLane(42, { text: 'Totaal' }, RID2)).toEqual({ kind: 'gone' });
+    expect(store.readTableLaneRequest).not.toHaveBeenCalled();
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(after).not.toHaveBeenCalled();
   });
 
   it('a request id already used for a DIFFERENT row → gone (no reuse across rows)', async () => {

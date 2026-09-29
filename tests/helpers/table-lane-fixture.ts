@@ -86,6 +86,8 @@ export function laneRow(overrides: Partial<TableLaneRow> = {}): TableLaneRow {
     finderConfidence: 0.91,
     parentId: null,
     previousQuestion: null,
+    isReply: false,
+    routingAuditId: null,
     choices: [],
     status: 'running',
     attempts: 1,

@@ -45,6 +45,21 @@ create table table_lane_requests (
   finder_confidence double precision not null,
   -- set for a button reply / follow-up that continues an earlier lane row
   parent_id bigint references table_lane_requests(id) on delete set null,
+  -- true for a button/typed REPLY to a lane question (parent = a clarification
+  -- row); false for a first question or a follow-up (parent = an answer row).
+  -- A clarification has at most ONE reply child (unique index below), so a
+  -- retried or second-tab reply can never queue or charge a second child.
+  -- Follow-ups are not limited: one answer may legitimately be followed up
+  -- more than once (e.g. from two tabs).
+  is_reply boolean not null default false,
+  -- the free, gate-refunded routing turn (the audited 'onboarding_pending'
+  -- refusal) that queued this row; NULL for replies (no routing turn) and
+  -- when that turn went unrecorded (fail-closed). The routing turn is not
+  -- attached to a thread (the job attaches the lane's own answer), so this
+  -- stored link is what the question history uses to hide it (it would
+  -- otherwise list the question twice, with the onboarding wait text) and
+  -- what per-conversation deletion uses to redact it.
+  routing_audit_id bigint references audit_answers(id) on delete set null,
   previous_question text,
   -- accumulated reader answers to breakdown/region questions:
   -- [{ "dimension": "...", "code": "..." }]
@@ -73,3 +88,14 @@ create table table_lane_requests (
 -- the claim query scans only open rows, oldest first
 create index table_lane_requests_open on table_lane_requests (status, created_at)
   where status in ('pending','running');
+
+-- at most one reply child per lane question (see is_reply above); the store
+-- also checks this under the user's advisory lock and returns the existing
+-- child, so this index is the belt, not the mechanism
+create unique index table_lane_requests_one_reply on table_lane_requests (parent_id)
+  where is_reply and parent_id is not null;
+
+-- the history scan and per-conversation deletion look rows up by their
+-- routing turn
+create index table_lane_requests_routing_audit on table_lane_requests (routing_audit_id)
+  where routing_audit_id is not null;

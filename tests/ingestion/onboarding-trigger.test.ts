@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
 import type { Db } from '../../src/db/types.ts';
-import { triggerOnboarding, onboardingPrice } from '../../src/ingestion/onboarding-trigger.ts';
+import { triggerOnboarding, onboardingPrice, sliceCacheTableIds } from '../../src/ingestion/onboarding-trigger.ts';
 import { findActiveRequest } from '../../src/ingestion/onboarding-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -203,6 +203,35 @@ describe('triggerOnboarding — charge + queue, atomically (WP16 sub-part 2)', (
       // 500 − 20 + 20 − 100 = 400. The onboarding cost is the only net change
       // over the turn (question debit and its compensation cancel).
       expect(await getBalance(db, userId)).toBe(400);
+    });
+  });
+});
+
+// Ruling R16 (breadth step 5 final review): the onboarding offer never targets
+// a slice-cache table — sliceCacheTableIds names them, and must be safe while
+// migration 037 (cbs_tables.ingest_mode) is unapplied.
+describe('sliceCacheTableIds (Ruling R16)', () => {
+  async function seedTables(db: Db): Promise<void> {
+    await db.query(
+      `insert into cbs_tables (id, title, expected_dimensions) values
+         ('SLICE01', 'slice', '{}'), ('FULL001', 'full', '{}')`,
+    );
+    await db.query(`update cbs_tables set ingest_mode = 'slice_cache' where id = 'SLICE01'`);
+  }
+
+  it('names exactly the slice-cache tables among the given ids', async () => {
+    await withDb(async (db) => {
+      await seedTables(db);
+      expect(await sliceCacheTableIds(db, ['SLICE01', 'FULL001', 'UNKNOWN'])).toEqual(new Set(['SLICE01']));
+      expect(await sliceCacheTableIds(db, [])).toEqual(new Set());
+    });
+  });
+
+  it('without migration 037 (no ingest_mode column) nothing is a slice-cache table and nothing errors', async () => {
+    await withDb(async (db) => {
+      await seedTables(db);
+      await db.query('alter table cbs_tables drop column ingest_mode cascade');
+      expect(await sliceCacheTableIds(db, ['SLICE01', 'FULL001'])).toEqual(new Set());
     });
   });
 });

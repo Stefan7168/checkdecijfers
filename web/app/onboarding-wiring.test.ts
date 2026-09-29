@@ -89,7 +89,11 @@ describe('ADR 026 addendum: maybeTriggerOnboarding mints an offer, it does not t
     // B: skipping one strands the data) — the envelope's candidateIds must
     // reach the signed token verbatim, since nothing else carries it forward
     // to the eventual trigger call now that it is deferred to a confirm click.
-    expect(source).toContain('candidateIds: response.onboarding.candidateIds');
+    // Ruling R16 (breadth step 5 final review): carried verbatim unless a
+    // slice-cache table is among them (then dropped) — behaviour pinned in
+    // table-lane-actions.test.ts.
+    expect(source).toContain('? response.onboarding.candidateIds');
+    expect(source).toContain('response.onboarding.candidateIds.filter((id) => !sliceTables.has(id))');
   });
 
   it('fails closed to the UNAVAILABLE text, never a silent auto-trigger, when the secret is unset', () => {
