@@ -26,11 +26,14 @@ import {
 } from '../../../backend/answer/audit/alerts.ts';
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
 import { runOnboardingJob } from '../../../backend/ingestion/onboarding.ts';
+import { runTableLaneJob } from '../../../backend/ingestion/table-lane-job.ts';
 import { productionNotifier } from '../../../backend/ingestion/onboarding-notify.ts';
 import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.ts';
 import { findStaleSyncs, loadStaleSyncCandidateRows } from '../../../backend/ingestion/stale-sync.ts';
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
+import { tableLaneEnabled } from '../../../lib/table-lane.ts';
+import { tableLaneJobDeps } from '../../../lib/table-lane-job-deps.ts';
 import { runHealthChecks } from '../health/checks.ts';
 
 /** 'today' in the product's own timezone — same computation as the chat
@@ -90,6 +93,25 @@ export async function GET(request: Request): Promise<Response> {
       notify: productionNotifier(db),
       referenceDate: referenceDate(),
     });
+
+    // Breadth step 5 (Task 4): the table lane's daily backstop sweep — run
+    // its job ONCE after the onboarding job, so a row whose kick failed (or a
+    // stale/exhausted one) still finishes and settles within a day. Behind the
+    // lane's master switch (while dormant no code path touches its queue — the
+    // session-27 rule the onboarding flag follows too). Fail-open in its own
+    // try/catch: a table-lane problem never turns today's onboarding result
+    // into an error response. Logs carry no question text.
+    if (tableLaneEnabled()) {
+      try {
+        const tableLane = await runTableLaneJob(tableLaneJobDeps(db));
+        console.info(`onboarding-cron: table-lane sweep ${JSON.stringify(tableLane)}`);
+      } catch (tableLaneError) {
+        console.warn(
+          'onboarding-cron: table-lane sweep failed (job result unaffected):',
+          tableLaneError instanceof Error ? `${tableLaneError.name}: ${tableLaneError.message}` : String(tableLaneError),
+        );
+      }
+    }
 
     // #23 (health-probe alert, session 110): AFTER the main job, re-run the
     // SAME checks /api/health runs (#114) and alert ONCE if the app itself is

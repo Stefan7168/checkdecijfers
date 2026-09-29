@@ -365,6 +365,24 @@ export async function finishTableLaneRequest(
   });
 }
 
+/** Ruling R3: records the thread the job attached this row's answer to
+ * (the row's own thread, or the one attachOrCreateThread just created for a
+ * first question in a new chat), so the poll can hand it to the client and
+ * child rows (button replies, follow-ups) inherit it. Never moves a row to a
+ * DIFFERENT thread: a row that already carries another thread id throws, and
+ * writing the thread it already has is a no-op. */
+export async function setTableLaneThread(db: Db, rowId: number, threadId: number): Promise<void> {
+  const { rows } = await db.query(
+    `update table_lane_requests set thread_id = $2
+      where id = $1 and (thread_id is null or thread_id = $2)
+      returning id`,
+    [rowId, threadId],
+  );
+  if (rows[0] === undefined) {
+    throw new Error(`table-lane row ${rowId} is unknown or already belongs to another thread; not setting thread ${threadId}`);
+  }
+}
+
 /** One row, only for its owner (the poll reads through this): another user's
  * row id reads as absent, indistinguishable from an unknown id. */
 export async function readTableLaneRequest(db: Db, rowId: number, userId: string): Promise<TableLaneRow | null> {

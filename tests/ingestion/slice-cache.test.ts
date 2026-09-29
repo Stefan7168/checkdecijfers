@@ -309,6 +309,30 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     expect(rowAfter.updated_at).toEqual(rowBefore.updated_at); // untouched, not just unchanged-looking
   });
 
+  it('breadth step 5: a prefetched schema + code lists are used instead of fetching them again', async () => {
+    const docs = await loadDocs('83625NED');
+    const fixture = new FixtureSource(docs);
+    const schema = await fixture.fetchTableSchema('83625NED');
+    const codeLists: Record<string, Awaited<ReturnType<CbsSource['fetchCodeList']>>> = {};
+    for (const d of schema.dimensions) codeLists[d.name] = await fixture.fetchCodeList('83625NED', d.name);
+    const noNetwork: CbsSource = {
+      fetchTableSchema: () => Promise.reject(new Error('must not fetch the schema again')),
+      fetchCodeList: () => Promise.reject(new Error('must not fetch a code list again')),
+      fetchObservations: () => {
+        throw new Error('unused');
+      },
+      fetchObservationCount: () => Promise.resolve(null),
+      fetchCatalog: () => Promise.resolve([]),
+    };
+
+    const result = await registerSchemaOnly(db, noNetwork, '83625NED', { schema, codeLists });
+
+    expect(result.ok).toBe(true);
+    expect((await cbsTablesRow('83625NED')).ingest_mode).toBe('slice_cache');
+    expect(await labelCount('83625NED')).toBeGreaterThan(0);
+    await expect(registerSchemaOnly(db, noNetwork, '85224NED', { schema, codeLists })).rejects.toThrow(/prefetched schema/);
+  });
+
   it('already registered as full -> registered_as_full; the whole-table path owns it, no writes here', async () => {
     const docs = await loadDocs('83625NED');
     const source = new FixtureSource(docs);

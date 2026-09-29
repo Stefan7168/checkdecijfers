@@ -15,6 +15,7 @@ import {
   findExhaustedTableLaneRequests,
   readTableLaneRequest,
   releaseForRetry,
+  setTableLaneThread,
   TABLE_LANE_MAX_ATTEMPTS,
   TABLE_LANE_STALE_MS,
   type TableLaneRow,
@@ -571,5 +572,32 @@ describe('parent link and thread', () => {
     const child = await created(userId, { parentId: parent.id, threadId });
     expect(child.parentId).toBe(parent.id);
     expect(child.threadId).toBe(threadId);
+  });
+});
+
+describe('setTableLaneThread (Ruling R3)', () => {
+  it('writes the thread the job attached the answer to back onto the row', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const row = await created(userId);
+    expect(row.threadId).toBeNull();
+    const { rows: t } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [userId]);
+    const threadId = Number(t[0]!.id);
+    await setTableLaneThread(db, row.id, threadId);
+    expect((await readTableLaneRequest(db, row.id, userId))!.threadId).toBe(threadId);
+  });
+
+  it('is a no-op when the row already carries that thread, and never moves a row to another thread', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const { rows: t1 } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [userId]);
+    const { rows: t2 } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [userId]);
+    const first = Number(t1[0]!.id);
+    const second = Number(t2[0]!.id);
+    const row = await created(userId, { threadId: first });
+    await setTableLaneThread(db, row.id, first);
+    expect((await readTableLaneRequest(db, row.id, userId))!.threadId).toBe(first);
+    await expect(setTableLaneThread(db, row.id, second)).rejects.toThrow(/thread/);
+    expect((await readTableLaneRequest(db, row.id, userId))!.threadId).toBe(first);
   });
 });

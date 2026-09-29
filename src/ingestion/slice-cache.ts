@@ -95,6 +95,12 @@ export async function registerSchemaOnly(
   db: Db,
   source: CbsSource,
   tableId: string,
+  /** Breadth step 5 (the table-lane job): the schema + code lists the caller
+   * JUST fetched from this same `source` for this table, so a first
+   * registration does not fetch them a second time. Absent ⇒ fetched here,
+   * exactly as before. Never stored as-is beyond what this function already
+   * stores from a fetch of its own. */
+  prefetched?: { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> },
 ): Promise<SchemaOnlyResult> {
   const existing = await db.query('select ingest_mode, units from cbs_tables where id = $1', [tableId]);
   if (existing.rows.length > 0) {
@@ -112,7 +118,10 @@ export async function registerSchemaOnly(
     return { ok: true, tableId, numericMeasures: Object.keys(units).sort(), alreadyRegistered: true };
   }
 
-  const schema = await source.fetchTableSchema(tableId);
+  if (prefetched !== undefined && prefetched.schema.tableId !== tableId) {
+    throw new Error(`registerSchemaOnly: prefetched schema is for "${prefetched.schema.tableId}", not "${tableId}"`);
+  }
+  const schema = prefetched?.schema ?? (await source.fetchTableSchema(tableId));
 
   // Controller ruling, fix round 1: a slice-cache table's ONLY freshness
   // signal is CBS's own 'Modified' date — a source that cannot state one
@@ -141,7 +150,7 @@ export async function registerSchemaOnly(
     };
   }
 
-  const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+  const codeLists = prefetched?.codeLists ?? (await fetchAllCodeLists(source, tableId, schema.dimensions));
   const periodCodes: CbsCode[] = codeLists[periodDim.name] ?? [];
   if (periodCodes.length === 0) {
     return {
