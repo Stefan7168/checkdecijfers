@@ -1,5 +1,34 @@
 # STATUS archive — the session log
 
+**Session 140 (2026-09-29, local UTC+7 — started by the owner's kickoff paste; the owner was present at the start and
+at the wrap-up; ran in PARALLEL with session 141 (the owner's vision review) in the same checkout; spent nothing on AI).**
+
+1. **State verified at start:** `main` = `e8aedbe5`, CI 36483049274 green, prod 200.
+2. **Breadth step 5 planned** — [plan](superpowers/plans/2026-09-29-breadth-step-5-table-lane-wiring.md) (`5c92c634`):
+   curated miss → finder → `table_lane_requests` row (migration **038, FILE-ONLY**) with the normal question price
+   reserved → background job `/api/table-lane-job` (register layout, table-scoped parse, breakdown/region/period
+   resolution, `ensureSlice`, audited answer / button question / refusal, settlement in the same transaction as the
+   row's terminal status) → chat polls, shows buttons, accepts typed replies; follow-ups reuse the table (parser prompt
+   v3). Dark behind `TABLE_LANE_ENABLED`.
+3. **Built via subagent-driven development** — 8 tasks, each reviewed (opus on the money/audit/safety tasks); 6 of 8
+   needed one fix round. Real defects the reviews caught: a copied refund routine (now `compensateSplitInTx`); a
+   reader's region pick applied to the wrong place when two places were ambiguous; fail-closed audit rows that could not
+   be reconstructed; a double give-up audit from two overlapping sweeps; the lane question's options shown twice (the
+   extra chips started a paid question); a late lane answer clobbering a newer turn's state. Final whole-branch review
+   ("with fixes", 0 Critical, 4 Important — double-charged button reply, duplicate history entry, conversation deletion
+   leaving the routing turn, flag-off not stopping replies) → one fix wave (`38b59f45`, `df76feb7`) → re-review clean.
+   16 controller rulings (R1–R16) recorded in ADR 062 "As built — step 5"; deferred minors in #340–#345.
+4. **Verification block** (`scripts/verify-block.sh`, detached, solo) on `df76feb7`: typechecks 0/0; backend 263 files /
+   4,622 tests passed; benchmark gate PASS (6/6 refusal, 0 fabricated); web 177 files / 3,402 tests passed; `next build`
+   ok. `/code-review` LOW: 0 findings.
+5. **Merged** to `main` as `763b91e7` (17 commits), CI 36518156649 green incl. deploy, prod 200. Branch deleted.
+6. **Go-live still needs** (owner, all waiting for ADR 063's gate): migrations 037 + 038, `TABLE_LANE_ENABLED=1` with
+   `ONBOARDING_ENABLED=1` and `CRON_SECRET`, the parser recording + calibration run (39 cases, prompt v3, ~114k estimated
+   input tokens, after 2026-10-01), step 6's benchmark.
+7. **Parallel session 141** (same checkout) held the owner's vision interview → ADR 063, "The Look" as the only work
+   package, table-lane step 6 PAUSED. It wrote the STATUS top block and the session-142 kickoff (`7f55cfae`); this
+   session waited for that commit, then added this entry, lessons, and #345 residuals on top.
+
 **Session 139 (2026-09-28 → 2026-09-29, local UTC+7 — started by the owner's kickoff paste; no further owner messages;
 ran autonomously through the breadth queue; spent nothing on AI).**
 

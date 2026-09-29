@@ -29,6 +29,21 @@ on top.
    across eight files. Check `docs/status-archive.md` and the latest kickoff for the current session number before
    writing the first doc.
 
+## Session 140 — a plan's own mandates need review too; two sessions in one checkout
+
+1. **Reviews overruled the plan three times, correctly.** The plan said step-2 refusals carry no parse audit, and told
+   the job's kick helper and a refund routine to be copied; reviewers flagged each (R6, R11, T1-I1) and the rulings
+   went against the plan. The reviewer rubric's "plan-mandated is still a finding" earned its keep — keep it.
+2. **Fixtures shaped like the brief hide integration bugs.** Task 6's tests used `pending: null` and no suggestions; the
+   real Task 3 envelope carries both, so a lane question showed its options twice and a chip started a paid question.
+   Cross-task tests must build fixtures from the producing task's real output, not the brief's sketch.
+3. **Money rows need ownership before side effects, everywhere.** The give-up path wrote an audit row from a plain
+   `select` — two sweeps could each write one. Every path that writes an audit or settles must first own the row
+   (fenced claim on status + attempts), not just the happy path.
+4. **A parallel session in the same checkout is normal now — coordinate, don't race.** Session 141 rewrote STATUS while
+   this session merged; waiting for its commit (poll `git status` clean + new HEAD) and adding entries on top avoided
+   any overwrite. A cross-session message confirmed the numbering (140 vs 141). Never `git add -A` in a shared checkout.
+
 ## Session 139 — a closed-choice parser is only as safe as its weakest escape hatch
 
 1. **Write down how a measurement was counted, not just the result.** Step 3's plan quoted "1,363 of 1,785 eligible

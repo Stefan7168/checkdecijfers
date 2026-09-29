@@ -12,8 +12,8 @@ Read order: `CLAUDE.md` → `docs/STATUS.md` top block → this file. Verify eve
   review) and `docs/decisions/063-chart-first-refocus-look-is-the-gate.md` (the five owner answers) before touching UI.
 - **The gate:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
   Then the owner invites people. Record each sign-off with its date in open-questions #346.
-- **`main`:** the table-lane step-5 branch (`breadth-step-5`, 17 commits) was merged DARK to `main` in session 141 with
-  the full verification block; see the session-141 entry in `docs/status-archive.md` for the SHA and CI run. Everything
+- **`main`:** the table-lane step-5 branch (`breadth-step-5`, 17 commits) was merged DARK to `main` in session 140 (`763b91e7`, CI 36518156649) with
+  the full verification block; see the session-140 entry in `docs/status-archive.md`. Everything
   else built-but-dark (Pro plan, Eurostat, brand colours, regional Part 2 on its branch) is PAUSED until the gate.
 - **Spend:** the $50 monthly roof resets 2026-10-01. The Look needs no AI spend.
 
