@@ -8,6 +8,7 @@ import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
+import { MESSAGES } from '../lib/i18n/messages.ts';
 import { fakeAnswerResponse } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
 
@@ -83,7 +84,7 @@ function laneAnswerGated(): GatedResponse {
   };
 }
 
-function laneQuestionGated(): GatedResponse {
+function laneQuestionGated(withEnglish = false): GatedResponse {
   return {
     kind: 'ok',
     netCost: 5,
@@ -91,7 +92,29 @@ function laneQuestionGated(): GatedResponse {
     response: {
       kind: 'clarification',
       text: 'Welk geslacht bedoel je?',
-      pending: null,
+      // The REAL envelope shape Task 3's buildClarification produces: the member
+      // titles ride along as suggestions and English chips, with a STRIPPED
+      // rescue carrier as `pending`.
+      suggestions: QUESTION.options.map((o) => o.title),
+      pending: {
+        question: 'Hoeveel dingen?',
+        referenceDate: '2026-09-29',
+        axes: ['measure'],
+        questionNl: 'Welk geslacht bedoel je?',
+        options: [],
+        rescueOnly: true,
+      },
+      // An English reader's envelope also carries the English sibling (with chips).
+      ...(withEnglish
+        ? {
+            english: {
+              source: 'template',
+              text: 'Which sex do you mean?',
+              chips: QUESTION.options.map((o) => ({ label: o.title, submit: o.title })),
+              untranslated: [],
+            },
+          }
+        : {}),
       tableLane: { version: 1, rowId: 41, tableId: '83765NED', selectionNote: null, question: QUESTION },
     } as unknown as ComposedResponse,
   };
@@ -117,7 +140,7 @@ describe('table lane in the chat', () => {
     const onThreadId = vi.fn();
     const onOutcome = vi.fn();
     renderChat({ onThreadId, onOutcome });
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel dingen?' } });
       fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
@@ -146,7 +169,7 @@ describe('table lane in the chat', () => {
     askQuestion.mockResolvedValue(routingOutcome());
     pollTableLane.mockResolvedValue({ status: 'running' });
     renderChat();
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel dingen?' } });
       fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
@@ -170,7 +193,7 @@ describe('table lane in the chat', () => {
     askQuestion.mockResolvedValue(routingOutcome());
     pollTableLane.mockResolvedValue({ status: 'gone' });
     renderChat();
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel dingen?' } });
       fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
@@ -188,7 +211,7 @@ async function landQuestion() {
   askQuestion.mockResolvedValue(routingOutcome());
   pollTableLane.mockResolvedValue({ status: 'done', gated: laneQuestionGated(), threadId: 12 });
   renderChat();
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
   await act(async () => {
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel dingen?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
@@ -218,25 +241,101 @@ describe('table lane breakdown question in the chat', () => {
     expect(screen.queryByRole('button', { name: 'Totaal mannen en vrouwen' })).toBeNull();
   });
 
-  it('a typed reply goes to replyToTableLane, not askQuestion; no match keeps the question open', async () => {
+  it('shows ONLY the lane buttons - no generic suggestion chips or hint (real envelope shape)', async () => {
     await landQuestion();
-    replyToTableLane.mockResolvedValue({ kind: 'no_match' });
-    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Onbekend' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
-    await screen.findByText(
-      'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
-    );
-    expect(replyToTableLane).toHaveBeenCalledWith(41, { text: 'Onbekend' }, expect.any(String));
-    expect(askQuestion).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Mannen' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Mannen' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Totaal mannen en vrouwen' })).toHaveLength(1);
+    expect(screen.queryByText(MESSAGES.nl['chat.clarificationOptionsHint'])).toBeNull();
+  });
 
-    // A second typed attempt still answers the (still open) question.
+  it('for an English reader too: the English question text, lane buttons only (no English chip row)', async () => {
+    askQuestion.mockResolvedValue(routingOutcome());
+    pollTableLane.mockResolvedValue({ status: 'done', gated: laneQuestionGated(true), threadId: 12 });
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Ask a question…'), { target: { value: 'How many?' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    vi.useRealTimers();
+    expect(screen.getByText('Which sex do you mean?')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Mannen' })).toHaveLength(1);
+    expect(screen.queryByText('Pick an option:')).toBeNull();
+  });
+
+  it('a typed name that matches answers the question through replyToTableLane', async () => {
+    await landQuestion();
     replyToTableLane.mockResolvedValue({ kind: 'started', rowId: 78 });
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'mannen' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
     await waitFor(() => expect(screen.getByText('CBS-tabel ophalen…')).toBeTruthy());
-    expect(replyToTableLane).toHaveBeenLastCalledWith(41, { text: 'mannen' }, expect.any(String));
+    expect(replyToTableLane).toHaveBeenCalledWith(41, { text: 'mannen' }, expect.any(String));
     expect(askQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('R13: typed text that matches nothing closes the question and goes on as a fresh question', async () => {
+    await landQuestion();
+    replyToTableLane.mockResolvedValue({ kind: 'no_match' });
+    askQuestion.mockResolvedValue({
+      gated: { kind: 'unauthenticated' },
+      context: null,
+      threadId: null,
+      onboardingOffer: null,
+      proofRequestUrls: null,
+      tableLane: null,
+    });
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Iets heel anders' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await waitFor(() => expect(askQuestion).toHaveBeenCalledTimes(2));
+    expect(replyToTableLane).toHaveBeenCalledWith(41, { text: 'Iets heel anders' }, expect.any(String));
+    expect(askQuestion.mock.calls[1]![0]).toBe('Iets heel anders');
+    // One bubble for the reader's text (not two), and the question is closed.
+    expect(screen.getAllByText('Iets heel anders')).toHaveLength(1);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Mannen' })).toBeNull());
+    expect(
+      screen.queryByText(
+        'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+      ),
+    ).toBeNull();
+  });
+
+  it('a button the server rejects (no_match) shows the info line and keeps the question open', async () => {
+    await landQuestion();
+    replyToTableLane.mockResolvedValue({ kind: 'no_match' });
+    fireEvent.click(screen.getByRole('button', { name: 'Mannen' }));
+    await screen.findByText(
+      'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+    );
+    expect(screen.getByRole('button', { name: 'Mannen' })).toBeTruthy();
+  });
+
+  it('insufficient credits on a click keeps the question open', async () => {
+    await landQuestion();
+    replyToTableLane.mockResolvedValue({ kind: 'insufficient_credits', balance: 1, required: 20 });
+    fireEvent.click(screen.getByRole('button', { name: 'Mannen' }));
+    await screen.findByText(/Je hebt niet genoeg credits/);
+    expect(screen.getByRole('button', { name: 'Mannen' })).toBeTruthy();
+  });
+
+  it('a double click on a button sends one reply (latch)', async () => {
+    await landQuestion();
+    let release!: (value: ReplyTableLaneOutcome) => void;
+    replyToTableLane.mockImplementation(() => new Promise((r) => (release = r)));
+    const button = screen.getByRole('button', { name: 'Mannen' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(replyToTableLane).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      release({ kind: 'started', rowId: 77 });
+    });
+    expect(replyToTableLane).toHaveBeenCalledTimes(1);
   });
 
   it('once the reply started, the next typed text is an ordinary new question', async () => {
@@ -263,5 +362,66 @@ describe('table lane breakdown question in the chat', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mannen' }));
     await screen.findByText('Deze keuzevraag staat niet meer open. Stel je vraag opnieuw.');
     expect(screen.queryByRole('button', { name: 'Totaal mannen en vrouwen' })).toBeNull();
+  });
+});
+
+describe('a lane result landing above newer turns', () => {
+  it('leaves the newer turn\'s open clarification round (pending) alone', async () => {
+    askQuestion.mockResolvedValueOnce(routingOutcome());
+    pollTableLane.mockResolvedValue({ status: 'running' });
+    renderChat();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Eerste vraag' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    });
+    // Meanwhile the reader asks a second, curated question that needs a clarification.
+    askQuestion.mockResolvedValueOnce({
+      gated: {
+        kind: 'ok',
+        netCost: 5,
+        auditId: 30,
+        response: {
+          kind: 'clarification',
+          text: 'Welk jaar bedoel je?',
+          pending: { questionNl: 'Welk jaar bedoel je?' },
+        } as unknown as ComposedResponse,
+      },
+      context: null,
+      threadId: null,
+      onboardingOffer: null,
+      proofRequestUrls: null,
+      tableLane: null,
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Tweede vraag' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    });
+    expect(screen.getByText('Welk jaar bedoel je?')).toBeTruthy();
+
+    // Now the first job lands as a button question - above the second turn.
+    pollTableLane.mockResolvedValue({ status: 'done', gated: laneQuestionGated(), threadId: null });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(screen.getByText('Welk geslacht bedoel je?')).toBeTruthy();
+    // Not the live round: its buttons are not offered ...
+    expect(screen.queryByRole('button', { name: 'Mannen' })).toBeNull();
+
+    // ... and the composer still answers the SECOND turn's clarification.
+    replyToClarification.mockResolvedValue({
+      gated: { kind: 'unauthenticated' },
+      context: null,
+      threadId: null,
+      onboardingOffer: null,
+      proofRequestUrls: null,
+      tableLane: null,
+    });
+    vi.useRealTimers();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '2024' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await waitFor(() => expect(replyToClarification).toHaveBeenCalledTimes(1));
+    expect(replyToTableLane).not.toHaveBeenCalled();
+    expect(askQuestion).toHaveBeenCalledTimes(2);
   });
 });

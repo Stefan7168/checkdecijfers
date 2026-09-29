@@ -55,7 +55,9 @@ import {
   tableLaneNoteOf,
   tableLaneProgressMessage,
   tableLaneQuestionOfResponse,
+  withoutLaneQuestionChips,
 } from '../lib/chat-message.ts';
+import { PILL } from './chip-style.ts';
 import { TableLaneProgress } from './table-lane-progress.tsx';
 import { TableLaneQuestion } from './table-lane-question.tsx';
 // Co-pilot phase 3 (session 114, Task 3): re-exported here (defined in
@@ -113,8 +115,8 @@ const CHIP_ACTION = `${CHIP_BASE} border-border bg-background text-foreground ho
 // now (still focusable), never natively `disabled`, so the pseudo-class
 // would never apply.
 const CHIP_SOON = `${CHIP_BASE} border-dashed border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed`;
-/** Follow-up chips (#73) and the docked-visual reference chip: pills under a message. */
-const PILL = 'rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground';
+// Follow-up chips (#73) and the docked-visual reference chip: pills under a message
+// (PILL itself lives in ./chip-style.ts, shared with the table lane's buttons).
 
 /** WP20 #82: live pricing for the pre-send cost surfaces — read from the
  * pricing tables by the page (ADR 006), threaded via Dashboard. `balance` is
@@ -277,10 +279,14 @@ function CopyAnswerButton({
   view,
   sourceUrl,
   citation,
+  extraLines = [],
 }: {
   view: AnswerView;
   sourceUrl: string | null;
   citation: string | null;
+  /** Lines copied after the answer's own structural lines (the table lane's
+   * selection note - which breakdown the number is for). */
+  extraLines?: string[];
 }) {
   const [copied, setCopied] = useState(false);
   const t = useT();
@@ -290,7 +296,7 @@ function CopyAnswerButton({
       variant="ghost"
       size="xs"
       onClick={async () => {
-        const { text: bodyText, html: bodyHtml } = buildAnswerCopy(view, sourceUrl);
+        const { text: bodyText, html: bodyHtml } = buildAnswerCopy(view, sourceUrl, extraLines);
         const text = citation !== null ? `${bodyText}\n\n${citation}` : bodyText;
         const html = citation !== null ? `${bodyHtml}<p>${escapeHtmlForCopy(citation)}</p>` : bodyHtml;
         try {
@@ -588,6 +594,18 @@ export function Chat({
   // `replaceRowId` set ⇒ the message REPLACES that job's progress bubble
   // instead of appending.
   function landOutcome(outcome: AskOutcome, replaceRowId: number | null = null): void {
+    // A table-lane job's outcome lands IN PLACE of its progress bubble, which
+    // may by now sit above newer turns. Only a landing at the very bottom is the
+    // conversation's live round; above newer turns it takes its slot and leaves
+    // the open-round state (`pending`, the open lane question) and the thread
+    // alone. A bubble that is no longer in the list (chat reset) drops the whole
+    // landing - no side effects either.
+    let liveRound = true;
+    if (replaceRowId !== null) {
+      const index = messages.findIndex((message) => message.tableLane?.rowId === replaceRowId);
+      if (index === -1) return;
+      liveRound = index === messages.length - 1;
+    }
     // A table-lane ROUTING turn: `gated` is the audited routing refusal
     // (onboarding_pending) - never rendered. A progress bubble stands in for
     // the answer the background job will deliver. The routing turn itself
@@ -608,7 +626,7 @@ export function Chat({
     // first completed turn) so the next turn attaches to it, and report it up
     // for the sidebar highlight/refresh. A failed attach returns null and the
     // chat simply stays threadless.
-    if (threadAware && outcome.threadId !== null) {
+    if (liveRound && threadAware && outcome.threadId !== null) {
       setThreadId(outcome.threadId);
       onThreadId?.(outcome.threadId);
     }
@@ -677,7 +695,8 @@ export function Chat({
         ),
       );
       // None of these kinds change the pending clarification state;
-      // `finally` below still clears `busy`.
+      // `finally` below still clears `busy`. They do end a lane question.
+      if (liveRound) setOpenTableLane(null);
       return;
     }
 
@@ -713,11 +732,22 @@ export function Chat({
     // behind, or a chip could briefly render with no bound carrier. Resumed
     // messages keep `carrier: null` (ADR 033 ⟨A6⟩, replay-assemble.ts never
     // guesses one) — the click handler treats that as fill-don't-send.
+    const laneQuestion = tableLaneQuestionOfResponse(response);
+    // A table-lane question is answered by its own buttons: its stripped rescue
+    // carrier and member-title chips are not offered (withoutLaneQuestionChips).
     const carrier: ChatMessage['carrier'] =
       carried &&
+      laneQuestion === null &&
       (response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification')
         ? { pending: carried }
         : null;
+    const chips = withoutLaneQuestionChips(
+      response,
+      response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification'
+        ? (response.suggestions ?? [])
+        : [],
+      response.kind === 'refusal' || response.kind === 'clarification' ? (response.english ?? null) : null,
+    );
     setMessages((m) =>
       placeMessage(m, replaceRowId, {
         role: 'assistant',
@@ -817,12 +847,7 @@ export function Chat({
         // the label in the input, the user presses Verstuur and sees the cost
         // line, and the server's deterministic rung recognizes the label and
         // resolves it without a second LLM parse.
-        suggestions:
-          response.kind === 'answer' ||
-          response.kind === 'refusal' ||
-          response.kind === 'clarification'
-            ? (response.suggestions ?? [])
-            : [],
+        suggestions: chips.suggestions,
         // WP128: the feedback anchor — only real answers get buttons; the
         // `?? null` guards the same deploy-window skew as suggestions.
         auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,
@@ -848,15 +873,12 @@ export function Chat({
         // those two kinds (RefusalResponse/ClarificationResponse, Task 5),
         // `?? null` guarding the same deploy-window skew AND every
         // Dutch-only turn.
-        nonAnswerEnglish:
-          response.kind === 'refusal' || response.kind === 'clarification'
-            ? (response.english ?? null)
-            : null,
+        nonAnswerEnglish: chips.nonAnswerEnglish,
         // Breadth step 5 (Task 6): the table lane's present-only envelope
         // key. The selection note sits under a table-lane answer (live and on
         // replay from the same envelope); the button question is live-only.
         tableLaneNote: tableLaneNoteOf(response),
-        tableLaneQuestion: tableLaneQuestionOfResponse(response),
+        tableLaneQuestion: laneQuestion,
       }),
     );
     // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
@@ -864,10 +886,13 @@ export function Chat({
     // reset). The message just appended above carries the identical pending
     // as its own `carrier` for a chip click to bind to instead — see
     // handleSubmit's send-time resolution and the click handler below.
-    setPending(carried ?? null);
-    // The table lane's open button question (if this response carries one):
-    // the composer's next typed reply goes to it, not to askQuestion.
-    setOpenTableLane(tableLaneQuestionOfResponse(response));
+    // A landing above newer turns (liveRound false) leaves the live round alone.
+    if (liveRound) {
+      setPending(laneQuestion === null ? (carried ?? null) : null);
+      // The table lane's open button question (if this response carries one):
+      // the composer's next typed reply goes to it, not to askQuestion.
+      setOpenTableLane(laneQuestion);
+    }
   }
 
 
@@ -1054,12 +1079,20 @@ export function Chat({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    // Breadth step 5 (Task 6): while a table-lane button question is open, the
-    // composer answers IT (the server matches the typed name against the
-    // dimension's full member list - never a nearest match) instead of asking a
-    // new question. Chip clicks elsewhere still go through sendText.
-    if (openTableLane !== null) {
-      await replyTableLane(openTableLane.rowId, { text }, text);
+    // Breadth step 5 (Task 6): while a table-lane button question is the
+    // LATEST message and still open, the composer first offers the typed name to
+    // it (the server matches it against the dimension's full member list - never
+    // a nearest match). Ruling R13: text that does not match is never a trap - it
+    // closes the question and goes on as a fresh question. Chip clicks elsewhere
+    // still go through sendText.
+    const latest = messages[messages.length - 1];
+    if (
+      openTableLane !== null &&
+      latest?.tableLaneQuestion != null &&
+      latest.tableLaneQuestion.rowId === openTableLane.rowId
+    ) {
+      const asFreshQuestion = await replyTableLane(openTableLane.rowId, { text }, text, true);
+      if (asFreshQuestion) await sendText(text, true);
       return;
     }
     await sendText(text);
@@ -1069,8 +1102,18 @@ export function Chat({
   // - a clicked member (`{ code }`, bubble = its CBS title) or a typed name
   // (`{ text }`). `started` swaps in a new progress bubble; `no_match` is free
   // and leaves the question open; the polling bubble lands the outcome later.
-  async function replyTableLane(rowId: number, choice: ReplyTableLaneChoice, bubbleText: string): Promise<void> {
-    if (!bubbleText || busy || sendingRef.current || nothingSelected) return;
+  //
+  // Returns true (typed text only, `typed`) when the text did not answer the
+  // question and must go on as a fresh question (R13): the question is closed
+  // and the reader's bubble is already shown.
+  async function replyTableLane(
+    rowId: number,
+    choice: ReplyTableLaneChoice,
+    bubbleText: string,
+    typed = false,
+  ): Promise<boolean> {
+    if (!bubbleText || busy || sendingRef.current || nothingSelected) return false;
+    let asFreshQuestion = false;
     sendingRef.current = true;
     const submitGeneration = generationRef.current;
     setMessages((m) => [...m, { ...infoChatMessage(bubbleText), role: 'user', kind: null }]);
@@ -1080,10 +1123,15 @@ export function Chat({
     setStaleDeploy(false);
     try {
       const result = await replyToTableLane(rowId, choice, crypto.randomUUID());
-      if (generationRef.current !== submitGeneration) return;
+      if (generationRef.current !== submitGeneration) return false;
       if (result.kind === 'started') {
         setOpenTableLane(null);
         setMessages((m) => [...m, tableLaneProgressMessage(result.rowId, t('tableLane.progress'))]);
+      } else if (typed && (result.kind === 'no_match' || result.kind === 'gone')) {
+        // R13: typed text that is not one of the question's members (or whose
+        // question is no longer open) is a fresh question, never a dead end.
+        setOpenTableLane(null);
+        asFreshQuestion = true;
       } else if (result.kind === 'no_match') {
         setMessages((m) => [...m, infoChatMessage(t('tableLane.noMatch'))]);
       } else if (result.kind === 'insufficient_credits') {
@@ -1095,12 +1143,15 @@ export function Chat({
           proofRequestUrls: null,
           tableLane: null,
         });
+        // Not answered: the question stays open so the reader can top up and
+        // click again.
+        setOpenTableLane({ rowId });
       } else {
         setOpenTableLane(null);
         setMessages((m) => [...m, infoChatMessage(t('tableLane.replyGone'))]);
       }
     } catch (err) {
-      if (generationRef.current !== submitGeneration) return;
+      if (generationRef.current !== submitGeneration) return false;
       if (unstable_isUnrecognizedActionError(err)) {
         setStaleDeploy(true);
       } else {
@@ -1110,6 +1161,7 @@ export function Chat({
       sendingRef.current = false;
       setBusy(false);
     }
+    return asFreshQuestion;
   }
 
   // R7 (WP-D, #75/#211): extracted from handleSubmit so a one-click
@@ -1120,7 +1172,7 @@ export function Chat({
   // caller (chip clicks) passes the label text straight through. Behavior for
   // the existing typed-submit path is byte-identical — same guard order, same
   // body, just parameterized on `text` instead of reading `input` inline.
-  async function sendText(text: string) {
+  async function sendText(text: string, userBubbleShown = false) {
     // Strong-tier review HIGH-3(b): `busy` is React state, so two clicks in the
     // same tick both read the pre-render `false` and both fire a request (two
     // billed turns). `sendingRef` is set SYNCHRONOUSLY here and cleared in the
@@ -1134,10 +1186,14 @@ export function Chat({
     // thread is now displayed. Re-checked after the await.
     const submitGeneration = generationRef.current;
 
-    setMessages((m) => [
-      ...m,
-      { role: 'user', kind: null, text, chart: null, scatter: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
-    ]);
+    // `userBubbleShown`: a typed reply the table lane did not take (R13) already
+    // has its bubble on screen - it goes on here as a fresh question.
+    if (!userBubbleShown) {
+      setMessages((m) => [
+        ...m,
+        { role: 'user', kind: null, text, chart: null, scatter: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
+      ]);
+    }
     setInput('');
     setBusy(true);
     setError(null);
@@ -1777,6 +1833,7 @@ export function Chat({
                         // #296: a scatter's English card has no Dutch citation
                         // appended either (the citation is a Dutch quote).
                         citation={useEnglishCardContent || (scatter !== null && lang === 'en') ? null : message.citation}
+                        extraLines={message.tableLaneNote ? [message.tableLaneNote] : []}
                       />
                     ) : null}
                     {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}

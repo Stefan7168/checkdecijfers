@@ -13,6 +13,7 @@ import {
   tableLaneProgressMessage,
   tableLaneQuestionOfResponse,
 } from './chat-message.ts';
+import { buildAnswerCopy } from './copy-answer.ts';
 import { assembleMessages } from './replay-assemble.ts';
 
 const fakeDb = { query: async () => ({ rows: [] }) } as unknown as Db;
@@ -42,7 +43,16 @@ function clarificationWithQuestion(): ComposedResponse {
   return {
     kind: 'clarification',
     text: 'Welk geslacht bedoel je?',
-    pending: null,
+    // The real Task 3 shape: member titles as suggestions, English chips, and a
+    // stripped rescue carrier.
+    suggestions: QUESTION.options.map((o) => o.title),
+    pending: { questionNl: 'Welk geslacht bedoel je?', options: [], rescueOnly: true },
+    english: {
+      source: 'template',
+      text: 'Which sex do you mean?',
+      chips: QUESTION.options.map((o) => ({ label: o.title, submit: o.title })),
+      untranslated: [],
+    },
     tableLane: laneEnvelope({ question: QUESTION }),
   } as unknown as ComposedResponse;
 }
@@ -99,11 +109,60 @@ describe('assembleMessages - table lane replay', () => {
     expect(assistant!.tableLaneQuestion ?? null).toBeNull();
     expect(assistant!.tableLane ?? null).toBeNull();
     expect(assistant!.tableLaneNote).toBeNull();
+    // No generic member-title chips either (they would send a bare title as a
+    // fresh question), Dutch or English.
+    expect(assistant!.suggestions).toEqual([]);
+    expect(assistant!.nonAnswerEnglish?.chips).toEqual([]);
+    expect(assistant!.nonAnswerEnglish?.text).toBe('Which sex do you mean?');
+    expect(assistant!.carrier).toBeNull();
+  });
+
+  it('keeps the English chips of an ordinary (non-lane) clarification', async () => {
+    const response = {
+      kind: 'clarification',
+      text: 'Welk jaar?',
+      suggestions: ['2023', '2024'],
+      pending: null,
+      english: {
+        source: 'template',
+        text: 'Which year?',
+        chips: [{ label: '2023', submit: '2023' }],
+        untranslated: [],
+      },
+    } as unknown as ComposedResponse;
+    const [, assistant] = await assembleMessages(replayParts([row(response)]), fakeDb);
+    expect(assistant!.nonAnswerEnglish?.chips).toEqual([{ label: '2023', submit: '2023' }]);
   });
 
   it('replays a curated answer with no note', async () => {
     const response = fakeAnswerResponse({ body: 'x' }) as unknown as ComposedResponse;
     const [, assistant] = await assembleMessages(replayParts([row(response)]), fakeDb);
     expect(assistant!.tableLaneNote).toBeNull();
+  });
+});
+
+describe('buildAnswerCopy - table lane selection note', () => {
+  const view = {
+    body: 'Er zijn 5 dingen.',
+    assumptionLine: null,
+    regionSetLine: null,
+    regionSeriesLine: null,
+    stalenessWarning: null,
+    definitionLine: null,
+    alternatesLine: null,
+    markingLine: null,
+    attribution: 'Bron: CBS.',
+    tableId: '83765NED',
+    syncedAt: null,
+  };
+
+  it('copies the note after the answer lines and before the attribution', () => {
+    const { text, html } = buildAnswerCopy(view, null, ['Selectie: Geslacht: Mannen']);
+    expect(text).toBe('Er zijn 5 dingen.\n\nSelectie: Geslacht: Mannen\n\nBron: CBS.');
+    expect(html).toContain('<p>Selectie: Geslacht: Mannen</p>');
+  });
+
+  it('is unchanged without a note', () => {
+    expect(buildAnswerCopy(view, null).text).toBe('Er zijn 5 dingen.\n\nBron: CBS.');
   });
 });

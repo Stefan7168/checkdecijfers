@@ -114,6 +114,18 @@ describe('TableLaneProgress', () => {
     expect(pollTableLane).toHaveBeenCalledTimes(calls);
   });
 
+  it('measures the 10-minute budget in wall-clock time, including slow polls', async () => {
+    // Each poll takes 20 s in flight; timer delays alone would sum to far less.
+    pollTableLane.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ status: 'running' }), 20_000)),
+    );
+    const { props } = setup();
+    await advance(590_000);
+    expect(props.onGone).not.toHaveBeenCalled();
+    await advance(40_000);
+    expect(props.onGone).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps polling through a failed poll', async () => {
     pollTableLane.mockRejectedValueOnce(new Error('network'));
     const { props } = setup();

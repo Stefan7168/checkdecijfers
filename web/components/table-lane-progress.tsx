@@ -46,15 +46,13 @@ export function TableLaneProgress({
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let elapsed = 0;
+    const startedAt = Date.now();
+    const elapsed = () => Date.now() - startedAt;
     let slowReported = false;
 
     const schedule = () => {
-      const delay = elapsed < TABLE_LANE_SLOW_AFTER_MS ? TABLE_LANE_FAST_POLL_MS : TABLE_LANE_SLOW_POLL_MS;
-      timer = setTimeout(() => {
-        elapsed += delay;
-        void poll();
-      }, delay);
+      const delay = elapsed() < TABLE_LANE_SLOW_AFTER_MS ? TABLE_LANE_FAST_POLL_MS : TABLE_LANE_SLOW_POLL_MS;
+      timer = setTimeout(() => void poll(), delay);
     };
 
     const poll = async () => {
@@ -75,11 +73,11 @@ export function TableLaneProgress({
         callbacks.current.onGone();
         return;
       }
-      if (elapsed >= TABLE_LANE_GIVE_UP_MS) {
+      if (elapsed() >= TABLE_LANE_GIVE_UP_MS) {
         callbacks.current.onGone();
         return;
       }
-      if (!slowReported && elapsed >= TABLE_LANE_SLOW_AFTER_MS) {
+      if (!slowReported && elapsed() >= TABLE_LANE_SLOW_AFTER_MS) {
         slowReported = true;
         callbacks.current.onSlow();
       }

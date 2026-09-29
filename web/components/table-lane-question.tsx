@@ -7,10 +7,8 @@
 // composer - the server matches it against the dimension's FULL member list.
 import type { BreakdownQuestion } from '../backend/query/breakdowns.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
+import { PILL } from './chip-style.ts';
 
-// The same chip look chat.tsx uses for its follow-up/option chips.
-const PILL =
-  'rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground';
 
 /** Hard ceiling on shown buttons (mirrors BREAKDOWN_OPTION_CAP server-side); a
  * belt so a malformed envelope can never render a wall of buttons. */

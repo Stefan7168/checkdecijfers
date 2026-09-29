@@ -266,6 +266,24 @@ export function tableLaneQuestionOfResponse(
   return { rowId: lane.rowId, question: lane.question };
 }
 
+/** A table-lane button question is answered ONLY by the lane's own buttons.
+ * The job's clarification also carries the member titles as `suggestions` /
+ * English chips (and a stripped rescue carrier), and a generic chip click would
+ * send a bare title as a fresh, paid question - so on such a response the chip
+ * surfaces are emptied, live and on replay alike (one definition). Any other
+ * response passes through untouched. */
+export function withoutLaneQuestionChips(
+  response: ComposedResponse,
+  suggestions: string[],
+  nonAnswerEnglish: NonAnswerEnglish | null,
+): { suggestions: string[]; nonAnswerEnglish: NonAnswerEnglish | null } {
+  if (tableLaneQuestionOfResponse(response) === null) return { suggestions, nonAnswerEnglish };
+  return {
+    suggestions: [],
+    nonAnswerEnglish: nonAnswerEnglish === null ? null : { ...nonAnswerEnglish, chips: [] },
+  };
+}
+
 /** A plain assistant info line (no chart, no card, no cost). */
 export function infoChatMessage(text: string): ChatMessage {
   return {

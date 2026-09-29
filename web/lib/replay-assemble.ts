@@ -34,7 +34,7 @@ import { batchIdsForProof, buildAnswerProof, fetchRequestUrlsByBatch } from './a
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import type { ChatMessage } from './chat-message.ts';
-import { messageKind, tableLaneNoteOf } from './chat-message.ts';
+import { messageKind, tableLaneNoteOf, withoutLaneQuestionChips } from './chat-message.ts';
 import { pairedAttributionOf } from './scatter-card.ts';
 import { answerCsvFor } from './scatter-csv.ts';
 import { statCardData } from './stat-card-data.ts';
@@ -168,6 +168,13 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
   // itself (Amendment 6 — that builder stays a pure, synchronous leaf).
   const proof = answer !== null ? buildAnswerProof(answer) : null;
   const proofRequestUrls = await fetchProofRequestUrls(db, proof);
+  // A stored table-lane button question replays as plain text: no buttons, and
+  // none of the generic member-title chips either (chat-message.ts).
+  const laneChips = withoutLaneQuestionChips(
+    response,
+    part.suggestions,
+    response.kind === 'answer' ? null : (response.english ?? null),
+  );
   return {
     role: 'assistant',
     kind: messageKind(response),
@@ -195,7 +202,7 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
     proofRequestUrls,
     answerView,
     provisional: part.provisional,
-    suggestions: part.suggestions,
+    suggestions: laneChips.suggestions,
     // Feedback only anchors to real answers (the receive-path convention).
     auditId: isAnswer ? part.auditId : null,
     webSection: part.webSection,
@@ -220,7 +227,7 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
     // straight off the raw stored envelope (`response`, not `answer` — it
     // never rides an 'answer' response) — a reloaded English refusal/
     // clarification is the same one the reader originally saw.
-    nonAnswerEnglish: response.kind === 'answer' ? null : (response.english ?? null),
+    nonAnswerEnglish: laneChips.nonAnswerEnglish,
     // Breadth step 5 (Task 6): a stored table-lane answer keeps its selection
     // note (straight off the envelope). A stored table-lane QUESTION replays as
     // plain text - `tableLaneQuestion` is deliberately never restored (live
