@@ -2409,6 +2409,18 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
 
+## The share preview image (`/embed/<token>/opengraph-image`) — session 143
+
+Every Share link's embed page has an Open Graph image (WP-LOOK a2, `web/app/embed/[token]/opengraph-image.tsx`).
+To look at one: open a share link's URL with `/opengraph-image` appended (e.g.
+`https://checkdecijfers.vercel.app/embed/<token>/opengraph-image`) — a 1200×630 PNG. Paste a share link into
+LinkedIn's Post Inspector or Slack to see the unfurl. **The local harness has no `EMBED_TOKEN_SECRET`**, so there
+every token resolves to nothing and the route serves the neutral brand card (valid PNG, no digits) — the real card
+is exercised by `web/lib/share-preview.test.tsx` and `web/app/embed/[token]/opengraph-image.test.tsx`, which
+rasterise for real in vitest. Gotcha found on the first visual run: the image tool re-encodes a percent-encoded SVG
+data URI through a Latin-1-only `btoa` — the em dash in every CBS attribution line threw; the SVG is therefore
+embedded as base64 we encode ourselves (`svgDataUri`).
+
 ## The hermetic test database cache (`node_modules/.cache/cdc-fixture-db`) — bounded since session 143
 
 The backend suite and the local harness restore a fully ingested PGlite database from a ~160 MB `.tar` snapshot in

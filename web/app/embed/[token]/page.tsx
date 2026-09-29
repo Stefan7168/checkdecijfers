@@ -67,6 +67,7 @@ import { ChartView } from '../../../components/chart.tsx';
 import { ScatterView } from '../../../components/scatter-view.tsx';
 import { scatterCardSourceOf, scatterCardText } from '../../../lib/scatter-card.ts';
 import { getDb } from '../../../lib/db.ts';
+import { loadEmbedChart } from './embed-chart.ts';
 import { isChartForm, isTabularForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
 import type { ChartCommand } from '../../../lib/chart-commands.ts';
@@ -107,9 +108,10 @@ export const dynamic = 'force-dynamic';
 // (Phase 0, pre-launch), but THIS page must stay noindexed even after that
 // global flag is eventually lifted — a shared chart URL is for the reader
 // who received the link, never a page meant to rank.
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+// WP-LOOK part (a2) (session 143): folded into `generateMetadata` below —
+// Next allows only one of the two exports — the noindex is kept on EVERY
+// branch there, valid chart included.
+const NOINDEX: Metadata['robots'] = { index: false, follow: false };
 
 /** The exact date convention `buildAttributionLine` uses for this same kind
  * of audit timestamp (src/answer/compose/format.ts:
@@ -159,6 +161,24 @@ async function loadPublishedEdits(
   } catch {
     return { log: undefined, style: null };
   }
+}
+
+// WP-LOOK part (a2) (session 143, 2026-09-29, #351): the unfurl TEXT next to
+// the Open Graph image (opengraph-image.tsx wires the picture itself). Title
+// and description are spec strings / the saved headline; a link that
+// resolves to nothing gets the bare brand and stays out of search indexes.
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  const chart = await loadEmbedChart(token).catch(() => null);
+  if (chart === null) return { title: 'checkdecijfers.nl', robots: NOINDEX };
+  const description = chart.headlineText ?? chart.spec.attributionLine;
+  return {
+    title: `${chart.spec.title} · checkdecijfers.nl`,
+    description,
+    robots: NOINDEX,
+    openGraph: { title: chart.spec.title, description, type: 'article', siteName: 'checkdecijfers.nl' },
+    twitter: { card: 'summary_large_image', title: chart.spec.title, description },
+  };
 }
 
 export default async function EmbedPage({

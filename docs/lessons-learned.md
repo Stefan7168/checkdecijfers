@@ -45,7 +45,13 @@ on top.
    the DOM for every command kind now visits all three tabs. Naming trap: the popup's own "Grafiek" tab collided with
    the Style panel's "Grafiek" sub-tab (`getByRole` ambiguity AND a real UX ambiguity) — renamed the sub-tab to
    "Lijnen en assen" rather than special-casing the queries.
-7. **CBS dimension titles can carry their own classification code.** 568 titles in the fixtures start with a COICOP
+7. **Spike the rendering mechanism before designing around it.** The share preview image hinged on one unknown —
+   does Next's image tool render the text inside an embedded SVG? — and a ten-minute throwaway script answered it
+   (yes, in a fallback face) before any design was written; the same script's second run found the real bug the unit
+   test with an ASCII fixture missed: a percent-encoded data URI goes through a Latin-1 `btoa` inside the tool and the
+   em dash every CBS attribution line carries threw `InvalidCharacterError`. Fixture strings must carry the real
+   data's non-ASCII characters, and a visual run is part of verifying an image route, not optional polish.
+8. **CBS dimension titles can carry their own classification code.** 568 titles in the fixtures start with a COICOP
    code ("000000 Alle bestedingen"); the card showed it verbatim for months because the label was correctly treated as
    an untouchable spec string. Stripping digits from a spec string is safe under the whole-card digit scan (it can only
    remove numbers), so a display-only regex at the render site was enough — the proof panel keeps the raw title.

@@ -62,7 +62,7 @@ const { getOwnChartEdits, getUserChartStyle } = vi.hoisted(() => ({
 vi.mock('../../../backend/chart/edits-store.ts', () => ({ getOwnChartEdits }));
 vi.mock('../../../backend/chart/user-styles.ts', () => ({ getUserChartStyle }));
 
-import EmbedPage, { metadata } from './page.tsx';
+import EmbedPage, { generateMetadata } from './page.tsx';
 
 // A full, valid ChartSpec — not the sparse shape a naive fixture would
 // reach for. ChartView's `spec.schemaVersion !== 1` guard (and its direct
@@ -290,8 +290,23 @@ describe('/embed/[token] — frozen render', () => {
     expect(screen.getByText(/bevroren op/i)).toBeInTheDocument();
   });
 
-  it('sets noindex via the exported metadata', () => {
-    expect(metadata.robots).toEqual({ index: false, follow: false });
+  // WP-LOOK part (a2) (session 143): the static `metadata` became
+  // `generateMetadata` (title/description for the unfurl next to the Open
+  // Graph image); noindex holds on EVERY branch, valid chart included.
+  it('sets noindex via generateMetadata on every branch, and the unfurl title/description come from the stored chart', async () => {
+    verifyEmbedToken.mockReturnValue(null);
+    const missing = await generateMetadata({ params: params('nope') });
+    expect(missing.robots).toEqual({ index: false, follow: false });
+    expect(missing.title).toBe('checkdecijfers.nl');
+
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    const valid = await generateMetadata({ params: params('42.sig') });
+    expect(valid.robots).toEqual({ index: false, follow: false });
+    expect(valid.title).toBe('Testreeks · checkdecijfers.nl');
+    expect(valid.description).toBe('Bron: CBS StatLine, tabel 83693NED.');
+    expect(valid.openGraph?.title).toBe('Testreeks');
   });
 
   // Session 101 (open-questions #237(b)/#205): the Pro pitch on the frozen

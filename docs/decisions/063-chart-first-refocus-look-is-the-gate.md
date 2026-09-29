@@ -97,6 +97,11 @@ looks finished untouched.
 - **Owner rethink, session 143 (#351):** after seeing a code-drawn-images content pipeline, the owner asked whether to
   rethink; decision: **popup first, then a server-made preview image for every Share link (part (a2), before (c))**.
   Not a rebuild of the on-screen renderer; the image model belongs to the homepage/white-glove page, never to a chart.
+- **Part (a2), round 1 — session 143, 2026-09-29 (SHA in the status-archive entry):** every Share link now unfurls
+  with a 1200×630 picture of the chart (`/embed/<token>/opengraph-image`): the saved headline, the headline figure
+  verbatim, the brand, and the ADR 014 server SVG (attribution footer included) embedded whole, rasterised by Next's
+  built-in image tool. No new dependency, no AI, no schema change, no outside service. Part (b) was ruled "good
+  enough for now, revisit later" by the owner (not signed off); (c) the homepage is next.
 
 ## Revisit triggers
 

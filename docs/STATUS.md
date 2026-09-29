@@ -38,9 +38,12 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-143-kickoff.md](sess
   - (b) the Edit popup — **round 1 BUILT (session 143, owner GO on the design; SHA in the archive entry):** header
     with undo · redo · history, a preview of the card on the left, three tabs on the right (Grafiek · Markeringen ·
     Opmaak), a pinned footer with the "ask to change" box and Klaar; Download/Embed stay on the card; #348 fixed (the
-    plot is one tab stop). **Waiting for the owner's "I would share this" on (b)** ([#346](open-questions.md));
-  - (a2, added session 143, owner decision [#351](open-questions.md)) after (b), before (c): a server-made preview image
-    for every Share link (Open Graph image on the embed page + the same PNG to download), zero AI, no schema change;
+    plot is one tab stop). **Owner ruling: "good enough for now, come back to it later"** — not signed off, another
+    round after (a2)/(c) ([#346](open-questions.md));
+  - (a2, owner decision [#351](open-questions.md)) — **round 1 BUILT (session 143, SHA in the archive entry):** every
+    Share link unfurls with a 1200×630 picture of the chart (`/embed/<token>/opengraph-image`, Next's built-in image
+    tool around the ADR 014 server SVG); the embed page has title/description metadata. Owner's look at the picture
+    pending; residuals in 08-build-plan (fallback font, reader's form, no Download button yet);
   - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).
 - **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
   dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch

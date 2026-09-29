@@ -1306,6 +1306,17 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   `/embed/<token>` so a shared chart shows as a picture on LinkedIn / Slack / WhatsApp, and the same PNG downloadable.
   Zero AI, no schema change; cheapest mechanism first (own SVG renderer + `sharp`, already a dependency, vs. Satori —
   measure parity with the on-screen chart before choosing). Not a rebuild of the on-screen renderer.
+  **Round 1 BUILT (session 143, 2026-09-29, owner GO):** `web/app/embed/[token]/opengraph-image.tsx` (Next's file
+  convention → `og:image`/`twitter:image` on the embed page, 1200×630 PNG, Node runtime) + `generateMetadata` on the
+  page (title = spec title, description = saved headline or the attribution line). The card
+  (`web/lib/share-preview.tsx`, pure): saved headline sentence (if any), the headline figure verbatim, brand, and the
+  repo's own server SVG renderer (ADR 014: title, subtitle, plot, axis labels, attribution footer) embedded whole as a
+  base64 data URI — measured in a spike first: the image tool renders the SVG's text; a percent-encoded URI threw on
+  the em dash every CBS attribution line carries (Latin-1 `btoa` inside the tool), hence base64. A token that resolves
+  to nothing gets a neutral brand PNG with no digits. Tests: digit scan over the card's strings, real PNG
+  rasterisation in vitest (node env) incl. the em-dash case. Residuals: the renderer's text renders in the tool's
+  fallback face (not Inter); the reader's chosen form is not reflected (the spec's own line/bar is); no Download
+  button for that exact PNG yet; the local harness has no `EMBED_TOKEN_SECRET`, so it always serves the neutral card.
 - **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
   session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
   and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the
