@@ -34,7 +34,7 @@ import { batchIdsForProof, buildAnswerProof, fetchRequestUrlsByBatch } from './a
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import type { ChatMessage } from './chat-message.ts';
-import { messageKind } from './chat-message.ts';
+import { messageKind, tableLaneNoteOf } from './chat-message.ts';
 import { pairedAttributionOf } from './scatter-card.ts';
 import { answerCsvFor } from './scatter-csv.ts';
 import { statCardData } from './stat-card-data.ts';
@@ -221,6 +221,11 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
     // never rides an 'answer' response) — a reloaded English refusal/
     // clarification is the same one the reader originally saw.
     nonAnswerEnglish: response.kind === 'answer' ? null : (response.english ?? null),
+    // Breadth step 5 (Task 6): a stored table-lane answer keeps its selection
+    // note (straight off the envelope). A stored table-lane QUESTION replays as
+    // plain text - `tableLaneQuestion` is deliberately never restored (live
+    // interactive state, like `carrier`), so no buttons on a resumed thread.
+    tableLaneNote: tableLaneNoteOf(response),
   };
 }
 

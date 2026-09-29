@@ -16,7 +16,7 @@ import { Check, Copy, Database, FileSpreadsheet, Globe, Link2, PanelRight, Paper
 import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
-import { askQuestion, confirmOnboardingFetch, replyToClarification } from '../app/actions.ts';
+import { askQuestion, confirmOnboardingFetch, replyToClarification, replyToTableLane } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
@@ -35,6 +35,7 @@ import type { AnswerCsv } from '../lib/csv.ts';
 import { pairedAttributionOf, scatterCardText } from '../lib/scatter-card.ts';
 import { answerCsvFor } from '../lib/scatter-csv.ts';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
+import type { ReplyTableLaneChoice } from '../lib/table-lane.ts';
 import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import { DownloadCsvButton } from './download-csv-button.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
@@ -48,9 +49,15 @@ import type { AnswerView, ChatMessage } from '../lib/chat-message.ts';
 import {
   englishUserBubbleOverride,
   extendsPreviousChart,
+  infoChatMessage,
   messageKind,
   previousCompatibleChartIndex,
+  tableLaneNoteOf,
+  tableLaneProgressMessage,
+  tableLaneQuestionOfResponse,
 } from '../lib/chat-message.ts';
+import { TableLaneProgress } from './table-lane-progress.tsx';
+import { TableLaneQuestion } from './table-lane-question.tsx';
 // Co-pilot phase 3 (session 114, Task 3): re-exported here (defined in
 // chat-message.ts, a pure leaf dock-visuals.ts also imports) so this
 // component's own test can import it the way it imports everything else
@@ -332,6 +339,17 @@ function gatedMessageText(
   }
 }
 
+/** Breadth step 5 (Task 6): append `message`, or - when `replaceRowId` is set -
+ * swap it in for that table-lane job's progress bubble. A bubble that is no
+ * longer there (the chat was reset) drops the late message instead of
+ * appending it to the wrong conversation. */
+function placeMessage(list: ChatMessage[], replaceRowId: number | null, message: ChatMessage): ChatMessage[] {
+  if (replaceRowId === null) return [...list, message];
+  const index = list.findIndex((m) => m.tableLane?.rowId === replaceRowId);
+  if (index === -1) return list;
+  return list.map((m, i) => (i === index ? message : m));
+}
+
 // onOutcome (WP19, open-questions #68): reports every submit's GatedResponse
 // to the parent so the dashboard can move the displayed balance without a
 // reload. Pure notification -- the chat itself never derives balance state.
@@ -404,6 +422,11 @@ export function Chat({
   const lang = useLang();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
+  // Breadth step 5 (Task 6): the table lane's OPEN breakdown question - set
+  // when a table-lane clarification lands, cleared as soon as anything else
+  // lands, the reader's choice starts a new job, or the chat is reset. While it
+  // is set, the composer's typed reply is routed to it (see handleSubmit).
+  const [openTableLane, setOpenTableLane] = useState<{ rowId: number } | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
   // prop, updated to the server's attached thread id after a completed turn,
   // and sent as askQuestion's 5th argument (only when thread-aware).
@@ -546,6 +569,308 @@ export function Chat({
     }
   }
 
+  // Breadth step 5 (Task 6): the progress bubble's two small state edits.
+  function markTableLaneSlow(rowId: number): void {
+    setMessages((m) =>
+      m.map((message) =>
+        message.tableLane?.rowId === rowId ? { ...message, tableLane: { rowId, phase: 'slow' as const } } : message,
+      ),
+    );
+  }
+  function replaceTableLaneBubble(rowId: number, message: ChatMessage): void {
+    setMessages((m) => placeMessage(m, rowId, message));
+  }
+
+  // Breadth step 5 (Task 6): lands one askQuestion/replyToClarification outcome
+  // in the chat - EXACTLY the receive path sendText always had, extracted so a
+  // table-lane job's audited outcome (delivered later by the progress bubble's
+  // poll) is built by the same code as a direct answer, never a second copy.
+  // `replaceRowId` set ⇒ the message REPLACES that job's progress bubble
+  // instead of appending.
+  function landOutcome(outcome: AskOutcome, replaceRowId: number | null = null): void {
+    // A table-lane ROUTING turn: `gated` is the audited routing refusal
+    // (onboarding_pending) - never rendered. A progress bubble stands in for
+    // the answer the background job will deliver. The routing turn itself
+    // costs nothing (the gate already refunded it).
+    if (outcome.tableLane) {
+      if (threadAware && outcome.threadId !== null) {
+        setThreadId(outcome.threadId);
+        onThreadId?.(outcome.threadId);
+      }
+      onOutcome?.(outcome.gated);
+      setMessages((m) => [...m, tableLaneProgressMessage(outcome.tableLane!.rowId, t('tableLane.progress'))]);
+      setPending(null);
+      setOpenTableLane(null);
+      return;
+    }
+    applyOutcome(outcome);
+    // WP135 ⟨A1⟩: adopt the server's attached thread (lazy-created on the
+    // first completed turn) so the next turn attaches to it, and report it up
+    // for the sidebar highlight/refresh. A failed attach returns null and the
+    // chat simply stays threadless.
+    if (threadAware && outcome.threadId !== null) {
+      setThreadId(outcome.threadId);
+      onThreadId?.(outcome.threadId);
+    }
+    const { gated } = outcome;
+    onOutcome?.(gated);
+
+    if (gated.kind !== 'ok') {
+      // R2.2 (#69/#75/#211): insufficient_credits gets its OWN kind + a
+      // structured snapshot instead of the generic 'info' bubble, so the
+      // render below can name the covering pack and link /credits for
+      // real — keyed on the kind, never on parsing gatedMessageText's
+      // string. Every other non-'ok' kind is unchanged.
+      setMessages((m) =>
+        placeMessage(
+          m,
+          replaceRowId,
+        gated.kind === 'insufficient_credits'
+          ? {
+              role: 'assistant' as const,
+              kind: 'insufficient_credits' as const,
+              text: gatedMessageText(gated, t),
+              chart: null,
+              scatter: null,
+              chartAlternates: [],
+              cost: null,
+              citation: null,
+              card: null,
+              csv: null,
+              proof: null,
+              proofRequestUrls: null,
+              answerView: null,
+              provisional: false,
+              suggestions: [],
+              auditId: null,
+              webSection: null,
+              carrier: null,
+              insufficientCredits: { balance: gated.balance, required: gated.required },
+              onboardingOffer: null,
+              english: null,
+              nonAnswerEnglish: null,
+            }
+          : {
+              role: 'assistant' as const,
+              kind: 'info' as const,
+              text: gatedMessageText(gated, t),
+              chart: null,
+              scatter: null,
+              chartAlternates: [],
+              cost: null,
+              citation: null,
+              card: null,
+              csv: null,
+              proof: null,
+              proofRequestUrls: null,
+              answerView: null,
+              provisional: false,
+              suggestions: [],
+              auditId: null,
+              webSection: null,
+              carrier: null,
+              insufficientCredits: null,
+              onboardingOffer: null,
+              english: null,
+              nonAnswerEnglish: null,
+            },
+        ),
+      );
+      // None of these kinds change the pending clarification state;
+      // `finally` below still clears `busy`.
+      return;
+    }
+
+    const { response } = gated;
+    // ⟨A6⟩: the pending clarification (if any) this turn's response offers
+    // for its next reply — a clarification's own open round, or a
+    // rescueOnly carrier riding an answer/refusal's follow-up chips (#197
+    // step 3 / #73 v2). WP26c (ADR 024): a MISFIRED refusal may carry a
+    // rescue pending — the state that lets its one chip resolve
+    // deterministically instead of re-entering the parse that misfired. It
+    // is explicitly `rescueOnly`, and the server answers any NON-matching
+    // reply as a fresh question, so holding it here cannot turn the user's
+    // next unrelated question into a clarification-reply merge. `?? null`
+    // guards the deploy-window skew (an old server bundle omits the key).
+    const carried =
+      response.kind === 'clarification'
+        ? response.pending
+        : response.kind === 'refusal' || response.kind === 'answer'
+          ? (response.pending ?? null)
+          : null;
+    // #73 v2 follow-up (moved onto ChatMessage, session 76): an
+    // answer/refusal's carried rescue pending is a CARRIER a later chip
+    // binds to. Strong-tier review HIGH-3: a CLARIFICATION now snapshots its
+    // own open round here too. It used to be `null` on the reasoning that a
+    // clarification IS the open round — true while it is the newest message,
+    // but a superseded clarification (scrolled up after a newer round
+    // opened) then fell through to the LIVE `pending`, so its one-click
+    // option would have been sent as a reply to a DIFFERENT round: a
+    // wrong-carrier reply, and billed. Each clarification carrying its own
+    // snapshot makes a click resolve against the round the user is looking
+    // at. Computed HERE, before the message literal below, so it lands in
+    // the SAME setMessages call that appends the message — never a render
+    // behind, or a chip could briefly render with no bound carrier. Resumed
+    // messages keep `carrier: null` (ADR 033 ⟨A6⟩, replay-assemble.ts never
+    // guesses one) — the click handler treats that as fill-don't-send.
+    const carrier: ChatMessage['carrier'] =
+      carried &&
+      (response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification')
+        ? { pending: carried }
+        : null;
+    setMessages((m) =>
+      placeMessage(m, replaceRowId, {
+        role: 'assistant',
+        // WP23 review (display-honesty lens, HIGH): meta answers and
+        // smalltalk replies ride the refusal ENVELOPE by design (ADR 022 —
+        // "the text ANSWERS the question") — the refusal header would
+        // visually claim the opposite. They present as plain info.
+        // WP16 sub-part 2 (ADR 026): the onboarding acknowledgments ride the
+        // same envelope and ANSWER too ("we're fetching it") — nothing was
+        // refused, so the "Dit kon ik niet beantwoorden" header + geen-gok
+        // badge must NOT show; render as plain info like meta/smalltalk.
+        kind: messageKind(response),
+        text: response.text,
+        chart: response.kind === 'answer' ? response.chart : null,
+        // #296 part 2 Task 7: a present-only envelope key (A1) — `?? null`.
+        scatter: response.kind === 'answer' ? (response.scatter ?? null) : null,
+        chartAlternates: response.kind === 'answer' ? response.chartAlternates : [],
+        cost: gated.netCost,
+        citation: response.kind === 'answer' ? buildCitation(response) : null,
+        card: response.kind === 'answer' ? statCardData(response) : null,
+        // open-questions #324 gap 2: English-interface headers, Dutch data
+        // values unchanged either way (csv.ts's own scope).
+        // #296: `answerCsvFor` = buildAnswerCsv for every one-measure
+        // answer (unchanged), the two-axis scatter CSV for a scatter —
+        // the SAME dispatch thread replay calls (replay-assemble.ts).
+        csv: response.kind === 'answer' ? answerCsvFor(response, lang) : null,
+        proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
+        // #252 (was Amendment B5's named residual): this component is
+        // 'use client' with no server execution context, so the request_urls
+        // lookup itself cannot run here — it now runs SERVER-SIDE inside
+        // askQuestion/replyToClarification (web/app/actions.ts,
+        // outcomeProofRequestUrls) instead, threaded onto AskOutcome and
+        // read off `outcome` here, the same way `context`/`threadId`/
+        // `onboardingOffer` already are. Byte-identical map to what
+        // replay-assemble.ts / question-history.tsx already do for a
+        // resumed turn.
+        // `?? null` guards the same deploy-window skew as onboardingOffer
+        // below (a brand-new AskOutcome field an old server bundle omits).
+        proofRequestUrls: outcome.proofRequestUrls ?? null,
+        answerView:
+          response.kind === 'answer'
+            ? {
+                body: response.answer.body,
+                // WP26 mechanism B: `?? null` guards the deploy-window skew
+                // (an old server bundle omits the key), like suggestions.
+                assumptionLine: response.answer.assumptionLine ?? null,
+                // #253: `?? null` guards the deploy-window skew AND every
+                // answer that is not a region-class answer (the key is
+                // simply absent — A1).
+                regionSetLine: response.answer.regionSetLine ?? null,
+                // ADR 055 / MS1: `?? null` guards the deploy-window skew AND
+                // every answer whose series is complete (the key is simply
+                // absent — A1), same discipline as regionSetLine above.
+                regionSeriesLine: response.answer.regionSeriesLine ?? null,
+                // #296: a scatter's coverage line, second definition and
+                // second attribution — present-only, so a one-measure
+                // answerView is byte-identical to before.
+                // Task 7 fix M3: ONE presence check (`!= null`), so a stored
+                // `scatter: null` can never reach pairedAttributionOf.
+                ...(response.scatter != null
+                  ? {
+                      scatterLine: response.answer.scatterLine ?? null,
+                      pairedDefinitionLine: response.answer.pairedDefinitionLine ?? null,
+                      pairedAttribution: pairedAttributionOf(response.scatter),
+                    }
+                  : {}),
+                stalenessWarning: response.stalenessWarning,
+                definitionLine: response.answer.definitionLine,
+                // #39: `?? null` guards the deploy-window skew AND every
+                // answer without registry-recorded alternates (the key is
+                // simply absent — A1).
+                alternatesLine: response.answer.alternatesLine ?? null,
+                markingLine: response.answer.markingLine,
+                attribution: response.answer.attributionLine,
+                tableId: response.result.attribution.tableId,
+                source: response.result.attribution.source,
+                // #170(1): the source badge's measured sync date.
+                syncedAt: response.result.attribution.syncedAt,
+              }
+            : null,
+        // #296: a scatter quotes BOTH legs — the paired leg's cells count
+        // too (the same rule replay.ts's computeProvisional applies).
+        provisional:
+          response.kind === 'answer' &&
+          [response.result, ...(response.pairedResult ? [response.pairedResult] : [])].some((result) =>
+            result.cells.some((cell) => cell.provisional),
+          ),
+        // WP29 + #134(a): `?? []` guards the deploy-window skew only (an old
+        // server process serving a new client bundle omits the field); a
+        // current server always sets it. Answers carry follow-up chips;
+        // period-coverage refusals (freshness / outside_loaded_slice) carry a
+        // one-click retry chip — both ride the same structural field and the
+        // same kind-agnostic render + #75 fill-don't-send handler below.
+        // WP26 mechanism A (ADR 024): clarifications join the same surface —
+        // their chips are the OPTIONS the server proved answerable before
+        // offering them. Same fill-don't-send handler (#75): the click puts
+        // the label in the input, the user presses Verstuur and sees the cost
+        // line, and the server's deterministic rung recognizes the label and
+        // resolves it without a second LLM parse.
+        suggestions:
+          response.kind === 'answer' ||
+          response.kind === 'refusal' ||
+          response.kind === 'clarification'
+            ? (response.suggestions ?? [])
+            : [],
+        // WP128: the feedback anchor — only real answers get buttons; the
+        // `?? null` guards the same deploy-window skew as suggestions.
+        auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,
+        // WP129+130 (#130, ADR 032): the web section rides EVERY response kind
+        // (answer/clarification/refusal) — set from the envelope for all of
+        // them. `?? null` guards the deploy-window skew (an old server bundle
+        // omits the field); it renders keyed on this value, never the kind.
+        webSection: response.webSection ?? null,
+        carrier,
+        insufficientCredits: null,
+        // ADR 026 addendum (session 101): `?? null` guards the same
+        // deploy-window skew every other optional AskOutcome field does (an
+        // old server bundle omits the key) — a current server always sets
+        // it, null on every outcome except a fresh confirm-first offer.
+        onboardingOffer: outcome.onboardingOffer ?? null,
+        // ADR 058 (English answers, Task 8): only an 'answer' response
+        // carries `english` at all (AnswerResponse, Task 6); `?? null`
+        // guards the deploy-window skew AND every Dutch-only turn (the
+        // flag off, or the reader on Dutch — Task 7's A1 no-op).
+        english: response.kind === 'answer' ? (response.english ?? null) : null,
+        // ADR 058 phase 2 (#332, Task 6): the refusal/clarification
+        // sibling — the mirror image of `english` above: present only on
+        // those two kinds (RefusalResponse/ClarificationResponse, Task 5),
+        // `?? null` guarding the same deploy-window skew AND every
+        // Dutch-only turn.
+        nonAnswerEnglish:
+          response.kind === 'refusal' || response.kind === 'clarification'
+            ? (response.english ?? null)
+            : null,
+        // Breadth step 5 (Task 6): the table lane's present-only envelope
+        // key. The selection note sits under a table-lane answer (live and on
+        // replay from the same envelope); the button question is live-only.
+        tableLaneNote: tableLaneNoteOf(response),
+        tableLaneQuestion: tableLaneQuestionOfResponse(response),
+      }),
+    );
+    // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
+    // merges against (a resumed/switched thread clears it via the loadNonce
+    // reset). The message just appended above carries the identical pending
+    // as its own `carrier` for a chip click to bind to instead — see
+    // handleSubmit's send-time resolution and the click handler below.
+    setPending(carried ?? null);
+    // The table lane's open button question (if this response carries one):
+    // the composer's next typed reply goes to it, not to askQuestion.
+    setOpenTableLane(tableLaneQuestionOfResponse(response));
+  }
+
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, busy]);
@@ -569,6 +894,7 @@ export function Chat({
     setContext(initialContext ?? null);
     setThreadId(initialThreadId ?? null);
     setPending(null);
+    setOpenTableLane(null);
     chipRef.current = null;
     setInput('');
     setError(null);
@@ -727,7 +1053,63 @@ export function Chat({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await sendText(input.trim());
+    const text = input.trim();
+    // Breadth step 5 (Task 6): while a table-lane button question is open, the
+    // composer answers IT (the server matches the typed name against the
+    // dimension's full member list - never a nearest match) instead of asking a
+    // new question. Chip clicks elsewhere still go through sendText.
+    if (openTableLane !== null) {
+      await replyTableLane(openTableLane.rowId, { text }, text);
+      return;
+    }
+    await sendText(text);
+  }
+
+  // Breadth step 5 (Task 6): a reader's answer to a table-lane button question
+  // - a clicked member (`{ code }`, bubble = its CBS title) or a typed name
+  // (`{ text }`). `started` swaps in a new progress bubble; `no_match` is free
+  // and leaves the question open; the polling bubble lands the outcome later.
+  async function replyTableLane(rowId: number, choice: ReplyTableLaneChoice, bubbleText: string): Promise<void> {
+    if (!bubbleText || busy || sendingRef.current || nothingSelected) return;
+    sendingRef.current = true;
+    const submitGeneration = generationRef.current;
+    setMessages((m) => [...m, { ...infoChatMessage(bubbleText), role: 'user', kind: null }]);
+    setInput('');
+    setBusy(true);
+    setError(null);
+    setStaleDeploy(false);
+    try {
+      const result = await replyToTableLane(rowId, choice, crypto.randomUUID());
+      if (generationRef.current !== submitGeneration) return;
+      if (result.kind === 'started') {
+        setOpenTableLane(null);
+        setMessages((m) => [...m, tableLaneProgressMessage(result.rowId, t('tableLane.progress'))]);
+      } else if (result.kind === 'no_match') {
+        setMessages((m) => [...m, infoChatMessage(t('tableLane.noMatch'))]);
+      } else if (result.kind === 'insufficient_credits') {
+        landOutcome({
+          gated: { kind: 'insufficient_credits', balance: result.balance, required: result.required },
+          context: null,
+          threadId: null,
+          onboardingOffer: null,
+          proofRequestUrls: null,
+          tableLane: null,
+        });
+      } else {
+        setOpenTableLane(null);
+        setMessages((m) => [...m, infoChatMessage(t('tableLane.replyGone'))]);
+      }
+    } catch (err) {
+      if (generationRef.current !== submitGeneration) return;
+      if (unstable_isUnrecognizedActionError(err)) {
+        setStaleDeploy(true);
+      } else {
+        setError(t('chat.genericError'));
+      }
+    } finally {
+      sendingRef.current = false;
+      setBusy(false);
+    }
   }
 
   // R7 (WP-D, #75/#211): extracted from handleSubmit so a one-click
@@ -843,261 +1225,7 @@ export function Chat({
       // still clears busy (busy stayed true throughout, so no second submit could
       // have begun on the new thread).
       if (generationRef.current !== submitGeneration) return;
-      applyOutcome(outcome);
-      // WP135 ⟨A1⟩: adopt the server's attached thread (lazy-created on the
-      // first completed turn) so the next turn attaches to it, and report it up
-      // for the sidebar highlight/refresh. A failed attach returns null and the
-      // chat simply stays threadless.
-      if (threadAware && outcome.threadId !== null) {
-        setThreadId(outcome.threadId);
-        onThreadId?.(outcome.threadId);
-      }
-      const { gated } = outcome;
-      onOutcome?.(gated);
-
-      if (gated.kind !== 'ok') {
-        // R2.2 (#69/#75/#211): insufficient_credits gets its OWN kind + a
-        // structured snapshot instead of the generic 'info' bubble, so the
-        // render below can name the covering pack and link /credits for
-        // real — keyed on the kind, never on parsing gatedMessageText's
-        // string. Every other non-'ok' kind is unchanged.
-        setMessages((m) => [
-          ...m,
-          gated.kind === 'insufficient_credits'
-            ? {
-                role: 'assistant' as const,
-                kind: 'insufficient_credits' as const,
-                text: gatedMessageText(gated, t),
-                chart: null,
-                scatter: null,
-                chartAlternates: [],
-                cost: null,
-                citation: null,
-                card: null,
-                csv: null,
-                proof: null,
-                proofRequestUrls: null,
-                answerView: null,
-                provisional: false,
-                suggestions: [],
-                auditId: null,
-                webSection: null,
-                carrier: null,
-                insufficientCredits: { balance: gated.balance, required: gated.required },
-                onboardingOffer: null,
-                english: null,
-                nonAnswerEnglish: null,
-              }
-            : {
-                role: 'assistant' as const,
-                kind: 'info' as const,
-                text: gatedMessageText(gated, t),
-                chart: null,
-                scatter: null,
-                chartAlternates: [],
-                cost: null,
-                citation: null,
-                card: null,
-                csv: null,
-                proof: null,
-                proofRequestUrls: null,
-                answerView: null,
-                provisional: false,
-                suggestions: [],
-                auditId: null,
-                webSection: null,
-                carrier: null,
-                insufficientCredits: null,
-                onboardingOffer: null,
-                english: null,
-                nonAnswerEnglish: null,
-              },
-        ]);
-        // None of these kinds change the pending clarification state;
-        // `finally` below still clears `busy`.
-        return;
-      }
-
-      const { response } = gated;
-      // ⟨A6⟩: the pending clarification (if any) this turn's response offers
-      // for its next reply — a clarification's own open round, or a
-      // rescueOnly carrier riding an answer/refusal's follow-up chips (#197
-      // step 3 / #73 v2). WP26c (ADR 024): a MISFIRED refusal may carry a
-      // rescue pending — the state that lets its one chip resolve
-      // deterministically instead of re-entering the parse that misfired. It
-      // is explicitly `rescueOnly`, and the server answers any NON-matching
-      // reply as a fresh question, so holding it here cannot turn the user's
-      // next unrelated question into a clarification-reply merge. `?? null`
-      // guards the deploy-window skew (an old server bundle omits the key).
-      const carried =
-        response.kind === 'clarification'
-          ? response.pending
-          : response.kind === 'refusal' || response.kind === 'answer'
-            ? (response.pending ?? null)
-            : null;
-      // #73 v2 follow-up (moved onto ChatMessage, session 76): an
-      // answer/refusal's carried rescue pending is a CARRIER a later chip
-      // binds to. Strong-tier review HIGH-3: a CLARIFICATION now snapshots its
-      // own open round here too. It used to be `null` on the reasoning that a
-      // clarification IS the open round — true while it is the newest message,
-      // but a superseded clarification (scrolled up after a newer round
-      // opened) then fell through to the LIVE `pending`, so its one-click
-      // option would have been sent as a reply to a DIFFERENT round: a
-      // wrong-carrier reply, and billed. Each clarification carrying its own
-      // snapshot makes a click resolve against the round the user is looking
-      // at. Computed HERE, before the message literal below, so it lands in
-      // the SAME setMessages call that appends the message — never a render
-      // behind, or a chip could briefly render with no bound carrier. Resumed
-      // messages keep `carrier: null` (ADR 033 ⟨A6⟩, replay-assemble.ts never
-      // guesses one) — the click handler treats that as fill-don't-send.
-      const carrier: ChatMessage['carrier'] =
-        carried &&
-        (response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification')
-          ? { pending: carried }
-          : null;
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          // WP23 review (display-honesty lens, HIGH): meta answers and
-          // smalltalk replies ride the refusal ENVELOPE by design (ADR 022 —
-          // "the text ANSWERS the question") — the refusal header would
-          // visually claim the opposite. They present as plain info.
-          // WP16 sub-part 2 (ADR 026): the onboarding acknowledgments ride the
-          // same envelope and ANSWER too ("we're fetching it") — nothing was
-          // refused, so the "Dit kon ik niet beantwoorden" header + geen-gok
-          // badge must NOT show; render as plain info like meta/smalltalk.
-          kind: messageKind(response),
-          text: response.text,
-          chart: response.kind === 'answer' ? response.chart : null,
-          // #296 part 2 Task 7: a present-only envelope key (A1) — `?? null`.
-          scatter: response.kind === 'answer' ? (response.scatter ?? null) : null,
-          chartAlternates: response.kind === 'answer' ? response.chartAlternates : [],
-          cost: gated.netCost,
-          citation: response.kind === 'answer' ? buildCitation(response) : null,
-          card: response.kind === 'answer' ? statCardData(response) : null,
-          // open-questions #324 gap 2: English-interface headers, Dutch data
-          // values unchanged either way (csv.ts's own scope).
-          // #296: `answerCsvFor` = buildAnswerCsv for every one-measure
-          // answer (unchanged), the two-axis scatter CSV for a scatter —
-          // the SAME dispatch thread replay calls (replay-assemble.ts).
-          csv: response.kind === 'answer' ? answerCsvFor(response, lang) : null,
-          proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
-          // #252 (was Amendment B5's named residual): this component is
-          // 'use client' with no server execution context, so the request_urls
-          // lookup itself cannot run here — it now runs SERVER-SIDE inside
-          // askQuestion/replyToClarification (web/app/actions.ts,
-          // outcomeProofRequestUrls) instead, threaded onto AskOutcome and
-          // read off `outcome` here, the same way `context`/`threadId`/
-          // `onboardingOffer` already are. Byte-identical map to what
-          // replay-assemble.ts / question-history.tsx already do for a
-          // resumed turn.
-          // `?? null` guards the same deploy-window skew as onboardingOffer
-          // below (a brand-new AskOutcome field an old server bundle omits).
-          proofRequestUrls: outcome.proofRequestUrls ?? null,
-          answerView:
-            response.kind === 'answer'
-              ? {
-                  body: response.answer.body,
-                  // WP26 mechanism B: `?? null` guards the deploy-window skew
-                  // (an old server bundle omits the key), like suggestions.
-                  assumptionLine: response.answer.assumptionLine ?? null,
-                  // #253: `?? null` guards the deploy-window skew AND every
-                  // answer that is not a region-class answer (the key is
-                  // simply absent — A1).
-                  regionSetLine: response.answer.regionSetLine ?? null,
-                  // ADR 055 / MS1: `?? null` guards the deploy-window skew AND
-                  // every answer whose series is complete (the key is simply
-                  // absent — A1), same discipline as regionSetLine above.
-                  regionSeriesLine: response.answer.regionSeriesLine ?? null,
-                  // #296: a scatter's coverage line, second definition and
-                  // second attribution — present-only, so a one-measure
-                  // answerView is byte-identical to before.
-                  // Task 7 fix M3: ONE presence check (`!= null`), so a stored
-                  // `scatter: null` can never reach pairedAttributionOf.
-                  ...(response.scatter != null
-                    ? {
-                        scatterLine: response.answer.scatterLine ?? null,
-                        pairedDefinitionLine: response.answer.pairedDefinitionLine ?? null,
-                        pairedAttribution: pairedAttributionOf(response.scatter),
-                      }
-                    : {}),
-                  stalenessWarning: response.stalenessWarning,
-                  definitionLine: response.answer.definitionLine,
-                  // #39: `?? null` guards the deploy-window skew AND every
-                  // answer without registry-recorded alternates (the key is
-                  // simply absent — A1).
-                  alternatesLine: response.answer.alternatesLine ?? null,
-                  markingLine: response.answer.markingLine,
-                  attribution: response.answer.attributionLine,
-                  tableId: response.result.attribution.tableId,
-                  source: response.result.attribution.source,
-                  // #170(1): the source badge's measured sync date.
-                  syncedAt: response.result.attribution.syncedAt,
-                }
-              : null,
-          // #296: a scatter quotes BOTH legs — the paired leg's cells count
-          // too (the same rule replay.ts's computeProvisional applies).
-          provisional:
-            response.kind === 'answer' &&
-            [response.result, ...(response.pairedResult ? [response.pairedResult] : [])].some((result) =>
-              result.cells.some((cell) => cell.provisional),
-            ),
-          // WP29 + #134(a): `?? []` guards the deploy-window skew only (an old
-          // server process serving a new client bundle omits the field); a
-          // current server always sets it. Answers carry follow-up chips;
-          // period-coverage refusals (freshness / outside_loaded_slice) carry a
-          // one-click retry chip — both ride the same structural field and the
-          // same kind-agnostic render + #75 fill-don't-send handler below.
-          // WP26 mechanism A (ADR 024): clarifications join the same surface —
-          // their chips are the OPTIONS the server proved answerable before
-          // offering them. Same fill-don't-send handler (#75): the click puts
-          // the label in the input, the user presses Verstuur and sees the cost
-          // line, and the server's deterministic rung recognizes the label and
-          // resolves it without a second LLM parse.
-          suggestions:
-            response.kind === 'answer' ||
-            response.kind === 'refusal' ||
-            response.kind === 'clarification'
-              ? (response.suggestions ?? [])
-              : [],
-          // WP128: the feedback anchor — only real answers get buttons; the
-          // `?? null` guards the same deploy-window skew as suggestions.
-          auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,
-          // WP129+130 (#130, ADR 032): the web section rides EVERY response kind
-          // (answer/clarification/refusal) — set from the envelope for all of
-          // them. `?? null` guards the deploy-window skew (an old server bundle
-          // omits the field); it renders keyed on this value, never the kind.
-          webSection: response.webSection ?? null,
-          carrier,
-          insufficientCredits: null,
-          // ADR 026 addendum (session 101): `?? null` guards the same
-          // deploy-window skew every other optional AskOutcome field does (an
-          // old server bundle omits the key) — a current server always sets
-          // it, null on every outcome except a fresh confirm-first offer.
-          onboardingOffer: outcome.onboardingOffer ?? null,
-          // ADR 058 (English answers, Task 8): only an 'answer' response
-          // carries `english` at all (AnswerResponse, Task 6); `?? null`
-          // guards the deploy-window skew AND every Dutch-only turn (the
-          // flag off, or the reader on Dutch — Task 7's A1 no-op).
-          english: response.kind === 'answer' ? (response.english ?? null) : null,
-          // ADR 058 phase 2 (#332, Task 6): the refusal/clarification
-          // sibling — the mirror image of `english` above: present only on
-          // those two kinds (RefusalResponse/ClarificationResponse, Task 5),
-          // `?? null` guarding the same deploy-window skew AND every
-          // Dutch-only turn.
-          nonAnswerEnglish:
-            response.kind === 'refusal' || response.kind === 'clarification'
-              ? (response.english ?? null)
-              : null,
-        },
-      ]);
-      // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
-      // merges against (a resumed/switched thread clears it via the loadNonce
-      // reset). The message just appended above carries the identical pending
-      // as its own `carrier` for a chip click to bind to instead — see
-      // handleSubmit's send-time resolution and the click handler below.
-      setPending(carried ?? null);
+      landOutcome(outcome);
     } catch (err) {
       // WP135 (blocker fix): same generation guard for the failure path — a
       // stale submit's error must not paint over the thread now displayed.
@@ -1393,7 +1521,22 @@ export function Chat({
               * collapses into it; R4 attribution stays fully visible, never
               * shortened). Every other message kind (refusal / clarification
               * / info) keeps exactly today's plain bubble below. */}
-            {showsCard && answerView ? (
+            {message.tableLane ? (
+              // Breadth step 5 (Task 6): a table-lane job is running - the
+              // poller replaces this whole message with the audited outcome.
+              <TableLaneProgress
+                rowId={message.tableLane.rowId}
+                phase={message.tableLane.phase}
+                onSlow={() => markTableLaneSlow(message.tableLane!.rowId)}
+                onGone={() => replaceTableLaneBubble(message.tableLane!.rowId, infoChatMessage(t('tableLane.notReady')))}
+                onDone={({ gated, threadId }) =>
+                  landOutcome(
+                    { gated, context: null, threadId, onboardingOffer: null, proofRequestUrls: null, tableLane: null },
+                    message.tableLane!.rowId,
+                  )
+                }
+              />
+            ) : showsCard && answerView ? (
               <>
                 {/* Fix round 1 (controller ruling 16): a fallback answer
                   * keeps the UNCHANGED Dutch card below — this is the ONLY
@@ -1488,6 +1631,13 @@ export function Chat({
                     ) : null}
                     {cardMarkingLine ? (
                       <p className="text-xs text-muted-foreground">{cardMarkingLine}</p>
+                    ) : null}
+                    {/* Breadth step 5 (Task 6): the table lane's deterministic
+                      * "Selectie: ... / Uitgangspunt: ..." note - which
+                      * breakdown the number is for - in the same small muted
+                      * style as the definition line above. */}
+                    {message.tableLaneNote ? (
+                      <p className="text-xs text-muted-foreground">{message.tableLaneNote}</p>
                     ) : null}
                   </CardContent>
                 )}
@@ -1797,6 +1947,16 @@ export function Chat({
                   ? t('chat.dockedChipChart')
                   : t('chat.dockedChipCard')}
               </button>
+            ) : null}
+            {/* Breadth step 5 (Task 6): the table lane's breakdown question -
+              * buttons only while it is the OPEN question; an older one (or a
+              * resumed thread's) shows its text alone. */}
+            {message.tableLaneQuestion && openTableLane?.rowId === message.tableLaneQuestion.rowId ? (
+              <TableLaneQuestion
+                question={message.tableLaneQuestion.question}
+                disabled={busy}
+                onChoose={(choice, title) => void replyTableLane(message.tableLaneQuestion!.rowId, choice, title)}
+              />
             ) : null}
             {/* ADR 026 addendum (session 101): the confirm-first offer's own
               * button (#109's reversal, owner decision 4) — a real Button,
