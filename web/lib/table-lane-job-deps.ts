@@ -5,8 +5,8 @@
 // CBS source and Anthropic clients); never imported by a client component.
 //
 // The respond options mirror a live chat turn's: the compose client, the
-// reject-only semantic checker behind the same env flags as askQuestion
-// (semanticCheckOptions in web/app/actions.ts), and the English-answers options
+// reject-only semantic checker and referenceDate() from the SAME shared helper
+// askQuestion uses (web/lib/turn-options.ts), and the English-answers options
 // for an English reader (englishAnswerOptions — a no-op unless its flag is on).
 import type { AuditedRespondOptions } from '../backend/answer/audit/respond-audited.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
@@ -14,17 +14,7 @@ import { ODataV4Source } from '../backend/cbs-adapter/odata-v4.ts';
 import type { Db } from '../backend/db/types.ts';
 import type { TableLaneJobDeps } from '../backend/ingestion/table-lane-job.ts';
 import { englishAnswerOptions } from './english-answers.ts';
-
-/** 'today' in the product's own timezone — the same computation as the chat
- * action's and the onboarding-cron route's referenceDate(). */
-function referenceDate(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Amsterdam',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
+import { referenceDate, semanticCheckOptions } from './turn-options.ts';
 
 export function tableLaneJobDeps(db: Db): TableLaneJobDeps {
   const today = referenceDate();
@@ -38,15 +28,7 @@ export function tableLaneJobDeps(db: Db): TableLaneJobDeps {
       referenceDate: today,
       intentClient: new AnthropicLlmClient(),
       answerClient: new AnthropicLlmClient(),
-      ...(process.env.SEMANTIC_CHECK_ENABLED === '1'
-        ? {
-            semanticCheck: {
-              client: new AnthropicLlmClient(),
-              mode:
-                process.env.SEMANTIC_CHECK_FAILMODE === 'closed' ? ('fail_closed' as const) : ('fail_open' as const),
-            },
-          }
-        : {}),
+      ...semanticCheckOptions(),
       ...englishAnswerOptions(lang),
     }),
   };

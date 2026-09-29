@@ -36,7 +36,6 @@ import type { RequestUrlsByBatch } from '../lib/answer-proof.ts';
 import { deleteUserChartStyle } from '../backend/chart/user-styles.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
-import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 // WP26 mechanism A (ADR 024): the click-option trust boundary — the reply
 // turn's counterpart to validateConversationContext above.
@@ -124,6 +123,7 @@ import { getLang } from '../lib/i18n/server.ts';
 // contract (reportError never throws) — see web/lib/error-report.ts.
 import { reportError } from '../lib/error-report.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
+import { referenceDate, semanticCheckOptions } from '../lib/turn-options.ts';
 import { createClient } from '../lib/supabase-server.ts';
 // #149 (session-47 hunt): the SAME UUID-shape check the trial action already
 // uses (trial-actions.ts) — reused, not duplicated, to close the identical
@@ -137,20 +137,9 @@ import { isUuid } from '../lib/trial.ts';
 // covered by Proxy without anyone noticing, so every Server Function must
 // verify itself (web/lib/current-user.ts).
 
-// The one legitimate un-pinned clock in the codebase — every other call site
-// (tests, hermetic CI, the benchmark runner) injects a fixed reference date.
-// Computed in the product's own timezone (WP12 review): a plain UTC date is
-// still yesterday for up to two hours after midnight in the Netherlands,
-// which would skew relative-period resolution ("vorige maand").
-function referenceDate(): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Amsterdam',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
+// referenceDate() — 'today' in Europe/Amsterdam, the one un-pinned clock —
+// and semanticCheckOptions() (#144) live in web/lib/turn-options.ts, shared
+// with the onboarding-cron delivery re-run and the table-lane job.
 
 // Infra guard, not a pipeline rule: bounds single-request token spend on the
 // public endpoint (the client input caps at 500 chars; this is the belt
@@ -341,14 +330,6 @@ function validateSelection(raw: unknown): SourceSelection | undefined {
   return { sources, web: obj.web === true };
 }
 
-// #144 (ADR 034): the semantic checker's construction seam — DORMANT until the
-// owner-supervised go-live sets SEMANTIC_CHECK_ENABLED='1' (fixture-recorded
-// calibration first; the RUNBOOK step). SEMANTIC_CHECK_FAILMODE carries the
-// recorded owner decision on checker-call failures: 'closed' → a checker error
-// rejects the body down the R3 ladder (template fallback); anything else →
-// fail open (the body already passed the FULL deterministic validator — the
-// checker is defense-in-depth, not the primary gate). While dormant, no path
-// constructs the client and zero extra LLM calls or spend exist.
 // WP26 mechanism A (ADR 024): the clickable-clarification rollout flag —
 // DORMANT until the owner-supervised go-live sets CLARIFY_CLICK_ENABLED='1'
 // (the #53/#144 dormancy pattern). While unset, policy.ts builds no options,
@@ -367,16 +348,6 @@ function clickOptionsEnabled(): boolean {
 // and roll back, each mechanism on its own.
 function answerFirstEnabled(): boolean {
   return process.env.ANSWER_FIRST_ENABLED === '1';
-}
-
-function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Record<string, never> {
-  if (process.env.SEMANTIC_CHECK_ENABLED !== '1') return {};
-  return {
-    semanticCheck: {
-      client: new AnthropicLlmClient(),
-      mode: process.env.SEMANTIC_CHECK_FAILMODE === 'closed' ? 'fail_closed' : 'fail_open',
-    },
-  };
 }
 
 // #162 (ADR-DRAFT slot-filling, hermetic half): the number-free-phrasing

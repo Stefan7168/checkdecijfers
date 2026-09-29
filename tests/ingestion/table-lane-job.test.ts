@@ -127,6 +127,8 @@ class TableOnlySource implements CbsSource {
  * chosen call numbers (1-based, per source) — a CBS outage on demand. */
 class SpySource implements CbsSource {
   schemaCalls = 0;
+  codeListCalls = 0;
+  failCodeListCall: (n: number) => boolean = () => false;
   failSchemaCall: (n: number) => boolean = () => false;
   mutateSchema: (schema: CbsTableSchema, n: number) => CbsTableSchema = (s) => s;
   private readonly byTable: Record<string, CbsSource>;
@@ -146,7 +148,9 @@ class SpySource implements CbsSource {
     return this.mutateSchema(await this.src(tableId).fetchTableSchema(tableId, slice), n);
   }
   async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
+    this.codeListCalls += 1;
     events.log.push({ type: 'source', call: `fetchCodeList:${dimension}`, tableId });
+    if (this.failCodeListCall(this.codeListCalls)) throw new Error('CBS is down (test)');
     return this.src(tableId).fetchCodeList(tableId, dimension, slice);
   }
   fetchObservations(tableId: string, slice?: CbsSlice, dimensionNames?: string[]): AsyncIterable<CbsObservationRow[]> {
@@ -172,6 +176,7 @@ class ScriptedParseClient implements LlmClient {
   }
   async complete(request: LlmRequest): Promise<LlmResponse> {
     this.calls.push(request);
+    order.push('parse');
     this.onCall();
     const step = this.steps.shift();
     if (step === undefined) throw new Error('ScriptedParseClient: no step left');
@@ -202,6 +207,8 @@ function respondOptions(): (lang: 'nl' | 'en') => AuditedRespondOptions {
 }
 
 const sleeps: number[] = [];
+/** Parse calls and sleeps, in the order they happened. */
+const order: string[] = [];
 function deps(source: CbsSource, parseClient: LlmClient, extra: Partial<TableLaneJobDeps> = {}): TableLaneJobDeps {
   return {
     db,
@@ -211,6 +218,7 @@ function deps(source: CbsSource, parseClient: LlmClient, extra: Partial<TableLan
     referenceDate: REF,
     sleep: async (ms: number) => {
       sleeps.push(ms);
+      order.push(`sleep:${ms}`);
     },
     ...extra,
   };
@@ -302,6 +310,7 @@ beforeEach(async () => {
   await applyPricingDefaults(rawDb); // simple = 20, clarification = 10
   events.log.length = 0;
   sleeps.length = 0;
+  order.length = 0;
 });
 
 // ---------------------------------------------------------------------------
@@ -459,6 +468,8 @@ describe('runTableLaneJob — question and refusals', () => {
     await runTableLaneJob(deps(source, parse));
 
     expect(parse.calls).toHaveLength(0);
+    // M4: a schema-only refusal happens before any code-list fetch
+    expect(source.codeListCalls).toBe(0);
     expect((await row(queued.id, userId)).outcomeKind).toBe('refusal');
     const [a] = await audits(userId);
     expect(a!.refusalReason).toBe('table_lane_ineligible');
@@ -528,6 +539,74 @@ describe('runTableLaneJob — CBS unreachable (settled choices 1 + 2)', () => {
     expect(await getBalance(rawDb, userId)).toBe(80);
   });
 
+  it('R9: the job\'s own CBS schema load fails twice → cbs_unreachable after one 2 s retry, audited, net 0, no retry attempt', async () => {
+    const userId = await seedUser();
+    const queued = await queue(userId);
+    const source = await makeSource();
+    source.failSchemaCall = () => true;
+    const parse = new ScriptedParseClient([amsterdam()]);
+
+    const summary = await runTableLaneJob(deps(source, parse));
+
+    expect(summary).toEqual({ processed: 1, answered: 0, asked: 0, refused: 1, failed: 0 });
+    expect(sleeps).toEqual([2000]);
+    expect(source.schemaCalls).toBe(2);
+    expect(parse.calls).toHaveLength(0);
+    const done = await row(queued.id, userId);
+    expect(done.status).toBe('done');
+    expect(done.attempts).toBe(1);
+    expect(done.outcomeKind).toBe('refusal');
+    const [a] = await audits(userId);
+    expect(a!.refusalReason).toBe('cbs_unreachable');
+    expect(done.threadId).toBe(a!.threadId);
+    expect(await getBalance(rawDb, userId)).toBe(100);
+  });
+
+  it('R9: a schema load that fails once succeeds on the 2 s retry and answers', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const source = await makeSource();
+    source.failSchemaCall = (n) => n === 1;
+
+    const summary = await runTableLaneJob(deps(source, new ScriptedParseClient([amsterdam()])));
+
+    expect(summary.answered).toBe(1);
+    expect(sleeps).toEqual([2000]);
+  });
+
+  it('R9: a code-list load that keeps failing → cbs_unreachable', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const source = await makeSource();
+    source.failCodeListCall = () => true;
+
+    const summary = await runTableLaneJob(deps(source, new ScriptedParseClient([amsterdam()])));
+
+    expect(summary.refused).toBe(1);
+    expect(sleeps).toEqual([2000]);
+    expect((await audits(userId))[0]!.refusalReason).toBe('cbs_unreachable');
+    expect(await getBalance(rawDb, userId)).toBe(100);
+  });
+
+  it('M1: a < 24 h cached slice that CBS has since superseded is not used → cbs_unreachable', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const source = await makeSource();
+    await runTableLaneJob(deps(source, new ScriptedParseClient([amsterdam()])));
+    // Another slice already saw a newer CBS version of this table.
+    await rawDb.query(`update cbs_tables set schema_cbs_modified = schema_cbs_modified + interval '1 day' where id = $1`, [
+      LANE_TABLE,
+    ]);
+
+    const base = source.schemaCalls;
+    source.failSchemaCall = (n) => n > base + 1;
+    await queue(userId);
+    await runTableLaneJob(deps(source, new ScriptedParseClient([amsterdam()])));
+
+    expect((await audits(userId)).at(-1)!.refusalReason).toBe('cbs_unreachable');
+    expect(await getBalance(rawDb, userId)).toBe(80);
+  });
+
   it('a cached slice older than 24 h is not used → cbs_unreachable', async () => {
     const userId = await seedUser();
     await queue(userId);
@@ -591,6 +670,8 @@ describe('runTableLaneJob — failures, retries and give-up', () => {
       expect(done.attempts).toBe(2);
       expect(await audits(userId)).toHaveLength(1);
       expect(await getBalance(rawDb, userId)).toBe(80);
+      // M2: the released row is re-claimed only after a 2 s backoff
+      expect(order).toEqual(['parse', 'sleep:2000', 'parse']);
     } finally {
       errors.mockRestore();
     }
@@ -613,6 +694,62 @@ describe('runTableLaneJob — failures, retries and give-up', () => {
     expect(summary.processed).toBe(1);
     expect((await row(first.id, userId)).status).toBe('done');
     expect((await row(second.id, userId)).status).toBe('pending');
+  });
+
+  it('does not claim a new row when less than 120 s of the budget remains (M3)', async () => {
+    const userId = await seedUser();
+    const first = await queue(userId);
+    const second = await queue(userId);
+    let clock = Date.now();
+    const parse = new ScriptedParseClient([amsterdam(), amsterdam()]);
+    parse.onCall = () => {
+      clock += 130_000; // 110 s of a 240 s budget left afterwards
+    };
+
+    const summary = await runTableLaneJob(deps(await makeSource(), parse, { now: () => new Date(clock), budgetMs: 240_000 }));
+
+    expect(summary.processed).toBe(1);
+    expect((await row(first.id, userId)).status).toBe('done');
+    expect((await row(second.id, userId)).status).toBe('pending');
+  });
+
+  it('a budget under 120 s claims nothing (M3)', async () => {
+    const userId = await seedUser();
+    const queued = await queue(userId);
+    const summary = await runTableLaneJob(deps(await makeSource(), new ScriptedParseClient([amsterdam()]), { budgetMs: 100_000 }));
+    expect(summary.processed).toBe(0);
+    expect((await row(queued.id, userId)).status).toBe('pending');
+  });
+
+  it('two concurrent invocations over one exhausted row write exactly one audit and settle once (Important 1)', async () => {
+    const userId = await seedUser();
+    const queued = await queue(userId);
+    await rawDb.query(
+      `update table_lane_requests set status = 'running', attempts = $2,
+              started_at = now() - ($3::int * interval '1 millisecond') - interval '1 minute'
+        where id = $1`,
+      [queued.id, TABLE_LANE_MAX_ATTEMPTS, TABLE_LANE_STALE_MS],
+    );
+    const source = await makeSource();
+
+    const [a, b] = await Promise.all([
+      runTableLaneJob(deps(source, new ScriptedParseClient([]))),
+      runTableLaneJob(deps(source, new ScriptedParseClient([]))),
+    ]);
+
+    expect(a.failed + b.failed).toBe(1);
+    const rows = await audits(userId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.refusalReason).toBe('table_lane_failed');
+    const failed = await row(queued.id, userId);
+    expect(failed.status).toBe('failed');
+    expect(failed.auditId).toBe(rows[0]!.id);
+    expect(failed.threadId).toBe(rows[0]!.threadId);
+    expect(await count(`select count(*)::int as n from chat_threads where user_id = $1`, [userId])).toBe(1);
+    expect(
+      await count(`select count(*)::int as n from credit_transactions where user_id = $1 and reason = 'compensation'`, [userId]),
+    ).toBe(1);
+    expect(await getBalance(rawDb, userId)).toBe(100);
   });
 
   it('reclaims a stale running row and answers it', async () => {

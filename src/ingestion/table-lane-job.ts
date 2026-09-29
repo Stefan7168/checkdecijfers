@@ -3,21 +3,28 @@
 // invocation drains the table_lane_requests queue (src/ingestion/
 // table-lane-store.ts) until it is empty or the time budget is spent. Per
 // claimed row:
-//   1. load the table's live CBS schema + code lists (once — registration
-//      reuses them),
+//   1. load the table's live CBS schema (a CBS load failure is retried once
+//      after 2 s, then refused `cbs_unreachable` — Ruling R9),
 //   2. registerSchemaOnly (layout only; a refusal → table_lane_ineligible),
+//      with the schema just loaded and a memoized code-list loader it calls
+//      only after its schema-only refusals — so nothing is fetched twice and
+//      `no_cbs_modified` / `no_time_dimension` refuse before any code list,
 //   3. planTableLane (the table-scoped parse + every safety gate),
 //   4. a fetch plan → ensureSlice, OUTSIDE any lock (retry once after 2 s on
 //      a CBS fetch failure; then a < 24 h cached slice, else cbs_unreachable),
 //   5. respondTableLane → exactly ONE audited response,
-//   6. attach it to the reader's thread (Ruling R3: the thread id is written
-//      back onto the row),
-//   7. finishTableLaneRequest → terminal status + settlement in one
+//   6. finishTableLaneRequest → terminal status + settlement in one
 //      transaction (answer keeps the price, clarification refunds down to the
-//      clarification price, refusal / failure refunds in full).
-// A thrown error in 1–5 releases the row for one retry; the last attempt
-// gives up with an audited `table_lane_failed` refusal + full refund, so a
-// paid question never silently disappears.
+//      clarification price, refusal / failure refunds in full),
+//   7. only after a successful finish, attach it to the reader's thread
+//      (Ruling R3: the thread id is written back onto the row) — a superseded
+//      invocation whose finish is rejected never surfaces its audit.
+// A thrown error in 1–5 releases the row for one retry (re-claimed no sooner
+// than 2 s later); the last attempt gives up with an audited
+// `table_lane_failed` refusal + full refund, so a paid question never
+// silently disappears. An exhausted row (a crashed invocation left it running
+// at the cap) is owned atomically before its give-up is audited, so
+// concurrent invocations audit it once.
 //
 // Principle (b): this job (the route handler that runs it) is the ONLY place
 // the table lane contacts CBS. Principle (c): every non-answer is a typed
@@ -39,6 +46,7 @@ import { attachOrCreateThread } from '../threads/index.ts';
 import { fetchAllCodeLists } from './pipeline.ts';
 import { ensureSlice, registerSchemaOnly, sliceFilterKey, type SliceRequest } from './slice-cache.ts';
 import {
+  claimExhaustedTableLaneRequest,
   claimTableLaneRequest,
   findExhaustedTableLaneRequests,
   finishTableLaneRequest,
@@ -51,7 +59,12 @@ import {
 /** Stop claiming new rows after this long (the route's maxDuration is 300 s;
  * one row can take tens of seconds — CBS fetch + parse + compose). */
 export const TABLE_LANE_JOB_BUDGET_MS = 240_000;
-/** Settled choice 2: one retry of a CBS fetch failure, after this pause. */
+/** Fix round 1 (M3): no new row is claimed with less than this left of the
+ * budget — a row can need ensureSlice's 180 s lock timeout plus LLM calls,
+ * and a row killed by maxDuration burns an attempt. */
+export const TABLE_LANE_MIN_CLAIM_BUDGET_MS = 120_000;
+/** Settled choice 2 / Ruling R9: one retry of a CBS fetch or load failure,
+ * after this pause. Also the backoff before re-claiming after a release (M2). */
 export const TABLE_LANE_CBS_RETRY_MS = 2_000;
 /** Settled choice 1: a stored slice confirmed within this window may answer
  * when CBS is unreachable. **Assumption** — mirrors the curated daily sync. */
@@ -110,15 +123,28 @@ function logFailure(row: TableLaneRow, what: string, error: unknown): void {
   );
 }
 
-/** The live schema + every dimension's code list, fetched once per row. */
-async function loadTable(source: CbsSource, tableId: string): Promise<TableLaneTable> {
-  const schema = await source.fetchTableSchema(tableId);
-  const codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
-  return { schema, codeLists };
+/** Ruling R9: CBS could not serve the table's schema or code lists, twice. */
+class CbsUnreachableError extends Error {
+  override name = 'CbsUnreachableError';
+}
+
+/** Runs one CBS metadata load; on a throw, waits 2 s and tries once more;
+ * a second throw becomes CbsUnreachableError (Ruling R9). */
+async function cbsLoad<T>(ctx: Ctx, what: string, load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch {
+    await ctx.sleep(TABLE_LANE_CBS_RETRY_MS);
+    try {
+      return await load();
+    } catch (error) {
+      throw new CbsUnreachableError(`loading the ${what} from CBS failed twice: ${errorSummary(error)}`);
+    }
+  }
 }
 
 function refusePlan(
-  reason: 'table_lane_ineligible' | 'table_lane_failed',
+  reason: 'table_lane_ineligible' | 'table_lane_failed' | 'cbs_unreachable',
   detail: string,
   from?: TableLanePlan,
 ): TableLanePlan {
@@ -148,9 +174,13 @@ async function ensureWithFallback(ctx: Ctx, tableId: string, slice: SliceRequest
     // row's own checked_at (the query layer already shows it).
     const filterKey = sliceFilterKey(slice);
     const since = new Date(ctx.now().getTime() - TABLE_LANE_CACHED_SLICE_MAX_AGE_MS).toISOString();
+    // M1: never a row CBS has already superseded — the same rule ensureSlice
+    // uses (a row older than the table's current schema_cbs_modified, i.e. a
+    // different slice already saw a newer CBS version, is stale).
     const cached = await db.query(
       `select 1 from slice_fetches
-        where table_id = $1 and filter_key = $2 and checked_at > $3::timestamptz`,
+        where table_id = $1 and filter_key = $2 and checked_at > $3::timestamptz
+          and cbs_modified >= (select schema_cbs_modified from cbs_tables where id = $1)`,
       [tableId, filterKey, since],
     );
     if (cached.rows.length > 0) return { kind: 'stored', fetch: { ok: true, filterKey, fromCache: true } };
@@ -169,22 +199,42 @@ async function produce(
   seen: { title: string | null; plan: TableLanePlan | null },
 ): Promise<AuditedResponse> {
   const { db, source, parseClient, referenceDate } = ctx.deps;
-  const table = await loadTable(source, row.tableId);
-  seen.title = table.schema.title;
   const respond = (extra: Pick<RespondTableLaneInput, 'plan' | 'fetch' | 'refusalOverride' | 'startedAt'>) =>
     respondTableLane(db, {
       row,
       referenceDate,
       respondOptions: ctx.deps.respondOptions(row.lang),
-      tableTitle: table.schema.title,
+      tableTitle: seen.title,
       ...extra,
     });
 
-  const registered = await registerSchemaOnly(db, source, row.tableId, table);
-  if (!registered.ok) {
-    // registered_as_full cannot occur (the finder never routes a held
-    // table); if it does, it is refused the same way.
-    return respond({ plan: refusePlan('table_lane_ineligible', `${registered.reason}: ${registered.summary}`), fetch: null });
+  let table: TableLaneTable;
+  try {
+    const schema = await cbsLoad(ctx, 'table schema', () => source.fetchTableSchema(row.tableId));
+    seen.title = schema.title;
+    // Memoized: registration calls it only after its schema-only refusals
+    // (an already-registered table: never), the plan reuses the same lists.
+    let codeLists: TableLaneTable['codeLists'] | null = null;
+    const loadCodeLists = async () =>
+      (codeLists ??= await cbsLoad(ctx, 'code lists', () => fetchAllCodeLists(source, row.tableId, schema.dimensions)));
+    const registered = await registerSchemaOnly(db, source, row.tableId, { schema, codeLists: loadCodeLists });
+    if (!registered.ok) {
+      // registered_as_full cannot occur (the finder never routes a held
+      // table); if it does, it is refused the same way.
+      return await respond({
+        plan: refusePlan('table_lane_ineligible', `${registered.reason}: ${registered.summary}`),
+        fetch: null,
+      });
+    }
+    table = { schema, codeLists: await loadCodeLists() };
+  } catch (error) {
+    if (!(error instanceof CbsUnreachableError)) throw error;
+    logFailure(row, 'CBS unreachable (refused cbs_unreachable)', error);
+    return respond({
+      plan: refusePlan('cbs_unreachable', error.message),
+      fetch: null,
+      refusalOverride: { reason: 'cbs_unreachable', detail: error.message },
+    });
   }
 
   const startedAt = performance.now();
@@ -233,7 +283,6 @@ function resultOf(kind: string, refusalReason: string | null): 'answer' | 'clari
 async function deliver(ctx: Ctx, row: TableLaneRow, audited: AuditedResponse, failureSummary: string | null): Promise<RowResult> {
   const response = audited.response;
   const result = resultOf(response.kind, response.kind === 'refusal' ? response.reason : null);
-  if (audited.auditId !== null) await attachThread(ctx, row, audited.auditId, null);
   await finishTableLaneRequest(
     ctx.deps.db,
     row.id,
@@ -242,6 +291,8 @@ async function deliver(ctx: Ctx, row: TableLaneRow, audited: AuditedResponse, fa
       ? { kind: 'failed', summary: failureSummary ?? 'table-lane: gave up', auditId: audited.auditId }
       : { kind: result, auditId: audited.auditId },
   );
+  // Only the invocation whose finish succeeded surfaces the audit in the thread.
+  if (audited.auditId !== null) await attachThread(ctx, row, audited.auditId, null);
   return result;
 }
 
@@ -278,7 +329,6 @@ async function finishFromAudit(
   audit: NonNullable<Awaited<ReturnType<typeof findLaneAudit>>>,
 ): Promise<RowResult> {
   const result = resultOf(audit.kind, audit.refusalReason);
-  await attachThread(ctx, row, audit.id, audit.threadId);
   await finishTableLaneRequest(
     ctx.deps.db,
     row.id,
@@ -287,6 +337,7 @@ async function finishFromAudit(
       ? { kind: 'failed', summary: row.failureSummary ?? 'table-lane: gave up', auditId: audit.id }
       : { kind: result, auditId: audit.id },
   );
+  await attachThread(ctx, row, audit.id, audit.threadId);
   return result;
 }
 
@@ -360,20 +411,32 @@ export async function runTableLaneJob(deps: TableLaneJobDeps): Promise<TableLane
 
   // Rows a crashed invocation left running at the attempt cap: fail + refund
   // each (per-row isolation — one bad row never wedges the queue).
-  for (const row of await findExhaustedTableLaneRequests(deps.db, ctx.now())) {
-    summary.processed += 1;
+  // Each is owned atomically first (fix round 1, Important 1): a concurrent
+  // invocation that listed the same row gets null and skips it, so the
+  // give-up is audited exactly once.
+  for (const listed of await findExhaustedTableLaneRequests(deps.db, ctx.now())) {
     try {
+      const row = await claimExhaustedTableLaneRequest(deps.db, listed.id, listed.attempts, ctx.now());
+      if (row === null) continue;
+      summary.processed += 1;
       tally(summary, await giveUp(ctx, row, row.failureSummary ?? 'the job stopped before finishing (stale)', { title: null, plan: null }));
     } catch (error) {
-      logFailure(row, 'exhausted row could not be failed + refunded (retried next run)', error);
+      logFailure(listed, 'exhausted row could not be failed + refunded (retried next run)', error);
     }
   }
 
-  while (ctx.now().getTime() - startedAt < budgetMs) {
+  let justReleased = false;
+  // M3: claim only while at least TABLE_LANE_MIN_CLAIM_BUDGET_MS is left.
+  while (budgetMs - (ctx.now().getTime() - startedAt) >= TABLE_LANE_MIN_CLAIM_BUDGET_MS) {
+    // M2: a row this invocation just released is not re-claimed straight
+    // away (the oldest-first claim would pick it again at once).
+    if (justReleased) await ctx.sleep(TABLE_LANE_CBS_RETRY_MS);
     const row = await claimTableLaneRequest(deps.db, ctx.now());
     if (row === null) break;
     summary.processed += 1;
-    tally(summary, await processClaimed(ctx, row));
+    const result = await processClaimed(ctx, row);
+    justReleased = result === 'retry';
+    tally(summary, result);
   }
   return summary;
 }

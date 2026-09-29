@@ -32,21 +32,13 @@ import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.t
 import { findStaleSyncs, loadStaleSyncCandidateRows } from '../../../backend/ingestion/stale-sync.ts';
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
-import { tableLaneEnabled } from '../../../lib/table-lane.ts';
 import { tableLaneJobDeps } from '../../../lib/table-lane-job-deps.ts';
+import { referenceDate, semanticCheckOptions } from '../../../lib/turn-options.ts';
 import { runHealthChecks } from '../health/checks.ts';
 
-/** 'today' in the product's own timezone — same computation as the chat
- * action's referenceDate(), so the delivery re-run resolves relative periods
- * exactly as a live turn would. */
-function referenceDate(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Amsterdam',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
+// referenceDate(): 'today' in the product's own timezone — the SAME shared
+// helper the chat action uses (web/lib/turn-options.ts), so the delivery
+// re-run resolves relative periods exactly as a live turn would.
 
 export async function GET(request: Request): Promise<Response> {
   const cronSecret = process.env.CRON_SECRET;
@@ -74,17 +66,7 @@ export async function GET(request: Request): Promise<Response> {
       // #144 (ADR 034): the delivery re-run gets the SAME reject-only semantic
       // checker as a live chat turn, behind the same dormant env flags — a
       // delivered onboarding answer is exactly as user-visible.
-      ...(process.env.SEMANTIC_CHECK_ENABLED === '1'
-        ? {
-            semanticCheck: {
-              client: new AnthropicLlmClient(),
-              mode:
-                process.env.SEMANTIC_CHECK_FAILMODE === 'closed'
-                  ? ('fail_closed' as const)
-                  : ('fail_open' as const),
-            },
-          }
-        : {}),
+      ...semanticCheckOptions(),
       // WP27 stage C: the measure-fit gate's client (Haiku pin in
       // onboarding-fit.ts). Dormant — and spend-free — until stage D applies
       // migration 015: pre-015 every row's candidate chain reads back [] (the
@@ -96,21 +78,20 @@ export async function GET(request: Request): Promise<Response> {
 
     // Breadth step 5 (Task 4): the table lane's daily backstop sweep — run
     // its job ONCE after the onboarding job, so a row whose kick failed (or a
-    // stale/exhausted one) still finishes and settles within a day. Behind the
-    // lane's master switch (while dormant no code path touches its queue — the
-    // session-27 rule the onboarding flag follows too). Fail-open in its own
-    // try/catch: a table-lane problem never turns today's onboarding result
-    // into an error response. Logs carry no question text.
-    if (tableLaneEnabled()) {
-      try {
-        const tableLane = await runTableLaneJob(tableLaneJobDeps(db));
-        console.info(`onboarding-cron: table-lane sweep ${JSON.stringify(tableLane)}`);
-      } catch (tableLaneError) {
-        console.warn(
-          'onboarding-cron: table-lane sweep failed (job result unaffected):',
-          tableLaneError instanceof Error ? `${tableLaneError.name}: ${tableLaneError.message}` : String(tableLaneError),
-        );
-      }
+    // stale/exhausted one) still finishes and settles within a day. NOT behind
+    // TABLE_LANE_ENABLED (ruling R10): the flag gates only NEW routing — rows
+    // already queued (and their held credits) are always finished, even after
+    // the flag is switched off. Fail-open in its own try/catch: a table-lane
+    // problem (e.g. migration 038 not yet applied) never turns today's
+    // onboarding result into an error response. Logs carry no question text.
+    try {
+      const tableLane = await runTableLaneJob(tableLaneJobDeps(db));
+      console.info(`onboarding-cron: table-lane sweep ${JSON.stringify(tableLane)}`);
+    } catch (tableLaneError) {
+      console.warn(
+        'onboarding-cron: table-lane sweep failed (job result unaffected):',
+        tableLaneError instanceof Error ? `${tableLaneError.name}: ${tableLaneError.message}` : String(tableLaneError),
+      );
     }
 
     // #23 (health-probe alert, session 110): AFTER the main job, re-run the

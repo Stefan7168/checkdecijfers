@@ -11,7 +11,6 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GET } from './api/table-lane-job/route.ts';
 import { kickTableLaneJob } from '../lib/table-lane-kick.ts';
-import { tableLaneEnabled } from '../lib/table-lane.ts';
 
 const read = (rel: string): string => readFileSync(join(__dirname, rel), 'utf-8');
 
@@ -87,40 +86,41 @@ describe('table-lane-job wiring (source pins)', () => {
     expect(deps).toContain('new ODataV4Source()');
     expect(deps).toContain('parseClient: new AnthropicLlmClient()');
     expect(deps).toContain('englishAnswerOptions(lang)');
-    expect(deps).toContain("process.env.SEMANTIC_CHECK_ENABLED === '1'");
+    // M5: the same shared helpers as askQuestion and the onboarding re-run
+    expect(deps).toContain("from './turn-options.ts'");
+    expect(deps).toContain('...semanticCheckOptions()');
+    expect(deps).toContain('referenceDate()');
+    expect(deps).not.toContain('SEMANTIC_CHECK_ENABLED');
   });
 });
 
 describe('daily sweep in onboarding-cron', () => {
   const cron = read('api/onboarding-cron/route.ts');
 
-  it('runs the table-lane job once after the onboarding job, behind the lane flag, fail-open, before the 200', () => {
+  it('runs the table-lane job once after the onboarding job, fail-open, before the 200', () => {
     const jobDone = cron.indexOf('await runOnboardingJob(');
     const sweep = cron.indexOf('await runTableLaneJob(tableLaneJobDeps(', jobDone);
-    const gate = cron.lastIndexOf('tableLaneEnabled()', sweep);
     const ownCatch = cron.indexOf('table-lane sweep failed', sweep);
     const responseJson = cron.indexOf('Response.json(summary', jobDone);
     expect(jobDone).toBeGreaterThan(-1);
     expect(sweep).toBeGreaterThan(jobDone);
-    expect(gate).toBeGreaterThan(jobDone);
     expect(ownCatch).toBeGreaterThan(sweep);
     expect(responseJson).toBeGreaterThan(ownCatch);
   });
-});
 
-describe('tableLaneEnabled', () => {
-  const original = process.env.TABLE_LANE_ENABLED;
-  afterEach(() => {
-    if (original === undefined) delete process.env.TABLE_LANE_ENABLED;
-    else process.env.TABLE_LANE_ENABLED = original;
+  it('R10: the sweep is NOT behind TABLE_LANE_ENABLED — queued rows always finish and settle', () => {
+    expect(cron).not.toContain('tableLaneEnabled');
+    expect(cron).not.toContain('TABLE_LANE_ENABLED ===');
   });
 
-  it("is on only for exactly '1'", () => {
-    delete process.env.TABLE_LANE_ENABLED;
-    expect(tableLaneEnabled()).toBe(false);
-    process.env.TABLE_LANE_ENABLED = 'true';
-    expect(tableLaneEnabled()).toBe(false);
-    process.env.TABLE_LANE_ENABLED = '1';
-    expect(tableLaneEnabled()).toBe(true);
+  it('M5: referenceDate and the semantic-check options come from the shared helper', () => {
+    expect(cron).toContain("from '../../../lib/turn-options.ts'");
+    expect(cron).toContain('...semanticCheckOptions()');
+    expect(cron).not.toContain('function referenceDate');
+    expect(cron).not.toContain("process.env.SEMANTIC_CHECK_ENABLED === '1'");
+    const actions = read('actions.ts');
+    expect(actions).toContain("import { referenceDate, semanticCheckOptions } from '../lib/turn-options.ts';");
+    expect(actions).not.toContain('function referenceDate');
+    expect(actions).not.toContain('function semanticCheckOptions');
   });
 });

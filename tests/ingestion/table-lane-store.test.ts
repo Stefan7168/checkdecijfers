@@ -9,6 +9,7 @@ import { getBucketBalance, grantBucket } from '../../src/billing/pro-bucket.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import {
+  claimExhaustedTableLaneRequest,
   claimTableLaneRequest,
   createTableLaneRequest,
   finishTableLaneRequest,
@@ -330,6 +331,32 @@ describe('stale running rows', () => {
     const exhausted = await findExhaustedTableLaneRequests(db, t2);
     expect(exhausted.map((r) => r.id)).toEqual([row.id]);
     expect(exhausted[0]!.attempts).toBe(2);
+  });
+
+  it('claimExhaustedTableLaneRequest takes ownership of an exhausted row exactly once (fix round 1, Important 1)', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const row = await created(userId);
+    const t0 = new Date('2026-09-29T10:00:00Z');
+    await claimTableLaneRequest(db, t0);
+    const t1 = new Date(t0.getTime() + TABLE_LANE_STALE_MS + 1000);
+    await claimTableLaneRequest(db, t1);
+    const t2 = new Date(t1.getTime() + TABLE_LANE_STALE_MS + 1000);
+    const [listed] = await findExhaustedTableLaneRequests(db, t2);
+
+    const owned = await claimExhaustedTableLaneRequest(db, listed!.id, listed!.attempts, t2);
+    expect(owned!.id).toBe(row.id);
+    expect(owned!.status).toBe('running');
+    expect(owned!.attempts).toBe(TABLE_LANE_MAX_ATTEMPTS); // never above the cap
+    expect(owned!.startedAt?.toISOString()).toBe(t2.toISOString());
+    // a second lister of the same (now fresh) row gets nothing
+    expect(await claimExhaustedTableLaneRequest(db, listed!.id, listed!.attempts, t2)).toBeNull();
+    expect(await findExhaustedTableLaneRequests(db, t2)).toEqual([]);
+    // not an exhausted row at all (fresh, or below the cap): nothing
+    const other = await created(userId);
+    await claimTableLaneRequest(db, t2);
+    const t3 = new Date(t2.getTime() + TABLE_LANE_STALE_MS + 1000);
+    expect(await claimExhaustedTableLaneRequest(db, other.id, 1, t3)).toBeNull();
   });
 
   it('releaseForRetry puts a running row back to pending with the summary; a pending row cannot be released', async () => {

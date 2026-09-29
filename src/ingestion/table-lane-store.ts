@@ -272,6 +272,30 @@ export async function findExhaustedTableLaneRequests(db: Db, now: Date = new Dat
   return rows.map(fromRow);
 }
 
+/** Takes ownership of ONE row findExhaustedTableLaneRequests listed, before
+ * the job writes its give-up audit (fix round 1, Important 1): moves its
+ * stale clock to `now` only while it is still `running`, stale, at exactly
+ * `expectedAttempts` and at the cap. A concurrent job invocation that listed
+ * the same row then gets null here and skips it — so the give-up is audited
+ * once. `attempts` is NOT incremented (the row never runs again; the finish
+ * fences on this same value). Returns the owned row, or null. */
+export async function claimExhaustedTableLaneRequest(
+  db: Db,
+  rowId: number,
+  expectedAttempts: number,
+  now: Date = new Date(),
+): Promise<TableLaneRow | null> {
+  const { rows } = await db.query(
+    `update table_lane_requests
+        set started_at = $3::timestamptz
+      where id = $1 and status = 'running' and attempts = $2 and attempts >= $5::int
+        and started_at < $3::timestamptz - ($4::int * interval '1 millisecond')
+      returning *`,
+    [rowId, expectedAttempts, now.toISOString(), TABLE_LANE_STALE_MS, TABLE_LANE_MAX_ATTEMPTS],
+  );
+  return rows[0] === undefined ? null : fromRow(rows[0]);
+}
+
 /** Puts a `running` row back to `pending` after a transient failure, keeping
  * the summary for the operator. `attempts` is left as is (the next claim adds
  * one). Throws unless the row is `running` with exactly `expectedAttempts`
