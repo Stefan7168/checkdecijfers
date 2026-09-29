@@ -84,7 +84,7 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `STRIPE_SECRET_KEY` | `web/.env.local` + Vercel env store (**set 2026-07-04** — this row lagged the actual state; see the correction note above about which Stripe Sandbox this key actually belongs to, "GlaiBaan sandbox", not the "Check de Cijfers" Test-mode account) | Real secret. Stripe Dashboard (test mode) → Developers → API keys → create/roll a **restricted key** (prefer over the full secret key — least privilege) → replace in both places → delete the old key in the Stripe dashboard |
 | `STRIPE_WEBHOOK_SECRET` | Vercel env store (**set 2026-07-05, marked Sensitive** — replaced once already, see the correction note above: the original destination lived in the wrong account and never fired) | Real secret. Stripe Dashboard → the correct account/sandbox (the one `STRIPE_SECRET_KEY` actually posts to — verify via that account's own Workbench → Logs before assuming) → Developers → Webhooks → your endpoint → "Signing secret" → reveal → replace in Vercel. A dashboard-only edit does nothing until the next deploy |
 | `NEXT_PUBLIC_APP_URL` | `web/.env.local` (`http://localhost:3000`) + **`web/.env.production`, committed to git** (`https://checkdecijfers.vercel.app` — moved 2026-07-04, note below) | Not secret — the deployed app's own origin, used to build the magic-link redirect and Stripe Checkout success/cancel URLs (`web/app/login/actions.ts`, `web/app/credits/actions.ts`) |
-| `CRON_SECRET` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28**) | Real secret you invent yourself: any long random string (password-manager generator). Vercel automatically sends it in the `Authorization` header of its cron requests; the onboarding cron route (`web/app/api/onboarding-cron/route.ts`) returns 503 when the var is missing and 401 on a wrong value — fail closed either way. Rotation: generate a new string → replace in Vercel → redeploy; no third party involved **⚠ Blast radius widened 2026-07-25 (#189): this secret now gates TWO crons — the onboarding job AND `/api/gdpr-purge-cron`, the GDPR retention purge. Removing it stops both, and the purge failing closed is silent by nature (it is a scheduled job nobody watches), so treat a `CRON_SECRET` rotation as also needing a purge-run check.** |
+| `CRON_SECRET` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28**) | Real secret you invent yourself: any long random string (password-manager generator). Vercel automatically sends it in the `Authorization` header of its cron requests; the onboarding cron route (`web/app/api/onboarding-cron/route.ts`) returns 503 when the var is missing and 401 on a wrong value — fail closed either way. Rotation: generate a new string → replace in Vercel → redeploy; no third party involved **⚠ Blast radius widened 2026-07-25 (#189): this secret now gates TWO crons — the onboarding job AND `/api/gdpr-purge-cron`, the GDPR retention purge. Removing it stops both, and the purge failing closed is silent by nature (it is a scheduled job nobody watches), so treat a `CRON_SECRET` rotation as also needing a purge-run check.** **Since breadth step 5 it also gates `/api/table-lane-job` (the table lane's job route, and the kick that fires it); missing → that route answers 503 and queued lane questions wait for the daily sweep, which is inside `/api/onboarding-cron` and so needs the same secret.** |
 | `GDPR_PURGE_APPLY` | Vercel env store only (**✅ SET `1`, Production, 2026-09-05, session 78, owner-directed** — `printf '1' \| vercel env add GDPR_PURGE_APPLY production` + empty-commit redeploy `490362f`) | Not secret — the literal value `1`. **The only thing separating "reports what it would delete" from "redacts and deletes".** `/api/gdpr-purge-cron` runs monthly (`0 4 1 * *`) and now actually redacts/deletes. **Flip verified 2026-09-05:** triggered one real run via `vercel crons run /api/gdpr-purge-cron` (Vercel's CLI invokes it pre-authenticated — no need to retrieve `CRON_SECRET`, which is a Sensitive-type var and cannot be read back via `vercel env pull` by design, only used by Vercel's own cron dispatch); `vercel logs` showed `Applied — redacted 0 audit_answers ... 0 trial_questions ... 0 error_log`, matching the `npm run gdpr:purge` dry-run baseline (0 everywhere) exactly. Unsetting it is a COMPLETE rollback — nothing else in that route writes. Do NOT flip it in a deploy burst ([#173](open-questions.md)) — this flip followed a ~5-hour gap after the prior deploy burst, not during one. |
 | `CLARIFY_CLICK_ENABLED` | Vercel env store only (**✅ SET `1`, Production, 2026-09-02, session 69, owner present**) | Not secret — the literal value `1`. WP26 mechanism A: clarification chips carry a pre-verified intent, a byte-equal reply is taken without an LLM; #197 comparison chips under answers ride the same take-path, and since #73 v2 (session 72; PR #122 merged + live 2026-09-03, session 75, `4fd6ea5`) so does every follow-up chip under an answer. Smoke-tested 2026-09-03 (audit rows 261/262, 263/264). Rollback: remove + redeploy — but read the ROLLBACK ORDER in the WP26 section first (this flag goes off FIRST, `ANSWER_FIRST_ENABLED` a day later). |
 | `ANSWER_FIRST_ENABLED` | Vercel env store only (**✅ SET `1`, Production, 2026-09-03 05:40Z, session 71, owner go in chat** — `printf '1' \| vercel env add ANSWER_FIRST_ENABLED production --sensitive`, the CLI reads the value from stdin) | Not secret — the literal value `1`. WP26 mechanism B: a question with no place (on a measure with a national row) answers nationally, a question with no period answers with the recent trend, both disclosed in-sentence; since #175 (same day) the anonymous trial reads it too. Rollback: remove + redeploy, only AFTER the click flag has been off for a day (WP26 section). |
@@ -92,6 +92,7 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `EUROSTAT_SIBLINGS_ENABLED` | Nowhere yet (**NOT SET — E2a step 6, the owner-signed flip; step 5's registration groundwork built session 125 continuation, 2026-09-23, branch `e2a-step5-staging`, still fully dark**). **⚠ This is a plain `process.env` read (`src/sources/eurostat-siblings.ts`'s `eurostatSiblingsEnabled()`), not threaded through `web/app/actions.ts` like the WP26 flags — so it takes effect in ANY process that reads it, not only the deployed web app. That includes every CLI/benchmark script that loads the root `.env` (e.g. `npm run benchmark:run:live`, `npm run registry:apply`, this repo's other `--env-file=.env` scripts). Never put this variable in your local `.env` "to test it" — it would silently turn the three reviewed pairs on for every local script run, not just the one you meant, with the NOT-yet-owner-signed Dutch wording. Test it via `vi.stubEnv` in vitest instead (see `tests/sources/eurostat-siblings.test.ts`/`tests/answer/eurostat-siblings-flag.test.ts`).** | Not secret — the literal value `1`. The E2a step-6 master switch: while unset, `activeEurostatSiblings()` (`src/sources/eurostat-siblings.ts`) returns `{}` and the resolver/offer-side clarification gate/click trust boundary all agree there is nothing to offer — byte-identical to before step 5, even once step 5's `registry:apply` has upserted the three reviewed sibling measures into `canonical_measures` (those rows sit there unreachable, and — since the same fix round — excluded from the public coverage report/`/llms.txt` too, see `src/registry/coverage.ts`). Setting it to exactly `'1'` makes the three reviewed pairs (unemployment, inflation, GDP growth) reachable via a dry-run-verified clarification chip — do this only after the step-6 wording sweep (docs/RUNBOOK.md, "E2a step 5" section) and the benchmark's new Eurostat tasks. **Removing it is the kill-switch, but — like every other Vercel env-store flag in this table — it only takes effect on the deployed app after a REDEPLOY** (Vercel bakes env vars in per-deployment; setting/unsetting the variable alone changes nothing until the next build). No code change is needed either way. |
 | `RESEND_API_KEY` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28; key "checkdecijfers-data-retrieved", Sending scope, separate from the Supabase SMTP key**) | Real secret. Resend dashboard → API Keys → create a key with **Sending access** scope → paste into Vercel (mark Sensitive) → redeploy. This is a SECOND key, separate from the one pasted into Supabase's SMTP settings (that one sends magic-link emails; this one lets the app itself send "je tabel is klaar" onboarding notifications). Without it the app still works — notification emails are skipped with a log line; the dashboard stays the source of truth |
 | `ONBOARDING_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-06, Production — the WP16 master switch, WP16 go-live session 28**) | Not secret — the literal value `1`, now LIVE. While set, on-demand fetch is active. **Removing it is the instant kill-switch** — the deployed app then never constructs the table finder and behaves exactly as before WP16 sub-part 2 (the honest clarification), no rerank spend, no touch of the migration-012 tables, no code change needed. (Owner marked it Sensitive at set time — harmless; the value `1` is just hidden in the UI.) |
+| `TABLE_LANE_ENABLED` | Vercel env store only (**NOT SET — breadth step 5 is built and merged DARK; the flip is the LAST step of the go-live sequence in "Table lane (breadth step 5)" below, owner-signed**) | Not secret — the literal value `1`, read ONLY through `tableLaneEnabled()` in `web/lib/table-lane.ts` (exactly `'1'` = on; unset or anything else = off, `askQuestion` byte-identical to before). **Also needs `ONBOARDING_ENABLED=1`** (already set) — the finder that produces the routing is only built then. Only the workspace chat routes to the lane. **Removing it is the kill-switch for NEW routing**; rows already queued are still finished (and refunded if needed) by the daily sweep. Set with `printf '1' \| vercel env add TABLE_LANE_ENABLED production` + a redeploy (env edits never reach a running deployment). |
 | `ANTHROPIC_TRIAL_API_KEY` | Vercel env store only (**✅ SET 2026-07-17 by the owner, Production, Sensitive — #53 go-live, session 52; key lives in its own Anthropic workspace with its own hard spend cap**) | Real secret, and deliberately a SEPARATE key from `ANTHROPIC_API_KEY`: Anthropic console → create a key **with its own hard spend cap** (the trial's outer belt — abuse can never touch the main budget) → paste into Vercel (mark Sensitive) → redeploy. Rotation: same as `ANTHROPIC_API_KEY` but only the Vercel store. Removing it (or `TRIAL_ENABLED`) is the trial's kill-switch — the homepage section disappears, nothing else changes |
 | `TRIAL_IP_HASH_SECRET` | Vercel env store only (**✅ SET 2026-07-17, Production — #53 go-live, session 52; generated and piped straight into `vercel env add`, value never displayed anywhere**) | Real secret you invent yourself (password-manager generator, long random string). Used ONLY to HMAC visitor IPs for the per-IP trial limit — raw IPs never persist. Rotation: replace in Vercel + redeploy; consequence is benign (per-IP counts restart) |
 | `TRIAL_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-17, Production — #53 go-live, session 52**) | Not secret — the literal value `1`. The trial master switch: while unset the whole homepage trial renders NOTHING (dormant, byte-identical landing). **Removing it is the instant kill-switch** |
@@ -1061,8 +1062,9 @@ publishes no machine status for it. Three things to know:
 A **slice-cache** table (`cbs_tables.ingest_mode = 'slice_cache'`) holds only the cells questions asked for, fetched on
 demand (`src/ingestion/slice-cache.ts`). Operational facts:
 
-1. **Migration 037 is FILE-ONLY** until the owner runs `npm run db:migrate` (owner-supervised live DDL). Apply it before
-   breadth step 5 goes live, not earlier-dependent: every code path is probe-guarded, and nothing calls the slice cache yet.
+1. **Migration 037 is FILE-ONLY** until the owner runs `npm run db:migrate` (owner-supervised live DDL). Apply it together
+   with 038 before the table lane goes live (see "Table lane (breadth step 5)" below); until then every code path is
+   probe-guarded, and with `TABLE_LANE_ENABLED` off nothing calls the slice cache.
 2. **`ingest sync <id>` refuses a slice-cache table** (failure stage `ingest_mode`, not quarantined); **`sync --all`
    skips them** with a log line. They are refreshed per question by `ensureSlice`, never by a whole-table sync.
 3. **A quarantined slice-cache table has no `--rebaseline` path yet.** Recovery: evict it (`tables:evict --apply`,
@@ -1070,6 +1072,58 @@ demand (`src/ingestion/slice-cache.ts`). Operational facts:
    supervised DB edit after reading the batch's failure summary.
 4. `last_sync_at` stays NULL for these tables by design — the stale-sync alert, onboarding and the coverage page ignore
    them; each served cell is dated by its covering slice's `checked_at`.
+
+## Table lane (breadth step 5, ADR 062, built session 140, 2026-09-29 — merged DARK; nothing live until the owner flips it)
+
+What it is: in the workspace chat, a question the curated figures cannot place, but the table finder matches to a CBS
+table, is answered from that table at the normal question price (instead of the 100-credit e-mail offer). The reader
+sees a progress bubble in the chat; a background job fetches only the cells needed, checks and stores them, and writes
+the answer, a button question or a refusal into the conversation. Every non-answer is refunded (a question is refunded
+down to the small clarification price).
+
+**Go-live sequence (owner present, in this order; each step is a separate supervised action):**
+1. **Apply migrations 037 and 038** — `npm run db:migrate` from the repo root (live DDL; additive only, a new table and
+   new columns, nothing existing changes). Expect exactly those two to apply. Verify afterwards that `slice_fetches` and
+   `table_lane_requests` exist (read-only recipe: "Read-only questions to the live database").
+2. **Recording + calibration run of the table parser** — only after 2026-10-01 (the monthly $50 Anthropic spend limit starts over), see
+   "Table-parser recording run" below. Now 39 cases, prompt version 3. Nothing about the lane is trustworthy before this.
+3. **Step 6: the table-lane benchmark** (its own work package: 0 fabricated numbers, refusals correct) on the recorded parser.
+4. **Only then** set `TABLE_LANE_ENABLED=1` (row in the secrets register above) and redeploy. `ONBOARDING_ENABLED=1` and
+   `CRON_SECRET` must still be set (they are).
+5. Smoke test as the owner in the workspace chat (a question about a table we do not hold); watch `vercel logs` right
+   away for `table-lane-job:` lines (the retention is short). Rollback: remove `TABLE_LANE_ENABLED` and redeploy.
+
+**How a question flows (for reading logs).** `askQuestion` queues a `table_lane_requests` row and pays the price up front
+in the same database transaction; it then fires `/api/table-lane-job` (the "kick"). The job claims the oldest open row,
+loads the table's layout from CBS, asks the AI to pick the figure (closed choice), fetches the slice, answers, settles the
+money, and attaches the answer to the conversation. The reader's bubble polls our database (never CBS). Once a day
+`/api/onboarding-cron` (06:00 UTC) runs the job once more as a backstop; it does so even when the flag is off, so
+credits held for an open row never wait on a flag flip.
+
+**Manual job kick** (if a queued row is waiting, e.g. after a failed kick and before the daily sweep). The owner runs
+this in a terminal with the real secret loaded in `CRON_SECRET`; the job route answers with a small JSON summary of the
+rows it handled (`processed`, `answered`, `asked`, `refused`, `failed`):
+
+```
+curl -H "Authorization: Bearer $CRON_SECRET" https://checkdecijfers.vercel.app/api/table-lane-job
+```
+
+**Reading a stuck row.** Read-only, through the repo's own client (recipe in "Read-only questions to the live
+database"), select without the question text:
+`select id, status, attempts, table_id, created_at, started_at, finished_at, outcome_kind, failure_summary from table_lane_requests order by id desc limit 20`.
+- `pending`: queued, not yet claimed. Normal for seconds; if it lingers, the kick failed — run the manual kick above, or
+  wait for the 06:00 UTC sweep.
+- `running` for under 5 minutes: a job invocation is working on it (one row can take tens of seconds).
+- `running` for over 5 minutes: the invocation died; the next job run claims it again (attempt 2). At `attempts = 2` and
+  stale, the next run gives up: an audited "did not work, you pay nothing" answer appears in the reader's conversation
+  and the price is refunded in full. Nothing to do by hand.
+- `failed`: given up; `failure_summary` says why (technical text, never shown to the reader). The refund is already made.
+- `done`: `outcome_kind` is `answer`, `clarification` (a button question) or `refusal`.
+A row is never edited by hand: the money and the status move together in the store's own transaction.
+
+**Retention.** Finished rows (`done` / `failed`) hold the reader's question text and the table id a second time; the
+GDPR self-service deletion, the per-conversation deletion and the monthly purge (`GDPR_PURGE_APPLY`) hard-delete them
+with the audit rows. A row still open at that moment is swept by the next run once it ends. Nothing extra to schedule.
 
 ## Ingestion alerts (#23, built session 109, 2026-09-17)
 
@@ -2499,11 +2553,12 @@ Only `select` statements; any DDL or write stays an owner-supervised, migration-
 
 ## Table-parser recording run (breadth step 4 — owner-supervised, after 2026-10-01; added session 139, 2026-09-29)
 
-The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b") has never called the AI. Its first
-recording turns the 35 labelled questions (`benchmark/tableparse-labelled-set.json`) into replayable fixtures and a
-calibration report. Measured cost estimate: ~102k input tokens on the cheap tier (a few cents). Steps, owner present:
+The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") has never called the AI. Its first
+recording turns the 39 labelled questions (`benchmark/tableparse-labelled-set.json`, now including the follow-up cases;
+prompt version 3 since breadth step 5) into replayable fixtures and a calibration report. Measured cost estimate: ~114k
+input tokens on the cheap tier (dry run, a few cents). Steps, owner present:
 
-1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 35 cases and prints the per-case prompt sizes.
+1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 39 cases and prints the per-case prompt sizes.
 2. `TABLEPARSE_RECORD_OK=1 npm run tableparse:record` — the live run (needs `ANTHROPIC_API_KEY` in `.env`). Without the
    variable the script refuses on purpose. Writes `tests/fixtures/llm/tableparse/*.json` and
    `benchmark/tableparse-calibration-report.json`.
