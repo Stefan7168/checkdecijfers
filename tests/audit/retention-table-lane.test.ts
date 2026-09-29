@@ -62,12 +62,13 @@ describe('table_lane_requests retention', () => {
       const running = await insertLaneRow(db, { userId: me, status: 'running' });
       const pending = await insertLaneRow(db, { userId: me, status: 'pending' });
       const theirs = await insertLaneRow(db, { userId: other, status: 'done' });
-      void done;
-      void failed;
 
       await deleteUserQuestionHistory(db, me);
 
-      expect(await laneIds(db)).toEqual([running, pending, theirs].sort((a, b) => a - b));
+      const ids = await laneIds(db);
+      expect(ids).toEqual([running, pending, theirs].sort((a, b) => a - b));
+      expect(ids).not.toContain(done);
+      expect(ids).not.toContain(failed);
     });
   });
 

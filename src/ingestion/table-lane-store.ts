@@ -19,7 +19,7 @@
 // this row was itself a question_cost debit on the raw request id (and was
 // refunded), and question_cost is unique per (user_id, request_id).
 import {
-  compensate,
+  compensateSplitInTx,
   deriveAddonRequestId,
   getActionClassPrice,
   getCurrentGrantId,
@@ -28,7 +28,6 @@ import {
   splitDebit,
   type SplitDebitResult,
 } from '../billing/ledger.ts';
-import { compensateBucket } from '../billing/pro-bucket.ts';
 import type { TableLaneChoice } from '../answer/table-lane/types.ts';
 import type { Db, QueryResultRow } from '../db/types.ts';
 
@@ -194,10 +193,12 @@ export async function createTableLaneRequest(db: Db, input: CreateTableLaneInput
 
     const split = await splitDebit(tx, input.userId, ledgerRequestId, required, QUESTION_DEBIT, 'table-lane debit', grantId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
-      // A debit under this derived id exists but no row does. The debit and the
-      // row are written in one transaction, so this is not a state the code can
-      // produce; refuse loudly rather than run the job for an unpaid or
-      // already-settled charge.
+      // A debit under this derived id exists but no row does. Create writes the
+      // debit and the row in one transaction, so the only way here is
+      // retention: it hard-deletes finished rows while the ledger keeps the
+      // debit, and the same (user, requestId) was then resubmitted. That is a
+      // client retry after a history deletion; fail safe (no charge, no job)
+      // rather than run the job for an already-settled charge.
       throw new Error(`table-lane debit ${ledgerRequestId} already exists without a request row`);
     }
 
@@ -273,16 +274,32 @@ export async function findExhaustedTableLaneRequests(db: Db, now: Date = new Dat
 
 /** Puts a `running` row back to `pending` after a transient failure, keeping
  * the summary for the operator. `attempts` is left as is (the next claim adds
- * one). Throws unless the row is currently running. */
-export async function releaseForRetry(db: Db, rowId: number, summary: string): Promise<void> {
+ * one). Throws unless the row is `running` with exactly `expectedAttempts`
+ * (fencing: a superseded, since-reclaimed invocation must not release the
+ * row), and throws when the row has already used TABLE_LANE_MAX_ATTEMPTS: the
+ * caller must then finish it as `failed` (refund + audited refusal), so no row
+ * is ever attempted more than the cap while the reader's credits are held. */
+export async function releaseForRetry(
+  db: Db,
+  rowId: number,
+  expectedAttempts: number,
+  summary: string,
+): Promise<void> {
+  if (expectedAttempts >= TABLE_LANE_MAX_ATTEMPTS) {
+    throw new Error(
+      `table-lane row ${rowId} has used ${expectedAttempts} of ${TABLE_LANE_MAX_ATTEMPTS} attempts; finish it as failed instead of releasing it`,
+    );
+  }
   const { rows } = await db.query(
     `update table_lane_requests
-        set status = 'pending', failure_summary = $2
-      where id = $1 and status = 'running'
+        set status = 'pending', failure_summary = $3
+      where id = $1 and status = 'running' and attempts = $2
       returning id`,
-    [rowId, summary],
+    [rowId, expectedAttempts, summary],
   );
-  if (rows[0] === undefined) throw new Error(`table-lane row ${rowId} is not running; cannot release it for retry`);
+  if (rows[0] === undefined) {
+    throw new Error(`table-lane row ${rowId} is not running at attempt ${expectedAttempts}; cannot release it for retry`);
+  }
 }
 
 export type TableLaneOutcome =
@@ -296,17 +313,30 @@ export type TableLaneOutcome =
  *   failed         -> row failed (+ failure_summary), full refund
  * Refunds go bucket first (the inverse of the debit's order), each capped at
  * what that leg actually took. If the settlement throws, the transaction rolls
- * back and the row stays `running`. Throws when the row is unknown or not
- * `running` (already finished, or never claimed), settling nothing — the
+ * back and the row stays `running`. Throws when the row is unknown, not
+ * `running` (already finished, or never claimed), or not at `expectedAttempts`
+ * (a superseded invocation), settling nothing — the
  * ledger's one-compensation-per-debit index is only the backstop behind this
  * check. */
-export async function finishTableLaneRequest(db: Db, rowId: number, outcome: TableLaneOutcome): Promise<void> {
+export async function finishTableLaneRequest(
+  db: Db,
+  rowId: number,
+  expectedAttempts: number,
+  outcome: TableLaneOutcome,
+): Promise<void> {
   await db.withTransaction(async (tx) => {
     const locked = await tx.query('select * from table_lane_requests where id = $1 for update', [rowId]);
     const raw = locked.rows[0] as RawRow | undefined;
     if (raw === undefined) throw new Error(`table-lane row ${rowId} does not exist`);
     if (raw.status !== 'running') {
       throw new Error(`table-lane row ${rowId} is ${raw.status}, not running; refusing to finish or settle it again`);
+    }
+    // Fencing: only the invocation that holds the CURRENT attempt may finish. A
+    // superseded (stale, reclaimed) invocation throws here, before it settles.
+    if (Number(raw.attempts) !== expectedAttempts) {
+      throw new Error(
+        `table-lane row ${rowId} is at attempt ${Number(raw.attempts)}, not ${expectedAttempts}; a newer invocation owns it`,
+      );
     }
     const split = splitFromRow(raw);
     const paid = split.fromBucket + split.fromLedger;
@@ -318,7 +348,7 @@ export async function finishTableLaneRequest(db: Db, rowId: number, outcome: Tab
     } else if (outcome.kind === 'refusal' || outcome.kind === 'failed') {
       refund = paid;
     }
-    if (refund > 0) await refundSplit(tx, raw.user_id, split, refund, outcome.auditId);
+    if (refund > 0) await compensateSplitInTx(tx, raw.user_id, split, refund, outcome.auditId);
 
     await tx.query(
       `update table_lane_requests
@@ -333,29 +363,6 @@ export async function finishTableLaneRequest(db: Db, rowId: number, outcome: Tab
       ],
     );
   });
-}
-
-/** compensateSplit's logic on the caller's transaction (compensateSplit opens
- * its own transaction, which cannot nest inside finishTableLaneRequest's):
- * bucket portion first, capped at what the bucket leg took, then the ledger. */
-async function refundSplit(
-  tx: Db,
-  userId: string,
-  split: SplitDebitResult,
-  refundCredits: number,
-  auditAnswerId: number | null,
-): Promise<void> {
-  let remaining = refundCredits;
-  if (split.bucketEntry !== null && remaining > 0) {
-    const amount = Math.min(remaining, split.fromBucket);
-    await compensateBucket(tx, userId, split.bucketEntry.id, amount);
-    remaining -= amount;
-  }
-  if (split.ledgerEntry !== null && remaining > 0) {
-    const amount = Math.min(remaining, split.fromLedger);
-    await compensate(tx, userId, split.ledgerEntry.id, amount, auditAnswerId);
-    remaining -= amount;
-  }
 }
 
 /** One row, only for its owner (the poll reads through this): another user's

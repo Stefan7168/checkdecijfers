@@ -263,7 +263,7 @@ describe('claimTableLaneRequest', () => {
     expect(await claimTableLaneRequest(db)).toBeNull();
   });
 
-  it('two concurrent claims never return the same row', async () => {
+  it('two claims issued together on one connection never return the same row', async () => {
     const userId = randomUUID();
     await seedSignup(userId, 200);
     const a = await created(userId);
@@ -274,7 +274,7 @@ describe('claimTableLaneRequest', () => {
     expect(new Set([c1!.id, c2!.id])).toEqual(new Set([a.id, b.id]));
   });
 
-  it('with a single pending row, only one of two concurrent claims gets it', async () => {
+  it('with a single pending row, only one of two claims issued together on one connection gets it', async () => {
     const userId = randomUUID();
     await seedSignup(userId, 100);
     await created(userId);
@@ -335,9 +335,9 @@ describe('stale running rows', () => {
     const userId = randomUUID();
     await seedSignup(userId, 100);
     const row = await created(userId);
-    await expect(releaseForRetry(db, row.id, 'x')).rejects.toThrow();
+    await expect(releaseForRetry(db, row.id, 0, 'x')).rejects.toThrow();
     await claimTableLaneRequest(db);
-    await releaseForRetry(db, row.id, 'CBS was slow');
+    await releaseForRetry(db, row.id, 1, 'CBS was slow');
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('pending');
     expect(after!.failureSummary).toBe('CBS was slow');
@@ -361,7 +361,7 @@ describe('finishTableLaneRequest', () => {
     await seedSignup(userId, 100);
     const row = await running(userId);
     const auditId = await insertAuditRow(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'answer', auditId });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'answer', auditId });
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('done');
     expect(after!.outcomeKind).toBe('answer');
@@ -376,7 +376,7 @@ describe('finishTableLaneRequest', () => {
     await seedSignup(userId, 100);
     const row = await running(userId);
     const auditId = await insertAuditRow(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'clarification', auditId });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'clarification', auditId });
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('done');
     expect(after!.outcomeKind).toBe('clarification');
@@ -388,7 +388,7 @@ describe('finishTableLaneRequest', () => {
     await seedSignup(userId, 100);
     const row = await running(userId);
     const auditId = await insertAuditRow(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'refusal', auditId });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'refusal', auditId });
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('done');
     expect(after!.outcomeKind).toBe('refusal');
@@ -401,7 +401,7 @@ describe('finishTableLaneRequest', () => {
     const userId = randomUUID();
     await seedSignup(userId, 100);
     const row = await running(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'failed', summary: 'CBS unreachable', auditId: null });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'failed', summary: 'CBS unreachable', auditId: null });
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('failed');
     expect(after!.outcomeKind).toBeNull();
@@ -416,12 +416,12 @@ describe('finishTableLaneRequest', () => {
     await seedSubscription(userId, grantId);
     await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
     const r1 = await running(userId); // 15 bucket + 5 ledger
-    await finishTableLaneRequest(db, r1.id, { kind: 'refusal', auditId: null });
+    await finishTableLaneRequest(db, r1.id, 1, { kind: 'refusal', auditId: null });
     expect(await getBucketBalance(db, userId, grantId)).toBe(15);
     expect(await getBalance(db, userId)).toBe(100);
 
     const r2 = await running(userId);
-    await finishTableLaneRequest(db, r2.id, { kind: 'clarification', auditId: null });
+    await finishTableLaneRequest(db, r2.id, 1, { kind: 'clarification', auditId: null });
     // spent 20 (15 bucket + 5 ledger); clarification price 10 -> refund 10 -> bucket gets 10 back
     expect(await getBucketBalance(db, userId, grantId)).toBe(10);
     expect(await getBalance(db, userId)).toBe(95);
@@ -434,7 +434,7 @@ describe('finishTableLaneRequest', () => {
     await seedSubscription(userId, grantId);
     await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
     const row = await running(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'failed', summary: 'boom', auditId: null });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'failed', summary: 'boom', auditId: null });
     expect(await getBucketBalance(db, userId, grantId)).toBe(1000);
     expect(await getBalance(db, userId)).toBe(100);
   });
@@ -444,7 +444,7 @@ describe('finishTableLaneRequest', () => {
     await seedSignup(userId, 100);
     const row = await running(userId);
     // audit id 999999 violates credit_transactions.audit_answer_id -> the refund throws
-    await expect(finishTableLaneRequest(db, row.id, { kind: 'refusal', auditId: 999999 })).rejects.toThrow();
+    await expect(finishTableLaneRequest(db, row.id, 1, { kind: 'refusal', auditId: 999999 })).rejects.toThrow();
     const after = await readTableLaneRequest(db, row.id, userId);
     expect(after!.status).toBe('running');
     expect(after!.finishedAt).toBeNull();
@@ -455,10 +455,10 @@ describe('finishTableLaneRequest', () => {
     const userId = randomUUID();
     await seedSignup(userId, 100);
     const row = await running(userId);
-    await finishTableLaneRequest(db, row.id, { kind: 'refusal', auditId: null });
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'refusal', auditId: null });
     expect(await getBalance(db, userId)).toBe(100);
-    await expect(finishTableLaneRequest(db, row.id, { kind: 'refusal', auditId: null })).rejects.toThrow();
-    await expect(finishTableLaneRequest(db, row.id, { kind: 'failed', summary: 's', auditId: null })).rejects.toThrow();
+    await expect(finishTableLaneRequest(db, row.id, 1, { kind: 'refusal', auditId: null })).rejects.toThrow();
+    await expect(finishTableLaneRequest(db, row.id, 1, { kind: 'failed', summary: 's', auditId: null })).rejects.toThrow();
     expect(await getBalance(db, userId)).toBe(100);
     expect(await countRows(`select count(*) as n from credit_transactions where reason = 'compensation'`)).toBe(1);
     const after = await readTableLaneRequest(db, row.id, userId);
@@ -469,8 +469,8 @@ describe('finishTableLaneRequest', () => {
     const userId = randomUUID();
     await seedSignup(userId, 100);
     const row = await created(userId);
-    await expect(finishTableLaneRequest(db, row.id, { kind: 'answer', auditId: null })).rejects.toThrow();
-    await expect(finishTableLaneRequest(db, 424242, { kind: 'answer', auditId: null })).rejects.toThrow();
+    await expect(finishTableLaneRequest(db, row.id, 1, { kind: 'answer', auditId: null })).rejects.toThrow();
+    await expect(finishTableLaneRequest(db, 424242, 1, { kind: 'answer', auditId: null })).rejects.toThrow();
     expect(await getBalance(db, userId)).toBe(80);
   });
 
@@ -481,8 +481,72 @@ describe('finishTableLaneRequest', () => {
     const t0 = new Date('2026-09-29T10:00:00Z');
     await claimTableLaneRequest(db, t0);
     await claimTableLaneRequest(db, new Date(t0.getTime() + TABLE_LANE_STALE_MS + 1000));
-    await finishTableLaneRequest(db, row.id, { kind: 'failed', summary: 'gave up', auditId: null });
+    await finishTableLaneRequest(db, row.id, 2, { kind: 'failed', summary: 'gave up', auditId: null });
     expect(await getBalance(db, userId)).toBe(100);
+  });
+});
+
+describe('attempt cap and fencing', () => {
+  async function claimedAt(userId: string, times: number): Promise<{ row: TableLaneRow; last: Date }> {
+    const row = await created(userId);
+    let last = new Date('2026-09-29T10:00:00Z');
+    let claimed = await claimTableLaneRequest(db, last);
+    for (let i = 1; i < times; i++) {
+      last = new Date(last.getTime() + TABLE_LANE_STALE_MS + 1000);
+      claimed = await claimTableLaneRequest(db, last);
+    }
+    expect(claimed!.id).toBe(row.id);
+    expect(claimed!.attempts).toBe(times);
+    return { row: claimed!, last };
+  }
+
+  it('releaseForRetry refuses once the row has used every attempt; the caller must finish it as failed', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const { row } = await claimedAt(userId, TABLE_LANE_MAX_ATTEMPTS);
+    await expect(releaseForRetry(db, row.id, TABLE_LANE_MAX_ATTEMPTS, 'again')).rejects.toThrow(/finish it as failed/);
+    const still = await readTableLaneRequest(db, row.id, userId);
+    expect(still!.status).toBe('running');
+    // and the way out works: finish it failed with the refund
+    await finishTableLaneRequest(db, row.id, TABLE_LANE_MAX_ATTEMPTS, { kind: 'failed', summary: 'gave up', auditId: null });
+    expect(await getBalance(db, userId)).toBe(100);
+  });
+
+  it('a superseded invocation cannot finish a reclaimed row: throws, settles nothing, the current one still can', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const first = await created(userId);
+    const t0 = new Date('2026-09-29T10:00:00Z');
+    const attempt1 = await claimTableLaneRequest(db, t0);
+    expect(attempt1!.attempts).toBe(1);
+    // attempt 1 goes stale; a second invocation reclaims the row
+    const attempt2 = await claimTableLaneRequest(db, new Date(t0.getTime() + TABLE_LANE_STALE_MS + 1000));
+    expect(attempt2!.attempts).toBe(2);
+
+    await expect(
+      finishTableLaneRequest(db, first.id, 1, { kind: 'refusal', auditId: null }),
+    ).rejects.toThrow(/newer invocation/);
+    const mid = await readTableLaneRequest(db, first.id, userId);
+    expect(mid!.status).toBe('running');
+    expect(await getBalance(db, userId)).toBe(80);
+    expect(await countRows(`select count(*) as n from credit_transactions where reason = 'compensation'`)).toBe(0);
+
+    await finishTableLaneRequest(db, first.id, 2, { kind: 'answer', auditId: null });
+    expect((await readTableLaneRequest(db, first.id, userId))!.status).toBe('done');
+  });
+
+  it('a superseded invocation cannot release a reclaimed row either', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const row = await created(userId);
+    const t0 = new Date('2026-09-29T10:00:00Z');
+    await claimTableLaneRequest(db, t0);
+    await claimTableLaneRequest(db, new Date(t0.getTime() + TABLE_LANE_STALE_MS + 1000)); // attempt 2 owns it
+    await expect(releaseForRetry(db, row.id, 1, 'late')).rejects.toThrow(/not running at attempt 1/);
+    const after = await readTableLaneRequest(db, row.id, userId);
+    expect(after!.status).toBe('running');
+    expect(after!.attempts).toBe(2);
+    expect(after!.failureSummary).toBeNull();
   });
 });
 
