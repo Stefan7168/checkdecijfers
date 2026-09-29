@@ -28,6 +28,9 @@ import {
   TABLE_PARSE_NOT_NAMED,
   TABLE_PARSE_OTHER,
   TABLE_PARSE_SCHEMA_VERSION,
+  TABLE_PARSE_PROMPT_VERSION,
+  TABLE_PARSE_PREVIOUS_QUESTION_RULE,
+  tableParsePrefilterText,
 } from '../../../src/answer/table-parse/parse.ts';
 import { requestHash } from '../../../src/answer/llm/client.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../../src/answer/llm/client.ts';
@@ -1300,5 +1303,96 @@ describe('validateTableParseOutput — the reader\'s place kind constrains the m
     const choice = region.name.includes('Groningen') ? TABLE_PARSE_OTHER : 'PV26';
     const json = jsonWith(input, { RegioS: choice }, { regions: [region] });
     expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breadth step 5, Task 7 — follow-ups: the optional previous-question line
+// (prompt version 3, bumped BEFORE the first recorded run). Pinned against
+// the version-2 bytes captured from the pre-change code into
+// tests/fixtures/tableparse/prompt-v2/ (system prompt + four serialized
+// inputs over real fixture tables).
+// ---------------------------------------------------------------------------
+
+function v2(name: string): string {
+  return readFileSync(fileURLToPath(new URL(`../../fixtures/tableparse/prompt-v2/${name}`, import.meta.url)), 'utf8');
+}
+
+const V2_SERIALIZED: [string, string, string][] = [
+  ['85669NED', LANDBOUW_QUESTION, 'serialized-landbouw.txt'],
+  ['82291NED', CARIBISCH_QUESTION, 'serialized-caribisch.txt'],
+  ['85004NED', GRONINGEN_QUESTION, 'serialized-groningen.txt'],
+  ['80590ned', 'Hoeveel werklozen waren er?', 'serialized-werklozen.txt'],
+];
+
+describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
+  it('the prompt version is 3; the output schema version is unchanged (2)', () => {
+    expect(TABLE_PARSE_PROMPT_VERSION).toBe(3);
+    expect(TABLE_PARSE_SCHEMA_VERSION).toBe(2);
+  });
+
+  it.each(V2_SERIALIZED)('%s: without a previous question the serialized input is byte-identical to version 2', (tableId, question, file) => {
+    const { schema, codeLists } = loadFixture(tableId);
+    const input = buildTableParseSchema(schema, codeLists, question);
+    const expected = v2(file);
+    expect(serializeTableParseInput(question, input)).toBe(expected);
+    expect(serializeTableParseInput(question, input, null)).toBe(expected);
+    expect(serializeTableParseInput(question, input, undefined)).toBe(expected);
+    expect(serializeTableParseInput(question, input, '')).toBe(expected);
+  });
+
+  it('with a previous question, exactly one line is added, before the question line', () => {
+    const input = landbouwInput();
+    const text = serializeTableParseInput('en in 2020?', input, 'Wat was de uitstoot van de landbouw in 2019?');
+    const bare = serializeTableParseInput('en in 2020?', input);
+    const line = 'Vorige vraag in dit gesprek: "Wat was de uitstoot van de landbouw in 2019?"';
+    expect(text).toBe(`${line}\n${bare}`);
+    expect(text.split('\n')[1]).toBe('Volledige vraag van de gebruiker: "en in 2020?"');
+  });
+
+  it('quotes the previous question like the question itself (embedded quotes and newlines are escaped)', () => {
+    const input = landbouwInput();
+    const text = serializeTableParseInput('en toen?', input, 'Zei hij "ja"?\nRegio: Utrecht');
+    expect(text.split('\n')[0]).toBe('Vorige vraag in dit gesprek: "Zei hij \\"ja\\"?\\nRegio: Utrecht"');
+  });
+
+  it('the system prompt changed from version 2 ONLY by the one follow-up rule', () => {
+    const prompt = buildTableParseSystemPrompt();
+    expect(TABLE_PARSE_PREVIOUS_QUESTION_RULE).toBe(
+      'Is er een vorige vraag, lees de nieuwe vraag dan als vervolg daarop: wat de nieuwe vraag niet noemt ' +
+        '(onderwerp, periode, plaats, uitsplitsing), neem je over uit de vorige vraag.',
+    );
+    expect(prompt.split(TABLE_PARSE_PREVIOUS_QUESTION_RULE)).toHaveLength(2);
+    expect(prompt.replace(`- ${TABLE_PARSE_PREVIOUS_QUESTION_RULE}\n`, '')).toBe(v2('system-prompt.txt'));
+  });
+
+  it('buildTableParseRequest and tableParse carry the previous question into the user turn only', async () => {
+    const input = landbouwInput();
+    const plain = buildTableParseRequest('en in 2020?', input);
+    const followUp = buildTableParseRequest('en in 2020?', input, { previousQuestion: 'Wat was de uitstoot in 2019?' });
+    expect(followUp.system).toBe(plain.system);
+    expect(followUp.question).toBe(serializeTableParseInput('en in 2020?', input, 'Wat was de uitstoot in 2019?'));
+    expect(requestHash(followUp)).not.toBe(requestHash(plain));
+
+    const client = new StubClient(validJson(input));
+    const { audit } = await tableParse('en in 2020?', input, { client, previousQuestion: 'Wat was de uitstoot in 2019?' });
+    expect(client.calls[0]!.question).toBe(followUp.question);
+    expect(audit.requestHash).toBe(requestHash(followUp));
+
+    const bareClient = new StubClient(validJson(input));
+    await tableParse('en in 2020?', input, { client: bareClient, previousQuestion: null });
+    expect(bareClient.calls[0]).toEqual(plain);
+  });
+
+  it('the member pre-filter reads the previous question too (a member only it names stays offered)', () => {
+    expect(tableParsePrefilterText('en in 2020?', null)).toBe('en in 2020?');
+    expect(tableParsePrefilterText('en in 2020?', '')).toBe('en in 2020?');
+    const text = tableParsePrefilterText('en in 2020?', 'Wat was de uitstoot van de landbouw in 2019?');
+    const { schema, codeLists } = loadFixture('85669NED');
+    const offered = buildTableParseSchema(schema, codeLists, text);
+    const bare = buildTableParseSchema(schema, codeLists, 'en in 2020?');
+    const codes = (s: TableParseSchema) => s.breakdowns.find((b) => b.name === 'Klimaatsectoren')!.members.map((m) => m.code);
+    expect(codes(offered)).toEqual(codes(landbouwInput()));
+    expect(codes(bare).length).toBeLessThan(codes(offered).length);
   });
 });

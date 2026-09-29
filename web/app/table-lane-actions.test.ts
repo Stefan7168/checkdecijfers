@@ -310,6 +310,178 @@ describe('askQuestion — flag on: routed to the table lane', () => {
   });
 });
 
+// Breadth step 5, Task 7: a follow-up in the same conversation reuses the
+// previous table-lane ANSWER's table. The link (6th argument, the previous
+// row id) is validated before the pipeline runs — owned, done, an answer, in
+// this same thread — and then stands in for the table finder: it is consulted
+// only on a curated miss (the pipeline's unmatched exit), so a curated hit
+// always wins. Anything else about the link ⇒ ignored, today's path.
+describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
+  beforeEach(() => {
+    vi.stubEnv('TABLE_LANE_ENABLED', '1');
+    threads.validateThreadOwnership.mockResolvedValue(3);
+  });
+
+  const PARENT = laneRow({
+    id: 50,
+    threadId: 3,
+    question: 'Hoeveel ziekenhuisopnamen waren er in 2019?',
+    tableId: '84521NED',
+    finderConfidence: 0.88,
+    status: 'done',
+    auditId: 90,
+    outcomeKind: 'answer',
+  });
+
+  type Finder = (term: string, question: string) => Promise<{ tableId: string; confidence: number; topicTerm: string; alreadyPending: boolean; candidateIds: string[] } | null>;
+  function pipelineOptions(): { tableFinder?: Finder } {
+    return audit.answerQuestionAudited.mock.calls[0]![2] as { tableFinder?: Finder };
+  }
+
+  /** The pipeline's curated miss: the unmatched exit consults the injected
+   * finder (as src/answer/intent/policy.ts resolveUnmatched does) and a
+   * routing becomes the onboarding_pending refusal. */
+  function driveMiss(term: string): void {
+    audit.answerQuestionAudited.mockImplementation(async (_db: Db, question: string, options: { tableFinder?: Finder }) => {
+      const routing = options.tableFinder ? await options.tableFinder(term, question) : null;
+      const response = routing
+        ? ({
+            kind: 'refusal',
+            reason: 'onboarding_pending',
+            question,
+            text: ONBOARDING_PENDING_TEXT,
+            onboarding: { tableId: routing.tableId, topicTerm: routing.topicTerm, confidence: routing.confidence, candidateIds: routing.candidateIds },
+          } as unknown as ComposedResponse)
+        : ({ kind: 'clarification', question, text: 'Welk onderwerp bedoel je?' } as unknown as ComposedResponse);
+      return { response, auditId: 11 } as AuditedResponse;
+    });
+    billing.chargeAndRun.mockImplementation(
+      async (_db: Db, _uid: string, _rid: string, run: () => Promise<AuditedResponse>) => ({ kind: 'ok', ...(await run()), netCost: 0 }) as GatedResponse,
+    );
+  }
+
+  it('a curated miss with a valid link queues a row for the SAME table with the previous question, skipping the finder', async () => {
+    vi.stubEnv('ONBOARDING_ENABLED', '1'); // the real finder would exist — the link replaces it
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('vrouwen');
+    store.createTableLaneRequest.mockResolvedValue({ kind: 'created', row: laneRow({ id: 51, parentId: 50 }) });
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+
+    expect(store.readTableLaneRequest).toHaveBeenCalledWith(fakeDb, 50, 'user-1');
+    // The finder slot answers with the parent's table — no catalog search.
+    expect(await pipelineOptions().tableFinder!('vrouwen', 'En voor vrouwen?')).toEqual({
+      tableId: '84521NED',
+      topicTerm: 'vrouwen',
+      confidence: 0.88,
+      alreadyPending: false,
+      candidateIds: ['84521NED'],
+    });
+    expect(store.createTableLaneRequest).toHaveBeenCalledWith(fakeDb, {
+      userId: 'user-1',
+      requestId: RID,
+      threadId: 3,
+      lang: 'nl',
+      question: 'En voor vrouwen?',
+      tableId: '84521NED',
+      finderConfidence: 0.88,
+      parentId: 50,
+      previousQuestion: 'Hoeveel ziekenhuisopnamen waren er in 2019?',
+    });
+    // Same money path and shape as a finder-routed question (Task 5).
+    expect(outcome.tableLane).toEqual({ rowId: 51 });
+    expect(outcome.threadId).toBe(3);
+    expect(outcome.onboardingOffer).toBeNull();
+    expect(offerToken.signOnboardingOffer).not.toHaveBeenCalled();
+    expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
+    expect(after).toHaveBeenCalledTimes(1);
+    (after.mock.calls[0]![0] as () => void)();
+    expect(kickTableLaneJob).toHaveBeenCalledTimes(1);
+  });
+
+  it('a curated HIT still wins: the link is never used, the answer passes through', async () => {
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    const answer = { kind: 'answer', question: 'q', text: 'Het antwoord.', answer: { body: 'x' } } as unknown as ComposedResponse;
+    drive(answer, 5, 20);
+    const outcome = await askQuestion('Hoeveel inwoners heeft Utrecht?', RID, null, undefined, 3, 50);
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(outcome.tableLane).toBeNull();
+    expect(outcome.gated).toEqual({ kind: 'ok', netCost: 20, auditId: 5, response: answer });
+    expect(outcome.threadId).toBe(7);
+  });
+
+  it("another user's row id is ignored (the owner-scoped read returns null): today's path, no follow-up fields", async () => {
+    store.readTableLaneRequest.mockResolvedValue(null);
+    driveMiss('vrouwen');
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 99);
+    expect(store.readTableLaneRequest).toHaveBeenCalledWith(fakeDb, 99, 'user-1');
+    expect(pipelineOptions().tableFinder).toBeUndefined(); // ONBOARDING_ENABLED off: no finder at all, as today
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(outcome.tableLane).toBeNull();
+  });
+
+  it.each([
+    ['a refusal', { outcomeKind: 'refusal' as const }],
+    ['a clarification (button question)', { outcomeKind: 'clarification' as const }],
+    ['a pending row', { status: 'pending' as const, outcomeKind: null, auditId: null }],
+    ['a running row', { status: 'running' as const, outcomeKind: null, auditId: null }],
+    ['a failed row', { status: 'failed' as const, outcomeKind: 'refusal' as const }],
+    ['a row in another thread', { threadId: 4 }],
+    ['a row with no thread', { threadId: null }],
+  ])('a link to %s is ignored', async (_label, overrides) => {
+    store.readTableLaneRequest.mockResolvedValue({ ...PARENT, ...overrides });
+    driveMiss('vrouwen');
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(pipelineOptions().tableFinder).toBeUndefined();
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+    expect(outcome.tableLane).toBeNull();
+  });
+
+  it('a link while the chat has no thread yet (fresh chat) is ignored', async () => {
+    threads.validateThreadOwnership.mockResolvedValue(null);
+    store.readTableLaneRequest.mockResolvedValue(PARENT);
+    driveMiss('vrouwen');
+    await askQuestion('En voor vrouwen?', RID, null, undefined, null, 50);
+    expect(pipelineOptions().tableFinder).toBeUndefined();
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+  });
+
+  it('a malformed link is ignored without a read', async () => {
+    driveMiss('vrouwen');
+    for (const bad of [0, -1, 1.5, Number.NaN, '50', null, { id: 50 }]) {
+      await askQuestion('En voor vrouwen?', RID, null, undefined, 3, bad);
+    }
+    expect(store.readTableLaneRequest).not.toHaveBeenCalled();
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+  });
+
+  it('a failing link read is ignored (reported), never fails the turn', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    store.readTableLaneRequest.mockRejectedValue(new Error('connection reset'));
+    driveMiss('vrouwen');
+    const outcome = await askQuestion('En voor vrouwen?', RID, null, undefined, 3, 50);
+    expect(pipelineOptions().tableFinder).toBeUndefined();
+    expect(outcome.tableLane).toBeNull();
+    expect(reportError).toHaveBeenCalledWith('askQuestion.tableLaneFollowUp', expect.any(Error), expect.objectContaining({ requestId: RID }));
+    spy.mockRestore();
+  });
+
+  it('flag off: the link is never read and the outcome is exactly today\'s', async () => {
+    vi.stubEnv('TABLE_LANE_ENABLED', '');
+    threads.validateThreadOwnership.mockResolvedValue(null);
+    drive(routingRefusal(), 11);
+    const outcome = await askQuestion('Hoeveel woningen?', RID, null, undefined, null, 50);
+    expect(store.readTableLaneRequest).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ ...TODAY_OUTCOME, tableLane: null });
+  });
+
+  it('a non-thread-aware caller never uses a link', async () => {
+    drive(routingRefusal(), 11);
+    await askQuestion('Hoeveel woningen?', RID, null, undefined, undefined, 50);
+    expect(store.readTableLaneRequest).not.toHaveBeenCalled();
+    expect(store.createTableLaneRequest).not.toHaveBeenCalled();
+  });
+});
+
 describe('pollTableLane', () => {
   it('unauthenticated → gone, nothing read', async () => {
     currentUserId.mockResolvedValue(null);

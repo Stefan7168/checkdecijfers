@@ -425,3 +425,110 @@ describe('a lane result landing above newer turns', () => {
     expect(askQuestion).toHaveBeenCalledTimes(2);
   });
 });
+
+// Breadth step 5 (Task 7): the next question after a landed lane ANSWER sends
+// that row's id (askQuestion's 6th argument), so the server can reuse its
+// table for a follow-up. Only the latest live-round landing counts: a lane
+// question/refusal, or any other turn, clears the link.
+describe('table-lane follow-up link', () => {
+  const CURATED_CONTEXT = { version: 1, marker: 'curated-referent' } as unknown as AskOutcome['context'];
+
+  function plainOutcome(response: ComposedResponse, context: AskOutcome['context'] = null): AskOutcome {
+    return {
+      gated: { kind: 'ok', netCost: 20, auditId: 3, response },
+      context,
+      threadId: 12,
+      onboardingOffer: null,
+      proofRequestUrls: null,
+      tableLane: null,
+    };
+  }
+
+  function laneRefusalGated(): GatedResponse {
+    return {
+      kind: 'ok',
+      netCost: 0,
+      auditId: 10,
+      response: {
+        kind: 'refusal',
+        reason: 'table_lane_no_measure',
+        text: 'Deze tabel heeft daar geen cijfer voor.',
+        tableLane: { version: 1, rowId: 41, tableId: '83765NED', selectionNote: null, question: null },
+      } as unknown as ComposedResponse,
+    };
+  }
+
+  async function landLane(gated: GatedResponse) {
+    askQuestion.mockResolvedValueOnce(routingOutcome(41));
+    pollTableLane.mockResolvedValue({ status: 'done', gated, threadId: 12 });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel dingen in 2019?' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    vi.useRealTimers();
+  }
+
+  async function askNext(text: string, outcome: AskOutcome = plainOutcome(fakeAnswerResponse({ body: 'Volgend antwoord.' }) as unknown as ComposedResponse)) {
+    askQuestion.mockResolvedValueOnce(outcome);
+    const before = askQuestion.mock.calls.length;
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: text } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await waitFor(() => expect(askQuestion.mock.calls.length).toBe(before + 1));
+    return askQuestion.mock.calls[before]!;
+  }
+
+  it('after a lane answer the next question sends its row id (and drops the older curated referent)', async () => {
+    renderChat({ onThreadId: vi.fn() });
+    // An earlier curated answer left a curated referent behind ...
+    askQuestion.mockResolvedValueOnce(plainOutcome(fakeAnswerResponse({ body: 'Curated.' }) as unknown as ComposedResponse, CURATED_CONTEXT));
+    await ask('Hoeveel inwoners heeft Amsterdam?');
+    await screen.findByText('Curated.');
+    // ... then a table-lane answer lands: it is the conversation's referent now.
+    await landLane(laneAnswerGated());
+    expect(screen.getByText('Er zijn 5 dingen.')).toBeTruthy();
+
+    const args = await askNext('En voor vrouwen?');
+    expect(args[0]).toBe('En voor vrouwen?');
+    expect(args[2]).toBeNull(); // the stale curated context is not sent
+    expect(args[4]).toBe(12); // the thread the job attached
+    expect(args[5]).toBe(41);
+    expect(args).toHaveLength(6);
+  });
+
+  it('a lane refusal never becomes the link: the next question sends none', async () => {
+    renderChat({ onThreadId: vi.fn() });
+    await landLane(laneRefusalGated());
+    const args = await askNext('En voor vrouwen?');
+    expect(args).toHaveLength(5);
+  });
+
+  it('a lane button question never becomes the link either', async () => {
+    renderChat({ onThreadId: vi.fn() });
+    await landLane(laneQuestionGated());
+    // R13: typed text that matches nothing goes on as a fresh question.
+    replyToTableLane.mockResolvedValue({ kind: 'no_match' });
+    const args = await askNext('Iets heel anders');
+    expect(args).toHaveLength(5);
+  });
+
+  it('any newer turn clears the link: after a curated answer, no link is sent', async () => {
+    renderChat({ onThreadId: vi.fn() });
+    await landLane(laneAnswerGated());
+    const first = await askNext('En voor vrouwen?');
+    expect(first[5]).toBe(41);
+    await screen.findByText('Volgend antwoord.');
+    const second = await askNext('En in 2020?');
+    expect(second).toHaveLength(5);
+  });
+
+  it('a chat that is not thread-aware never sends a link', async () => {
+    renderChat();
+    await landLane(laneAnswerGated());
+    const args = await askNext('En voor vrouwen?');
+    expect(args).toHaveLength(3);
+  });
+});

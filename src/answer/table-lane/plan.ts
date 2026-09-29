@@ -68,6 +68,7 @@ import {
   TableParseRegionUnavailableError,
   TableParseValidationError,
   tableParse,
+  tableParsePrefilterText,
   validateTableParseOutput,
   type TableParseAudit,
   type TableParseResult,
@@ -187,7 +188,9 @@ function absorbNationalTerms(
 
 export async function planTableLane(input: {
   question: string;
-  /** Accepted now; passed to the parser only from Task 7 (Ruling R2). */
+  /** The previous table-lane question in the same conversation (a follow-up
+   * — Task 7): it reaches the parser's user turn (prompt version 3) and the
+   * member pre-filter. Null ⇒ the version-2 request, byte-identical. */
   previousQuestion: string | null;
   table: TableLaneTable;
   /** Reader answers from earlier button rounds. */
@@ -196,7 +199,7 @@ export async function planTableLane(input: {
   referenceDate: string;
   client: LlmClient;
 }): Promise<TableLanePlan> {
-  const { question, table, choices, referenceDate } = input;
+  const { question, previousQuestion, table, choices, referenceDate } = input;
   const { schema, codeLists } = table;
 
   const refuse = (
@@ -217,7 +220,10 @@ export async function planTableLane(input: {
   // --- 1. The table's closed menu -----------------------------------------------
   let offered: TableParseSchema;
   try {
-    offered = buildTableParseSchema(schema, codeLists, question);
+    // Task 7: a follow-up's pre-filter also reads the previous question, so a
+    // member only that question named stays in the menu the model may carry
+    // over (tableParsePrefilterText returns `question` itself when null).
+    offered = buildTableParseSchema(schema, codeLists, tableParsePrefilterText(question, previousQuestion));
   } catch (e) {
     if (e instanceof TableParseIneligibleTableError) return refuse('table_lane_ineligible', e.message, null, null);
     throw e;
@@ -243,12 +249,11 @@ export async function planTableLane(input: {
   const nationalOnly = regionDims.length === 0 && !hasRegionCodedBreakdownMember;
 
   // --- 2. The table-scoped parse ------------------------------------------------
-  // Ruling R2: `previousQuestion` is not passed to the parser until Task 7.
   const recorder = recordingClient(input.client);
   let result: TableParseResult;
   let parseAudit: TableParseAudit;
   try {
-    const outcome = await tableParse(question, offered, { client: recorder.client });
+    const outcome = await tableParse(question, offered, { client: recorder.client, previousQuestion });
     result = outcome.result;
     parseAudit = outcome.audit;
   } catch (e) {

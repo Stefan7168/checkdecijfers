@@ -13,7 +13,12 @@ import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../src/cbs-adapter/types.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import { buildTableParseSchema } from '../../src/answer/table-parse/input.ts';
-import { TABLE_PARSE_SCHEMA_VERSION } from '../../src/answer/table-parse/parse.ts';
+import {
+  buildTableParseRequest,
+  serializeTableParseInput,
+  tableParsePrefilterText,
+  TABLE_PARSE_SCHEMA_VERSION,
+} from '../../src/answer/table-parse/parse.ts';
 import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../../src/answer/intent/types.ts';
 import type { TableLaneChoice } from '../../src/answer/table-lane/types.ts';
 import {
@@ -497,18 +502,48 @@ describe('planTableLane — fetch', () => {
     expect(p.selection.named).toContainEqual({ dimension: 'RegioS', dimensionTitle: "Regio's", code: 'NL01', memberTitle: 'Nederland' });
   });
 
-  it('does not pass previousQuestion to the parser (Task 7 does)', async () => {
-    const client = new StubClient(output(emissions, 'Uitstoot 2020?', { measureCode: 'D003040', period: { kind: 'year', year: 2020 } }));
-    await planTableLane({
-      question: 'Uitstoot 2020?',
-      previousQuestion: 'EERDERE-VRAAG-MARKER',
-      table: emissions,
-      choices: [],
-      referenceDate: REF,
-      client,
-    });
+  // Task 7 (replaces Ruling R2's "not passed yet" pin): a follow-up's
+  // previous question reaches the parser's user turn — and the member
+  // pre-filter, so a sector only the previous question named stays offered.
+  it('passes previousQuestion to the parser: the version-3 user turn with the previous-question line', async () => {
+    const previous = 'Hoeveel broeikasgas kwam vrij door elektriciteit in 2019?';
+    const question = 'En in 2020?';
+    const offered = buildTableParseSchema(emissions.schema, emissions.codeLists, tableParsePrefilterText(question, previous));
+    const client = new StubClient(
+      JSON.stringify({
+        version: TABLE_PARSE_SCHEMA_VERSION,
+        measureCode: 'D003040',
+        breakdowns: offered.breakdowns.map((b) => ({ dimension: b.name, choice: b.name === 'Klimaatsectoren' ? 'A050124' : 'niet_genoemd' })),
+        period: { kind: 'year', year: 2020 },
+        regions: [],
+        regionScope: null,
+        derivation: 'none',
+        confidence: 0.95,
+        reading: 'test',
+      }),
+    );
+    const p = await planTableLane({ question, previousQuestion: previous, table: emissions, choices: [], referenceDate: REF, client });
     expect(client.calls).toHaveLength(1);
-    expect(JSON.stringify(client.calls[0])).not.toContain('EERDERE-VRAAG-MARKER');
+    expect(client.calls[0]!.question).toBe(serializeTableParseInput(question, offered, previous));
+    expect(client.calls[0]!.question.split('\n')[0]).toBe(`Vorige vraag in dit gesprek: ${JSON.stringify(previous)}`);
+    // The follow-up's own pre-filter would have cut the sector the previous
+    // question named; with the previous question it is offered and chosen.
+    const bare = buildTableParseSchema(emissions.schema, emissions.codeLists, question);
+    expect(bare.breakdowns.find((b) => b.name === 'Klimaatsectoren')!.members.map((m) => m.code)).not.toContain('A050124');
+    expect(offered.breakdowns.find((b) => b.name === 'Klimaatsectoren')!.members.map((m) => m.code)).toContain('A050124');
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.slice.members['Klimaatsectoren']).toEqual(['A050124']);
+    expect(p.slice.periods).toEqual(['2020JJ00']);
+  });
+
+  it('without a previous question the parser request is byte-identical to the plain (version-2 user turn) request', async () => {
+    const question = 'Uitstoot 2020?';
+    const client = new StubClient(output(emissions, question, { measureCode: 'D003040', period: { kind: 'year', year: 2020 } }));
+    await planTableLane({ question, previousQuestion: null, table: emissions, choices: [], referenceDate: REF, client });
+    const offered = buildTableParseSchema(emissions.schema, emissions.codeLists, question);
+    expect(client.calls[0]).toEqual(buildTableParseRequest(question, offered));
+    expect(client.calls[0]!.question).not.toContain('Vorige vraag');
   });
 });
 

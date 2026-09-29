@@ -433,6 +433,14 @@ export function Chat({
   // lands, the reader's choice starts a new job, or the chat is reset. While it
   // is set, the composer's typed reply is routed to it (see handleSubmit).
   const [openTableLane, setOpenTableLane] = useState<{ rowId: number } | null>(null);
+  // Breadth step 5 (Task 7): the follow-up link - the row id of the table-lane
+  // ANSWER that is the conversation's latest live-round turn, sent as
+  // askQuestion's 6th argument so a follow-up ("en voor vrouwen?") can reuse
+  // that answer's table. Any other live-round landing (a lane question or
+  // refusal, a curated turn) clears it; the chat reset clears it too. Only a
+  // flag-on server ever produces a lane answer, so while TABLE_LANE_ENABLED is
+  // off this stays null and askQuestion is called exactly as before.
+  const [tableLaneFollowUp, setTableLaneFollowUp] = useState<number | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
   // prop, updated to the server's attached thread id after a completed turn,
   // and sent as askQuestion's 5th argument (only when thread-aware).
@@ -701,6 +709,18 @@ export function Chat({
     }
 
     const { response } = gated;
+    // Task 7: the follow-up link follows the latest live-round landing - set
+    // only by a table-lane job's ANSWER (it replaces that row's progress
+    // bubble), cleared by everything else. The lane answer is now the
+    // conversation's referent, so the curated context an EARLIER curated turn
+    // left behind is dropped: a follow-up must never be read against a
+    // different, older topic (the lane answer itself carries no curated
+    // context - its outcome's `context` is null).
+    if (liveRound) {
+      const laneAnswer = replaceRowId !== null && response.kind === 'answer';
+      setTableLaneFollowUp(laneAnswer ? replaceRowId : null);
+      if (laneAnswer) setContext(null);
+    }
     // ⟨A6⟩: the pending clarification (if any) this turn's response offers
     // for its next reply — a clarification's own open round, or a
     // rescueOnly carrier riding an answer/refusal's follow-up chips (#197
@@ -920,6 +940,7 @@ export function Chat({
     setThreadId(initialThreadId ?? null);
     setPending(null);
     setOpenTableLane(null);
+    setTableLaneFollowUp(null);
     chipRef.current = null;
     setInput('');
     setError(null);
@@ -1268,7 +1289,9 @@ export function Chat({
             : await replyToClarification(sendPending, sendValue, requestId);
       } else {
         outcome = threadAware
-          ? await askQuestion(sendValue, requestId, context, selection, threadId)
+          ? tableLaneFollowUp !== null
+            ? await askQuestion(sendValue, requestId, context, selection, threadId, tableLaneFollowUp)
+            : await askQuestion(sendValue, requestId, context, selection, threadId)
           : websearch
             ? await askQuestion(sendValue, requestId, context, selection)
             : await askQuestion(sendValue, requestId, context);

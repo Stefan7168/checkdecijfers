@@ -1,0 +1,67 @@
+Volledige vraag van de gebruiker: "Hoeveel werklozen waren er?"
+Tabel: 80590ned — Arbeidsdeelname en werkloosheid per maand 
+
+Maten in deze tabel:
+1. measureCode=3000790_2 | eenheid=x 1000
+   titel: Niet-seizoengecorrigeerd
+   groep: Beroepsbevolking
+2. measureCode=D002308 | eenheid=x 1000
+   titel: Seizoengecorrigeerd
+   groep: Beroepsbevolking
+   omschrijving: Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omda…
+3. measureCode=3000795_2 | eenheid=x 1000
+   titel: Niet-seizoengecorrigeerd
+   groep: Werkzame beroepsbevolking
+4. measureCode=D006409 | eenheid=x 1000
+   titel: Seizoengecorrigeerd
+   groep: Werkzame beroepsbevolking
+   omschrijving: Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omda…
+5. measureCode=3000800_2 | eenheid=x 1000
+   titel: Niet-seizoengecorrigeerd
+   groep: Werkloze beroepsbevolking
+6. measureCode=D001875 | eenheid=x 1000
+   titel: Seizoengecorrigeerd
+   groep: Werkloze beroepsbevolking
+   omschrijving: Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omda…
+7. measureCode=M001906_2 | eenheid=%
+   titel: Niet-seizoengecorrigeerd
+   groep: Werkloosheidspercentage
+8. measureCode=M004210 | eenheid=%
+   titel: Seizoengecorrigeerd
+   groep: Werkloosheidspercentage
+   omschrijving: Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omda…
+9. measureCode=3000810_2 | eenheid=x 1000
+   titel: Niet-seizoengecorrigeerd
+   groep: Niet-beroepsbevolking
+10. measureCode=D006394 | eenheid=x 1000
+   titel: Seizoengecorrigeerd
+   groep: Niet-beroepsbevolking
+   omschrijving: Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omda…
+11. measureCode=M001731_2 | eenheid=%
+   titel: Niet-seizoengecorrigeerd
+   groep: Bruto arbeidsparticipatie
+12. measureCode=M006335 | eenheid=%
+   titel: Seizoengecorrigeerd
+   groep: Bruto arbeidsparticipatie
+   omschrijving: Het aandeel van de seizoengecorrigeerde (werkzame en werkloze) beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeni…
+13. measureCode=M001796_2 | eenheid=%
+   titel: Niet-seizoengecorrigeerd
+   groep: Netto arbeidsparticipatie
+14. measureCode=M005036 | eenheid=%
+   titel: Seizoengecorrigeerd
+   groep: Netto arbeidsparticipatie
+   omschrijving: Het aandeel van de seizoengecorrigeerde werkzame beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een r…
+
+Uitsplitsingen in deze tabel:
+- dimensie=Geslacht | titel: Geslacht
+    T001038 — Totaal
+    3000 — Mannen
+    4000 — Vrouwen
+- dimensie=Leeftijd | titel: Leeftijd
+    52052 — 15 tot 75 jaar
+    53050 — 15 tot 25 jaar
+    53310 — 25 tot 45 jaar
+    53825 — 45 tot 75 jaar
+
+Beschikbare periode-precisies: JJ (jaar), KW (kwartaal), MM (maand)
+Regio's: deze tabel kent geen regio's.

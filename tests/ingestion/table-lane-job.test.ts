@@ -235,7 +235,7 @@ async function seedUser(credits = 100): Promise<string> {
 
 async function queue(
   userId: string,
-  overrides: { question?: string; tableId?: string; threadId?: number | null } = {},
+  overrides: { question?: string; tableId?: string; threadId?: number | null; previousQuestion?: string | null } = {},
 ): Promise<TableLaneRow> {
   const result = await createTableLaneRequest(rawDb, {
     userId,
@@ -245,6 +245,7 @@ async function queue(
     question: overrides.question ?? LANE_QUESTION,
     tableId: overrides.tableId ?? LANE_TABLE,
     finderConfidence: 0.9,
+    ...(overrides.previousQuestion !== undefined ? { previousQuestion: overrides.previousQuestion } : {}),
   });
   if (result.kind !== 'created') throw new Error(`expected created, got ${result.kind}`);
   return result.row;
@@ -376,6 +377,31 @@ describe('runTableLaneJob — answer path', () => {
     const last = (await audits(userId)).at(-1)!;
     expect(lanePart(last).fromCachedSlice).toBe(false);
     expect(await getBalance(rawDb, userId)).toBe(60);
+  });
+
+  // Task 7: a follow-up row's previous question reaches the table parser
+  // (prompt version 3's "Vorige vraag" line); a plain row's parse request has
+  // no such line (the version-2 user turn).
+  it('a follow-up row sends its previous question to the parser and answers', async () => {
+    const userId = await seedUser();
+    const previous = 'Hoeveel inwoners had Amsterdam in 2023?';
+    const queued = await queue(userId, { previousQuestion: previous });
+    const client = new ScriptedParseClient([amsterdam()]);
+
+    await runTableLaneJob(deps(await makeSource(), client));
+
+    expect(client.calls).toHaveLength(1);
+    expect(client.calls[0]!.question.split('\n')[0]).toBe(`Vorige vraag in dit gesprek: ${JSON.stringify(previous)}`);
+    expect(client.calls[0]!.question.split('\n')[1]).toBe(`Volledige vraag van de gebruiker: ${JSON.stringify(LANE_QUESTION)}`);
+    expect((await row(queued.id, userId)).outcomeKind).toBe('answer');
+  });
+
+  it('a plain row sends no previous-question line', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const client = new ScriptedParseClient([amsterdam()]);
+    await runTableLaneJob(deps(await makeSource(), client));
+    expect(client.calls[0]!.question.startsWith('Volledige vraag van de gebruiker: ')).toBe(true);
   });
 
   it('attaches the answer to the row’s own thread when it has one', async () => {

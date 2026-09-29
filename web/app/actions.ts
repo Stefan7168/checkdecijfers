@@ -138,6 +138,8 @@ import {
   readTableLaneRequest,
 } from '../backend/ingestion/table-lane-store.ts';
 import type { TableLaneEnvelope } from '../backend/answer/table-lane/types.ts';
+import type { TableLaneRow } from '../backend/ingestion/table-lane-store.ts';
+import type { OnboardingRouting, TableFinder } from '../backend/answer/intent/policy.ts';
 import { kickTableLaneJob } from '../lib/table-lane-kick.ts';
 import { matchBreakdownReply, tableLaneEnabled } from '../lib/table-lane.ts';
 import type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
@@ -531,6 +533,11 @@ export async function askQuestion(
   // (Dashboard/benchmark/runner) and NO thread work happens at all — today's
   // behavior byte-identical; benchmark rows keep thread_id NULL.
   rawThreadId?: unknown,
+  // Breadth step 5 (Task 7): the row id of the previous table-lane ANSWER in
+  // this conversation (untrusted, client-held — see validateTableLaneFollowUp).
+  // Read only behind TABLE_LANE_ENABLED on a thread-aware turn; absent or
+  // invalid ⇒ today's path exactly.
+  rawTableLaneFollowUp?: unknown,
 ): Promise<AskOutcome> {
   guardLength(question);
   guardRequestId(requestId);
@@ -552,6 +559,12 @@ export async function askQuestion(
   // WP129+130 (#129, ADR 032): validate the untrusted selection payload BEFORE
   // the gate (never throws; forced undefined while the flag is off).
   const selection = validateSelection(rawSelection);
+  // Breadth step 5 (Task 7): the follow-up link, validated BEFORE the gate
+  // (read-only, never throws). Flag off or not thread-aware ⇒ never read.
+  const followUp =
+    threadAware && tableLaneEnabled() && rawTableLaneFollowUp !== undefined
+      ? await validateTableLaneFollowUp(userId, requestId, rawTableLaneFollowUp, validatedThreadId)
+      : null;
   // ⟨W4⟩ Upfront affordability (UX only, race-tolerated): a web-opted turn
   // transiently needs simple + web_addon = 30 in BOTH modes — the untouched
   // gate holds the base 20 before the pipeline, and the web reserve of 10
@@ -643,15 +656,24 @@ export async function askQuestion(
         // applies migrations 012+013 and sets the env vars, production
         // behaves byte-identically pre-WP16 — no finder, no per-question
         // rerank spend, no path that can touch the not-yet-migrated tables.
-        ...(process.env.ONBOARDING_ENABLED === '1'
-          ? {
-              tableFinder: buildOnboardingFinder({
-                db: getDb(),
-                userId,
-                rerankClient: new AnthropicLlmClient(),
-              }),
-            }
-          : {}),
+        //
+        // Breadth step 5 (Task 7): a validated follow-up link REPLACES the
+        // finder with one that answers the previous lane answer's table — the
+        // finder slot is consulted only on a curated miss (the unmatched
+        // exit), so a curated hit always wins and a miss skips the catalog
+        // search. `followUp` is null whenever the flag is off, so the
+        // ONBOARDING_ENABLED branch below is then exactly today's.
+        ...(followUp !== null
+          ? { tableFinder: tableLaneFollowUpFinder(followUp) }
+          : process.env.ONBOARDING_ENABLED === '1'
+            ? {
+                tableFinder: buildOnboardingFinder({
+                  db: getDb(),
+                  userId,
+                  rerankClient: new AnthropicLlmClient(),
+                }),
+              }
+            : {}),
         // ADR 058 (English answers, Task 8): dormant unless
         // ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English — {} ⇒
         // byte-identical to today (englishAnswerOptions's own dormancy).
@@ -669,7 +691,7 @@ export async function askQuestion(
     // show. Flag off (or not thread-aware) ⇒ this block is skipped and the
     // code below runs exactly as before.
     if (threadAware && tableLaneEnabled()) {
-      const routed = await routeToTableLane(gated, { userId, requestId, question, lang, validatedThreadId });
+      const routed = await routeToTableLane(gated, { userId, requestId, question, lang, validatedThreadId, followUp });
       if (routed !== null) {
         if (routed.kind === 'insufficient') {
           // The routing refusal was refunded by the gate; settle a (normally
@@ -854,6 +876,8 @@ async function routeToTableLane(
     question: string;
     lang: 'nl' | 'en';
     validatedThreadId: number | null;
+    /** Task 7: the validated previous lane answer (validateTableLaneFollowUp). */
+    followUp?: TableLaneRow | null;
   },
 ): Promise<{ kind: 'queued'; rowId: number } | { kind: 'insufficient'; balance: number; required: number } | null> {
   if (gated.kind !== 'ok') return null;
@@ -866,6 +890,12 @@ async function routeToTableLane(
   ) {
     return null;
   }
+  // Task 7: a follow-up (the routing came from the link's finder, so the
+  // table IS the previous answer's) continues that row: the job's parser reads
+  // the previous question (prompt version 3). Checked on the table id too, so
+  // only the link's own routing can ever carry it.
+  const followUp =
+    ctx.followUp != null && ctx.followUp.tableId === response.onboarding.tableId ? ctx.followUp : null;
   try {
     const result = await createTableLaneRequest(getDb(), {
       userId: ctx.userId,
@@ -875,6 +905,7 @@ async function routeToTableLane(
       question: ctx.question,
       tableId: response.onboarding.tableId,
       finderConfidence: response.onboarding.confidence,
+      ...(followUp !== null ? { parentId: followUp.id, previousQuestion: followUp.question } : {}),
     });
     if (result.kind === 'insufficient') return result;
     return { kind: 'queued', rowId: result.row.id };
@@ -883,6 +914,49 @@ async function routeToTableLane(
     await reportError('askQuestion.tableLane', error, { requestId: ctx.requestId, userId: ctx.userId });
     return null;
   }
+}
+
+// Breadth step 5 (Task 7): the follow-up link askQuestion received — the row
+// id of the previous table-lane ANSWER in this conversation, untrusted. Usable
+// only when it is the reader's own row (owner-scoped read), finished ('done')
+// with an ANSWER (a lane question, refusal or failure never becomes a
+// follow-up), and in the very thread this turn continues. Anything else — or a
+// failing read (reported, #65) — returns null: the link is ignored and the turn
+// takes today's path. Reads only our own database (principle b).
+async function validateTableLaneFollowUp(
+  userId: string,
+  requestId: string,
+  raw: unknown,
+  validatedThreadId: number | null,
+): Promise<TableLaneRow | null> {
+  if (!isTableLaneRowId(raw) || validatedThreadId === null) return null;
+  try {
+    const row = await readTableLaneRequest(getDb(), raw, userId);
+    if (row === null || row.status !== 'done' || row.outcomeKind !== 'answer' || row.threadId !== validatedThreadId) {
+      return null;
+    }
+    return row;
+  } catch (error) {
+    console.error('table-lane follow-up read failed (link ignored):', error);
+    await reportError('askQuestion.tableLaneFollowUp', error, { requestId, userId, extra: { rowId: raw } });
+    return null;
+  }
+}
+
+// Breadth step 5 (Task 7): the finder a validated follow-up link stands in
+// for. The pipeline consults a finder ONLY on its unmatched exit (a curated
+// miss — src/answer/intent/policy.ts resolveUnmatched), so this can never
+// override a curated answer; it answers the previous lane answer's table
+// without a catalog search (no rerank spend), as a fresh (never
+// already-pending) routing — routeToTableLane then queues the follow-up row.
+function tableLaneFollowUpFinder(parent: TableLaneRow): TableFinder {
+  return async (term: string): Promise<OnboardingRouting> => ({
+    tableId: parent.tableId,
+    topicTerm: term,
+    confidence: parent.finderConfidence,
+    alreadyPending: false,
+    candidateIds: [parent.tableId],
+  });
 }
 
 // ⟨W3⟩/⟨W1⟩ (WP129+130, ADR 032): the web add-on settlement. Runs AFTER the
