@@ -331,3 +331,53 @@ describe('embed mode shows the published caption (session 136)', () => {
     expect(screen.queryByRole('button', { name: 'Bijschrift bewerken' })).toBeNull();
   });
 });
+
+// WP-LOOK part (b) round 2 (session 144): the Grafiek tab carries a Titel
+// field and a Bijschrift field of its own (next to form and period), and the
+// forms this series cannot take are folded behind one line.
+describe('the Grafiek tab: title + caption fields, folded forms (round 2)', () => {
+  it('the Titel field sets the reader title on blur (same rule as the inline editor: CBS title back = no override)', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
+    const field = screen.getByRole('textbox', { name: 'Titel' });
+    fireEvent.change(field, { target: { value: 'Mijn eigen kop' } });
+    fireEvent.blur(field);
+    // The card behind the modal is inert while it is open; the popup's own
+    // preview shows the same title.
+    const preview = () => document.querySelector('[data-slot="chart-edit-preview"]') as HTMLElement;
+    expect(preview()).toHaveTextContent('Mijn eigen kop');
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(preview()).not.toHaveTextContent('Mijn eigen kop');
+    // Typing the CBS title back is "no override", not a history step.
+    fireEvent.change(screen.getByRole('textbox', { name: 'Titel' }), { target: { value: twoSeriesLineSpec().title } });
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Titel' }));
+    expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+  });
+
+  it('the Bijschrift field sets and clears the caption, as undoable steps', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
+    const field = screen.getByRole('textbox', { name: 'Bijschrift' });
+    fireEvent.change(field, { target: { value: 'Eigen bewerking' } });
+    fireEvent.blur(field);
+    expect(screen.getByTestId('chart-caption')).toHaveTextContent('Eigen bewerking');
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.queryByTestId('chart-caption')).toBeNull();
+  });
+
+  it('folds the forms this series cannot take behind one line, and unfolds them on request', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
+    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
+    const disabledBefore = tablist.querySelectorAll('button:disabled').length;
+    expect(disabledBefore).toBeGreaterThan(0);
+    // Folded: the container carries the hide rule; every disabled tab stays in the DOM.
+    expect(tablist.className).toContain('[&>button:disabled]:hidden');
+    const toggle = screen.getByRole('button', { name: `Nog ${disabledBefore} vormen, niet mogelijk voor deze reeks` });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(tablist.className).not.toContain('[&>button:disabled]:hidden');
+    expect(screen.getByRole('button', { name: 'Verberg de vormen die niet kunnen' })).toHaveAttribute('aria-expanded', 'true');
+    expect(tablist.querySelectorAll('button:disabled').length).toBe(disabledBefore);
+  });
+});

@@ -634,6 +634,9 @@ test.describe.serial('chart co-pilot phase 5 — dumbbell, slope, heatmap', () =
       ['Helling', 'Beschikbaar zodra je precies twee momenten vergelijkt.'],
       ['Warmtekaart', 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.'],
     ];
+    // Round 2 (session 144): the forms this series cannot take are folded
+    // behind one line until the reader opens it — same buttons, same reasons.
+    await page.getByRole('button', { name: /^Nog \d+ vormen/ }).click();
     for (const [name, reason] of reasons) {
       const tab = page.getByRole('tab', { name });
       await expect(tab).toBeDisabled();
@@ -849,6 +852,7 @@ test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked ove
       ['Gestapeld', 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.'],
       ['Gestapeld (%)', 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zodat elk aandeel tegen een echt totaal wordt gezet.'],
     ];
+    await page.getByRole('button', { name: /^Nog \d+ vormen/ }).click();
     for (const [name, reason] of reasons) {
       const tab = page.getByRole('tab', { name, exact: true });
       await expect(tab).toBeDisabled();

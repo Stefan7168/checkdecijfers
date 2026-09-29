@@ -704,6 +704,9 @@ export function ChartView({
   // editor without the unmount-time blur committing the draft behind it (the
   // caption editor commits on Save only, so it needs no such guard).
   const [titleEditing, setTitleEditing] = useState(false);
+  // Round 2 (session 144): the Grafiek tab hides the chart forms this series
+  // cannot take until the reader asks for them.
+  const [showAllForms, setShowAllForms] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const titleCancelledRef = useRef(false);
 
@@ -1229,6 +1232,17 @@ export function ChartView({
       (!stackPending && stackVerifiedPeriods.size === 0 && firstStackRefusal !== undefined ? wholeRefusalKey(firstStackRefusal.reason) : null));
   const canUseStacked = stackedStructural && stackedRefusal === null;
   const canUseStacked100 = stacked100Structural && stackedRefusal === null;
+  const unavailableFormCount = [
+    canUseLine,
+    canUseArea,
+    canUseHbar,
+    canUseDumbbell,
+    canUseSlope,
+    canUseHeatmap,
+    canUsePie,
+    canUseStacked,
+    canUseStacked100,
+  ].filter((ok) => !ok).length;
   // `fallbackForm` applies the STRUCTURAL policy (a roster form on a spec
   // that lost its provenance → table); the verdict-driven fallback is
   // layered on top here, in the one place `activeForm` is decided, so a
@@ -2300,7 +2314,9 @@ export function ChartView({
     setTitleDraft(shownTitle);
     setTitleEditing(true);
   }
-  function commitTitle() {
+  /** The one title-commit rule, shared by the card's inline editor and the
+   * popup's Titel field (round 2, session 144). */
+  function commitTitleText(raw: string, origin: 'canvas' | 'panel') {
     // Final-review finding M4: the story lock covers the COMMIT too, not only
     // the buttons that open the editor — exactly like ChartEditableText's
     // own commit (the caption's, lifted out in session 113).
@@ -2308,14 +2324,17 @@ export function ChartView({
     // a title through the lock (Enter, or the blur the story's own click
     // causes in a real browser).
     if (storyOpen) return;
-    const trimmed = titleDraft.trim();
+    const trimmed = raw.trim();
     // Only the reader's OWN words are ever stored: an empty box, or the spec
     // title typed back unchanged, means "no override" (null), never a copy of
     // CBS's measure name masquerading as a reader edit.
     const next = trimmed === '' || trimmed === displaySpec.title ? null : trimmed;
     // No history entry for a no-op — pressing Enter on an unchanged title
     // must not put a do-nothing step in the undo stack.
-    if (next !== state.title) dispatchCommand({ kind: 'setTitle', title: next }, 'canvas');
+    if (next !== state.title) dispatchCommand({ kind: 'setTitle', title: next }, origin);
+  }
+  function commitTitle() {
+    commitTitleText(titleDraft, 'canvas');
     setTitleEditing(false);
   }
   function cancelTitleEdit() {
@@ -3911,7 +3930,12 @@ export function ChartView({
              * period-mark and note strips moved to the Markeringen tab. */
             <div className="rounded-xl border border-border bg-card p-4 sm:p-5" data-slot="chart-edit-preview" aria-label={t(chartLang, 'chart.edit.previewLabel')}>
               <p className="text-base font-semibold leading-snug text-foreground">{shownTitle}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              {/* Round 2 (session 144): on a phone the preview is compact —
+                * subtitle, caption strip and source line are hidden below `lg`
+                * so the tabs and controls sit one thumb away (the caption is
+                * edited on the Grafiek tab there); the card behind still shows
+                * all of it. */}
+              <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">
                 {displaySpec.unit}
                 {dimEntries.length > 0 ? ` · ${dimEntries.map(([, v]) => stripDimensionCode(v)).join(' · ')}` : ''}
               </p>
@@ -3931,8 +3955,8 @@ export function ChartView({
                 {canvasNode}
                 {legendNode}
               </div>
-              <div className="mt-3">{captionNode}</div>
-              <p className="mt-3 text-xs text-muted-foreground">{displayAttributionLine}</p>
+              <div className="mt-3 hidden lg:block">{captionNode}</div>
+              <p className="mt-3 hidden text-xs text-muted-foreground lg:block">{displayAttributionLine}</p>
             </div>
           }
           footer={
@@ -4028,11 +4052,17 @@ export function ChartView({
               {!embedMode && !inStage ? (
                 <div className="flex flex-col gap-4" data-slot="chart-controls">
                   <ChartEditField label={t(chartLang, 'chart.edit.formLabel')}>
+                  {/* Round 2 (session 144): the forms this series cannot take
+                    * stay in the DOM (same buttons, same reasons, same keyboard
+                    * order) but are hidden until the reader opens the line
+                    * below — seven greyed chips out of eleven read as clutter
+                    * on the first look. A disabled chip is never the active
+                    * form, so nothing selected can vanish. */}
                   <div
                     role="tablist"
                     aria-label={t(chartLang, 'chart.weergaveLabel')}
                     onKeyDown={onFormTabKeyDown}
-                    className="flex flex-wrap items-center gap-1.5"
+                    className={'flex flex-wrap items-center gap-1.5' + (showAllForms ? '' : ' [&>button:disabled]:hidden')}
                   >
                     <button
                       ref={lineTabRef}
@@ -4214,6 +4244,67 @@ export function ChartView({
                       {t(chartLang, 'chart.form.stacked100')}
                     </button>
                   </div>
+                  {unavailableFormCount > 0 ? (
+                    <button
+                      type="button"
+                      aria-expanded={showAllForms}
+                      onClick={() => setShowAllForms((v) => !v)}
+                      className="w-fit text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      data-slot="chart-edit-more-forms"
+                    >
+                      {showAllForms
+                        ? t(chartLang, 'chart.edit.fewerForms')
+                        : t(chartLang, 'chart.edit.moreForms', { n: String(unavailableFormCount) })}
+                    </button>
+                  ) : null}
+                  </ChartEditField>
+                  {/* Round 2 (session 144): the reader's own words, next to the
+                    * form and the period, so the Grafiek tab holds everything
+                    * about WHAT the chart says. Same commit rules as the card's
+                    * inline title editor and the caption strip (an empty box or
+                    * the CBS title typed back = no override; story lock). */}
+                  <ChartEditField label={t(chartLang, 'chart.edit.titleLabel')}>
+                    <input
+                      key={`${chartEpoch}-${state.title ?? ''}`}
+                      type="text"
+                      defaultValue={shownTitle}
+                      disabled={storyOpen}
+                      title={storyLockedTitle}
+                      aria-describedby={storyOpen ? storyLockId : undefined}
+                      placeholder={t(chartLang, 'chart.title.placeholder')}
+                      aria-label={t(chartLang, 'chart.edit.titleLabel')}
+                      maxLength={CHART_TITLE_MAX_LENGTH}
+                      data-command-kind="setTitle"
+                      onBlur={(e) => commitTitleText(e.currentTarget.value, 'panel')}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          commitTitleText(e.currentTarget.value, 'panel');
+                        }
+                      }}
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </ChartEditField>
+                  <ChartEditField label={t(chartLang, 'chart.edit.captionLabel')}>
+                    <textarea
+                      key={`${chartEpoch}-${state.caption ?? ''}`}
+                      defaultValue={state.caption ?? ''}
+                      disabled={storyOpen}
+                      title={storyLockedTitle}
+                      aria-describedby={storyOpen ? storyLockId : undefined}
+                      placeholder={t(chartLang, 'chart.edit.captionPlaceholder')}
+                      aria-label={t(chartLang, 'chart.edit.captionLabel')}
+                      maxLength={CHART_CAPTION_MAX_LENGTH}
+                      rows={2}
+                      data-command-kind="setCaption"
+                      onBlur={(e) => {
+                        if (storyOpen) return;
+                        const trimmed = e.currentTarget.value.trim();
+                        const next = trimmed === '' ? null : trimmed;
+                        if (next !== (state.caption ?? null)) dispatchCommand({ kind: 'setCaption', caption: next }, 'panel');
+                      }}
+                      className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    />
                   </ChartEditField>
                   {/* Reachable via the disabled Lijn tab's aria-describedby above — a
                     * plain `title` (kept, for pointer users) is invisible to a screen

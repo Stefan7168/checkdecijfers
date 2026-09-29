@@ -113,30 +113,41 @@ export function ChartEditModal({
         aria-modal="true"
         closeLabel={closeLabel}
         onKeyDown={onKeyDown}
-        className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-5 sm:max-w-2xl sm:p-6 lg:max-h-[88vh] lg:max-w-6xl lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-x-6 lg:overflow-hidden"
+        // WP-LOOK part (b) round 2 (session 144): a FIXED height at every
+        // width, so switching tabs never changes the popup's size (round 1
+        // sized it to its content and the whole dialog jumped), and one flex
+        // column — header, a body that scrolls, a footer pinned at the
+        // bottom of the SCREEN. On a phone the body is a single scroll area
+        // (preview, then tabs and controls) and the Klaar button is always
+        // one thumb away; from `lg` the body is two columns that each scroll
+        // on their own, and the footer spans both.
+        className="flex h-[calc(100dvh-1rem)] w-full max-w-[calc(100%-1rem)] flex-col gap-3 overflow-hidden p-4 sm:h-[calc(100dvh-2rem)] sm:max-w-2xl sm:gap-4 sm:p-6 lg:h-[88vh] lg:max-w-6xl"
       >
         {/* Header row: title left, the caller's actions right. `pr-10` keeps
           * the actions clear of the dialog's own × (absolute, top-2 right-2). */}
-        <div className="flex min-w-0 items-center justify-between gap-3 pr-10 lg:col-span-2" data-slot="chart-edit-header">
+        <div className="flex min-w-0 shrink-0 items-center justify-between gap-3 pr-10" data-slot="chart-edit-header">
           <DialogTitle className="min-w-0 truncate">{title}</DialogTitle>
           {headerActions ? <div className="flex shrink-0 items-center gap-1">{headerActions}</div> : null}
         </div>
-        {/* WP-LOOK part (a) (session 142): the chart column scrolls on its own
-          * at desktop width too — with the notes / goal-line / period-range
-          * strips under the chart, a 720–800 px laptop window otherwise put
-          * the note form and "Periode markeren" below an unreachable fold
-          * (found by the Playwright smoke). */}
-        <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto" data-slot="chart-edit-chart-column">
-          {chartSlot}
+        <div
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:gap-x-6 lg:overflow-hidden"
+          data-slot="chart-edit-body"
+        >
+          {/* WP-LOOK part (a) (session 142): the chart column scrolls on its own
+            * at desktop width — with the strips under the chart, a 720–800 px
+            * laptop window otherwise put controls below an unreachable fold. */}
+          <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto" data-slot="chart-edit-chart-column">
+            {chartSlot}
+          </div>
+          <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:pr-1" data-slot="chart-edit-controls-column">
+            {children}
+          </div>
         </div>
-        <div className="flex min-w-0 flex-col gap-3 lg:min-h-0" data-slot="chart-edit-controls-column">
-          <div className="min-w-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">{children}</div>
-          {footer ? (
-            <div className="shrink-0 border-t border-border pt-3" data-slot="chart-edit-footer">
-              {footer}
-            </div>
-          ) : null}
-        </div>
+        {footer ? (
+          <div className="shrink-0 border-t border-border pt-3" data-slot="chart-edit-footer">
+            {footer}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
