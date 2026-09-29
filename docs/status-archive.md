@@ -1,5 +1,42 @@
 # STATUS archive — the session log
 
+**Session 143 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
+
+1. **Part (a) round 2 (`df33e9c4`, CI 36536732798 green incl. deploy):** the owner saw the round-1 screenshots and ruled
+   "fix those two first, then it's done" on the two defects the session named — the five-button row wrapped (chat list
+   open: two lines; phone: three) and the subtitle showed CBS's raw code ("% 000000 Alle bestedingen"). Fixed with a CSS
+   container on the row + measured icon-collapse tiers (`web/lib/chart-action-row.ts`, no JS) and a display-only
+   `stripDimensionCode` (`web/lib/dim-label.ts`). **Part (a) signed off on that ruling (#346).**
+2. **Owner rethink prompt (#351):** the owner showed a colleague's content pipeline (every graphic drawn by code from the
+   article's numbers; Satori/@vercel/og, QuickChart, Mermaid, hand-rolled SVG; an image model for text-free heroes) and
+   asked to rethink. Session's reading, given in plain English: we already have "cannot disagree with the text"; what we
+   lack is a server-made chart IMAGE (share links unfurled with no picture; `src/chart/render.ts` used by nothing).
+   **Owner decision: popup first, then the share preview image (a2), then the homepage.** The URL-based chart service is
+   out (numbers through a third party; principle (b)); the image model is for the homepage/white-glove page only.
+3. **Part (b) round 1 (`abd02013`, CI 36545207240 green incl. deploy), on the owner's GO of a plain-English design:**
+   header with undo · redo · history, a preview of the card on the left, three tabs on the right (Grafiek ·
+   Markeringen · Opmaak; only the active one mounted; Opmaak disabled in table form), a pinned footer with the co-pilot
+   box and Klaar; Download/Embed left the popup for the card's row; the Style panel's sub-tab "Grafiek" renamed
+   "Lijnen en assen"; a point click or a chat-added marking switches to Markeringen; **#348 fixed** (the plot is one tab
+   stop, arrows walk the points). 64 tests relocated behind the right tab (`openEdit(tab)` helper), the command-kind
+   contract scans all three tabs, e2e 23/23. **Owner ruling on the screenshots: "good enough for now, come back to it
+   later"** — not signed off, another round after (a2)/(c).
+4. **Disk (owner request, same session):** `node_modules/.cache/cdc-fixture-db` had grown to 166 snapshots / 24.5 GB in
+   four days (the cache key hashes all of `src/`, nothing pruned). Reported first, deleted on the owner's yes together
+   with `web/.next` (26 GB freed, 25 → 51 GB free; both node_modules kept); `ensureSnapshot()` now prunes to the 3
+   newest (`pruneSnapshots`, unit-tested); RUNBOOK section added.
+5. **Part (a2) round 1 (`56c62d96`, CI 36548015000 — see the next session's verification):** every Share link's embed
+   page has an Open Graph image (`/embed/<token>/opengraph-image`, 1200×630): saved headline, headline figure verbatim,
+   brand, and the ADR 014 server SVG embedded whole (base64 — a percent-encoded URI threw on the em dash in every CBS
+   attribution line, found in the mandatory visual run), rasterised by Next's built-in image tool; `generateMetadata`
+   for the unfurl text (noindex kept). Mechanism measured in a spike before design. Neutral brand card for dead links.
+   The owner saw the real PNG; verdict pending.
+6. **Also:** open-questions #349 (owner's parked white-glove-service idea, competitor codenamed "Competitor L"), #350
+   (one timing flake in `chart-edits-persistence.test.tsx`, passes solo), #351 (the rethink decision); lessons-learned
+   session-143 entry (Playwright over the pane for owner screenshots, measure tiers, mid-turn ideas → open-questions,
+   cache eviction, iframe artifacts unreadable, tabs relocate tests, spike the mechanism); 04-architecture rows;
+   `chart-templates.ts` named the one token source. ESLint crashes in this checkout (nested dependency), pre-existing.
+
 **Session 142 (2026-09-29, local UTC+7, owner present for the four mockup questions, then autonomous — WP-LOOK part (a),
 round 1; spent nothing on AI).**
 

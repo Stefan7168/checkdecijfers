@@ -17,8 +17,8 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 142 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-143-kickoff.md](session-briefs/2026-09-29-session-143-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 143 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](session-briefs/2026-09-29-session-144-kickoff.md).**
 
 - **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
   ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
