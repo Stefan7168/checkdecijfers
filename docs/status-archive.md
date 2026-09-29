@@ -1,5 +1,39 @@
 # STATUS archive — the session log
 
+**Session 145 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
+
+1. **State verified at start** (clean tree at `093d6f29`, CI 36564105092 green, no open PRs, prod 200, no A records for
+   graphmaker.studio). Owner picked **breadth** from the kickoff's one dialog.
+2. **Migrations 037 + 038 APPLIED on the live database** (owner present; `npm run db:migrate` reported exactly
+   `037_slice_cache.sql, 038_table_lane_requests.sql`; pre-check read-only: live at 036, targets absent, 0 batch rows
+   violating the widened check; the 037 constraint body copied from 022, the latest redefinition — verified). Post-check
+   read-only: `slice_fetches` + `table_lane_requests` exist, RLS on both, 8 indexes, `failure_stage` check includes
+   `ingest_mode`, `cbs_tables.ingest_mode = 'full'` on all 21 rows; prod 200 after. Docs `8552be39` (RUNBOOK "Table lane"
+   step 1 ✅, STATUS, build plan, ADR 062, architecture row, #335). **Dry run of the table-parser recording works:** 39
+   cases, 114,136 estimated input tokens (`npm run tableparse:eval -- --dry-run`).
+3. **Brand colours / Pro plan** (owner's second pick) turned out to be owner account steps only (Brandfetch key; Stripe
+   Price + webhook events) — both are built and flagged off; owner chose "neither today".
+4. **SEO landing page built DARK (#353, `04fa8350`, CI 36569565684 green + deploy):** brainstormed as a bounded change
+   (owner: Netherlands page now, Eurostat later — the registry holds ONE Eurostat dataset and no curated Eurostat story).
+   `/netherlands-cbs-data`: the /galerij shell + the 12 curated stories + the coverage list rendered open
+   (`CoverageDisclosureView defaultOpen`), nl + en (`seoNl.*`). `web/lib/seo-pages.ts` = the one switch
+   (`SEO_PAGES_INDEXABLE = false`) + the path list; drives `robots.ts` (allow-list + sitemap when on), the page's
+   index/canonical metadata and the new `app/sitemap.ts`. `proxy.ts`: the page, `/robots.txt`, `/sitemap.xml` public.
+   **Code review LOW found one real gap: `/robots.txt` had 307'd to `/login` on prod since it existed** — fixed in the same
+   change. Verification block: typechecks 0 (root + web), backend 264 files / 4630 tests, web 186 files / 3456 tests,
+   benchmark gate PASS (6/6 refusals, 0 fabricated), `next build`, e2e 40 passed. Live after deploy: page 200 with
+   `noindex, nofollow` and no canonical, `/robots.txt` 200 (blanket disallow), `/sitemap.xml` 200 (empty) — as designed.
+   Docs: 03-mvp-scope scope note 2, RUNBOOK "SEO landing pages" (go-live after the domain), #353, build plan,
+   architecture row.
+5. **The 1 October recording-run plan written (`991d48c0`):**
+   [session-briefs/2026-10-01-recording-run-plan.md](session-briefs/2026-10-01-recording-run-plan.md) — order A table
+   parser → B regional Part 2 (branch `regional-stats-part2`, 66 intent cases) → C Eurostat step 0; commands with verified
+   flags; measured cost basis (~6.6K tokens per intent call, ~$1.02/MTok Haiku from the session-129/130 measurements;
+   ~$2.85 floor, ~$4.35 budget); pass/fail gates; three owner decisions (prompt rename limited to intent + table-parse).
+   Pointers from RUNBOOK "Table-parser recording run" and #338.
+6. **CI:** every push of session 145 green (36569565684 on the code push; the two doc pushes skip CI by design).
+7. **Spend:** zero; the $50 roof resets 2026-10-01.
+
 **Session 144 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
 
 1. **Opened by asking for the pending decision** (session 143 closed on "this project is going nowhere" + the launch-to-ten

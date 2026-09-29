@@ -17,39 +17,31 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 144, updated session 145 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-145-kickoff.md](session-briefs/2026-09-29-session-145-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-146-kickoff.md](session-briefs/2026-09-29-session-146-kickoff.md).**
 
-- **⚑ THE ADR 063 GATE IS PASSED (session 144, 2026-09-29):** the owner said "I would share this" about (a) the answer
-  card (s143), (b) the Edit popup (s144 round 2, `39ed880a`), (c) the homepage (s144, `8afcd17a`), and "Fine" about the
-  share picture (a2 round 2, `5e5608c1`). WP-LOOK is COMPLETE — nothing of The Look is open.
-- **⚑ LAUNCH DEFERRED BY THE OWNER, twice in one day ([#352](open-questions.md)):** at the session start ("Keep building
-  The Look") and again after the gate passed ("Keep building, no launch yet"). The launch-to-ten recommendation stands
-  and returns at ADR 063's revisit trigger (2026-10-27) — **do not raise it a third time before then unless the owner
-  brings it up.** Session 143's "this project is going nowhere" statement is recorded there too.
-- **⚑ REBRAND APPLIED (ADR [064](decisions/064-rebrand-graphmaker-studio.md), `66197f14`+`35b69c73`):** every
-  reader-visible name is **graphmaker.studio**; the repo, the address `checkdecijfers.vercel.app`, mail domains, the
-  embed protocol strings and the model prompts keep the old name (each with its own step in the ADR). **Domain wiring
-  started:** both hostnames are ADDED to the Vercel project; the two Cloudflare A records are the owner's step (chose
-  "later") — RUNBOOK "Wiring graphmaker.studio". The `NEXT_PUBLIC_APP_URL` switch waits for the records. Owner idea
-  [#353](open-questions.md): SEO landing pages per data source under the new domain, after the domain is live.
-- **⚑ BREADTH RESUMED (session 145, 2026-09-29, owner pick): migrations 037 + 038 APPLIED on the live database**
-  (owner present; `npm run db:migrate` applied exactly those two; `slice_fetches`, `table_lane_requests`, the two
-  `cbs_tables` columns, 8 indexes, RLS and the widened `failure_stage` check verified read-only; all 21 tables read
-  `ingest_mode = 'full'`; prod 200 after). Still dark for readers: `TABLE_LANE_ENABLED` unset, parser never recorded.
-- **NEXT (owner-chosen order):** (1) **breadth** ([#335](open-questions.md)) — on/after 2026-10-01 the recording +
-  calibration run (owner-supervised AI spend, ~114k input tokens cheap tier, [#338](open-questions.md), RUNBOOK
-  "Table-parser recording run"), then step 6's table-lane benchmark, then the `TABLE_LANE_ENABLED` flip; (2) wire the
-  domain when the owner sets DNS (no A records as of 2026-09-29 12:00 UTC; a session verifies and switches the address,
-  owner present); (3) regional statistics Part 2 (branch `regional-stats-part2`), Eurostat E2a steps 0/5/6
-  ([#313](open-questions.md)), Pro plan, brand colours — still paused by the owner's call, no longer by the gate.
-- **Direction (ADR 063, unchanged):** ONE product — a beautiful, sourced chart of official Dutch and European
-  statistics. Review that fed it: [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
-- **#347 (gallery cold start) FIXED + measured:** the curated set persists in Next's Data Cache across instances; the
-  5 s deadline fired once per deploy (the smoke's own request), not once per fresh instance.
-- **CI:** every push of session 144 ended green except two red-then-fixed runs (36551609780 → 36554179148 on the landing
-  e2e; 36563648186 → 36564105092 on a typecheck pin) — see the archive entry.
-- **Spend:** zero AI spend in session 144; the $50 monthly roof resets 2026-10-01.
+- **⚑ BREADTH RESUMED (session 145, owner pick): migrations 037 + 038 APPLIED on the live database** (owner present;
+  exactly those two; `slice_fetches`, `table_lane_requests`, the `cbs_tables` columns, 8 indexes, RLS, the widened
+  `failure_stage` check verified read-only; all 21 tables `ingest_mode = 'full'`). Still dark for readers:
+  `TABLE_LANE_ENABLED` unset, the parser never recorded. Dry run measured: 39 cases, 114,136 input tokens.
+- **⚑ THE 1 OCTOBER RUN IS PLANNED:** [session-briefs/2026-10-01-recording-run-plan.md](session-briefs/2026-10-01-recording-run-plan.md)
+  — A table parser → B regional Part 2 (branch `regional-stats-part2`) → C Eurostat step 0, ~$4.35 budget of the $50
+  roof (resets 2026-10-01 00:00 UTC), pass/fail gates, three owner decisions (incl. renaming only the intent +
+  table-parse prompts). **On/after 2026-10-01, owner present: follow that plan; that is the single next priority.**
+- **⚑ SEO LANDING PAGE BUILT DARK ([#353](open-questions.md), `04fa8350`, CI 36569565684 green):** `/netherlands-cbs-data`
+  live at the vercel address with `noindex` — the 12 curated stories + the open coverage list, nl + en, zero AI. One
+  switch (`SEO_PAGES_INDEXABLE` in `web/lib/seo-pages.ts`, `false`) turns robots allow-list + index/canonical + sitemap on
+  together — flip only after the domain is live (RUNBOOK "SEO landing pages"). Eurostat page waits for curated Eurostat
+  series (one dataset loaded, none curated). Found + fixed: `/robots.txt` had 307'd to `/login` on prod since it existed.
+- **Domain (ADR [064](decisions/064-rebrand-graphmaker-studio.md)):** hostnames ADDED to Vercel; the two Cloudflare A
+  records are the owner's step (none as of 2026-09-29 12:00 UTC) — RUNBOOK "Wiring graphmaker.studio"; then the
+  `NEXT_PUBLIC_APP_URL` switch (owner present), then the SEO switch.
+- **Launch deferred by the owner twice ([#352](open-questions.md)) — do not raise before 2026-10-27 unless the owner
+  does.** The Look is complete (ADR 063 gate passed session 144).
+- **Owner account steps, parked by the owner ("neither today", session 145):** brand colours need a Brandfetch key;
+  the Pro plan needs the Stripe Price + webhook events (RUNBOOK sections). Not code.
+- **Direction (ADR 063, unchanged):** ONE product — a beautiful, sourced chart of official Dutch and European statistics.
+- **CI:** every push of session 145 green (36569565684; doc pushes skip CI). **Spend:** zero in session 145.
 - **Phase 0 gate** (below) is passed and unchanged; principles (a)/(b)/(c) untouched.
 
 ---

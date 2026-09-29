@@ -6,6 +6,34 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 145 — migrations 037/038 live, the first SEO page (dark), the 1 October recording plan
+
+1. **A code-review pass caught a pre-existing production gap that every test had passed over: `/robots.txt` had 307'd to
+   `/login` since the file existed.** The proxy's public-path allowlist never listed it, and nothing noticed because the
+   whole site is noindex anyway (a crawler that cannot read robots.txt assumes "allowed", then every page says noindex
+   itself). It only became a bug the moment a page was meant to be indexable — the SEO switch would have pointed Googlebot
+   at a login redirect. Lesson: **when a change makes a crawler-facing file matter for the first time, `curl` that file on
+   prod as part of the design read, before writing code** — the review found it, but a 3-second curl at brainstorm time
+   would have put it in the design instead of a fix round. Same rule for any file "the platform serves" (sitemap, llms.txt,
+   manifest): the proxy treats them as pages.
+2. **"Real charts from the curated set" for a second data source was an assumption the database refuted in one query.**
+   The owner's idea (#353) named two pages; the live registry holds one Eurostat dataset (a banking capital ratio) and
+   zero curated Eurostat stories. Checking `cbs_tables` by `source` before the design turned a two-page build into a
+   one-page build plus an honest "later", instead of a thin page that principle (c) would have had to refuse anyway.
+   Reinforces the standing memory rule "verify design claims against real data" — one read-only query per scope claim.
+3. **A test written from a guessed UI string fails on the label, not the feature.** The page test looked for a "Start"
+   link; the real CTA key says "Start asking" / "Begin met vragen". Grep the message key before asserting on copy —
+   the i18n file is the source, not the memory of what a button "probably" says.
+4. **A plan that cites script flags must verify each flag exists.** The first draft of the 1 October plan wrote
+   `tableparse:eval -- --repeat=1` and "read the script's filter flag" — the table-parse script has no repeat flag and
+   the intent script's is `--only=<id-prefix>`; one grep fixed both before the plan was pushed. A plan is followed
+   literally on the day; a wrong flag there costs a live-spend retry.
+5. **The verification block's e2e leg leaves the dev harness running on port 3102.** `preview_start` then refuses
+   ("another chat's dev server"); navigating the browser pane straight to `http://localhost:3102/<path>` works — it is
+   this checkout's harness and serves the current code. Owner-facing screenshots: Playwright against it, as the kickoff
+   says; the browser pane's own screenshot kept a restored mid-page scroll position and was not usable for a "top of
+   page" shot.
+
 ## Session 144 — the gate passed (homepage, popup round 2, share picture round 2), then the rebrand
 
 1. **Truncating a typecheck's output cost a red CI run.** `npx tsc --noEmit | head -3` showed the first three errors of the
