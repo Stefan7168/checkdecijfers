@@ -6,6 +6,18 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 149 — the freshness alert (a short build session)
+
+1. **Extract the shared scan before wiring a second caller.** The report script owned the "CBS date vs our last sync" loop inline; the
+   cron needed the same rows. Moving it to `src/ingestion/freshness-check.ts` (one function, a callback for read errors) meant the
+   report and the alert can never disagree about what "behind" means, and the extraction was covered by a fake-Db test.
+2. **Dedupe without a column: key it on the source's own date.** "Age of CBS's change" is recomputed each run, so the daily cron mails on
+   day 0 and every 7th day with no "last alerted at" state. The cost is a stated limit (a missed cron on day 0 = first mail on day 7);
+   the session-start `npm run ingest:freshness` is the backstop. Write such limits into the RUNBOOK, not just the code comment.
+3. **A source-scan wiring pin can trip on its own comments.** The first pin ("the block never mentions `registerAndSync`") failed because
+   the route's older comments already say that word; slice the pin to the new block instead of the whole file.
+4. **A dialog answer of "up to you" is a delegation, not a non-answer.** Took the stated recommendation (e-mail, not auto-sync) and said so.
+
 ## Session 148 — the stale showcase (found by looking at the live site) and a plan rehearsal
 
 1. **A "nothing scheduled can run" session had missed the biggest defect on the product.** Session 147 verified the repo (clean tree,

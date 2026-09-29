@@ -1,5 +1,23 @@
 # STATUS archive — the session log
 
+**Session 149 (2026-09-29 late night, local 2026-09-30; owner present; zero AI spend; no DDL; no data written).**
+
+1. Opened with the session-148 kickoff. Verified: tree clean at `04852e1d`, CI green, prod 200, DNS for graphmaker.studio still absent,
+   `npm run ingest:freshness` = 0 of 20 behind (Eurostat `tipsbd30` not checked). The 1 October recording cannot start before then.
+2. Asked the owner the one open decision (#355: how to automate the freshness check); answer **"Up to you"** → took the recommendation.
+3. **Built the new-CBS-data alert ([#355](open-questions.md)), commit `5d8bb265`:** the daily cron (`/api/onboarding-cron`) now runs the same
+   `Modified` comparison as `npm run ingest:freshness` and e-mails the owner one Dutch mail naming every table that is behind + the command.
+   New: `src/ingestion/freshness-check.ts` (shared read-only scan, also used by the report script), `findNewCbsData` +
+   `shouldAlertAboutNewData` (day 0, then every 7th day; `src/ingestion/freshness.ts`), `alertNewCbsData`/`maybeAlertNewCbsData`
+   (`src/answer/audit/alerts.ts`), a `withDeadline` 90 s bound + fail-open block in the route. It never syncs, writes, or calls AI.
+   Option (b), auto-syncing the SAFE tables, stays NOT built. Tests added: freshness pure functions, `freshness-check.test.ts` (fake Db),
+   `new-cbs-data-alert.test.ts`, two wiring pins in `web/app/onboarding-cron.test.ts`.
+4. **Verified:** typechecks clean; backend 268 files / 4678 tests (+1 todo); benchmark gate PASS (6/6 refusals, 0 fabricated); web 188 files /
+   3479 tests; real `next build`; `/code-review` LOW: no findings. Docs updated: RUNBOOK ("New-CBS-data alert" + release-day step 6),
+   open-questions #355, 08-build-plan, 04-architecture, CLAUDE.md maintenance agenda, README.
+5. CI run 36603120766 on `5d8bb265`: all jobs success incl. deploy; prod `curl -sI` 200; DNS for graphmaker.studio still absent.
+   Wrap-up docs (STATUS, archive, lessons, kickoff 149) pushed as a docs-only commit (skips CI).
+
 **Session 148 (2026-09-29 night, owner present; zero AI spend; live data refresh of 13 tables).**
 
 1. Session opened with the session-147 kickoff (verify-only state: tree clean at `453bdfa0`, CI green, prod 200, DNS for graphmaker.studio
