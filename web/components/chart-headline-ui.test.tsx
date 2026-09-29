@@ -120,14 +120,27 @@ afterEach(() => {
   chartHeadlineActions.fetchChartHeadline.mockReset().mockResolvedValue({ ok: true, headline: null });
 });
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('chart headline — trigger visibility', () => {
-  it('shows a "Kop voorstellen" trigger only when embed.auditId is present and findings exist', () => {
+  it('shows a "Kop voorstellen" trigger only when embed.auditId is present and findings exist', async () => {
     render(<ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     expect(screen.getByText('Kop voorstellen')).toBeInTheDocument();
   });
 
-  it('shows no trigger without an auditId (e.g. an anonymous/trial chart)', () => {
+  it('shows no trigger without an auditId (e.g. an anonymous/trial chart)', async () => {
     render(<ChartView spec={twoSeriesFindingsSpec()} />);
+    await openEdit();
     expect(screen.queryByText('Kop voorstellen')).not.toBeInTheDocument();
   });
 });
@@ -141,6 +154,7 @@ describe('chart headline — draft, edit, save', () => {
         <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
       </ChartStyleProvider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByText('Kop voorstellen'));
     await screen.findByDisplayValue('Werkloosheid stijgt scherp');
     fireEvent.change(screen.getByDisplayValue('Werkloosheid stijgt scherp'), { target: { value: 'Werkloosheid stijgt fors' } });
@@ -150,8 +164,9 @@ describe('chart headline — draft, edit, save', () => {
     expect(chartHeadlineActions.saveChartHeadline).toHaveBeenCalledWith(1, 'Werkloosheid stijgt fors');
   });
 
-  it('shows the unauthenticated message when drafting while signed out', () => {
+  it('shows the unauthenticated message when drafting while signed out', async () => {
     render(<ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     fireEvent.click(screen.getByText('Kop voorstellen'));
     expect(screen.getByText('Log in om een kop toe te voegen.')).toBeInTheDocument();
     expect(chartHeadlineActions.draftChartHeadline).not.toHaveBeenCalled();
@@ -167,6 +182,7 @@ describe('chart headline — draft, edit, save', () => {
         <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
       </ChartStyleProvider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByText('Kop voorstellen'));
     expect(await screen.findByText('Kon de kop niet voorstellen.')).toBeInTheDocument();
     expect(screen.queryByText('Kon de kop niet opslaan.')).not.toBeInTheDocument();
@@ -182,6 +198,7 @@ describe('chart headline — draft, edit, save', () => {
         <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
       </ChartStyleProvider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByText('Kop voorstellen'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Kon de kop niet voorstellen.');
   });
@@ -196,6 +213,7 @@ describe('chart headline — draft, edit, save', () => {
         <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
       </ChartStyleProvider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByText('Kop voorstellen'));
     await screen.findByDisplayValue('Werkloosheid stijgt scherp');
     fireEvent.click(screen.getByText('Opslaan'));

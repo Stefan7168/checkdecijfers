@@ -140,10 +140,12 @@ describe('VisualDock — threads auditId into ChartView\'s embed prop (Task 4)',
 // bubble got — proven here by the reading control chart.test.tsx's own Task 5
 // tests use to find it (`getByRole('combobox', { name: /lezing|reading/i })`).
 describe('VisualDock — threads chartAlternates into ChartView\'s alternates prop (#254 Task 6)', () => {
-  it('shows the reading control when the active chart visual carries chartAlternates', () => {
+  it('shows the reading control when the active chart visual carries chartAlternates', async () => {
     const visual = chartVisual({ chartAlternates: [{ label: 'Ongecorrigeerd', spec: CHART_SPEC }] });
     render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
-    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
+    // WP-LOOK part (a): the reading control lives in the card's Edit popup.
+    fireEvent.click(screen.getByRole('button', { name: /^(Bewerken|Edit)$/ }));
+    expect(await screen.findByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
   });
 
   it('shows no reading control when the active chart visual carries no chartAlternates (default [])', () => {

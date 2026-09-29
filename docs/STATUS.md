@@ -17,8 +17,8 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 141 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-142-kickoff.md](session-briefs/2026-09-29-session-142-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 142 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-143-kickoff.md](session-briefs/2026-09-29-session-143-kickoff.md).**
 
 - **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
   ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
@@ -29,15 +29,20 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-142-kickoff.md](sess
   Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
-  - (a) the answer chart: headline, one number, the chart as hero, one source line, buttons Edit / Download / Share;
-    every other control moves into the popup;
-  - (b) the Edit popup, redesigned with the design skills (interface, data-viz, component library), light + dark;
+  - (a) the answer chart — **round 1 BUILT and on `main` (session 142, see the session-142 archive entry for the SHA):**
+    title → headline / one number → chart → caveats → source line → one row Edit · Download · Embed · Share · Insights
+    (the owner's five); every control lives in the one Edit popup (opens in table form too); owner-owned strips
+    (caption, notes, goal lines, period ranges) show on the card only when they hold something. Screenshots (desktop
+    dark + light, phone, popup) were sent to the owner; **waiting for "I would share this" or change requests
+    ([#346](open-questions.md))**;
+  - (b) the Edit popup, redesigned with the design skills (interface, data-viz, component library), light + dark — the
+    owner will decide its shape when they see it; residual to fix there: keyboard cost of the bottom row ([#348](open-questions.md));
   - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).
 - **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
   dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch
   `regional-stats-part2`), Eurostat in chat, Pro plan, brand colours. Owner-supervised items (migrations 037 + 038, the
   table-parser recording run after 2026-10-01, #245, #275, #313, #328, #330) also wait.
-- **Spend:** the $50 monthly roof resets 2026-10-01; The Look needs no AI spend (UI work, hermetic tests).
+- **Spend:** the $50 monthly roof resets 2026-10-01; The Look needs no AI spend (UI work, hermetic tests, the local harness).
 - **Phase 0 gate** (below) is passed and unchanged; principles (a)/(b)/(c) untouched by ADR 063.
 
 ---

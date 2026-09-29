@@ -6,6 +6,33 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 142 — moving every chart control into one popup (WP-LOOK part (a))
+
+1. **A UI relocation is mostly a test relocation.** Moving the form tabs, selects, undo/redo and co-pilot input from the
+   card into the Edit popup changed ~40 lines of component logic and broke 241 tests in ten files — every one of them
+   only because the control was now inside a portal (`getByRole` finds it after a click on Edit, `container.querySelector`
+   never does). The mechanical fix (an `openEdit()` / `closeEdit()` helper per file, `await` because the popup is
+   `next/dynamic`) was delegated to a cheap-tier agent for the 398-test file and done by hand for the nine small ones.
+   Budget a test day for any "just move it" UI change on this card.
+2. **The test update found three real bugs the component read did not.** Selecting Tabel from inside the popup closed
+   the popup (an old "table has no Style panel" rule); the Style section stole keyboard focus when it remounted after
+   Tabel; ⌘Z did nothing while the reader was inside the popup (the dialog is a portal outside the card's key handler).
+   All three surfaced as failing keyboard tests, not as visual defects — the arrow-key and shortcut tests are the ones
+   worth keeping strict when a control moves.
+3. **Base UI's modal hides the card from testing-library.** While the popup is open the card behind it is `aria-hidden`,
+   so `screen.getByRole('heading')` fails for the card's own title; a test must close the popup before asserting on
+   the card, or pass `hidden: true`. This also means the story panel (on the card) and the popup are never open
+   together — they share one `openPanel` slot — so two "lock while the story is open" tests had to be rewritten as
+   "the story and the popup never share the screen".
+4. **The hermetic harness + the built-in browser is the cheapest visual loop.** `preview_start` name `harness`, set the
+   session cookie from `scripts/dev-harness/session-cookie.json` with `document.cookie`, ask a recorded question, and
+   HMR shows every edit within seconds at any viewport and colour scheme, with zero spend and no production touch.
+   Screenshots came from the browser tool's own captures (copied out of the tool-results folder), not from Playwright.
+5. **Owner answers can widen a list.** The mockup offered three buttons; the owner typed five (Edit, Download, Embed,
+   Share, Insights). Share did not exist — the cheapest mechanism (a link to the existing public embed page, same
+   signed token) took one small component and no new route. Ask with an "Other" option open, then build the cheapest
+   version of what comes back rather than negotiating the list down.
+
 ## Session 141 — a vision review that starts from the live site, not from the docs
 
 1. **Look at the live product before reading the plan.** Ninety sessions of docs said the product was on track; five

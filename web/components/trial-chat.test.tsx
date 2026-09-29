@@ -145,7 +145,9 @@ describe('TrialChat', () => {
     render(<TrialChat initialQuestionsLeft={2} />);
     await ask('Toon een grafiek');
     await screen.findByText('Hier is de grafiek.');
-    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
+    // WP-LOOK part (a): the reading control lives in the card's Edit popup.
+    fireEvent.click(screen.getByRole('button', { name: /^(Bewerken|Edit)$/ }));
+    expect(await screen.findByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
   });
 });
 

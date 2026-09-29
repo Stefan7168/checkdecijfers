@@ -151,20 +151,36 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('undo / redo at the chart card', () => {
-  it('hiding a series then Undo brings it back; Redo hides it again', () => {
-    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+  it('hiding a series then Undo brings it back; Redo hides it again', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    // The popup shows the SAME live chart (one instance, relocated), so the
+    // curves are counted over the whole document.
+    const curves = () => document.querySelectorAll('.recharts-line-curve');
+    expect(curves()).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
-    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(1);
+    expect(curves()).toHaveLength(1);
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
-    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+    expect(curves()).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
-    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(1);
+    expect(curves()).toHaveLength(1);
   });
 
-  it('⌘Z on the card undoes; ⇧⌘Z redoes; both buttons are disabled when there is nothing to do', () => {
+  it('⌘Z on the card undoes; ⇧⌘Z redoes; both buttons are disabled when there is nothing to do', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     const undoBtn = screen.getByRole('button', { name: 'Ongedaan maken' });
     const redoBtn = screen.getByRole('button', { name: 'Opnieuw' });
     expect(undoBtn).toBeDisabled();
@@ -175,10 +191,15 @@ describe('undo / redo at the chart card', () => {
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true, shiftKey: true });
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    // WP-LOOK part (a): the same shortcuts work INSIDE the popup (a portal
+    // outside the card's DOM), where the reader is actually editing.
+    fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'z', metaKey: true });
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('Ctrl+Y redoes too (the Windows idiom)', () => {
+  it('Ctrl+Y redoes too (the Windows idiom)', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     fireEvent.keyDown(container.firstElementChild!, { key: 'z', ctrlKey: true });
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
@@ -186,8 +207,9 @@ describe('undo / redo at the chart card', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it("⌘Z inside a text field is left to the field's own native undo", () => {
+  it("⌘Z inside a text field is left to the field's own native undo", async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     // A text field mounted INSIDE the card: the handler sits on the card
     // root, so an event bubbling from an <input> must be left alone.
@@ -197,13 +219,16 @@ describe('undo / redo at the chart card', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('the spec-swap reset never leaves history entries behind', () => {
+  it('the spec-swap reset never leaves history entries behind', async () => {
     const { rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
     const other = twoSeriesLineSpec();
     other.title = 'Andere grafiek';
     rerender(<ChartView spec={other} />);
+    // The spec swap also closes the popup; reopen it to read the buttons.
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
   });
 
@@ -220,8 +245,9 @@ describe('undo / redo at the chart card', () => {
   // would walk straight through it — and a story STEP is the app moving its
   // own view, never a reader edit, so it leaves no history entry behind.
   describe('the story-mode control lock', () => {
-    it('disables Undo/Redo while the story is open, and ⌘Z does nothing', () => {
+    it('disables Undo/Redo while the story is open, and ⌘Z does nothing', async () => {
       const { container } = render(<ChartView spec={twoSeriesFindingsSpec()} />);
+      await openEdit();
       // One real edit first, so Undo would otherwise be enabled.
       fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
       expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
@@ -231,18 +257,28 @@ describe('undo / redo at the chart card', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
       expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeEnabled();
 
+      // WP-LOOK part (a): Insights sits on the card and the Undo/Redo buttons
+      // in the Edit popup; the two share ONE `openPanel` slot, so the story
+      // and the popup are never open together (as Style and the story never
+      // were). The lock is therefore observable on the card's keyboard
+      // shortcuts while the story is open, and opening the popup closes the
+      // story again — which lifts the lock.
+      closeEdit();
       fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeDisabled();
-
-      const formBefore = screen.getByRole('tab', { name: 'Staaf' }).getAttribute('aria-selected');
       fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true });
       fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true, shiftKey: true });
-      expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', formBefore!);
+      expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+      await openEdit();
+      expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+      // The form is still Staaf (where the Undo above left it): had ⌘Z
+      // gone through the lock it would read Lijn.
+      expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeEnabled();
     });
 
-    it('a story step never creates a history entry', () => {
+    it('a story step never creates a history entry', async () => {
       render(<ChartView spec={twoSeriesFindingsSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
@@ -251,6 +287,7 @@ describe('undo / redo at the chart card', () => {
       // Close the story again: the lock lifts, and there is still nothing to undo.
       fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+      await openEdit();
       expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeDisabled();
     });
@@ -259,7 +296,9 @@ describe('undo / redo at the chart card', () => {
   it('the embed dialog still receives the current form (the same state serialises as before)', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 42 }} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    closeEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
     expect(await screen.findByText(/form=bar/)).toBeInTheDocument();
   });

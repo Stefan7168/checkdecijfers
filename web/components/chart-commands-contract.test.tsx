@@ -254,6 +254,17 @@ function kindsInDom(root: HTMLElement): Set<string> {
   return out;
 }
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () => {
   it('every command kind is reachable from an on-screen control', async () => {
     render(
@@ -271,7 +282,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // resolve a tick after the modal tab, so each is awaited explicitly
     // before the scan; without this the scan can run before their lazy
     // import settles and flag them as missing when they are not.
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
     await screen.findByRole('tab', { name: 'Grafiek' });
     // Goal line's and era shading's own `addGoalLine`/`addEraShading`
     // data-command-kind sits on each form's SAVE button, not its trigger —
@@ -296,7 +307,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
   // instead of the phase-1 CHART_COMMAND_KINDS superset).
   it('every kind cbsViewCommandSchema can produce has an on-screen control', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
     await screen.findByRole('tab', { name: 'Grafiek' });
     // Co-pilot phase 6 (Tasks 3 and 5): the CBS schema now names
     // addEraShading and addGoalLine too. Each one's `data-command-kind`
@@ -324,7 +335,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
   // tab strip and `cbsCapabilities` read — so the chat is never told about a
   // shape the reader could not click), and that every disabled tab explains
   // itself. Read straight off the schema, never a hand-copied form list.
-  it('every form the CBS co-pilot schema can emit is a real tab, enabled exactly when the scorer offers it', () => {
+  it('every form the CBS co-pilot schema can emit is a real tab, enabled exactly when the scorer offers it', async () => {
     const setFormOption = cbsViewCommandSchema.options.find((option) => option.shape.kind.value === 'setForm');
     expect(setFormOption).toBeDefined();
     // The union member's `form` enum — read through the shape, since the
@@ -366,7 +377,11 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     const single: ChartSpec = { ...qualifying, series: [qualifying.series[0]!] };
     const roster = provinciesRosterSpec();
     for (const spec of [qualifying, single, roster]) {
-      const { container, unmount } = render(<ChartView spec={spec} embed={{ auditId: 1 }} />);
+      const { unmount } = render(<ChartView spec={spec} embed={{ auditId: 1 }} />);
+      // WP-LOOK part (a): the tabs live in the Edit popup (a portal), so the
+      // scan reads document.body, like the kind-level scans above.
+      await openEdit();
+      const container = document.body;
       const tabs = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"][data-command-kind="setForm"]')];
       const byForm = new Map<ChartForm, HTMLButtonElement>();
       for (const form of chatForms) {
@@ -410,7 +425,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
   // reason reachable, with `regionScope: null` (a hand-picked or
   // LLM-assembled selection that merely happens to name every province is
   // still no whole: only `resolveRegionSet` vouches for a roster).
-  it('pie/stacked/stacked100 tabs follow the regionScope provenance, never the code list', () => {
+  it('pie/stacked/stacked100 tabs follow the regionScope provenance, never the code list', async () => {
     const roster = provinciesRosterSpec();
     const sameCodesNoScope: ChartSpec = { ...roster, regionScope: null };
     const forms = [
@@ -427,17 +442,19 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     };
 
     const withScope = render(<ChartView spec={roster} embed={{ auditId: 1 }} />);
+    await openEdit();
     for (const [form, label] of forms) {
-      expect(tabFor(withScope.container, label).disabled, `${form} enabled on the roster`).toBe(false);
+      expect(tabFor(document.body, label).disabled, `${form} enabled on the roster`).toBe(false);
     }
     withScope.unmount();
 
     const withoutScope = render(<ChartView spec={sameCodesNoScope} embed={{ auditId: 1 }} />);
+    await openEdit();
     for (const [form, label, reason] of forms) {
-      const tab = tabFor(withoutScope.container, label);
+      const tab = tabFor(document.body, label);
       expect(tab.disabled, `${form} disabled without provenance`).toBe(true);
       expect(tab.getAttribute('title'), `${form} title`).toBe(reason);
-      const described = withoutScope.container.querySelector(`#${CSS.escape(tab.getAttribute('aria-describedby') ?? '')}`);
+      const described = document.body.querySelector(`#${CSS.escape(tab.getAttribute('aria-describedby') ?? '')}`);
       expect(described?.textContent, `${form} aria-describedby`).toBe(reason);
     }
     withoutScope.unmount();
@@ -446,9 +463,13 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
   // Task 5: the reader's own title and caption edit IN PLACE on the card —
   // no panel to open, so a plain non-embed render already carries both
   // controls (the pencil next to the heading and the "add a caption" button).
-  it('setTitle and setCaption have in-place controls', () => {
+  it('setTitle has an in-place control on the card; setCaption lives in the Edit popup', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    const found = kindsInDom(container);
+    expect(kindsInDom(container).has('setTitle')).toBe(true);
+    // WP-LOOK part (a): the caption's "add" control is in the popup (a
+    // portal), so it is scanned over document.body once the popup is open.
+    await openEdit();
+    const found = kindsInDom(document.body);
     expect(found.has('setTitle')).toBe(true);
     expect(found.has('setCaption')).toBe(true);
   });
@@ -531,6 +552,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // Same single-visible-series gate the I8 final-review fix added to the
     // "Gemiddelde tonen" control: hide one of the two series first.
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
     // `addDerivedOverlay`'s recipe lands in state.derivedOverlayRequests
     // synchronously (the reducer never awaits the async resolution), so the

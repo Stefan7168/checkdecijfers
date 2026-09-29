@@ -146,6 +146,7 @@ import { SeriesLegend } from './chart-series-legend.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
+import { ChartShareButton } from './chart-share-button.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
 import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
@@ -2018,11 +2019,13 @@ export function ChartView({
     // goes false for the new form (which would otherwise strand the panel
     // open with no way to reach it, per the review finding).
     if (openPanel === 'story') closeStory();
-    // Round 2: table form has no frame and no Style panel at all — switching
-    // TO it must close the panel itself (not just skip rendering it while on
-    // Tabel), or `openPanel` stays stuck on 'style' and the panel silently
-    // reappears the moment the user switches back to a chart form.
-    if (next === 'table' || next === 'heatmap') setOpenPanel(null);
+    // Round 2 used to close the Style panel when switching TO Tabel/
+    // Warmtekaart (no frame, no Style panel there). WP-LOOK part (a)
+    // (session 142, ADR 063): the popup now holds the form tabs themselves,
+    // so it stays open across every form — only its Style section is gated
+    // on `!tabularForm` — otherwise arrowing through the tablist would eject
+    // the reader at Tabel and Dumbbell/Helling/Warmtekaart were unreachable
+    // by keyboard (found by the test update).
     dispatchCommand({ kind: 'setForm', form: next }, 'panel');
     formTabRef[next].current?.focus();
   }
@@ -3414,6 +3417,12 @@ export function ChartView({
   // open (mount check below, the same rule the notes strip follows).
   const copilotAvailable = editsKey !== null;
 
+  // WP-LOOK part (a): which reader-owned strips carry content right now (the
+  // card shows only those; the popup shows every strip with its controls).
+  const hasOwnCaption = state.caption !== null && state.caption.trim() !== '';
+  const hasOwnNotes = state.notes.length > 0 || pendingPoint !== null || state.goalLines.length > 0;
+  const hasOwnEras = state.eraShadings.length > 0;
+
   return (
     <div
       className={`${frameClass} outline-none`.trim()}
@@ -3556,66 +3565,6 @@ export function ChartView({
             {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => v).join(' · ')}</span> : null}
           </div>
         </div>
-        {/* Fix round 1 (Minor 5): the two right-hand groups share ONE
-          * wrapper — the header row is `justify-between` and a third bare
-          * child would be centred — and the wrapper itself is gated, so
-          * embed/stage mode render no empty box at all. */}
-        {!embedMode && !inStage ? (
-          <div className="flex shrink-0 items-start gap-1">
-            <ChartHistoryActions
-              undo={undo}
-              redo={redo}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              history={history}
-              lang={chartLang}
-              locked={storyOpen ? { title: storyLockedTitle!, describedBy: storyLockId } : undefined}
-            />
-            {storyAvailable || !tabularForm ? (
-              <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
-                {/* Story mode (session 92): the colourful trigger is offered
-                  * whenever there is a code-built story (storyAvailable,
-                  * computed above next to styleControlsId). */}
-                {storyAvailable ? (
-                  <ChartStoryTrigger
-                    open={storyOpen}
-                    onToggle={toggleStory}
-                    controlsId={storyControlsId}
-                    triggerId={storyTriggerId}
-                    lang={chartLang}
-                  />
-                ) : null}
-                {/* Review fix (chart-panel-layout, option A): table form gets NO
-                  * frame and NO Style panel (as before the Frame-tab feature) — a
-                  * framed table would need its own export path, so the trigger
-                  * stays gated on `!tabularForm` exactly like the
-                  * ChartConfigPanel mount further down. */}
-                {!tabularForm ? (
-                  <ChartConfigTrigger
-                    open={styleOpen}
-                    onToggle={toggleStylePanel}
-                    controlsId={styleControlsId}
-                    triggerId={styleTriggerId}
-                    lang={chartLang}
-                    compact
-                  />
-                ) : null}
-                {/* Journalist chart-headline (Task 6): chat context only (the
-                  * embed page never shows edit UI, per the spec — Task 7's own
-                  * static render is the read-only counterpart) and only when
-                  * there's something to draft from (mirrors the Insights
-                  * trigger's own storyAvailable-from-findings gate above). */}
-                {embed?.auditId !== undefined && findings.length > 0 ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={startHeadlineDraft} disabled={headlineBusy}>
-                    {headlineBusy
-                      ? t(chartLang, 'chart.headline.drafting')
-                      : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </div>
       {/* Journalist chart-headline (Task 6): the sentence headline leads,
         * the headlineFigure big-number block (below) follows. Named state
@@ -3713,508 +3662,6 @@ export function ChartView({
         >
           {displayActiveSpec.attribution.trendHeadline}
         </p>
-      ) : null}
-      {/* Chart-card polish (2026-09-15): ONE quiet control row above the
-        * plot — the Weergave tablist left, the Vanaf/Tot window right — in
-        * place of the former two rows (tablist + Opmaak + Inzichten, then
-        * Vanaf/Tot). Kept ABOVE the export container on purpose: DOM order
-        * is keyboard order, and every SeriesDot/SeriesBar is a tab stop
-        * (click-to-annotate), so a reader must reach the form switch before
-        * the chart's own points — moving the row under the plot would have
-        * cost a keyboard user one Tab per data point. Spec Part B3 + ADR
-        * 044: the whole row is a viewer-only control surface, gated on both
-        * `!embedMode` and `!inStage` exactly as before. */}
-      {!embedMode && !inStage ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2" data-slot="chart-controls">
-          <div
-            role="tablist"
-            aria-label={t(chartLang, 'chart.weergaveLabel')}
-            onKeyDown={onFormTabKeyDown}
-            className="flex flex-wrap items-center gap-1"
-          >
-            <button
-              ref={lineTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'line'}
-              aria-controls={panelId}
-              aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
-              tabIndex={activeForm === 'line' ? 0 : -1}
-              disabled={!canUseLine}
-              title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
-              onClick={() => selectForm('line')}
-              className={quietTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.tabLine')}
-            </button>
-            <button
-              ref={areaTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'area'}
-              aria-controls={panelId}
-              aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
-              tabIndex={activeForm === 'area' ? 0 : -1}
-              disabled={!canUseArea}
-              title={canUseArea ? undefined : areaDisabledReason}
-              onClick={() => selectForm('area')}
-              className={quietTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.area')}
-            </button>
-            <button
-              ref={barTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'bar'}
-              aria-controls={panelId}
-              tabIndex={activeForm === 'bar' ? 0 : -1}
-              onClick={() => selectForm('bar')}
-              className={quietTab(activeForm === 'bar')}
-            >
-              {t(chartLang, 'chart.tabBar')}
-            </button>
-            <button
-              ref={hbarTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'hbar'}
-              aria-controls={panelId}
-              aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
-              tabIndex={activeForm === 'hbar' ? 0 : -1}
-              disabled={!canUseHbar}
-              title={canUseHbar ? undefined : hbarDisabledReason}
-              onClick={() => selectForm('hbar')}
-              className={quietTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.hbar')}
-            </button>
-            <button
-              ref={tableTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'table'}
-              aria-controls={panelId}
-              tabIndex={activeForm === 'table' ? 0 : -1}
-              onClick={() => selectForm('table')}
-              className={quietTab(activeForm === 'table')}
-            >
-              {t(chartLang, 'chart.tabTable')}
-            </button>
-            {/* Phase 5 (Task 3): Dumbbell sits BEFORE Helling in the DOM so
-              * the visual/keyboard tab order matches FORM_ORDER's array order
-              * (dumbbell, slope, heatmap — the scorer's own fixed order). */}
-            <button
-              ref={dumbbellTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'dumbbell'}
-              aria-controls={panelId}
-              aria-describedby={canUseDumbbell ? undefined : `${domId}-dumbbell-reason`}
-              tabIndex={activeForm === 'dumbbell' ? 0 : -1}
-              disabled={!canUseDumbbell}
-              title={canUseDumbbell ? undefined : dumbbellDisabledReason}
-              onClick={() => selectForm('dumbbell')}
-              className={quietTab(activeForm === 'dumbbell') + (canUseDumbbell ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.dumbbell')}
-            </button>
-            <button
-              ref={slopeTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'slope'}
-              aria-controls={panelId}
-              aria-describedby={canUseSlope ? undefined : `${domId}-slope-reason`}
-              tabIndex={activeForm === 'slope' ? 0 : -1}
-              disabled={!canUseSlope}
-              title={canUseSlope ? undefined : slopeDisabledReason}
-              onClick={() => selectForm('slope')}
-              className={quietTab(activeForm === 'slope') + (canUseSlope ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.slope')}
-            </button>
-            {/* Phase 5 (Task 4): Warmtekaart is LAST — Dumbbell, Helling,
-              * Warmtekaart, matching FORM_ORDER's own array order. */}
-            <button
-              ref={heatmapTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'heatmap'}
-              aria-controls={panelId}
-              aria-describedby={canUseHeatmap ? undefined : `${domId}-heatmap-reason`}
-              tabIndex={activeForm === 'heatmap' ? 0 : -1}
-              disabled={!canUseHeatmap}
-              title={canUseHeatmap ? undefined : heatmapDisabledReason}
-              onClick={() => selectForm('heatmap')}
-              className={quietTab(activeForm === 'heatmap') + (canUseHeatmap ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.heatmap')}
-            </button>
-            {/* Phase 5b (verified-whole, Task 4): Taartdiagram, Gestapeld,
-              * Gestapeld (%) trail Warmtekaart, matching FORM_ORDER's own
-              * array order (chart-fit.ts's `allowedForms`). Disabled for a
-              * structural reason OR a verdict (see pieDisabledReason). */}
-            <button
-              ref={pieTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'pie'}
-              aria-controls={panelId}
-              aria-describedby={canUsePie ? undefined : `${domId}-pie-reason`}
-              tabIndex={activeForm === 'pie' ? 0 : -1}
-              disabled={!canUsePie}
-              title={canUsePie ? undefined : pieDisabledReason}
-              onClick={() => selectForm('pie')}
-              className={quietTab(activeForm === 'pie') + (canUsePie ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.pie')}
-            </button>
-            <button
-              ref={stackedTabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'stacked'}
-              aria-controls={panelId}
-              aria-describedby={canUseStacked ? undefined : `${domId}-stacked-reason`}
-              tabIndex={activeForm === 'stacked' ? 0 : -1}
-              disabled={!canUseStacked}
-              title={canUseStacked ? undefined : stackedDisabledReason}
-              onClick={() => selectForm('stacked')}
-              className={quietTab(activeForm === 'stacked') + (canUseStacked ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.stacked')}
-            </button>
-            <button
-              ref={stacked100TabRef}
-              type="button"
-              role="tab"
-              data-command-kind="setForm"
-              aria-selected={activeForm === 'stacked100'}
-              aria-controls={panelId}
-              aria-describedby={canUseStacked100 ? undefined : `${domId}-stacked100-reason`}
-              tabIndex={activeForm === 'stacked100' ? 0 : -1}
-              disabled={!canUseStacked100}
-              title={canUseStacked100 ? undefined : stacked100DisabledReason}
-              onClick={() => selectForm('stacked100')}
-              className={quietTab(activeForm === 'stacked100') + (canUseStacked100 ? '' : ' cursor-not-allowed opacity-40')}
-            >
-              {t(chartLang, 'chart.form.stacked100')}
-            </button>
-          </div>
-          {/* Reachable via the disabled Lijn tab's aria-describedby above — a
-            * plain `title` (kept, for pointer users) is invisible to a screen
-            * reader, and a disabled control still needs its reason available
-            * to whoever reaches it by keyboard/AT. */}
-          {!canUseLine ? (
-            <span id={`${domId}-line-reason`} className="sr-only">
-              {t(chartLang, 'chart.lineDisabledReason')}
-            </span>
-          ) : null}
-          {!canUseArea ? (
-            <span id={`${domId}-area-reason`} className="sr-only">
-              {areaDisabledReason}
-            </span>
-          ) : null}
-          {!canUseHbar ? (
-            <span id={`${domId}-hbar-reason`} className="sr-only">
-              {hbarDisabledReason}
-            </span>
-          ) : null}
-          {!canUseDumbbell ? (
-            <span id={`${domId}-dumbbell-reason`} className="sr-only">
-              {dumbbellDisabledReason}
-            </span>
-          ) : null}
-          {!canUseSlope ? (
-            <span id={`${domId}-slope-reason`} className="sr-only">
-              {slopeDisabledReason}
-            </span>
-          ) : null}
-          {!canUseHeatmap ? (
-            <span id={`${domId}-heatmap-reason`} className="sr-only">
-              {heatmapDisabledReason}
-            </span>
-          ) : null}
-          {!canUsePie ? (
-            <span id={`${domId}-pie-reason`} className="sr-only">
-              {pieDisabledReason}
-            </span>
-          ) : null}
-          {!canUseStacked ? (
-            <span id={`${domId}-stacked-reason`} className="sr-only">
-              {stackedDisabledReason}
-            </span>
-          ) : null}
-          {!canUseStacked100 ? (
-            <span id={`${domId}-stacked100-reason`} className="sr-only">
-              {stacked100DisabledReason}
-            </span>
-          ) : null}
-          {/* #254: the reading toggle — same quiet <select> pattern as the
-            * Vanaf/Tot pair right below it, and the same story lock (a story's
-            * steps are built from the ACTIVE reading's findings, so switching
-            * reading mid-story would change the captions under the reader).
-            * Its options are the registry's OWN label strings, verbatim —
-            * this component never invents copy describing a reading. The
-            * value lives in the reducer (`state.selectedReading`), NOT in the
-            * `spec` prop, which is what keeps a switch from tripping the
-            * spec-identity reset. Rendered only when the answer actually
-            * carried alternates; the whole row is already gated on
-            * `!embedMode && !inStage` above. */}
-          {alternates.length > 0 ? (
-            <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-              <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
-              <select
-                id={`${domId}-reading`}
-                aria-label={t(chartLang, 'chart.reading.label')}
-                value={state.selectedReading ?? 'primary'}
-                disabled={storyOpen}
-                title={storyLockedTitle}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-                data-command-kind="setReading"
-                onChange={(e) =>
-                  dispatchCommand({ kind: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) }, 'panel')
-                }
-                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
-                {/* Keyed by index on purpose: the index IS this list's
-                  * identity (it is what `selectedReading` stores and what
-                  * `activeReadingSpec` looks up), the array is never
-                  * reordered or filtered, and two registry alternates could
-                  * in principle carry the same label.
-                  *
-                  * These labels routinely CONTAIN DIGITS — the registry ships
-                  * 'CPI indexniveau (2025=100), geen mutatiepercentage',
-                  * 'stand per 31 december (Eindstand Voorraad)', '…(2021 =
-                  * 100)' — and that is deliberate and allowed. A registry
-                  * alternate label is curated config, hand-authored in
-                  * src/registry/defaults.ts and code-reviewed, never derived
-                  * from a CBS cell at runtime, and it NAMES a reading rather
-                  * than stating a measured quantity (an index BASE is a
-                  * definitional property of the measure, not a plotted
-                  * value). Same class as ChartAnnotation's curated event-marker
-                  * labels, whose own type comment (src/chart/types.ts) states
-                  * the policy: "METADATA … never a data VALUE (R1/R3's
-                  * numeric-token scanning never sees these)". chart.test.tsx's
-                  * #254 scan test pins the exemption as NARROW — the card
-                  * minus this one control must still scan clean with no
-                  * exemption at all, so a label's digits can never leak into
-                  * the chart, table, headline figure, axis or attribution. */}
-                {alternates.map((alt, i) => (
-                  <option key={i} value={i}>
-                    {alt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-          {zoomAvailable ? (
-            /* #254: `ml-auto` moves to the reading block above when one is
-             * shown, so the right-hand group starts there and the two
-             * <select> groups sit next to each other instead of being pushed
-             * apart by two competing auto margins. With no alternates (every
-             * call site before this feature) the class list is unchanged. */
-            <div
-              className={
-                (alternates.length > 0 ? '' : 'ml-auto ') +
-                'flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground'
-              }
-            >
-              <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
-              <select
-                id={`${domId}-from`}
-                aria-label={t(chartLang, 'chart.from')}
-                data-command-kind="setPeriodRange"
-                value={state.periodRange?.[0] ?? allPeriodCodes[0]}
-                disabled={storyOpen}
-                title={storyLockedTitle}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-                onChange={(e) => {
-                  const [from, clampedTo] = clampVanafChange(
-                    e.target.value,
-                    state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
-                  );
-                  dispatchCommand(
-                    {
-                      kind: 'setPeriodRange',
-                      range:
-                        from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
-                          ? null
-                          : [from, clampedTo],
-                    },
-                    'panel',
-                  );
-                }}
-                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {allPeriodCodes.map((code) => (
-                  <option key={code} value={code}>
-                    {periodLabelByCode.get(code)}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
-              <select
-                id={`${domId}-to`}
-                aria-label={t(chartLang, 'chart.to')}
-                data-command-kind="setPeriodRange"
-                value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
-                disabled={storyOpen}
-                title={storyLockedTitle}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-                onChange={(e) => {
-                  const [clampedFrom, to] = clampTotChange(
-                    state.periodRange?.[0] ?? allPeriodCodes[0],
-                    e.target.value,
-                  );
-                  dispatchCommand(
-                    {
-                      kind: 'setPeriodRange',
-                      range:
-                        clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
-                          ? null
-                          : [clampedFrom, to],
-                    },
-                    'panel',
-                  );
-                }}
-                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {allPeriodCodes.map((code) => (
-                  <option key={code} value={code}>
-                    {periodLabelByCode.get(code)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-          {/* Task 7: derived overlays (difference arrows, average lines) —
-            * small controls for on-demand calculations. Rendered inline with
-            * the main controls but after the tabs/reading/zoom selects.
-            * Fix round 3: `spec.kind` is `'line' | 'bar'` (the chart FORM),
-            * never `'answer'` — that comparison type-errored (TS2367) and was
-            * always false, so this whole control block was dead code in
-            * every prior round despite the report claiming it worked. The
-            * real "is this a CBS/Eurostat answer chart with a saved audit
-            * row" test is the same one the resolution effect above already
-            * uses (`embed?.auditId`) — `ChartView` only ever receives `embed`
-            * for that case (own-data charts render through the separate
-            * UserChartView component; the internal Eurostat explorer passes
-            * no `embed` at all and correctly gets no derived-overlay UI).
-            * Final-review fix I2: also gated on `activeForm` — derivedOverlayElements
-            * (the ReferenceLine renderer, above) only ever runs inside the
-            * LineChart/AreaChart branches, never bar/hbar, so offering these
-            * controls on a bar chart used to let a reader add an overlay,
-            * see its own remove chip appear, and watch nothing render —
-            * the control implied a capability the bar/hbar forms don't
-            * have. Mirrors the `activeForm === 'line' || activeForm ===
-            * 'area'` test `effectiveKind` already uses above.
-            * #293 (session 124): only the ADD controls are form-gated. While
-            * an overlay exists (or a refusal is showing), its remove chip and
-            * message stay visible on every form — switching to a bar chart
-            * must never hide the control that removes what the reader added. */}
-          {embed !== undefined &&
-          (activeForm === 'line' || activeForm === 'area' || state.derivedOverlayRequests.length > 0 || derivationRefusals.size > 0) ? (
-            <div className="flex flex-wrap items-center gap-1.5 ml-auto">
-              {activeForm === 'line' || activeForm === 'area' ? (
-              <>
-              <Button
-                type="button"
-                size="sm"
-                variant={differencePickerActive ? 'default' : 'outline'}
-                data-command-kind="addDerivedOverlay"
-                aria-pressed={differencePickerActive}
-                title={t(chartLang, 'chart.derived.differenceLabel')}
-                onClick={() => {
-                  setDifferencePickerActive((active) => !active);
-                  setFirstDifferencePoint(null);
-                  setDifferenceError(null);
-                }}
-                className="text-xs"
-              >
-                {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
-              </Button>
-              {/* Final-review fix I8: "Gemiddelde tonen" used to always
-                * average `displaySpec.series[0]` regardless of what the
-                * reader had hidden or how many series the chart actually
-                * has — silently including a hidden, unnamed series in a
-                * button whose own label implies "the average of what's on
-                * the chart". An average across several DIFFERENT series was
-                * never well-defined here (which one? all of them combined?),
-                * so — the smaller, more honest fix — the control now only
-                * offers itself when exactly one series is visible, matching
-                * the `seriesMeta.filter((s) => !state.hiddenKeys.has(s.key))`
-                * visibility check every chart-form branch above already
-                * uses for rendering. */}
-              {visibleSeriesMeta.length === 1 ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  data-command-kind="addDerivedOverlay"
-                  title={t(chartLang, 'chart.derived.meanLabel')}
-                  onClick={() => {
-                    // seriesMeta keys are positional ('s0', 's1', ... — see
-                    // buildRows above), so the one visible series' index is
-                    // its key with the 's' prefix stripped.
-                    const visibleIndex = Number(visibleSeriesMeta[0]!.key.slice(1));
-                    const visibleCodes = (displaySpec.series[visibleIndex]?.points ?? [])
-                      .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
-                      .map((p) => p.resultId);
-                    if (visibleCodes.length >= 2) {
-                      dispatchCommand(
-                        { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
-                        'panel',
-                      );
-                    }
-                  }}
-                  className="text-xs"
-                >
-                  {t(chartLang, 'chart.derived.meanLabel')}
-                </Button>
-              ) : null}
-              </>
-              ) : null}
-              {state.derivedOverlayRequests.map((overlay) => (
-                <Button
-                  key={overlay.id}
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  data-command-kind="removeDerivedOverlay"
-                  onClick={() => dispatchCommand({ kind: 'removeDerivedOverlay', overlayId: overlay.id }, 'panel')}
-                  className="text-xs h-6 px-2"
-                >
-                  × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
-                </Button>
-              ))}
-              {differenceError ? (
-                <span className="text-xs text-destructive">{differenceError}</span>
-              ) : null}
-              {derivationRefusals.size > 0 ? (
-                <div className="text-xs text-destructive">
-                  {/* Final-review fix I6: translated, never the server's raw
-                    * English reason string — see derivationRefusalMessage. */}
-                  {Array.from(derivationRefusals.entries()).map(([id, reason]) => (
-                    <div key={id}>{derivationRefusalMessage(chartLang, reason)}</div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       ) : null}
       {/* #262(c) (session 110): the public embed route (embedMode=true) hides
         * the WHOLE control row above (form tabs, Vanaf/Tot) by design — a
@@ -4340,19 +3787,20 @@ export function ChartView({
       {/* Final-review fix: table form gets no Style panel at all (as before
         * the Frame-tab feature) — a framed table would need its own export
         * path, so the mount stays gated on `!tabularForm`. */}
-      {!inStage && !tabularForm ? (
+      {!inStage && !embedMode ? (
         <ChartEditModal
           open={styleOpen}
           onClose={() => {
             setStyleOpen(false);
             document.getElementById(styleTriggerId)?.focus();
           }}
-          title={t(chartLang, 'chart.panel.regionLabel')}
+          title={t(chartLang, 'chart.edit.title')}
           // Session 110 UX audit pass 3, row 7: resolved via chartLang,
           // matching `title` right above it — never the ambient
           // LangProvider this file's own `t(chartLang, …)` convention
           // deliberately doesn't depend on.
           closeLabel={t(chartLang, 'common.close')}
+          onKeyDown={onHistoryKeyDown}
           chartSlot={
             <>
               {canvasNode}
@@ -4363,211 +3811,817 @@ export function ChartView({
             </>
           }
         >
-        <ChartConfigPanel
-          key={chartEpoch}
-          resolved={resolved}
-          seriesMeta={seriesMeta}
-          lang={chartLang}
-          open={styleOpen}
-          onOpenChange={setStyleOpen}
-          triggerId={styleTriggerId}
-          // #6 (session 110 UX audit): this panel is always hosted inside
-          // ChartEditModal here, whose Dialog already renders its own Close
-          // (X) button — the panel's own "Sluiten" was a second, redundant
-          // Close control in the same popup.
-          hideCloseButton
-          frameImage={frameImage}
-          onFrameImage={setFrameImage}
-          // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart
-          // tweaks yet opens the Style panel on the Sjablonen gallery
-          // instead of the raw Grafiek controls — `resolved.pristine`
-          // already tracks exactly that (the overrides object passed in is
-          // empty), evaluated once at the panel's own mount.
-          // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
-          // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
-          // and used to land on Sjablonen — never seeing "Mijn standaard is
-          // actief", which renders inside the Grafiek panel. A saved default
-          // IS a deliberate look already chosen, so the gallery is not what
-          // that reader needs first: open on Grafiek instead.
-          openTemplatesWhenPristine={accountStyle === null}
-          onChange={(patch, meta) => {
-            // Final-review fix (Fix 5): ChartConfigPanel now refuses a
-            // frame background/inset change UP FRONT (its own contrast
-            // guard, before ever calling this onChange) whenever it would
-            // make a series colour illegible — so there is nothing left for
-            // this callback to silently drop or adjust afterwards. Series
-            // colours are never changed by the frame feature.
-            // Fix round 1 (Minor 2): the panel SAYS whether a change is a
-            // mid-drag colour-picker move — no key-shape guessing here, so a
-            // discrete action that happens to touch the same keys (e.g.
-            // "Standaardkleuren") keeps its own undo entry. Transient
-            // entries merge until sealed (`onSeal` below).
-            dispatchCommand({ kind: 'setPresentation', patch }, 'panel', { transient: meta?.transient === true });
-            trackChartStyleEvent('option_changed');
-            // Task 5: every frame control change ALSO counts as its own
-            // frame_changed event, in addition to (never instead of) the
-            // option_changed every panel change already fires.
-            if (Object.keys(patch).some((key) => key.startsWith('frame'))) {
-              trackChartStyleEvent('frame_changed');
-            }
-          }}
-          onApplyTemplate={(id) => {
-            // ADR 043: a template REPLACES the reader's per-chart tweaks (a
-            // look is a whole, not a layer), then applies as ordinary
-            // overrides — every honesty lock re-runs per render exactly as
-            // for a hand-picked value. The uploaded frame image is cleared
-            // like the full reset does. Owner decision E is untouched: this
-            // chart only; the account default is the only persistence.
-            // ONE command, not reset-then-patch: a template is a single
-            // undoable step (its inverse is the full presentation it
-            // replaced), and `applyCommand` resolves the template id to the
-            // same `templateById(id).overrides` this used to inline.
-            dispatchCommand({ kind: 'applyTemplate', templateId: id }, 'panel');
-            setFrameImage(null);
-            trackChartStyleEvent(`template_${id}`);
-          }}
-          onSeal={sealHistory}
-          onReset={() => {
-            dispatchCommand({ kind: 'resetPresentation' }, 'panel');
-            // Final-review fix: "Standaardkleuren" (a partial reset) goes
-            // through onChange and was already counted; "Standaard" (the
-            // full reset) fired nothing, so the #220 usage counter — whose
-            // whole point is telling the owner which options readers
-            // actually touch — systematically under-counted resets.
-            trackChartStyleEvent('option_changed');
-            // Fix: clear the uploaded frame image when doing a full reset
-            setFrameImage(null);
-          }}
-          idPrefix={domId}
-          account={
-            signedIn
-              ? {
-                  hasDefault: accountStyle !== null,
-                  onSave: async () => {
-                    // The EFFECTIVE values (base + whatever per-chart tweaks
-                    // are currently showing) become the new account default —
-                    // "what's on screen" is what "Bewaar als mijn standaard"
-                    // promises to save — EXCEPT the keys the resolver LOCKED
-                    // for this form (P2 task-4 review): saving while a bar
-                    // chart is on screen must not bake the bar-forced zero
-                    // baseline into every future line chart. A locked value
-                    // was never the reader's choice, so it is not saved AS
-                    // THE LOCK'S VALUE — but final-review fix: it must still
-                    // be saved as whatever `base` (the account default
-                    // already in scope) already held for that key, not
-                    // dropped outright. Omitting the key made
-                    // `saveUserChartStyle`'s full-row REPLACE (never a merge)
-                    // silently erase an earlier saved preference for that key
-                    // — e.g. turning off "Waarden tonen" on a line chart,
-                    // saving, then only changing the font on a bar/hbar/area
-                    // chart and saving again wiped the earlier valueLabels
-                    // choice because bar forms lock it. Writing back
-                    // `base[key]` keeps both properties: a form-forced value
-                    // is never persisted, and a value the reader chose on a
-                    // DIFFERENT chart form survives an unrelated save on this
-                    // one.
-                    const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
-                    for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
-                      (chosen as Record<string, unknown>)[key] = base[key];
-                    }
-                    // Task 5 (design §C2): an "Own image" background is a
-                    // data URL held only in THIS component's `frameImage`
-                    // state, never written to the account-default row — so
-                    // it never rides along with a save. Saved as 'none'
-                    // instead of the image kind (never simply omitted,
-                    // matching the locked-key precedent just above: a key
-                    // this save cannot honour still gets an explicit,
-                    // digit-free stock value written back, not a silent gap).
-                    const droppedImage = chosen.frameBackground !== undefined && chosen.frameBackground !== 'none' && chosen.frameBackground.kind === 'image';
-                    if (droppedImage) chosen.frameBackground = 'none';
-                    // WP218 phase 3 (owner B): the last brand applied on any
-                    // chart shown by THIS MOUNTED ChartView (not just
-                    // whichever chart is on screen right now — see
-                    // lastAppliedBrand's own comment) rides along as the
-                    // account-default save's `brandApplied` argument, so the
-                    // persisted default can record which brand it came from.
-                    const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
-                    if (r.ok) {
-                      setAccountStyle(chosen);
-                      trackChartStyleEvent('default_saved');
-                    }
-                    if (!r.ok) return r.reason === 'unavailable' ? 'unavailable' : 'error';
-                    return droppedImage ? 'savedImageDropped' : 'saved';
-                  },
-                  onForget: async () => {
-                    const r = await forgetMyChartStyle();
-                    if (r.ok) {
-                      setAccountStyle(null);
-                      trackChartStyleEvent('default_forgotten');
-                    }
-                    return r.ok ? 'forgotten' : 'error';
-                  },
-                }
-              : undefined
-          }
-          // WP218 phase 3 (owner B): same signedIn gate as `account` —
-          // Ontdek/trial gets no Merkkleuren block at all.
-          brand={signedIn ? { lookup: (website) => lookupBrand(website), available: brandLookupAvailable } : undefined}
-          onBrandApplied={(applied) => {
-            setLastAppliedBrand(applied);
-            trackChartStyleEvent('brand_applied');
-          }}
-        />
-        {/* Owner punch-list item 1 (session 102): Download and Embed are
-          * otherwise stranded behind the Style modal's backdrop while it's
-          * open (a real, focus-trapped dialog) — unreachable even though
-          * both controls still exist in the footer below. Rendered here as
-          * a footer row after the panel, reusing the EXACT same props as
-          * the footer's own copies further down this file. `ChartEmbedButton`
-          * here reuses `onOpenChange={setEmbedOpen}` unchanged: `styleOpen`
-          * and `embedOpen` are both derived from the SAME `openPanel`
-          * discriminated state (see its declaration above), so a single
-          * `setEmbedOpen(true)` call flips `openPanel` straight from
-          * 'style' to 'embed' in one update — Style closes and Embed opens
-          * atomically, with no separate "close Style" call needed and no
-          * frame where both could be true at once. `!tabularForm` is
-          * already implied here (this whole modal is gated on it above),
-          * unlike the footer's own copy of this gate further down, which
-          * sits outside it. */}
-        {!(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ChartDownloadMenu
-              containerRef={chartContainerRef}
-              attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-              filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
-              lang={chartLang}
-              frame={pres}
-              frameImage={frameImage}
-              headlineText={chartHeadline}
-              titleText={exportTitle}
-              captionText={exportOwnCaption}
-              notice={exportNotice}
-              syncedAt={activeSpec.attribution.syncedAt}
-            />
-            {embed ? (
-              /* #254: the PRIMARY's table id, deliberately — an embed
-               * republishes the stored audit row (the primary answer), which
-               * carries no reading selection, so labelling the published
-               * iframe with an alternate's table would misname it. */
-              <ChartEmbedButton
-                auditId={embed.auditId}
-                tableId={spec.attribution.tableId}
+          {/* WP-LOOK part (a) (session 142, 2026-09-29, ADR 063): ONE Edit
+            * popup holds EVERY reader control — the form tabs, reading and
+            * period selects and derived overlays (the former control row
+            * above the plot), small multiples, the journalist-headline
+            * draft button, Undo/Redo/history, the Style panel and the
+            * co-pilot input. Nothing was removed (owner decision, ADR 063
+            * consequence 4); it all moved in here so the card itself is the
+            * chart, one number, one source line and one row of actions.
+            * The dock renders the SAME lifted chart nodes on the left (see
+            * the file-header comment of chart-edit-modal.tsx). Part (b) of
+            * WP-LOOK restyles this pane; part (a) only relocates. */}
+          <div className="flex flex-col gap-4" data-slot="chart-edit-pane">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t(chartLang, 'chart.edit.chartSection')}</span>
+              <ChartHistoryActions
+                undo={undo}
+                redo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                history={history}
                 lang={chartLang}
-                currentForm={state.form}
-                defaultIsTable={defaultFormIsTable(spec)}
-                open={embedOpen}
-                onOpenChange={setEmbedOpen}
-                disabled={state.selectedReading !== null}
-                chartSlot={
-                  <>
-                    {canvasNode}
-                    {legendNode}
-                  </>
-                }
+                locked={storyOpen ? { title: storyLockedTitle!, describedBy: storyLockId } : undefined}
               />
+            </div>
+          {/* Chart-card polish (2026-09-15): ONE quiet control row above the
+            * plot — the Weergave tablist left, the Vanaf/Tot window right — in
+            * place of the former two rows (tablist + Opmaak + Inzichten, then
+            * Vanaf/Tot). Kept ABOVE the export container on purpose: DOM order
+            * is keyboard order, and every SeriesDot/SeriesBar is a tab stop
+            * (click-to-annotate), so a reader must reach the form switch before
+            * the chart's own points — moving the row under the plot would have
+            * cost a keyboard user one Tab per data point. Spec Part B3 + ADR
+            * 044: the whole row is a viewer-only control surface, gated on both
+            * `!embedMode` and `!inStage` exactly as before. */}
+          {!embedMode && !inStage ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2" data-slot="chart-controls">
+              <div
+                role="tablist"
+                aria-label={t(chartLang, 'chart.weergaveLabel')}
+                onKeyDown={onFormTabKeyDown}
+                className="flex flex-wrap items-center gap-1"
+              >
+                <button
+                  ref={lineTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'line'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
+                  tabIndex={activeForm === 'line' ? 0 : -1}
+                  disabled={!canUseLine}
+                  title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
+                  onClick={() => selectForm('line')}
+                  className={quietTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.tabLine')}
+                </button>
+                <button
+                  ref={areaTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'area'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
+                  tabIndex={activeForm === 'area' ? 0 : -1}
+                  disabled={!canUseArea}
+                  title={canUseArea ? undefined : areaDisabledReason}
+                  onClick={() => selectForm('area')}
+                  className={quietTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.area')}
+                </button>
+                <button
+                  ref={barTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'bar'}
+                  aria-controls={panelId}
+                  tabIndex={activeForm === 'bar' ? 0 : -1}
+                  onClick={() => selectForm('bar')}
+                  className={quietTab(activeForm === 'bar')}
+                >
+                  {t(chartLang, 'chart.tabBar')}
+                </button>
+                <button
+                  ref={hbarTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'hbar'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
+                  tabIndex={activeForm === 'hbar' ? 0 : -1}
+                  disabled={!canUseHbar}
+                  title={canUseHbar ? undefined : hbarDisabledReason}
+                  onClick={() => selectForm('hbar')}
+                  className={quietTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.hbar')}
+                </button>
+                <button
+                  ref={tableTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'table'}
+                  aria-controls={panelId}
+                  tabIndex={activeForm === 'table' ? 0 : -1}
+                  onClick={() => selectForm('table')}
+                  className={quietTab(activeForm === 'table')}
+                >
+                  {t(chartLang, 'chart.tabTable')}
+                </button>
+                {/* Phase 5 (Task 3): Dumbbell sits BEFORE Helling in the DOM so
+                  * the visual/keyboard tab order matches FORM_ORDER's array order
+                  * (dumbbell, slope, heatmap — the scorer's own fixed order). */}
+                <button
+                  ref={dumbbellTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'dumbbell'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseDumbbell ? undefined : `${domId}-dumbbell-reason`}
+                  tabIndex={activeForm === 'dumbbell' ? 0 : -1}
+                  disabled={!canUseDumbbell}
+                  title={canUseDumbbell ? undefined : dumbbellDisabledReason}
+                  onClick={() => selectForm('dumbbell')}
+                  className={quietTab(activeForm === 'dumbbell') + (canUseDumbbell ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.dumbbell')}
+                </button>
+                <button
+                  ref={slopeTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'slope'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseSlope ? undefined : `${domId}-slope-reason`}
+                  tabIndex={activeForm === 'slope' ? 0 : -1}
+                  disabled={!canUseSlope}
+                  title={canUseSlope ? undefined : slopeDisabledReason}
+                  onClick={() => selectForm('slope')}
+                  className={quietTab(activeForm === 'slope') + (canUseSlope ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.slope')}
+                </button>
+                {/* Phase 5 (Task 4): Warmtekaart is LAST — Dumbbell, Helling,
+                  * Warmtekaart, matching FORM_ORDER's own array order. */}
+                <button
+                  ref={heatmapTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'heatmap'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseHeatmap ? undefined : `${domId}-heatmap-reason`}
+                  tabIndex={activeForm === 'heatmap' ? 0 : -1}
+                  disabled={!canUseHeatmap}
+                  title={canUseHeatmap ? undefined : heatmapDisabledReason}
+                  onClick={() => selectForm('heatmap')}
+                  className={quietTab(activeForm === 'heatmap') + (canUseHeatmap ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.heatmap')}
+                </button>
+                {/* Phase 5b (verified-whole, Task 4): Taartdiagram, Gestapeld,
+                  * Gestapeld (%) trail Warmtekaart, matching FORM_ORDER's own
+                  * array order (chart-fit.ts's `allowedForms`). Disabled for a
+                  * structural reason OR a verdict (see pieDisabledReason). */}
+                <button
+                  ref={pieTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'pie'}
+                  aria-controls={panelId}
+                  aria-describedby={canUsePie ? undefined : `${domId}-pie-reason`}
+                  tabIndex={activeForm === 'pie' ? 0 : -1}
+                  disabled={!canUsePie}
+                  title={canUsePie ? undefined : pieDisabledReason}
+                  onClick={() => selectForm('pie')}
+                  className={quietTab(activeForm === 'pie') + (canUsePie ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.pie')}
+                </button>
+                <button
+                  ref={stackedTabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'stacked'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseStacked ? undefined : `${domId}-stacked-reason`}
+                  tabIndex={activeForm === 'stacked' ? 0 : -1}
+                  disabled={!canUseStacked}
+                  title={canUseStacked ? undefined : stackedDisabledReason}
+                  onClick={() => selectForm('stacked')}
+                  className={quietTab(activeForm === 'stacked') + (canUseStacked ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.stacked')}
+                </button>
+                <button
+                  ref={stacked100TabRef}
+                  type="button"
+                  role="tab"
+                  data-command-kind="setForm"
+                  aria-selected={activeForm === 'stacked100'}
+                  aria-controls={panelId}
+                  aria-describedby={canUseStacked100 ? undefined : `${domId}-stacked100-reason`}
+                  tabIndex={activeForm === 'stacked100' ? 0 : -1}
+                  disabled={!canUseStacked100}
+                  title={canUseStacked100 ? undefined : stacked100DisabledReason}
+                  onClick={() => selectForm('stacked100')}
+                  className={quietTab(activeForm === 'stacked100') + (canUseStacked100 ? '' : ' cursor-not-allowed opacity-40')}
+                >
+                  {t(chartLang, 'chart.form.stacked100')}
+                </button>
+              </div>
+              {/* Reachable via the disabled Lijn tab's aria-describedby above — a
+                * plain `title` (kept, for pointer users) is invisible to a screen
+                * reader, and a disabled control still needs its reason available
+                * to whoever reaches it by keyboard/AT. */}
+              {!canUseLine ? (
+                <span id={`${domId}-line-reason`} className="sr-only">
+                  {t(chartLang, 'chart.lineDisabledReason')}
+                </span>
+              ) : null}
+              {!canUseArea ? (
+                <span id={`${domId}-area-reason`} className="sr-only">
+                  {areaDisabledReason}
+                </span>
+              ) : null}
+              {!canUseHbar ? (
+                <span id={`${domId}-hbar-reason`} className="sr-only">
+                  {hbarDisabledReason}
+                </span>
+              ) : null}
+              {!canUseDumbbell ? (
+                <span id={`${domId}-dumbbell-reason`} className="sr-only">
+                  {dumbbellDisabledReason}
+                </span>
+              ) : null}
+              {!canUseSlope ? (
+                <span id={`${domId}-slope-reason`} className="sr-only">
+                  {slopeDisabledReason}
+                </span>
+              ) : null}
+              {!canUseHeatmap ? (
+                <span id={`${domId}-heatmap-reason`} className="sr-only">
+                  {heatmapDisabledReason}
+                </span>
+              ) : null}
+              {!canUsePie ? (
+                <span id={`${domId}-pie-reason`} className="sr-only">
+                  {pieDisabledReason}
+                </span>
+              ) : null}
+              {!canUseStacked ? (
+                <span id={`${domId}-stacked-reason`} className="sr-only">
+                  {stackedDisabledReason}
+                </span>
+              ) : null}
+              {!canUseStacked100 ? (
+                <span id={`${domId}-stacked100-reason`} className="sr-only">
+                  {stacked100DisabledReason}
+                </span>
+              ) : null}
+              {/* #254: the reading toggle — same quiet <select> pattern as the
+                * Vanaf/Tot pair right below it, and the same story lock (a story's
+                * steps are built from the ACTIVE reading's findings, so switching
+                * reading mid-story would change the captions under the reader).
+                * Its options are the registry's OWN label strings, verbatim —
+                * this component never invents copy describing a reading. The
+                * value lives in the reducer (`state.selectedReading`), NOT in the
+                * `spec` prop, which is what keeps a switch from tripping the
+                * spec-identity reset. Rendered only when the answer actually
+                * carried alternates; the whole row is already gated on
+                * `!embedMode && !inStage` above. */}
+              {alternates.length > 0 ? (
+                <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
+                  <select
+                    id={`${domId}-reading`}
+                    aria-label={t(chartLang, 'chart.reading.label')}
+                    value={state.selectedReading ?? 'primary'}
+                    disabled={storyOpen}
+                    title={storyLockedTitle}
+                    aria-describedby={storyOpen ? storyLockId : undefined}
+                    data-command-kind="setReading"
+                    onChange={(e) =>
+                      dispatchCommand({ kind: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) }, 'panel')
+                    }
+                    className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
+                    {/* Keyed by index on purpose: the index IS this list's
+                      * identity (it is what `selectedReading` stores and what
+                      * `activeReadingSpec` looks up), the array is never
+                      * reordered or filtered, and two registry alternates could
+                      * in principle carry the same label.
+                      *
+                      * These labels routinely CONTAIN DIGITS — the registry ships
+                      * 'CPI indexniveau (2025=100), geen mutatiepercentage',
+                      * 'stand per 31 december (Eindstand Voorraad)', '…(2021 =
+                      * 100)' — and that is deliberate and allowed. A registry
+                      * alternate label is curated config, hand-authored in
+                      * src/registry/defaults.ts and code-reviewed, never derived
+                      * from a CBS cell at runtime, and it NAMES a reading rather
+                      * than stating a measured quantity (an index BASE is a
+                      * definitional property of the measure, not a plotted
+                      * value). Same class as ChartAnnotation's curated event-marker
+                      * labels, whose own type comment (src/chart/types.ts) states
+                      * the policy: "METADATA … never a data VALUE (R1/R3's
+                      * numeric-token scanning never sees these)". chart.test.tsx's
+                      * #254 scan test pins the exemption as NARROW — the card
+                      * minus this one control must still scan clean with no
+                      * exemption at all, so a label's digits can never leak into
+                      * the chart, table, headline figure, axis or attribution. */}
+                    {alternates.map((alt, i) => (
+                      <option key={i} value={i}>
+                        {alt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              {zoomAvailable ? (
+                /* #254: `ml-auto` moves to the reading block above when one is
+                 * shown, so the right-hand group starts there and the two
+                 * <select> groups sit next to each other instead of being pushed
+                 * apart by two competing auto margins. With no alternates (every
+                 * call site before this feature) the class list is unchanged. */
+                <div
+                  className={
+                    (alternates.length > 0 ? '' : 'ml-auto ') +
+                    'flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground'
+                  }
+                >
+                  <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
+                  <select
+                    id={`${domId}-from`}
+                    aria-label={t(chartLang, 'chart.from')}
+                    data-command-kind="setPeriodRange"
+                    value={state.periodRange?.[0] ?? allPeriodCodes[0]}
+                    disabled={storyOpen}
+                    title={storyLockedTitle}
+                    aria-describedby={storyOpen ? storyLockId : undefined}
+                    onChange={(e) => {
+                      const [from, clampedTo] = clampVanafChange(
+                        e.target.value,
+                        state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
+                      );
+                      dispatchCommand(
+                        {
+                          kind: 'setPeriodRange',
+                          range:
+                            from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
+                              ? null
+                              : [from, clampedTo],
+                        },
+                        'panel',
+                      );
+                    }}
+                    className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {allPeriodCodes.map((code) => (
+                      <option key={code} value={code}>
+                        {periodLabelByCode.get(code)}
+                      </option>
+                    ))}
+                  </select>
+                  <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
+                  <select
+                    id={`${domId}-to`}
+                    aria-label={t(chartLang, 'chart.to')}
+                    data-command-kind="setPeriodRange"
+                    value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
+                    disabled={storyOpen}
+                    title={storyLockedTitle}
+                    aria-describedby={storyOpen ? storyLockId : undefined}
+                    onChange={(e) => {
+                      const [clampedFrom, to] = clampTotChange(
+                        state.periodRange?.[0] ?? allPeriodCodes[0],
+                        e.target.value,
+                      );
+                      dispatchCommand(
+                        {
+                          kind: 'setPeriodRange',
+                          range:
+                            clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                              ? null
+                              : [clampedFrom, to],
+                        },
+                        'panel',
+                      );
+                    }}
+                    className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {allPeriodCodes.map((code) => (
+                      <option key={code} value={code}>
+                        {periodLabelByCode.get(code)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              {/* Task 7: derived overlays (difference arrows, average lines) —
+                * small controls for on-demand calculations. Rendered inline with
+                * the main controls but after the tabs/reading/zoom selects.
+                * Fix round 3: `spec.kind` is `'line' | 'bar'` (the chart FORM),
+                * never `'answer'` — that comparison type-errored (TS2367) and was
+                * always false, so this whole control block was dead code in
+                * every prior round despite the report claiming it worked. The
+                * real "is this a CBS/Eurostat answer chart with a saved audit
+                * row" test is the same one the resolution effect above already
+                * uses (`embed?.auditId`) — `ChartView` only ever receives `embed`
+                * for that case (own-data charts render through the separate
+                * UserChartView component; the internal Eurostat explorer passes
+                * no `embed` at all and correctly gets no derived-overlay UI).
+                * Final-review fix I2: also gated on `activeForm` — derivedOverlayElements
+                * (the ReferenceLine renderer, above) only ever runs inside the
+                * LineChart/AreaChart branches, never bar/hbar, so offering these
+                * controls on a bar chart used to let a reader add an overlay,
+                * see its own remove chip appear, and watch nothing render —
+                * the control implied a capability the bar/hbar forms don't
+                * have. Mirrors the `activeForm === 'line' || activeForm ===
+                * 'area'` test `effectiveKind` already uses above.
+                * #293 (session 124): only the ADD controls are form-gated. While
+                * an overlay exists (or a refusal is showing), its remove chip and
+                * message stay visible on every form — switching to a bar chart
+                * must never hide the control that removes what the reader added. */}
+              {embed !== undefined &&
+              (activeForm === 'line' || activeForm === 'area' || state.derivedOverlayRequests.length > 0 || derivationRefusals.size > 0) ? (
+                <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+                  {activeForm === 'line' || activeForm === 'area' ? (
+                  <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={differencePickerActive ? 'default' : 'outline'}
+                    data-command-kind="addDerivedOverlay"
+                    aria-pressed={differencePickerActive}
+                    title={t(chartLang, 'chart.derived.differenceLabel')}
+                    onClick={() => {
+                      setDifferencePickerActive((active) => !active);
+                      setFirstDifferencePoint(null);
+                      setDifferenceError(null);
+                    }}
+                    className="text-xs"
+                  >
+                    {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
+                  </Button>
+                  {/* Final-review fix I8: "Gemiddelde tonen" used to always
+                    * average `displaySpec.series[0]` regardless of what the
+                    * reader had hidden or how many series the chart actually
+                    * has — silently including a hidden, unnamed series in a
+                    * button whose own label implies "the average of what's on
+                    * the chart". An average across several DIFFERENT series was
+                    * never well-defined here (which one? all of them combined?),
+                    * so — the smaller, more honest fix — the control now only
+                    * offers itself when exactly one series is visible, matching
+                    * the `seriesMeta.filter((s) => !state.hiddenKeys.has(s.key))`
+                    * visibility check every chart-form branch above already
+                    * uses for rendering. */}
+                  {visibleSeriesMeta.length === 1 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-command-kind="addDerivedOverlay"
+                      title={t(chartLang, 'chart.derived.meanLabel')}
+                      onClick={() => {
+                        // seriesMeta keys are positional ('s0', 's1', ... — see
+                        // buildRows above), so the one visible series' index is
+                        // its key with the 's' prefix stripped.
+                        const visibleIndex = Number(visibleSeriesMeta[0]!.key.slice(1));
+                        const visibleCodes = (displaySpec.series[visibleIndex]?.points ?? [])
+                          .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
+                          .map((p) => p.resultId);
+                        if (visibleCodes.length >= 2) {
+                          dispatchCommand(
+                            { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
+                            'panel',
+                          );
+                        }
+                      }}
+                      className="text-xs"
+                    >
+                      {t(chartLang, 'chart.derived.meanLabel')}
+                    </Button>
+                  ) : null}
+                  </>
+                  ) : null}
+                  {state.derivedOverlayRequests.map((overlay) => (
+                    <Button
+                      key={overlay.id}
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      data-command-kind="removeDerivedOverlay"
+                      onClick={() => dispatchCommand({ kind: 'removeDerivedOverlay', overlayId: overlay.id }, 'panel')}
+                      className="text-xs h-6 px-2"
+                    >
+                      × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
+                    </Button>
+                  ))}
+                  {differenceError ? (
+                    <span className="text-xs text-destructive">{differenceError}</span>
+                  ) : null}
+                  {derivationRefusals.size > 0 ? (
+                    <div className="text-xs text-destructive">
+                      {/* Final-review fix I6: translated, never the server's raw
+                        * English reason string — see derivationRefusalMessage. */}
+                      {Array.from(derivationRefusals.entries()).map(([id, reason]) => (
+                        <div key={id}>{derivationRefusalMessage(chartLang, reason)}</div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {!tabularForm && smallMultiplesAvailable && !embedMode && !inStage ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                aria-pressed={smallMultiples}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onClick={() => setSmallMultiples((v) => !v)}
+                className={tabClass(smallMultiples) + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
+              >
+                {t(chartLang, 'chart.smallMultiplesToggle')}
+              </button>
+              {smallMultiples ? (
+                <div role="group" aria-label={t(chartLang, 'chart.axisGroupLabel')} className="flex gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={axisMode === 'shared'}
+                    onClick={() => setAxisMode('shared')}
+                    className={tabClass(axisMode === 'shared')}
+                  >
+                    {t(chartLang, 'chart.sharedAxes')}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={axisMode === 'own'}
+                    onClick={() => setAxisMode('own')}
+                    className={tabClass(axisMode === 'own')}
+                  >
+                    {t(chartLang, 'chart.ownAxes')}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+            {/* Journalist chart-headline (Task 6): chat context only and only
+              * when there is something to draft from (mirrors the Insights
+              * trigger's own storyAvailable-from-findings gate). */}
+            {embed?.auditId !== undefined && findings.length > 0 ? (
+              <div>
+                {/* The draft editor renders on the CARD (under the title, the
+                  * same place the saved headline shows), so the popup closes
+                  * first — an editor behind a modal backdrop is unreachable. */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStyleOpen(false);
+                    startHeadlineDraft();
+                  }}
+                  disabled={headlineBusy}
+                >
+                  {headlineBusy
+                    ? t(chartLang, 'chart.headline.drafting')
+                    : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
+                </Button>
+              </div>
             ) : null}
+            {/* Review fix (chart-panel-layout, option A): table form gets NO
+              * frame and NO Style panel — a framed table would need its own
+              * export path — so the Style panel alone stays gated on
+              * `!tabularForm`; the popup itself now opens in table form too,
+              * because the form tabs that lead back to a chart live in it. */}
+            {!tabularForm ? (
+              <>
+                <span className="border-t border-border pt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t(chartLang, 'chart.panel.trigger')}
+                </span>
+            <ChartConfigPanel
+              key={chartEpoch}
+              resolved={resolved}
+              seriesMeta={seriesMeta}
+              lang={chartLang}
+              open={styleOpen}
+              onOpenChange={setStyleOpen}
+              triggerId={styleTriggerId}
+              // #6 (session 110 UX audit): this panel is always hosted inside
+              // ChartEditModal here, whose Dialog already renders its own Close
+              // (X) button — the panel's own "Sluiten" was a second, redundant
+              // Close control in the same popup.
+              hideCloseButton
+              focusOnMount={false}
+              frameImage={frameImage}
+              onFrameImage={setFrameImage}
+              // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart
+              // tweaks yet opens the Style panel on the Sjablonen gallery
+              // instead of the raw Grafiek controls — `resolved.pristine`
+              // already tracks exactly that (the overrides object passed in is
+              // empty), evaluated once at the panel's own mount.
+              // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
+              // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
+              // and used to land on Sjablonen — never seeing "Mijn standaard is
+              // actief", which renders inside the Grafiek panel. A saved default
+              // IS a deliberate look already chosen, so the gallery is not what
+              // that reader needs first: open on Grafiek instead.
+              openTemplatesWhenPristine={accountStyle === null}
+              onChange={(patch, meta) => {
+                // Final-review fix (Fix 5): ChartConfigPanel now refuses a
+                // frame background/inset change UP FRONT (its own contrast
+                // guard, before ever calling this onChange) whenever it would
+                // make a series colour illegible — so there is nothing left for
+                // this callback to silently drop or adjust afterwards. Series
+                // colours are never changed by the frame feature.
+                // Fix round 1 (Minor 2): the panel SAYS whether a change is a
+                // mid-drag colour-picker move — no key-shape guessing here, so a
+                // discrete action that happens to touch the same keys (e.g.
+                // "Standaardkleuren") keeps its own undo entry. Transient
+                // entries merge until sealed (`onSeal` below).
+                dispatchCommand({ kind: 'setPresentation', patch }, 'panel', { transient: meta?.transient === true });
+                trackChartStyleEvent('option_changed');
+                // Task 5: every frame control change ALSO counts as its own
+                // frame_changed event, in addition to (never instead of) the
+                // option_changed every panel change already fires.
+                if (Object.keys(patch).some((key) => key.startsWith('frame'))) {
+                  trackChartStyleEvent('frame_changed');
+                }
+              }}
+              onApplyTemplate={(id) => {
+                // ADR 043: a template REPLACES the reader's per-chart tweaks (a
+                // look is a whole, not a layer), then applies as ordinary
+                // overrides — every honesty lock re-runs per render exactly as
+                // for a hand-picked value. The uploaded frame image is cleared
+                // like the full reset does. Owner decision E is untouched: this
+                // chart only; the account default is the only persistence.
+                // ONE command, not reset-then-patch: a template is a single
+                // undoable step (its inverse is the full presentation it
+                // replaced), and `applyCommand` resolves the template id to the
+                // same `templateById(id).overrides` this used to inline.
+                dispatchCommand({ kind: 'applyTemplate', templateId: id }, 'panel');
+                setFrameImage(null);
+                trackChartStyleEvent(`template_${id}`);
+              }}
+              onSeal={sealHistory}
+              onReset={() => {
+                dispatchCommand({ kind: 'resetPresentation' }, 'panel');
+                // Final-review fix: "Standaardkleuren" (a partial reset) goes
+                // through onChange and was already counted; "Standaard" (the
+                // full reset) fired nothing, so the #220 usage counter — whose
+                // whole point is telling the owner which options readers
+                // actually touch — systematically under-counted resets.
+                trackChartStyleEvent('option_changed');
+                // Fix: clear the uploaded frame image when doing a full reset
+                setFrameImage(null);
+              }}
+              idPrefix={domId}
+              account={
+                signedIn
+                  ? {
+                      hasDefault: accountStyle !== null,
+                      onSave: async () => {
+                        // The EFFECTIVE values (base + whatever per-chart tweaks
+                        // are currently showing) become the new account default —
+                        // "what's on screen" is what "Bewaar als mijn standaard"
+                        // promises to save — EXCEPT the keys the resolver LOCKED
+                        // for this form (P2 task-4 review): saving while a bar
+                        // chart is on screen must not bake the bar-forced zero
+                        // baseline into every future line chart. A locked value
+                        // was never the reader's choice, so it is not saved AS
+                        // THE LOCK'S VALUE — but final-review fix: it must still
+                        // be saved as whatever `base` (the account default
+                        // already in scope) already held for that key, not
+                        // dropped outright. Omitting the key made
+                        // `saveUserChartStyle`'s full-row REPLACE (never a merge)
+                        // silently erase an earlier saved preference for that key
+                        // — e.g. turning off "Waarden tonen" on a line chart,
+                        // saving, then only changing the font on a bar/hbar/area
+                        // chart and saving again wiped the earlier valueLabels
+                        // choice because bar forms lock it. Writing back
+                        // `base[key]` keeps both properties: a form-forced value
+                        // is never persisted, and a value the reader chose on a
+                        // DIFFERENT chart form survives an unrelated save on this
+                        // one.
+                        const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
+                        for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
+                          (chosen as Record<string, unknown>)[key] = base[key];
+                        }
+                        // Task 5 (design §C2): an "Own image" background is a
+                        // data URL held only in THIS component's `frameImage`
+                        // state, never written to the account-default row — so
+                        // it never rides along with a save. Saved as 'none'
+                        // instead of the image kind (never simply omitted,
+                        // matching the locked-key precedent just above: a key
+                        // this save cannot honour still gets an explicit,
+                        // digit-free stock value written back, not a silent gap).
+                        const droppedImage = chosen.frameBackground !== undefined && chosen.frameBackground !== 'none' && chosen.frameBackground.kind === 'image';
+                        if (droppedImage) chosen.frameBackground = 'none';
+                        // WP218 phase 3 (owner B): the last brand applied on any
+                        // chart shown by THIS MOUNTED ChartView (not just
+                        // whichever chart is on screen right now — see
+                        // lastAppliedBrand's own comment) rides along as the
+                        // account-default save's `brandApplied` argument, so the
+                        // persisted default can record which brand it came from.
+                        const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
+                        if (r.ok) {
+                          setAccountStyle(chosen);
+                          trackChartStyleEvent('default_saved');
+                        }
+                        if (!r.ok) return r.reason === 'unavailable' ? 'unavailable' : 'error';
+                        return droppedImage ? 'savedImageDropped' : 'saved';
+                      },
+                      onForget: async () => {
+                        const r = await forgetMyChartStyle();
+                        if (r.ok) {
+                          setAccountStyle(null);
+                          trackChartStyleEvent('default_forgotten');
+                        }
+                        return r.ok ? 'forgotten' : 'error';
+                      },
+                    }
+                  : undefined
+              }
+              // WP218 phase 3 (owner B): same signedIn gate as `account` —
+              // Ontdek/trial gets no Merkkleuren block at all.
+              brand={signedIn ? { lookup: (website) => lookupBrand(website), available: brandLookupAvailable } : undefined}
+              onBrandApplied={(applied) => {
+                setLastAppliedBrand(applied);
+                trackChartStyleEvent('brand_applied');
+              }}
+            />
+              </>
+            ) : null}
+          {!tabularForm && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <ChartDownloadMenu
+                containerRef={chartContainerRef}
+                attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
+                filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
+                lang={chartLang}
+                frame={pres}
+                frameImage={frameImage}
+                headlineText={chartHeadline}
+                titleText={exportTitle}
+                captionText={exportOwnCaption}
+                notice={exportNotice}
+                syncedAt={activeSpec.attribution.syncedAt}
+              />
+              {embed ? (
+                /* #254: the PRIMARY's table id, deliberately — an embed
+                 * republishes the stored audit row (the primary answer), which
+                 * carries no reading selection, so labelling the published
+                 * iframe with an alternate's table would misname it. */
+                <ChartEmbedButton
+                  auditId={embed.auditId}
+                  tableId={spec.attribution.tableId}
+                  lang={chartLang}
+                  currentForm={state.form}
+                  defaultIsTable={defaultFormIsTable(spec)}
+                  open={embedOpen}
+                  onOpenChange={setEmbedOpen}
+                  disabled={state.selectedReading !== null}
+                  chartSlot={
+                    <>
+                      {canvasNode}
+                      {legendNode}
+                    </>
+                  }
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {copilotAvailable ? (
+            <ChartCopilotInput
+              lang={chartLang}
+              busy={copilotBusy}
+              disabledReasonId={storyOpen ? storyLockId : tabularForm ? `${domId}-copilot-table-reason` : null}
+              examples={cbsExampleChips({ spec, state, zoomAvailable, lang: chartLang })}
+              reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
+              error={copilotError}
+              onSend={(m) => void sendToCopilot(m)}
+              onUndoReply={undoCopilotReply}
+              onRetry={(m) => void sendToCopilot(m)}
+              onFeedback={async () => ({ ok: false })}
+              onOpen={openCopilotTarget}
+              canOpen={copilotCanOpen}
+              onAskFollowUp={onAskFollowUp}
+              lockedNote={t(chartLang, 'chart.copilot.cbsLocked')}
+            />
+          ) : null}
+          {copilotAvailable && tabularForm ? (
+            <span id={`${domId}-copilot-table-reason`} className="sr-only">
+              {t(chartLang, 'chart.copilot.tabularLocked')}
+            </span>
+          ) : null}
           </div>
-        ) : null}
         </ChartEditModal>
       ) : null}
       {/* Task 3 (chart-visual-embed-pass): same no-double-mount reasoning as
@@ -4578,41 +4632,6 @@ export function ChartView({
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
       {zoomDisclosure ? <p className="mt-1 text-xs text-muted-foreground">{zoomDisclosure.trim()}</p> : null}
-      {!tabularForm && smallMultiplesAvailable && !embedMode && !inStage ? (
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            aria-pressed={smallMultiples}
-            disabled={storyOpen}
-            title={storyLockedTitle}
-            aria-describedby={storyOpen ? storyLockId : undefined}
-            onClick={() => setSmallMultiples((v) => !v)}
-            className={tabClass(smallMultiples) + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
-          >
-            {t(chartLang, 'chart.smallMultiplesToggle')}
-          </button>
-          {smallMultiples ? (
-            <div role="group" aria-label={t(chartLang, 'chart.axisGroupLabel')} className="flex gap-2">
-              <button
-                type="button"
-                aria-pressed={axisMode === 'shared'}
-                onClick={() => setAxisMode('shared')}
-                className={tabClass(axisMode === 'shared')}
-              >
-                {t(chartLang, 'chart.sharedAxes')}
-              </button>
-              <button
-                type="button"
-                aria-pressed={axisMode === 'own'}
-                onClick={() => setAxisMode('own')}
-                className={tabClass(axisMode === 'own')}
-              >
-                {t(chartLang, 'chart.ownAxes')}
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
       {/* Audit pass 2, row 7 (2026-09-17): #197 used to render a SECOND,
         * UI-only legend line here ("○ = voorlopig cijfer") — gated on the
         * exact same condition as the backend `provisionalNote` prose right
@@ -4698,15 +4717,21 @@ export function ChartView({
         * B3: also off in embedMode
         * — click-to-annotate is a viewer's own reading aid, session-only and
         * never part of the honest card an embed re-publishes elsewhere. */}
-      {!styleOpen ? captionNode : null}
-      {!styleOpen ? notesNode : null}
+      {/* WP-LOOK part (a) (session 142, ADR 063): on the CARD the caption,
+        * notes/goal-line and period-range strips render only when they hold
+        * something (a caption, a note or a point just clicked, a goal line,
+        * a marked period) — their "add" affordances and empty-state boxes
+        * live in the Edit popup, which renders the same nodes always. The
+        * "not CBS data" heading stays with the content wherever it shows. */}
+      {!styleOpen && hasOwnCaption ? captionNode : null}
+      {!styleOpen && hasOwnNotes ? notesNode : null}
       {/* Controller fix (session 115, Task 3 fix round 4): eraShadingNode was
        * only ever passed to ChartEditModal's `chartSlot` (rendered only when
        * `styleOpen` is true — see the "SAME lifted values" comment above),
        * so the era-shading trigger never appeared in the default,
        * non-modal dock — the same `!styleOpen ? X : null` mirroring every
        * other dock node here (captionNode, notesNode) already uses. */}
-      {!styleOpen ? eraShadingNode : null}
+      {!styleOpen && hasOwnEras ? eraShadingNode : null}
       {/* Task 3 (co-pilot phase 3): mounted directly after the notes strip,
         * outside chartContainerRef like the caption and the notes — a
         * reader's own words never enter a PNG/SVG export. Final review
@@ -4715,29 +4740,6 @@ export function ChartView({
         * reply strip (chips, the dropped line, group Undo) in the very commit
         * that applied "zet het in een tabel", leaving the reader a silently
         * transformed chart with no reachable undo. */}
-      {copilotAvailable ? (
-        <ChartCopilotInput
-          lang={chartLang}
-          busy={copilotBusy}
-          disabledReasonId={storyOpen ? storyLockId : tabularForm ? `${domId}-copilot-table-reason` : null}
-          examples={cbsExampleChips({ spec, state, zoomAvailable, lang: chartLang })}
-          reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
-          error={copilotError}
-          onSend={(m) => void sendToCopilot(m)}
-          onUndoReply={undoCopilotReply}
-          onRetry={(m) => void sendToCopilot(m)}
-          onFeedback={async () => ({ ok: false })}
-          onOpen={openCopilotTarget}
-          canOpen={copilotCanOpen}
-          onAskFollowUp={onAskFollowUp}
-          lockedNote={t(chartLang, 'chart.copilot.cbsLocked')}
-        />
-      ) : null}
-      {copilotAvailable && tabularForm ? (
-        <span id={`${domId}-copilot-table-reason`} className="sr-only">
-          {t(chartLang, 'chart.copilot.tabularLocked')}
-        </span>
-      ) : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured
         * sync date + deep link, from spec.attribution only (the source key is
@@ -4779,45 +4781,87 @@ export function ChartView({
           * two unrelated controls. Grouped into ONE flex group that wraps as
           * a unit; `shrink-0` keeps the pair from being squeezed before the
           * attribution text wraps instead. */}
-        {!tabularForm && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          <div className="flex shrink-0 items-center gap-2" data-slot="chart-footer-actions">
-            <ChartDownloadMenu
-              containerRef={chartContainerRef}
-              attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-              filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
-              lang={chartLang}
-              frame={pres}
-              frameImage={frameImage}
-              headlineText={chartHeadline}
-              titleText={exportTitle}
-              captionText={exportOwnCaption}
-              notice={exportNotice}
-              syncedAt={activeSpec.attribution.syncedAt}
-            />
-            {embed ? (
-              /* #254: the PRIMARY's table id — same reasoning as the copy
-               * inside ChartEditModal above (an embed republishes the
-               * stored audit row, which carries no reading selection). */
-              <ChartEmbedButton
-                auditId={embed.auditId}
-                tableId={spec.attribution.tableId}
-                lang={chartLang}
-                currentForm={state.form}
-                defaultIsTable={defaultFormIsTable(spec)}
-                open={embedOpen}
-                onOpenChange={setEmbedOpen}
-                disabled={state.selectedReading !== null}
-                chartSlot={
-                  <>
-                    {canvasNode}
-                    {legendNode}
-                  </>
-                }
-              />
-            ) : null}
-          </div>
-        ) : null}
       </div>
+      {/* WP-LOOK part (a) (session 142, ADR 063): the card's ONE row of
+        * actions, under the source line — Edit (the one popup with every
+        * control), Download, Embed, Share, Insights — the five the owner
+        * chose (open-questions #346). Edit is offered in table form too (the
+        * form tabs live inside it); Download/Embed/Share keep their old
+        * gates (never in small-multiples view: ChartDownloadMenu exports the
+        * first <svg>, one series' own mini panel — the same #46(c) risk as
+        * before; Embed/Share republish the PRIMARY reading's audit row).
+        * Never in embed or stage mode, exactly as the old header actions. */}
+      {!embedMode && !inStage ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2" data-slot="chart-card-actions">
+          <ChartConfigTrigger
+            open={styleOpen}
+            onToggle={toggleStylePanel}
+            controlsId={styleControlsId}
+            triggerId={styleTriggerId}
+            lang={chartLang}
+            edit
+          />
+          {!tabularForm && !(smallMultiples && smallMultiplesAvailable) ? (
+            /* `contents`: the three buttons wrap one by one inside the row on a
+             * phone instead of jumping to their own line as one block. */
+            <div className="contents" data-slot="chart-footer-actions">
+              <ChartDownloadMenu
+                containerRef={chartContainerRef}
+                attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
+                filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
+                lang={chartLang}
+                frame={pres}
+                frameImage={frameImage}
+                headlineText={chartHeadline}
+                titleText={exportTitle}
+                captionText={exportOwnCaption}
+                notice={exportNotice}
+                syncedAt={activeSpec.attribution.syncedAt}
+              />
+              {embed ? (
+                /* #254: the PRIMARY's table id — same reasoning as the copy
+                 * inside ChartEditModal above (an embed republishes the
+                 * stored audit row, which carries no reading selection). */
+                <ChartEmbedButton
+                  auditId={embed.auditId}
+                  tableId={spec.attribution.tableId}
+                  lang={chartLang}
+                  currentForm={state.form}
+                  defaultIsTable={defaultFormIsTable(spec)}
+                  open={embedOpen}
+                  onOpenChange={setEmbedOpen}
+                  disabled={state.selectedReading !== null}
+                  chartSlot={
+                    <>
+                      {canvasNode}
+                      {legendNode}
+                    </>
+                  }
+                />
+              ) : null}
+              {embed ? (
+                <ChartShareButton
+                  auditId={embed.auditId}
+                  lang={chartLang}
+                  currentForm={state.form}
+                  disabled={state.selectedReading !== null}
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {/* Story mode (session 92): the colourful trigger is offered whenever
+            * there is a code-built story (storyAvailable). */}
+          {storyAvailable ? (
+            <ChartStoryTrigger
+              open={storyOpen}
+              onToggle={toggleStory}
+              controlsId={storyControlsId}
+              triggerId={storyTriggerId}
+              lang={chartLang}
+            />
+          ) : null}
+        </div>
+      ) : null}
       {embedMode && embedFooter ? (
         <p className="mt-1 text-xs text-muted-foreground">
           {embedFooter}{' '}

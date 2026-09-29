@@ -18,6 +18,8 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { Download } from 'lucide-react';
+import { Button } from './ui/button.tsx';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import {
   FRAME_CORNER_PX,
@@ -1101,17 +1103,22 @@ export function ChartDownloadMenu({
 
   return (
     <div ref={wrapperRef} className="relative inline-block">
-      <button
+      {/* WP-LOOK part (a) (session 142, ADR 063): the same quiet ghost button
+        * as its neighbours in the card's one action row (Embed, Share) —
+        * it used to be an underlined text link. Same accessible name. */}
+      <Button
         ref={triggerRef}
         type="button"
+        variant="ghost"
+        size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
-        className="min-h-6 px-1 text-xs text-muted-foreground underline"
       >
+        <Download aria-hidden="true" />
         {t(lang, 'chart.download.trigger')}
-      </button>
+      </Button>
       {open ? (
         <div className="absolute right-0 z-10 mt-1 rounded-md border border-border bg-card shadow-sm">
         <div

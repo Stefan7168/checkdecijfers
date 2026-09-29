@@ -736,6 +736,13 @@ export interface ChartConfigPanelProps {
    * and only Close button exactly as before. `closeAndRefocus` (Escape,
    * keyboard) is unaffected either way — only the visible button is hidden. */
   hideCloseButton?: boolean;
+  /** WP-LOOK part (a) (session 142): false = do NOT move focus to this
+   * panel's active tab on mount. Inside the one Edit popup this panel is a
+   * SECTION under the chart controls and (un)mounts with the form (absent
+   * in table/heatmap form), so its mount focus would steal the keyboard
+   * from a reader arrowing through the form tablist past Tabel. Default
+   * true = the session-101 behaviour every other host still gets. */
+  focusOnMount?: boolean;
   /** R5.2 (journey WP-C, ADR 043 decision 6 revisit): when true AND
    * `resolved.pristine` (the per-chart override object is empty — no
    * template applied, no hand tweak yet) AND the templates tabpanel is
@@ -786,6 +793,7 @@ export function ChartConfigPanel({
   onApplyTemplate,
   openTemplatesWhenPristine = false,
   hideCloseButton = false,
+  focusOnMount = true,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   // ADR 043: which of the six named looks (if any) the resolved values
@@ -966,7 +974,7 @@ export function ChartConfigPanel({
   // again on a spec swap), so "on mount" already means "every time this
   // panel appears" — a real effect, not a one-time-ever curiosity.
   useEffect(() => {
-    tabRefs[activeTab].current?.focus();
+    if (focusOnMount) tabRefs[activeTab].current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately mount-only, see comment above.
   }, []);
 

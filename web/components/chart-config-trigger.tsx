@@ -12,7 +12,7 @@
 // (see that file's own re-export line) so the existing
 // chart-config-panel.test.tsx import keeps resolving.
 import type { ReactNode } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { Pencil, SlidersHorizontal } from 'lucide-react';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 
@@ -28,6 +28,13 @@ export interface ChartConfigTriggerProps {
    * 44 px phone tap target (R9.1) via `max-sm:size-11`. Default false =
    * the text button every existing harness/test renders, byte-identical. */
   compact?: boolean;
+  /** WP-LOOK part (a) (session 142, ADR 063): the card's ONE primary action,
+   * "Edit" — a filled button with a pencil that opens the popup holding
+   * every reader control (form, period, style, notes, co-pilot …), not only
+   * the Style panel this trigger used to name. Same id/aria wiring as the
+   * other two renderings, so focus-return and `aria-controls` are unchanged.
+   * Default false = the two existing renderings, byte-identical. */
+  edit?: boolean;
 }
 
 export function ChartConfigTrigger({
@@ -37,7 +44,16 @@ export function ChartConfigTrigger({
   triggerId,
   lang = 'nl',
   compact = false,
+  edit = false,
 }: ChartConfigTriggerProps): ReactNode {
+  if (edit) {
+    return (
+      <Button id={triggerId} type="button" variant="default" size="sm" aria-expanded={open} aria-controls={controlsId} onClick={onToggle}>
+        <Pencil aria-hidden="true" />
+        {t(lang, 'chart.edit.trigger')}
+      </Button>
+    );
+  }
   const label = t(lang, 'chart.panel.trigger');
   if (compact) {
     return (

@@ -1173,6 +1173,17 @@ const nl = {
   // them under a new key (the panel's own convention above already
   // catalogues 'Nederlands'/'English' for this exact concept).
   'chart.embed.trigger': 'Insluiten',
+  // WP-LOOK part (a) (session 142, 2026-09-29, ADR 063): the card's one
+  // Edit button + its popup title, and the Share button (copies a link to
+  // the public embed page of this chart — the same signed token Embed uses).
+  'chart.edit.trigger': 'Bewerken',
+  'chart.edit.title': 'Grafiek bewerken',
+  'chart.edit.chartSection': 'Grafiek',
+  'chart.share.trigger': 'Delen',
+  'chart.share.hint': 'Kopieer een link naar deze grafiek',
+  'chart.share.copied': 'Link gekopieerd',
+  'chart.share.failed': 'Delen lukte niet.',
+  'chart.share.signIn': 'Log in om een link te delen.',
   'chart.embed.dialogTitle': 'Grafiek insluiten',
   'chart.embed.dialogExplain': 'Plak deze code in een artikel om deze grafiek te tonen, met bronvermelding.',
   // Session 110 (embed auto-resize, ADR 041 addendum): one sentence
@@ -2413,6 +2424,14 @@ const en: Messages = {
   'chart.panel.close': 'Close',
   'chart.panel.dialogLabel': 'Style',
   'chart.embed.trigger': 'Embed',
+  'chart.edit.trigger': 'Edit',
+  'chart.edit.title': 'Edit chart',
+  'chart.edit.chartSection': 'Chart',
+  'chart.share.trigger': 'Share',
+  'chart.share.hint': 'Copy a link to this chart',
+  'chart.share.copied': 'Link copied',
+  'chart.share.failed': 'Sharing did not work.',
+  'chart.share.signIn': 'Sign in to share a link.',
   'chart.embed.dialogTitle': 'Embed this chart',
   'chart.embed.dialogExplain': 'Paste this code into an article to show this chart, with attribution.',
   'chart.embed.autoResizeExplain':

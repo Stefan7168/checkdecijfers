@@ -106,6 +106,17 @@ afterEach(() => {
   chartHeadlineActions.fetchChartHeadline.mockResolvedValue({ ok: true, headline: null });
 });
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('chart_edits persistence', () => {
   it('a saved log is replayed on mount and stays undoable', async () => {
     chartEditsActions.fetchChartEdits.mockResolvedValueOnce({
@@ -117,6 +128,8 @@ describe('chart_edits persistence', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
       </Provider>,
     );
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    await openEdit();
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: /Staaf|Bar/ })).toHaveAttribute('aria-selected', 'true'),
     );
@@ -149,6 +162,7 @@ describe('chart_edits persistence', () => {
     // Let the hydrate effect settle (it resolves `{ log: null }`) before the
     // fake clock takes over, so no real-timer promise is left pending.
     await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    await openEdit(); // real timers: the popup is next/dynamic
     vi.useFakeTimers();
     try {
       fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
@@ -183,7 +197,9 @@ describe('chart_edits persistence', () => {
         <ChartView spec={twoSeriesLineSpec()} />
       </Provider>,
     );
+    await openEdit(0);
     fireEvent.click(screen.getAllByRole('tab', { name: /Staaf|Bar/ })[0]!);
+    closeEdit();
     await act(() => new Promise((r) => setTimeout(r, 900)));
     expect(chartEditsActions.fetchChartEdits).not.toHaveBeenCalled();
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
@@ -202,9 +218,11 @@ describe('chart_edits persistence', () => {
       </Provider>,
     );
     await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith({ kind: 'answer', id: 1 }));
+    await openEdit(); // real timers: the popup is next/dynamic
     vi.useFakeTimers();
     try {
       fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+      closeEdit();
       await act(() => vi.advanceTimersByTimeAsync(1000));
       expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
       expect(chartEditsActions.saveChartEdits.mock.calls[0]![0]).toEqual({ kind: 'answer', id: 1 });
@@ -235,9 +253,11 @@ describe('chart_edits persistence', () => {
       </Provider>,
     );
     await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    await openEdit(); // real timers: the popup is next/dynamic
     vi.useFakeTimers();
     try {
       fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+      closeEdit();
       await act(() => vi.advanceTimersByTimeAsync(100)); // well inside the 800 ms window
       expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
       unmount();
@@ -268,7 +288,7 @@ describe('chart_edits persistence', () => {
 // A drag that is the reader's LAST action was therefore never saved at all.
 describe('an unsealed colour drag is still saved', () => {
   async function openColorPicker() {
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
     await screen.findByRole('tab', { name: 'Grafiek' });
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     return (await screen.findByLabelText('Kleur van Nederland kiezen')) as HTMLInputElement;
@@ -345,7 +365,9 @@ describe('an edit during the hydrate fetch', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
       </Provider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+    closeEdit();
     await act(() => new Promise((r) => setTimeout(r, 1000)));
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
   });
@@ -357,14 +379,18 @@ describe('an edit during the hydrate fetch', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
       </Provider>,
     );
+    await openEdit();
     fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+    closeEdit();
     await act(async () => {
       resolve({ ok: true, log: storedLog });
       await Promise.resolve();
     });
     // Both edits are in the live state: the stored title AND the new form.
     await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Hersteld'));
+    await openEdit();
     expect(screen.getByRole('tab', { name: /Staaf|Bar/ })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     await waitFor(() => expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1), { timeout: 3000 });
     const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
     expect(id).toEqual({ kind: 'answer', id: 5 });

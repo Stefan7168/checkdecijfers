@@ -134,8 +134,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('in-place title', () => {
-  it('editing the title replaces the heading, keeps the spec title in the subtitle, and Undo restores it', () => {
+  it('editing the title replaces the heading, keeps the spec title in the subtitle, and Undo restores it', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
     const input = screen.getByPlaceholderText('Eigen titel') as HTMLInputElement;
@@ -143,31 +154,35 @@ describe('in-place title', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Mijn kop');
     expect(screen.getByText(twoSeriesLineSpec().title)).toBeTruthy(); // the original in the subtitle
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    closeEdit();
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(twoSeriesLineSpec().title);
   });
 
-  it('an empty or unchanged title clears the override (no history entry for a no-op)', () => {
+  it('an empty or unchanged title clears the override (no history entry for a no-op)', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
     fireEvent.keyDown(screen.getByPlaceholderText('Eigen titel'), { key: 'Enter' });
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
   });
 
-  it('Escape cancels without a history entry; a title longer than the cap is cut by the input', () => {
+  it('Escape cancels without a history entry; a title longer than the cap is cut by the input', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
     const input = screen.getByPlaceholderText('Eigen titel') as HTMLInputElement;
     expect(input.maxLength).toBe(120);
     fireEvent.change(input, { target: { value: 'x' } });
     fireEvent.keyDown(input, { key: 'Escape' });
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
   });
 
   // Final-review finding M4: `commitTitle` must obey the story lock exactly
   // like `commitCaption` does — an editor already open when the story starts
   // must not be able to write a title through the lock.
-  it('Enter pressed in the title editor while the story is open writes nothing', () => {
+  it('Enter pressed in the title editor while the story is open writes nothing', async () => {
     render(<ChartView spec={twoSeriesFindingsSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
     const input = screen.getByPlaceholderText('Eigen titel') as HTMLInputElement;
@@ -176,6 +191,7 @@ describe('in-place title', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Enter' });
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
     expect(screen.queryByText('Mag niet')).toBeNull();
   });
@@ -187,8 +203,11 @@ describe('in-place title', () => {
 });
 
 describe('caption', () => {
-  it('adding, editing and removing a caption are three undoable steps', () => {
+  it('adding, editing and removing a caption are three undoable steps', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
+    // WP-LOOK part (a): the caption's "add" control lives in the Edit popup;
+    // the card shows the caption itself only once there is one.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
     fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: 'Bron: eigen bewerking' } });
     fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
@@ -204,25 +223,33 @@ describe('caption', () => {
   // Fix round 1, finding 5: `commitCaption` itself obeys the story lock, not
   // only the buttons that OPEN the editor — an editor already open when the
   // story starts must not be able to write a caption through the lock.
-  it('a Save pressed while the story is open writes nothing', () => {
+  it('the caption editor and the story never share the screen: the story closes the popup, the popup closes the story', async () => {
+    // Before WP-LOOK part (a) this test pressed Save with the story open and
+    // expected the story lock to refuse the write. The caption editor now
+    // lives in the Edit popup, and the popup and the story share ONE
+    // `openPanel` slot — so an editor open when the story starts is
+    // structurally impossible: the popup (editor included) is gone while
+    // the story is showing, and reopening the popup ends the story.
     render(<ChartView spec={twoSeriesFindingsSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
     fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: 'Mag niet' } });
-    // The story opens with the caption editor still on screen.
+    closeEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
-    const save = screen.getByRole('button', { name: 'Opslaan' });
-    expect(save).toBeDisabled();
-    fireEvent.click(save);
-    expect(screen.queryByTestId('chart-caption')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Opslaan' })).toBeNull();
+    expect(screen.queryByText('Mag niet')).toBeNull();
+    await openEdit();
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
   });
 
-  it('the caption is rendered outside the export container', () => {
+  it('the caption is rendered outside the export container', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
     fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: 'tekst' } });
     fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+    closeEdit();
     const svgHost = container.querySelector('.recharts-wrapper')!.closest('[data-chart-container], [data-testid="chart-container"]');
     expect(svgHost?.contains(screen.getByTestId('chart-caption'))).toBe(false);
   });
@@ -251,10 +278,12 @@ describe('title and caption in downloads (session 136, #278)', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
   }
 
-  function setCaption(text: string): void {
+  async function setCaption(text: string): Promise<void> {
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
     fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: text } });
     fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+    closeEdit();
   }
 
   it('an untouched chart downloads with its standard title', async () => {
@@ -267,7 +296,7 @@ describe('title and caption in downloads (session 136, #278)', () => {
   it('a reader title and caption whose numbers are on the chart go into the download, with no notice', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     setTitle('Utrecht groeit naar 55 in 2021');
-    setCaption('Eigen bewerking');
+    await setCaption('Eigen bewerking');
     const markup = await downloadSvgMarkup();
     expect(markup).toContain('Utrecht groeit naar 55 in 2021');
     expect(markup).toContain('Eigen bewerking');
@@ -278,7 +307,7 @@ describe('title and caption in downloads (session 136, #278)', () => {
   it('a reader title or caption with a number the chart does not show stays out, and the menu says so', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     setTitle('Bijna 60 procent');
-    setCaption('Was 38 in 2019');
+    await setCaption('Was 38 in 2019');
     const markup = await downloadSvgMarkup();
     expect(markup).not.toContain('Bijna 60');
     expect(markup).not.toContain('Was 38');

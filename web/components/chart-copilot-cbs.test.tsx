@@ -107,31 +107,45 @@ afterEach(() => {
   chartHeadlineActions.fetchChartHeadline.mockResolvedValue({ ok: true, headline: null });
 });
 
+
+/** WP-LOOK part (a) (session 142): every reader control now lives in the one
+ * Edit popup (next/dynamic — its content lands a tick after the click). */
+async function openEdit(index = 0): Promise<void> {
+  fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
+  await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+
 describe('the CBS chart co-pilot doorway — when it mounts', () => {
-  it('is offered signed in, in-app, with a saved answer behind it', () => {
+  it('is offered signed in, in-app, with a saved answer behind it', async () => {
     render(
       <Provider>
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 7 }} />
       </Provider>,
     );
+    await openEdit();
     expect(screen.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' })).toBeInTheDocument();
   });
 
-  it('is not offered without a saved answer (no embed.auditId)', () => {
+  it('is not offered without a saved answer (no embed.auditId)', async () => {
     render(
       <Provider>
         <ChartView spec={twoSeriesLineSpec()} />
       </Provider>,
     );
+    await openEdit();
     expect(screen.queryByRole('group', { name: 'Deze grafiek aanpassen via de chat' })).not.toBeInTheDocument();
   });
 
-  it('is not offered signed out', () => {
+  it('is not offered signed out', async () => {
     render(
       <Provider signedIn={false}>
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 7 }} />
       </Provider>,
     );
+    await openEdit();
     expect(screen.queryByRole('group', { name: 'Deze grafiek aanpassen via de chat' })).not.toBeInTheDocument();
   });
 
@@ -165,6 +179,7 @@ describe('the CBS chart co-pilot doorway — sending a message', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 7 }} />
       </Provider>,
     );
+    await openEdit();
     const input = screen.getByPlaceholderText('Pas deze grafiek aan');
     fireEvent.change(input, { target: { value: 'verberg Rotterdam' } });
     fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
@@ -197,6 +212,7 @@ describe('the CBS chart co-pilot doorway — sending a message', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 7 }} onAskFollowUp={onAskFollowUp} />
       </Provider>,
     );
+    await openEdit();
     fireEvent.change(screen.getByPlaceholderText('Pas deze grafiek aan'), { target: { value: 'gemiddelde temperatuur' } });
     fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
 
@@ -223,6 +239,7 @@ describe('the CBS chart co-pilot doorway — sending a message', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 7 }} />
       </Provider>,
     );
+    await openEdit();
     fireEvent.change(screen.getByPlaceholderText('Pas deze grafiek aan'), { target: { value: 'verberg s9' } });
     fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
 

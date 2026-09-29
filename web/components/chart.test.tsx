@@ -122,6 +122,22 @@ import {
 
 afterEach(cleanup);
 
+/** WP-LOOK part (a): every reader control now lives in the Edit popup. The popup
+ * content is a next/dynamic chunk, so it appears a tick after the click. */
+async function openEdit(): Promise<void> {
+  fireEvent.click(screen.getByRole('button', { name: /^(Bewerken|Edit)$/ }));
+  await screen.findByRole('tablist', { name: /^(Weergave|View)$/ });
+}
+function closeEdit(): void {
+  fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+}
+/** Switch chart form the way a reader now does: open the popup, click the tab, close it. */
+async function selectForm(name: string | RegExp): Promise<void> {
+  await openEdit();
+  fireEvent.click(screen.getByRole('tab', { name }));
+  closeEdit();
+}
+
 function point(overrides: Partial<ChartSpec['series'][0]['points'][0]> = {}) {
   return {
     resultId: 'r1',
@@ -670,7 +686,7 @@ describe('ChartView', () => {
   // was visually marked, a false on-screen claim. Fixed by composing
   // `effectiveKind` into the call, mirroring how `valueLabelPlan` already
   // does it.
-  it('#170(4)/honesty: stops claiming a marker is on the chart once a line-kind spec with a curated annotation is switched to Staaf', () => {
+  it('#170(4)/honesty: stops claiming a marker is on the chart once a line-kind spec with a curated annotation is switched to Staaf', async () => {
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -683,7 +699,7 @@ describe('ChartView', () => {
     render(<ChartView spec={s} />);
     expect(screen.getByText('Gemarkeerd in de grafiek: Testgebeurtenis 2024')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
 
     expect(screen.queryByText(/Gemarkeerd in de grafiek/)).not.toBeInTheDocument();
   });
@@ -1167,7 +1183,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     const yLine = () => document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line');
     expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
     expect(yLine()).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     expect(xLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
@@ -1182,7 +1198,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(baselineAxisLine({ axisLines: 'hidden', grid: 'both' })).toEqual({ stroke: 'var(--border)' });
     expect(baselineAxisLine({ axisLines: 'hidden', grid: 'none' })).toBe(false);
   });
-  it('the bar and horizontal-bar forms get the same hairline baseline on their category axis', () => {
+  it('the bar and horizontal-bar forms get the same hairline baseline on their category axis', async () => {
     const cmp = spec({
       kind: 'bar',
       series: [
@@ -1194,9 +1210,9 @@ describe('ADR 042 — the designed default renders its literals', () => {
     // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
     // on Liggend by default — select Staaf explicitly to exercise its own
     // baseline before switching to Liggend.
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
   });
@@ -1229,7 +1245,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     const annotated = render(<ChartView spec={spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis' }] })} />).container;
     expect(annotated.querySelector('.recharts-reference-line line')?.getAttribute('stroke-dasharray')).toBe('3 3');
   });
-  it('chart-card polish: the bar, horizontal-bar and small-multiples grids draw the same solid hairline', () => {
+  it('chart-card polish: the bar, horizontal-bar and small-multiples grids draw the same solid hairline', async () => {
     const cmp = spec({
       kind: 'bar',
       series: [
@@ -1241,17 +1257,19 @@ describe('ADR 042 — the designed default renders its literals', () => {
     // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
     // on Liggend by default — select Staaf explicitly to check its own
     // grid before switching to Liggend.
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     const barLine = container.querySelector('.recharts-cartesian-grid-horizontal line')!;
     expect(barLine.getAttribute('stroke-dasharray')).toBeNull();
     expect(barLine.getAttribute('stroke-opacity')).toBe('0.5');
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     const hbarLine = container.querySelector('.recharts-cartesian-grid-vertical line')!;
     expect(hbarLine.getAttribute('stroke-dasharray')).toBeNull();
     expect(hbarLine.getAttribute('stroke-opacity')).toBe('0.5');
     cleanup();
     const multi = render(<ChartView spec={twoSeriesSpec()} />).container;
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     const smallLine = multi.querySelector('.recharts-cartesian-grid-horizontal line')!;
     expect(smallLine.getAttribute('stroke-dasharray')).toBeNull();
     expect(smallLine.getAttribute('stroke-opacity')).toBe('0.5');
@@ -1365,7 +1383,7 @@ describe('ADR 042 — height follows width once measured', () => {
     panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
     fireResize(panel);
     expect(panel.style.height).toBe('360px');
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Breedbeeld' }));
     // WP218 phase 1 (session 101): the panel is open, so the export
@@ -1674,53 +1692,61 @@ describe('heatmapIntensity (phase 5, Task 4)', () => {
 describe('ChartView — #197 step 2, the Tabel view', () => {
   beforeEach(() => vi.unstubAllGlobals());
 
-  it('offers a Lijn/Tabel switch, chart first, and swaps to a table bound cell-by-cell to the spec', () => {
+  it('offers a Lijn/Tabel switch, chart first, and swaps to a table bound cell-by-cell to the spec', async () => {
     // Task 3 renamed the chart tab from the old generic "Grafiek" to the
     // form it actually renders ("Lijn", since threePointSpec is kind: 'line').
     const { container } = render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
     expect(container.querySelector('table')).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('svg.recharts-surface')).toBeNull();
     const table = screen.getByRole('table', { name: 'Testreeks (%)' });
     expect(table.querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
     expect(table.querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
     // Image download makes no sense for a table — the menu is not offered there.
     expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    await selectForm('Lijn');
     expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
   });
 
-  it('opens on the horizontal bar when a many-region comparison has more series than a vertical chart can label, but still fits COMPARISON_HBAR_MAX (session 110 many-region comparison fix, was: the idea-bank >15 rule opened this on the table)', () => {
+  it('opens on the horizontal bar when a many-region comparison has more series than a vertical chart can label, but still fits COMPARISON_HBAR_MAX (session 110 many-region comparison fix, was: the idea-bank >15 rule opened this on the table)', async () => {
     const series = Array.from({ length: 16 }, (_, i) => ({
       label: `Gemeente ${i}`,
       regionCode: `GM${i}`,
       points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
     }));
     const { container } = render(<ChartView spec={spec({ kind: 'bar', series })} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('table')).toBeNull();
     expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
   });
 
-  it('opens on the table when a many-region comparison exceeds even COMPARISON_HBAR_MAX (the idea-bank >15 rule, unreachable via hbar past this point)', () => {
+  it('opens on the table when a many-region comparison exceeds even COMPARISON_HBAR_MAX (the idea-bank >15 rule, unreachable via hbar past this point)', async () => {
     const series = Array.from({ length: COMPARISON_HBAR_MAX + 1 }, (_, i) => ({
       label: `Gemeente ${i}`,
       regionCode: `GM${i}`,
       points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
     }));
     const { container } = render(<ChartView spec={spec({ kind: 'bar', series })} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('table')).not.toBeNull();
     expect(container.querySelector('svg.recharts-surface')).toBeNull();
   });
 
-  it('shows no numeric token in the table that is not a spec string', () => {
+  it('shows no numeric token in the table that is not a spec string', async () => {
     const s = threePointSpec({ nullNotes: ['2021: geen gegevens beschikbaar (geheim).'] });
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     const specStrings = [
       s.title,
       s.unit,
@@ -1743,7 +1769,7 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     }
   });
 
-  it('keeps the user-chosen Tabel view when the SAME ChartView instance is handed a different spec without remounting, instead of reverting to that new spec\'s own default form', () => {
+  it('keeps the user-chosen Tabel view when the SAME ChartView instance is handed a different spec without remounting, instead of reverting to that new spec\'s own default form', async () => {
     // Mirrors the old (pre-reducer) code's deliberate `view` exemption from
     // the spec-swap reset: view is presentationally valid for ANY spec, so
     // carrying it across a swap is not a leak worth clearing. Both specs
@@ -1751,12 +1777,15 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     // form is 'line' (Lijn) -- if the swap silently reset to that
     // default, this would catch it.
     const { rerender } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Andere reeks' })} />);
-    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('table', { name: 'Andere reeks (%)' })).toBeInTheDocument();
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 
@@ -1905,10 +1934,12 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
   });
 
-  it('switches to one panel per series when toggled on, and shows the axis-mode switch only then', () => {
+  it('switches to one panel per series when toggled on, and shows the axis-mode switch only then', async () => {
     const { container } = render(<ChartView spec={twoSeriesSpec()} />);
     expect(screen.queryByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeNull();
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     // Two panels, each its own small chart — proves the switch happened.
     // (Not asserting "no SVG at all": ChartSmallMultiples' own mini charts
     // are ALSO Recharts SVGs with the same .recharts-surface class as the
@@ -1917,34 +1948,43 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     // ResponsiveContainer, never both — the panel count already proves which
     // branch is active.)
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
+    await openEdit();
     expect(screen.getByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeInTheDocument();
   });
 
-  it('hides the download menu in small-multiples view (it would silently export only the first panel)', () => {
+  it('hides the download menu in small-multiples view (it would silently export only the first panel)', async () => {
     render(<ChartView spec={twoSeriesSpec()} />);
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
   });
 
-  it('final-review fix: leaving small multiples on and switching to Staaf brings the download menu back (it no longer stays hidden on an ordinary bar chart)', () => {
+  it('final-review fix: leaving small multiples on and switching to Staaf brings the download menu back (it no longer stays hidden on an ordinary bar chart)', async () => {
     render(<ChartView spec={twoSeriesSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
     // smallMultiplesAvailable goes false on Staaf (it's a line-only view),
     // but the `smallMultiples` state itself is still true — the download
     // menu must key off BOTH, exactly like the container/render branch do,
     // not `smallMultiples` alone.
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
   });
 
-  it('a series hidden via the legend (idea 6) has no small-multiples panel either (shared hiddenKeys, not a separate copy)', () => {
+  it('a series hidden via the legend (idea 6) has no small-multiples panel either (shared hiddenKeys, not a separate copy)', async () => {
     const { container } = render(<ChartView spec={twoSeriesSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     const panels = container.querySelectorAll('[data-panel-for]');
     expect(panels.length).toBe(1);
     expect(panels[0].getAttribute('data-panel-for')).toBe('s0');
@@ -2043,10 +2083,12 @@ describe('ChartView — region_series (ADR 055 task 3): multi-point, multi-regio
     expect(container.querySelectorAll('[data-series-dimmed="true"]')).toHaveLength(2);
   });
 
-  it('offers small multiples — the row-14 bug this task fixes: a region_series answer used to build a spec small multiples could never reach', () => {
+  it('offers small multiples — the row-14 bug this task fixes: a region_series answer used to build a spec small multiples could never reach', async () => {
     const { container } = render(<ChartView spec={threeRegionSeriesLineSpec()} />);
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.getByRole('group', { name: 'Kleine grafieken per reeks' })).toBeInTheDocument();
     expect(container.querySelectorAll('[data-panel-for]')).toHaveLength(3);
   });
@@ -2150,46 +2192,48 @@ function singleRegionBarSpec(): ChartSpec {
 }
 
 describe('ChartView form switch', () => {
-  it('offers Lijn, Staaf and Tabel controls', () => {
+  it('offers Lijn, Staaf and Tabel controls', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Tabel' })).toBeInTheDocument();
   });
 
-  it('disables Lijn for a multi-region comparison (bar) chart and explains why', () => {
+  it('disables Lijn for a multi-region comparison (bar) chart and explains why', async () => {
     const s = multiRegionBarSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     expect(lineTab).toBeDisabled();
     expect(lineTab).toHaveAttribute('title', expect.stringContaining('regio'));
   });
 
-  it('switching to Staaf renders a BarChart-shaped structure for a line-kind spec', () => {
+  it('switching to Staaf renders a BarChart-shaped structure for a line-kind spec', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(document.querySelector('.recharts-bar')).not.toBeNull();
   });
 
-  it('bar form always domains the Y-axis at zero, even for an originally line-kind spec', () => {
+  it('bar form always domains the Y-axis at zero, even for an originally line-kind spec', async () => {
     const s = negativeValueLineSpec();
     render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     // yAxisDomain is exercised indirectly via Recharts' rendered axis; assert
     // the exported yAxisDomain function directly instead for a hermetic check:
     expect(yAxisDomain('bar')).toEqual([0, 'auto']);
   });
 
-  it('never renders a connected line across regions after a same-instance spec swap into a disallowed multi-region comparison', () => {
+  it('never renders a connected line across regions after a same-instance spec swap into a disallowed multi-region comparison', async () => {
     // The visual dock and Ontdek's reading toggle swap `spec` on the SAME
     // mounted ChartView (no `key`), and the reset action deliberately
     // preserves the previously chosen form across that swap. Picking Lijn
     // on an allowed spec, then handing the same instance a multi-region bar
     // spec, must not carry the 'line' form into a spec where it's forbidden.
     const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    await selectForm('Lijn');
     expect(container.querySelector('.recharts-line')).not.toBeNull();
 
     rerender(<ChartView spec={multiRegionBarSpec()} />);
@@ -2208,16 +2252,19 @@ describe('ChartView form switch', () => {
   // value (the same "disallowed line falls back to bar" projection
   // `effectiveKind` already used) and reading it everywhere the tablist
   // decides aria-selected/tabIndex.
-  it('keeps exactly one tab keyboard-reachable when a stale Lijn form meets a newly-disallowed multi-region spec', () => {
+  it('keeps exactly one tab keyboard-reachable when a stale Lijn form meets a newly-disallowed multi-region spec', async () => {
     const { rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    await selectForm('Lijn');
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' }).tabIndex).toBe(0);
+    closeEdit();
 
     // No `key` change -- same mounted ChartView instance, same as the test
     // above. The reducer's `reset` action preserves `state.form === 'line'`
     // across the swap, but this new spec has 3 series and kind 'bar', so
     // canUseLine is now false.
     rerender(<ChartView spec={multiRegionBarSpec()} />);
+    await openEdit();
 
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     const barTab = screen.getByRole('tab', { name: 'Staaf' });
@@ -2239,20 +2286,22 @@ describe('ChartView form switch', () => {
   // ticks/end labels. Both would silently strip the "honesty-bound custom
   // ticks and labels" this file's own top-of-file comment describes as
   // load-bearing.
-  it('shows bar value labels when a line-kind spec is switched to Staaf', () => {
+  it('shows bar value labels when a line-kind spec is switched to Staaf', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('[data-role="bar-label"]')).not.toBeNull();
   });
 
-  it('shows axis tick / end-of-line labels when a single-series bar-kind spec is switched to Lijn', () => {
+  it('shows axis tick / end-of-line labels when a single-series bar-kind spec is switched to Lijn', async () => {
     const s = singleRegionBarSpec();
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     expect(lineTab).not.toBeDisabled();
     fireEvent.click(lineTab);
+    closeEdit();
     expect(container.querySelector('.recharts-line')).not.toBeNull();
     expect(
       container.querySelector('[data-role="axis-tick"], [data-role="end-label"]'),
@@ -2261,33 +2310,48 @@ describe('ChartView form switch', () => {
 });
 
 describe('chart-card polish (2026-09-15) — a quiet control row and header actions', () => {
-  it('Opmaak is an icon-only header action (name kept), Inzichten sits beside it; neither is inside the Weergave row', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+  // WP-LOOK part (a) rewrite: the header no longer carries Opmaak/Inzichten —
+  // the card's actions live in ONE row at the bottom (Edit, Download/Embed/Share, Inzichten).
+  it('the actions live in one row at the bottom of the card, after the source line: Edit, then Download/Embed/Share, then Inzichten; the header and the card carry no Weergave row', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
     const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
-    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
-    const opmaak = screen.getByRole('button', { name: 'Opmaak' });
+    const edit = screen.getByRole('button', { name: 'Bewerken' });
     const inzichten = screen.getByRole('button', { name: 'Inzichten' });
-    expect(actions).toContainElement(opmaak);
+    const footer = actions.querySelector('[data-slot="chart-footer-actions"]') as HTMLElement;
+    expect(actions).toContainElement(edit);
     expect(actions).toContainElement(inzichten);
-    expect(opmaak.textContent).toBe('');
-    expect(opmaak).toHaveAttribute('title', 'Opmaak');
-    expect(controls).not.toContainElement(opmaak);
-    expect(controls).not.toContainElement(inzichten);
-    expect(controls).toContainElement(screen.getByRole('tablist', { name: 'Weergave' }));
-    // The gradient ring around Inzichten (the product's one gradient) survives the move.
-    expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(inzichten);
+    expect(actions).toContainElement(footer);
+    expect(within(footer).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    expect(within(footer).getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    expect(within(footer).getByRole('button', { name: 'Delen' })).toBeInTheDocument();
+    expect(edit.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(footer.compareDocumentPosition(inzichten) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Bottom of the card: the row follows the chart panel, not the header.
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    expect(heading.parentElement!.parentElement).not.toContainElement(actions);
+    // No Style button, no history group and no control row on the card any more.
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ongedaan maken' })).toBeNull();
+    expect(container.querySelector('[data-slot="chart-controls"]')).toBeNull();
+    expect(screen.queryByRole('tablist', { name: 'Weergave' })).toBeNull();
   });
-  it('the Vanaf/Tot selects share the Weergave row — one control row above the plot, not two — and keep their labels', () => {
+  it('the Vanaf/Tot selects share the Weergave row — one control row, not two — and keep their labels; that row now sits inside the Edit popup', async () => {
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
-    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    // Not on the card at all any more.
+    expect(container.querySelector('[data-slot="chart-controls"]')).toBeNull();
+    await openEdit();
+    const controls = document.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    const pane = document.querySelector('[data-slot="chart-edit-pane"]') as HTMLElement;
+    expect(pane).toContainElement(controls);
     expect(controls).toContainElement(screen.getByLabelText('Vanaf'));
     expect(controls).toContainElement(screen.getByLabelText('Tot'));
-    // DOM order = keyboard order: the control row precedes the chart panel, so a keyboard user reaches the tabs before the chart's own focusable points.
-    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
-    expect(controls.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(controls).toContainElement(screen.getByRole('tablist', { name: 'Weergave' }));
   });
-  it('the form tabs are quiet underline tabs: no muted track, the active tab underlined, the R9.1 tap-target classes kept', () => {
+  it('the form tabs are quiet underline tabs: no muted track, the active tab underlined, the R9.1 tap-target classes kept', async () => {
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     const tablist = screen.getByRole('tablist', { name: 'Weergave' });
     expect(tablist.className).not.toContain('bg-muted');
     const active = screen.getByRole('tab', { name: 'Lijn' });
@@ -2307,13 +2371,23 @@ describe('chart-card polish (2026-09-15) — a quiet control row and header acti
     expect(heading.nextElementSibling?.textContent).toContain('Totaal');
     expect(heading.parentElement).not.toContainElement(container.querySelector('[data-slot="chart-card-actions"]'));
   });
-  it('Tabel form drops the Opmaak action (no Style panel in table form, as before) and keeps Inzichten off there too', () => {
+  // WP-LOOK part (a) rewrite: Edit is now offered in table form (the form
+  // tabs that lead back to a chart live in the popup); only the Style panel
+  // section is absent there.
+  it('Tabel form still offers Edit (the popup opens in table form), but the popup carries no Style panel section there; Inzichten stays off', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    await selectForm('Tabel');
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tab', { name: 'Sjablonen' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Grafiek' })).toBeNull();
+    expect(screen.queryByText('Opmaak')).toBeNull();
+    closeEdit();
+    await selectForm('Lijn');
+    await openEdit();
+    expect(screen.getByText('Opmaak')).toBeInTheDocument();
   });
   it('embed mode and stage mode render neither the actions cluster nor the control row', () => {
     const embed = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />).container;
@@ -2335,7 +2409,7 @@ describe('chart-card polish (2026-09-15) — a quiet control row and header acti
 });
 
 describe('chart-card polish (2026-09-15) — the headline figure', () => {
-  it('leads with the last plotted value of a single time series, bound to its resultId, unit and period beside it, above the control row', () => {
+  it('leads with the last plotted value of a single time series, bound to its resultId, unit and period beside it, above the chart', () => {
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
     const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
     const bound = figure.querySelector('[data-label-for="nl-2021"]') as HTMLElement;
@@ -2343,14 +2417,17 @@ describe('chart-card polish (2026-09-15) — the headline figure', () => {
     expect(figure.textContent).toContain('%');
     expect(figure.textContent).toContain('2021');
     expect(figure.textContent).toContain('Laatste waarde in de grafiek');
-    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
-    expect(figure.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // WP-LOOK part (a): the control row moved into the Edit popup, so the figure now sits directly above the chart.
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(figure.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Outside the export container by construction (R6: never a new number in the file).
     expect(container.querySelector('[role="tabpanel"]')).not.toContainElement(figure);
   });
-  it('follows the Vanaf/Tot window: the window\'s own last point, labelled with its own period', () => {
+  it('follows the Vanaf/Tot window: the window\'s own last point, labelled with its own period', async () => {
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2020' } });
+    closeEdit();
     const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
     expect(figure.querySelector('[data-label-for="nl-2020"]')?.textContent).toBe('110');
     expect(figure.querySelector('[data-label-for="nl-2021"]')).toBeNull();
@@ -2372,25 +2449,27 @@ describe('chart-card polish (2026-09-15) — the headline figure', () => {
     expect(container.querySelector('[data-testid="headline-figure"] [data-label-for="b"]')?.textContent).toBe('2,0*');
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
-  it('no headline for a multi-series chart, a comparison, the Tabel form, or stage mode', () => {
+  it('no headline for a multi-series chart, a comparison, the Tabel form, or stage mode', async () => {
     expect(render(<ChartView spec={twoSeriesFourYearLineSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
     cleanup();
     expect(render(<ChartView spec={multiRegionBarSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
     cleanup();
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     expect(container.querySelector('[data-testid="headline-figure"]')).toBeNull();
     cleanup();
     expect(render(<ChartView spec={fourYearLineSpec()} stage={{ step: null, overrides: {} }} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
   });
-  it('the trend headline sentence sits directly under the figure (above the chart) and is still suppressed under a zoom', () => {
+  it('the trend headline sentence sits directly under the figure (above the chart) and is still suppressed under a zoom', async () => {
     const { container } = render(<ChartView spec={trendHeadlineLineSpec()} />);
     const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
     const sentence = screen.getByTestId('trend-headline');
     expect(figure.nextElementSibling).toBe(sentence);
     const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
     expect(sentence.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    closeEdit();
     expect(screen.queryByTestId('trend-headline')).toBeNull();
     expect(container.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
   });
@@ -2488,18 +2567,21 @@ function twoSeriesFourYearLineSpec(): ChartSpec {
 }
 
 describe('ChartView period-range zoom', () => {
-  it('offers Vanaf/Tot period selectors for a line-kind chart with multiple periods', () => {
+  it('offers Vanaf/Tot period selectors for a line-kind chart with multiple periods', async () => {
     const s = fourYearLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByLabelText('Vanaf')).toBeInTheDocument();
     expect(screen.getByLabelText('Tot')).toBeInTheDocument();
   });
 
-  it('narrowing the range hides points outside it and shows a disclosure note', () => {
+  it('narrowing the range hides points outside it and shows a disclosure note', async () => {
     const s = fourYearLineSpec();
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
     fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2020' } });
+    closeEdit();
     expect(screen.getByText(/2019.*2020/)).toBeInTheDocument();
     // Scoped to the plotted chart panel, not the whole screen: the Vanaf/Tot
     // selects deliberately keep listing every period (including 2018) so the
@@ -2510,11 +2592,13 @@ describe('ChartView period-range zoom', () => {
     expect(within(chartPanel).queryByText('2018')).not.toBeInTheDocument();
   });
 
-  it('suppresses the trend headline while a period range is active', () => {
+  it('suppresses the trend headline while a period range is active', async () => {
     const s = trendHeadlineLineSpec();
     render(<ChartView spec={s} />);
     expect(screen.getByTestId('trend-headline')).toBeInTheDocument();
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    closeEdit();
     expect(screen.queryByTestId('trend-headline')).not.toBeInTheDocument();
   });
 
@@ -2528,15 +2612,17 @@ describe('ChartView period-range zoom', () => {
   // unwindowed spec, so zooming the main view did nothing to the small
   // multiples panels -- a silent honesty gap (they'd show the full range
   // with no indication they differ from the just-zoomed main view).
-  it('also windows the small-multiples panels once zoomed (not just the main chart)', () => {
+  it('also windows the small-multiples panels once zoomed (not just the main chart)', async () => {
     const s = twoSeriesFourYearLineSpec();
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     // "Eigen assen" is the mode whose own-axis endpoint ticks are bound to a
     // resultId (data-label-for) -- the same axis-tick technique the #197
     // step-1 tests already use (svg [data-role="axis-tick"][data-label-for]).
     fireEvent.click(screen.getByRole('button', { name: 'Eigen assen' }));
+    closeEdit();
     const nlPanel = container.querySelector('[data-panel-for="s0"]') as HTMLElement;
     expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2018"]')).toBeNull();
     expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2021"]')).not.toBeNull();
@@ -2562,9 +2648,10 @@ describe('ChartView period-range zoom', () => {
   // windowSpec correctly returned zero points (never fabricated data), but
   // the on-screen AND exported disclosure sentence read as nonsense
   // ("Getoond: 2021-2019 van ...").
-  it('clamps Tot up to Vanaf when Vanaf is moved past it', () => {
+  it('clamps Tot up to Vanaf when Vanaf is moved past it', async () => {
     const s = fourYearLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2019' } });
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2021' } });
     expect(screen.getByLabelText<HTMLSelectElement>('Vanaf').value).toBe('2021');
@@ -2572,9 +2659,10 @@ describe('ChartView period-range zoom', () => {
     expect(screen.getByText(/2021.*2021/)).toBeInTheDocument();
   });
 
-  it('clamps Vanaf down to Tot when Tot is moved before it', () => {
+  it('clamps Vanaf down to Tot when Tot is moved before it', async () => {
     const s = fourYearLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2021' } });
     fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2019' } });
     expect(screen.getByLabelText<HTMLSelectElement>('Vanaf').value).toBe('2019');
@@ -2587,9 +2675,10 @@ describe('ChartView period-range zoom', () => {
   // silently showing lines -- the bar-zero-axis rule was bypassed by
   // drawing no bar at all, not by drawing a dishonest one. Gated off rather
   // than given its own bar path (cheapest, most conservative fix).
-  it('turns off small multiples availability once the form is switched away from Lijn', () => {
+  it('turns off small multiples availability once the form is switched away from Lijn', async () => {
     const s = twoSeriesFourYearLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).not.toBeInTheDocument();
@@ -2711,10 +2800,13 @@ describe('ChartView click-to-annotate', () => {
   it('a saved goal line is never rendered inside the chart export container', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
+    // The goal-line editor lives in the Edit popup on a fresh card.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Doellijn toevoegen' }));
     fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
     fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    closeEdit();
     const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(exportContainer?.textContent).not.toContain('Test Doel');
     expect(screen.getByText('Test Doel')).toBeInTheDocument();
@@ -2730,10 +2822,12 @@ describe('ChartView click-to-annotate', () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
     const before = container.querySelectorAll('.recharts-reference-line').length;
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Doellijn toevoegen' }));
     fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
     fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    closeEdit();
     expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(before);
   });
 
@@ -2849,14 +2943,16 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
   // regardless of what the reader had hidden or how many series exist —
   // silently including a hidden, unnamed series. The smaller, more honest
   // fix: only offer the control when exactly one series is visible.
-  it('I8: offers no "Gemiddelde tonen" control while more than one series is visible', () => {
+  it('I8: offers no "Gemiddelde tonen" control while more than one series is visible', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
   });
 
-  it('I8: hiding one of two series reveals the "Gemiddelde tonen" control; hiding the other one too removes it again', () => {
+  it('I8: hiding one of two series reveals the "Gemiddelde tonen" control; hiding the other one too removes it again', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    await openEdit();
     expect(screen.getByRole('button', { name: 'Gemiddelde tonen' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
     // Zero visible series is exactly as undefined an "average" as two.
@@ -2868,9 +2964,10 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
   // (the actual ReferenceLine renderer) only ever mounts inside the
   // LineChart/AreaChart branches, never bar/hbar. A bar chart used to offer
   // the controls with nothing behind them.
-  it('I2: offers no derived-overlay controls at all on a bar-form chart', () => {
+  it('I2: offers no derived-overlay controls at all on a bar-form chart', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
+    await openEdit();
     expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
   });
@@ -2881,6 +2978,7 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
   it('#293: on a bar form an existing overlay keeps its remove chip, while the add controls stay hidden', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
@@ -2895,8 +2993,9 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
   // `onPointClick` stays wired on every form, so it would silently hijack
   // bar-form point clicks (recording a "first point" with no visible picker
   // UI to explain why). Switching away from line/area must clear it.
-  it('switching to a bar form while the difference picker is active resets it, rather than leaving it silently armed', () => {
+  it('switching to a bar form while the difference picker is active resets it, rather than leaving it silently armed', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     const pickerButton = screen.getByRole('button', { name: 'Verschil aanduiden' });
     fireEvent.click(pickerButton);
     expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
@@ -2937,7 +3036,9 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
     // I8's gate: exactly one visible series (Nederland, whose points carry
     // the resultIds the mocked record's sourceResultIds reference).
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    closeEdit();
     // The resolution is async (a mocked Server Action call) — wait for the
     // ReferenceLine it produces rather than asserting synchronously.
     await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0));
@@ -3020,21 +3121,17 @@ function harvestSpecStrings(s: ChartSpec): string[] {
 describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    // WP218 phase 1 (session 101): Opmaak is now a real modal — the
-    // Weergave tablist (a dock row-mate of the Opmaak trigger) is inert
-    // while it's open, so these form tabs are captured here, before the
-    // panel ever opens, rather than re-queried by role once it has.
-    const staafTab = screen.getByRole('tab', { name: 'Staaf' });
-    const lijnTab = screen.getByRole('tab', { name: 'Lijn' });
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    // WP-LOOK part (a): the Weergave tablist now lives INSIDE the same Edit
+    // popup as the Style panel, so the form tabs are re-queried in it.
+    await openEdit();
     // ChartEditModal/ChartConfigPanel are next/dynamic-loaded (session 110
     // perf pass): await the first control inside the now-open modal before
     // the rest of this test's synchronous queries run.
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
-    fireEvent.click(staafTab);
-    fireEvent.click(lijnTab);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
   });
 
@@ -3061,7 +3158,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     const before = container.querySelectorAll('[data-point="value"]').length;
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // WP218 phase 1 (session 101): the chart itself now lives inside the
@@ -3080,7 +3177,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // runs, so the chart lives inside the portaled Style dialog for the
     // whole test — every query here reads via `document`, not `container`.
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
@@ -3124,7 +3221,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     const beforeY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Y-as vanaf nul' }));
     // WP218 phase 1 (session 101): the panel is now open, so the chart lives
@@ -3136,7 +3233,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
     cleanup();
     render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     // Bar form deletes 'zeroBaseline' from `applicable` entirely (chart-
     // presentation.ts resolvePresentation) — the control is never offered
     // because a bar's own render always floors at zero unconditionally.
@@ -3146,7 +3243,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
   it('a colour change recolours line, legend swatch and tooltip swatch together', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hexInput = screen.getByRole('textbox', { name: /Kleur van Nederland/ });
     fireEvent.change(hexInput, { target: { value: '#ff0000' } });
@@ -3175,7 +3272,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
   it('a spec swap on the same mounted chart also drops the panel\'s per-row state (a refusal alert typed for the old chart never shows on the new one)', async () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hex = screen.getByRole('textbox', { name: /hex-code/ }) as HTMLInputElement;
     fireEvent.change(hex, { target: { value: '#fefefe' } });
@@ -3183,13 +3280,13 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toHaveAttribute('aria-expanded', 'false');
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
   });
 
   it('a spec swap on the same mounted chart clears the presentation (owner E)', async () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
@@ -3205,19 +3302,19 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // component's own state (not remounted-away with the panel's old internal
   // `open`), so a spec swap must reset it explicitly — proven directly here,
   // not just inferred from the per-row-state test above.
-  it('a spec swap on the same mounted chart closes the Opmaak panel', () => {
+  it('a spec swap on the same mounted chart closes the Opmaak panel', async () => {
     const { rerender } = render(<ChartView spec={threePointSpec()} />);
-    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    const trigger = screen.getByRole('button', { name: 'Bewerken' });
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     // WP218 phase 1 (session 101): the panel's accessible name now lives on
     // the wrapping Base UI Dialog (role="dialog"), not a `role="region"` —
     // ChartConfigPanel itself no longer labels its own content.
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Grafiek bewerken' })).toBeInTheDocument();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog', { name: 'Grafiek bewerken' })).toBeNull();
   });
 
   it('Terug naar standaard restores the byte-identical stock svg', async () => {
@@ -3232,7 +3329,14 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // anything a reader (or a download) can see. Captured here, right after
     // opening and before any tweak, so both snapshots below come from the
     // SAME mount and the comparison stays meaningful.
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
+    // The dialog's own default focus lands on the chart svg (Recharts shows its
+    // keyboard tooltip cursor while it is focused) — blur it so the "stock"
+    // snapshot is the resting chart, comparable to the one after the reset.
+    await waitFor(() => expect(document.activeElement).not.toBe(document.body));
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
     const stock = document.querySelector('svg.recharts-surface')!.outerHTML;
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
@@ -3249,7 +3353,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
       definitionLine: 'Definitie: testdefinitie 2020.',
     });
     const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     // Whole-branch review fix: only one tabpanel is ever mounted at a time,
     // so scanning once AFTER the loop only ever sees the LAST tab clicked
     // (Kader) — scan after each click so every tab's own mounted content is
@@ -3269,7 +3373,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // (found while wiring up this fix). The dialog is the right scope
     // either way: it is the ONE thing that genuinely holds both the chart
     // and the panel's own tabs together, nothing more, nothing stale.
-    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = await screen.findByRole('dialog', { name: 'Grafiek bewerken' });
     // Same nested-Suspense-boundary reasoning as the tests above: the tabs
     // live in ChartConfigPanel, its own separately next/dynamic-loaded
     // chunk, so wait for at least one before iterating.
@@ -3286,8 +3390,8 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const barDialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    await openEdit();
+    const barDialog = await screen.findByRole('dialog', { name: 'Grafiek bewerken' });
     await within(barDialog).findByRole('tab', { name: 'Grafiek' });
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
@@ -3303,36 +3407,44 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // before the Frame-tab feature) — a framed table would need its own
   // export path. Neither the "Opmaak" trigger nor its dialog is offered in
   // Tabel form; switching back to Lijn restores both.
-  it('the panel is NOT offered in Tabel form (no frame, no Style panel)', () => {
+  // WP-LOOK part (a) rewrite: Edit itself IS offered in table form now (the
+  // form tabs live in the popup); what stays absent is the Style panel.
+  it('the Style panel is NOT offered in Tabel form (no frame, no Style panel) — the Edit popup opens there without it', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
-    // WP218 phase 1 (session 101): the panel's accessible name now lives on
-    // the wrapping Base UI Dialog (role="dialog"), not a `role="region"`.
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    await selectForm('Tabel');
+    // Popup closed after the switch.
+    expect(screen.queryByRole('dialog', { name: 'Grafiek bewerken' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
+    await openEdit();
+    expect(screen.getByRole('dialog', { name: 'Grafiek bewerken' })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Sjablonen' })).toBeNull();
+    closeEdit();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    await selectForm('Lijn');
+    await openEdit();
+    expect(await screen.findByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeInTheDocument();
   });
 
   // Round 2: switching TO Tabel form must close the Style panel itself
   // (setOpenPanel(null)), not just skip rendering it while on Tabel — else
   // `openPanel` stays stuck on 'style' and the panel silently reappears the
   // moment the user switches back to a chart form, with no click to open it.
-  it('round 2: selecting Tabel closes the Style panel, and it does not reappear on its own when switching back to a chart form', () => {
+  // WP-LOOK part (a) rewrite: the popup now stays open across every form —
+  // Tabel just drops its Style section, and a chart form brings it back.
+  it('round 2: selecting Tabel inside the popup drops the Style section (the popup stays open), and a chart form brings it back', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    // WP218 phase 1 (session 101): Opmaak is now a real modal — the
-    // Weergave tablist (a dock row-mate of the Opmaak trigger) is inert
-    // while it's open, so these form tabs are captured here, before the
-    // panel ever opens, rather than re-queried by role once it has.
-    const tabelTab = screen.getByRole('tab', { name: 'Tabel' });
-    const lijnTab = screen.getByRole('tab', { name: 'Lijn' });
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
-    fireEvent.click(tabelTab);
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
-    fireEvent.click(lijnTab);
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    // WP-LOOK part (a): the Weergave tablist lives inside the Edit popup
+    // itself now.
+    const trigger = screen.getByRole('button', { name: 'Bewerken' });
+    await openEdit();
+    expect(await screen.findByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('dialog', { name: 'Grafiek bewerken' })).toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(await screen.findByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeInTheDocument();
   });
 
   // Final-review fix (Fix 7): with a frame aspect ratio set AND small
@@ -3342,9 +3454,11 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // exact bug h-auto was originally added to avoid.
   it('small multiples stays h-auto even when a frame aspect ratio is set', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    closeEdit();
+    await openEdit();
+    const dialog = await screen.findByRole('dialog', { name: 'Grafiek bewerken' });
     // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
     // nested inside the (already-resolved) dialog shell — its own tabs need
     // their own await rather than reusing the dialog's.
@@ -3363,6 +3477,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // DIFFERENT DOM node than the one found before — a real unmount/remount,
   // not just a reposition).
   //
+  // WP-LOOK part (a): the trigger moved AGAIN — from the header actions
+  // cluster to the bottom actions row (`data-slot="chart-card-actions"`, now
+  // labelled Bewerken). Everything below about the modal relocation is
+  // unchanged.
   // Chart-card polish (2026-09-15): the trigger's DOCK POSITION changed by
   // explicit design — it is no longer a row-mate of the Weergave tablist
   // ("option A"); it is a header action next to the title
@@ -3371,16 +3489,16 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // exclusion from the tablist's own row). This one assertion is updated to
   // match — not weakened, corrected to the plan's own stated new layout;
   // everything below about the modal relocation is unaffected and unchanged.
-  it('the trigger stays in the card\'s header actions cluster in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', async () => {
+  it('the trigger sits in the card\'s bottom actions row in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const chartTabpanelBeforeOpen = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(chartTabpanelBeforeOpen).not.toBeNull();
 
-    // The trigger lives in the header's actions cluster (chart-card polish,
-    // 2026-09-15), not the Weergave tablist row. Unaffected by the modal
+    // The trigger lives in the bottom actions row (WP-LOOK part (a)), not
+    // the Weergave tablist row (which is inside the popup). Unaffected by the modal
     // conversion: only the PANEL's own content and the chart move, never
     // the trigger.
-    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    const trigger = screen.getByRole('button', { name: 'Bewerken' });
     const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
     expect(actions.contains(trigger)).toBe(true);
 
@@ -3392,7 +3510,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
     // Session 101: a real, portaled Base UI Dialog now carries BOTH the
     // chart (canvas) and the panel's own tabs together.
-    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = await screen.findByRole('dialog', { name: 'Grafiek bewerken' });
     // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
     // nested inside the (already-resolved) dialog shell — its own tabpanel
     // needs its own await rather than reusing the dialog's.
@@ -3401,13 +3519,13 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // "First the graph on top, then the design settings" (owner) survives
     // the move into the dialog: the chart is a PRECEDING sibling of the
     // panel's own tablist, never a following one.
-    const panelTablist = within(dialog).getByRole('tablist');
+    const panelTablist = within(dialog).getByRole('tablist', { name: 'Opmaak-onderdelen' });
     expect(Boolean(chartTabpanelInDialog.compareDocumentPosition(panelTablist) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(Boolean(chartTabpanelInDialog.compareDocumentPosition(panelTablist) & Node.DOCUMENT_POSITION_PRECEDING)).toBe(false);
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Grafiek bewerken' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -3417,22 +3535,29 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // pane (the legend, say) — rather than anything in the panel a reader
   // actually opened "Opmaak" to reach. ChartConfigPanel focuses its own
   // active tab on mount specifically to prevent that.
-  it('opening Opmaak focuses the panel\'s own active tab, not a control in the chart pane', async () => {
+  // WP-LOOK part (a) rewrite: ChartView's Edit popup passes focusOnMount={false}
+  // to ChartConfigPanel (the panel remounts on every Tabel/Warmtekaart round
+  // trip and must not steal focus from the Weergave tab being arrowed on), so
+  // the panel's own active tab is NO LONGER focused on open — the dialog's
+  // own default focus applies, inside the dialog.
+  it('opening Edit focuses inside the dialog (its own default), and no longer forces focus onto the Style panel\'s active tab', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    await openEdit();
+    const dialog = await screen.findByRole('dialog', { name: 'Grafiek bewerken' });
     // Whichever tab opens active (a pristine chart opens on Sjablonen per
     // R5.2/ADR 043, not Grafiek) — the point is that focus lands on THAT
     // tab, never on something in the chart pane preceding it in the DOM.
     // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
     // nested inside the (already-resolved) dialog shell, so its own active
     // tab needs its own await rather than reusing the dialog's.
-    const activeTab = await within(dialog).findByRole('tab', { selected: true });
-    expect(document.activeElement).toBe(activeTab);
+    const activeTab = await within(await within(dialog).findByRole('tablist', { name: 'Opmaak-onderdelen' })).findByRole('tab', { selected: true });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(activeTab);
   });
 
-  it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', () => {
+  it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', async () => {
     render(<ChartView spec={multiRegionBarSpec()} />);
+    await openEdit();
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     expect(lineTab).toBeDisabled();
     const describedById = lineTab.getAttribute('aria-describedby');
@@ -3444,7 +3569,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
   it('the SVG export carries the chosen stroke-width verbatim', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart's own svg
@@ -3463,7 +3588,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     setChartUsageSink((e) => { events.push(e); });
     try {
       render(<ChartView spec={threePointSpec()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('tab', { name: 'Sjablonen' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
       // WP218 phase 1 (session 101): the panel is open, so the chart lives
@@ -3486,7 +3611,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
 
   it("a template replaces earlier tweaks (reset first); Terug naar standaard afterwards returns to the default", async () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
@@ -3508,7 +3633,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
       definitionLine: 'Definitie: testdefinitie 2020.',
     });
     const { container } = render(<ChartView spec={lineSpec} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Sjablonen' }));
     // WP218 phase 1 (session 101): the panel's own tab content now lives
     // inside the portaled Style dialog, a DOM sibling of `container` rather
@@ -3522,7 +3647,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     // reader ever sees, whose STALE content from an earlier test's chart
     // caused exactly the false failure this comment now guards against
     // (found while wiring up this fix).
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = screen.getByRole('dialog', { name: 'Grafiek bewerken' });
     expect(within(dialog).getByText('Kleuren')).toBeInTheDocument();
     expect(container.textContent ?? '').not.toContain('Kleuren');
     scanForUnboundDigits(
@@ -3554,7 +3679,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
         <ChartView spec={lineSpec} />
       </LangProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Templates' }));
     // WP218 phase 1 (session 101): same relocation as the Dutch case above —
     // sanity-check that the dialog really carries the panel's own (English)
@@ -3562,7 +3687,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     // sibling Dutch test above for why: Recharts' own persistent, hidden
     // text-measurement scratch span lives there too and can carry stale
     // digits left over from an earlier test's chart).
-    const dialog = screen.getByRole('dialog', { name: 'Chart style' });
+    const dialog = screen.getByRole('dialog', { name: 'Edit chart' });
     expect(within(dialog).getByText('Colours')).toBeInTheDocument();
     expect(container.textContent ?? '').not.toContain('Colours');
     // #332: the card renders the ENGLISH display copy (English notation
@@ -3607,7 +3732,7 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
   it('tracks panel_open exactly once on open, and option_changed exactly once when Dik is clicked', async () => {
     render(<ChartView spec={threePointSpec()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     expect(sink).toHaveBeenCalledTimes(1);
     expect(sink).toHaveBeenCalledWith('panel_open');
@@ -3646,7 +3771,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     );
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeDisabled();
@@ -3664,7 +3789,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     expect(await screen.findByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
@@ -3676,7 +3801,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     expect(await screen.findByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -3686,7 +3811,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
@@ -3704,7 +3829,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
@@ -3721,11 +3846,11 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
   });
 
-  it('without a provider: the stock look, and no account row at all', () => {
+  it('without a provider: the stock look, and no account row at all', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     expect(screen.queryByRole('button', { name: 'Bewaar als mijn standaard' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Vergeet mijn standaard' })).toBeNull();
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
@@ -3738,10 +3863,10 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await selectForm('Staaf');
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Bewaar als mijn standaard' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+    expect(await screen.findByText('Opgeslagen.')).toHaveAttribute('role', 'status');
     const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
     // Bar form forces zeroBaseline to 'zero' on screen; the account had no
     // saved default (STOCK_PRESENTATION's 'auto') and the bar-forced value
@@ -3761,14 +3886,14 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await selectForm('Staaf');
+    await openEdit();
     // An unrelated tweak (the font) is what a reader actually does before
     // re-saving — this must not disturb the valueLabels default at all.
     fireEvent.click(await screen.findByRole('tab', { name: 'Lettertype' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Lettertype' }), { target: { value: 'Roboto' } });
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+    expect(await screen.findByText('Opgeslagen.')).toHaveAttribute('role', 'status');
     const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
     // Bar form forces valueLabels to 'shown' on screen; the account default
     // was 'hidden' (set on an earlier line chart) and must survive this
@@ -3788,11 +3913,11 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
           <ChartView spec={threePointSpec()} />
         </ChartStyleProvider>,
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
 
-      expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+      expect(await screen.findByText('Opgeslagen.')).toHaveAttribute('role', 'status');
       // WP218 phase 3 (owner B): the second argument is always passed —
       // `undefined` here since no brand was applied on this chart.
       expect(chartStyleActions.saveMyChartStyle).toHaveBeenCalledWith(
@@ -3818,10 +3943,10 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
           <ChartView spec={threePointSpec()} />
         </ChartStyleProvider>,
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('button', { name: 'Vergeet mijn standaard' }));
 
-      expect(await screen.findByRole('status')).toHaveTextContent('Vergeten.');
+      expect(await screen.findByText('Vergeten.')).toHaveAttribute('role', 'status');
       expect(sink).toHaveBeenCalledWith('default_forgotten');
       expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
       // accountStyle is now null ⇒ base is stock again. WP218 phase 1
@@ -3884,7 +4009,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
 
   it('without a provider (not signed in): no Merkkleuren block at all', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
   });
@@ -3901,7 +4026,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
         <ChartView spec={twoSeriesLineSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
     expect(button).toHaveAttribute('aria-disabled', 'true');
@@ -3929,7 +4054,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
           <ChartView spec={twoSeriesLineSpec()} />
         </ChartStyleProvider>,
       );
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
       fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
 
@@ -3963,7 +4088,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
         <ChartView spec={twoSeriesLineSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
     await waitFor(() => expect(chartStyleActions.lookupBrand).toHaveBeenCalledTimes(1));
@@ -4022,13 +4147,14 @@ function englishWordListSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
 }
 
 describe('WP218 phase 4 — charts follow the app language, per-chart, via the CBS word list', () => {
-  it('an English chart shows the Line/Bar/Table tabs', () => {
+  it('an English chart shows the Line/Bar/Table tabs', async () => {
     const s = englishWordListSpec();
     render(
       <LangProvider lang="en">
         <ChartView spec={s} />
       </LangProvider>,
     );
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Bar' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Table' })).toBeInTheDocument();
@@ -4061,7 +4187,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     ).toBeInTheDocument();
   });
 
-  it('an English chart shows the translated x-axis period label (2021 Q1) and Vanaf/Tot become From/To', () => {
+  it('an English chart shows the translated x-axis period label (2021 Q1) and Vanaf/Tot become From/To', async () => {
     const s = englishWordListSpec();
     // A second period so the zoom selectors (Vanaf/Tot -> From/To) render.
     s.series[0].points.push(
@@ -4078,6 +4204,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
         <ChartView spec={s} />
       </LangProvider>,
     );
+    await openEdit();
     const fromSelect = screen.getByRole('combobox', { name: 'From' });
     const toSelect = screen.getByRole('combobox', { name: 'To' });
     expect(within(fromSelect).getByText('2021 Q1')).toBeInTheDocument();
@@ -4148,9 +4275,9 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
         <ChartView spec={englishWordListSpec()} />
       </LangProvider>,
     );
-    // The app is English by default: the panel trigger and tabs read English.
+    // The app is English by default: the Edit trigger and tabs read English.
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     const languageSelect = await screen.findByRole('combobox', { name: 'Chart language' });
     fireEvent.change(languageSelect, { target: { value: 'nl' } });
 
@@ -4163,11 +4290,12 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     // open, so the WHOLE-card language switch is only checkable by role
     // once the dialog is closed and the dock is live again, exactly as a
     // real reader would see it after closing the panel.
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    closeEdit();
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Consumentenvertrouwen' })).toBeInTheDocument();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Consumentenvertrouwen' })).toBeInTheDocument();
   });
 
   // #332 (ADR 058 phase 3, Task 2): a reader's hidden-series edit is stored
@@ -4194,7 +4322,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     expect(screen.getByRole('button', { name: 'Nederland' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     const languageSelect = await screen.findByRole('combobox', { name: 'Taal van de grafiek' });
     fireEvent.change(languageSelect, { target: { value: 'en' } });
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
@@ -4271,7 +4399,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 // ---------------------------------------------------------------------------
 
 describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
-  it('offers all eleven tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling, Warmtekaart, Taartdiagram, Gestapeld, Gestapeld (%)', () => {
+  it('offers all eleven tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling, Warmtekaart, Taartdiagram, Gestapeld, Gestapeld (%)', async () => {
     // Phase 5 (chart-fit scorer, Tasks 2-4): Dumbbell, Helling (slope) and
     // Warmtekaart (heatmap) trail Tabel, in the scorer's own fixed order —
     // always rendered, disabled when the spec doesn't qualify (here: one
@@ -4279,12 +4407,15 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     // Task 4): Taartdiagram, Gestapeld, Gestapeld (%) trail those three,
     // again always rendered and here disabled (no roster provenance).
     render(<ChartView spec={threePointSpec()} />);
-    const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
+    await openEdit();
+    // Scoped to the Weergave tablist: the Style panel's own tabs (Sjablonen, Grafiek, …) share the popup.
+    const tabs = within(screen.getByRole('tablist', { name: 'Weergave' })).getAllByRole('tab').map((el) => el.textContent);
     expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']);
   });
 
-  it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
+  it('S1 (single-series time series): only Liggend is disabled, with a reason', async () => {
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Vlak' })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Staaf' })).not.toBeDisabled();
@@ -4300,8 +4431,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
   // screen reader) WITHOUT also being permanent, always-visible copy under
   // the tablist of every chart — the audit found it rendered as static text
   // under every chart's form tabs, landing-page cards included.
-  it('#16: the Liggend disabled reason is reachable via aria-describedby, and is never ALSO rendered as permanent visible copy', () => {
+  it('#16: the Liggend disabled reason is reachable via aria-describedby, and is never ALSO rendered as permanent visible copy', async () => {
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
     const describedById = hbarTab.getAttribute('aria-describedby');
     expect(describedById).toBeTruthy();
@@ -4316,8 +4448,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(screen.getAllByText(reasonText)).toHaveLength(1);
   });
 
-  it('S2 (multi-series time series): Vlak and Liggend are both disabled, each with its own reason', () => {
+  it('S2 (multi-series time series): Vlak and Liggend are both disabled, each with its own reason', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).not.toBeDisabled();
     const areaTab = screen.getByRole('tab', { name: 'Vlak' });
     expect(areaTab).toBeDisabled();
@@ -4328,8 +4461,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(hbarTab).toHaveAttribute('title', expect.stringContaining('periode'));
   });
 
-  it('S3 (multi-region comparison): Lijn and Vlak are both disabled, each with its own reason; Liggend is allowed', () => {
+  it('S3 (multi-region comparison): Lijn and Vlak are both disabled, each with its own reason; Liggend is allowed', async () => {
     render(<ChartView spec={multiRegionBarSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toBeDisabled();
     const areaTab = screen.getByRole('tab', { name: 'Vlak' });
     expect(areaTab).toBeDisabled();
@@ -4338,8 +4472,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(screen.getByRole('tab', { name: 'Liggend' })).not.toBeDisabled();
   });
 
-  it('a disabled tab\'s reason is reachable by keyboard/AT via aria-describedby, not just the pointer title', () => {
+  it('a disabled tab\'s reason is reachable by keyboard/AT via aria-describedby, not just the pointer title', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     const areaTab = screen.getByRole('tab', { name: 'Vlak' });
     const describedBy = areaTab.getAttribute('aria-describedby')!;
     expect(describedBy).toBeTruthy();
@@ -4348,12 +4483,13 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     );
   });
 
-  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Dumbbell -> Helling -> Warmtekaart -> Lijn)', () => {
+  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Dumbbell -> Helling -> Warmtekaart -> Lijn)', async () => {
     // Phase 5 (Tasks 2-4): twoSeriesLineSpec carries exactly two periods per
     // series (a 2 × 2 grid), so Dumbbell, Helling (slope) and Warmtekaart
     // (heatmap) are all allowed here and join the order after Tabel, in that
     // order; the disabled Vlak/Liggend are still skipped.
     render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     lineTab.focus();
     fireEvent.keyDown(lineTab, { key: 'ArrowRight' });
@@ -4370,13 +4506,14 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveFocus();
   });
 
-  it('S3: arrow-key order skips the disabled Lijn/Vlak tabs entirely (Staaf -> Liggend -> Tabel -> Staaf)', () => {
+  it('S3: arrow-key order skips the disabled Lijn/Vlak tabs entirely (Staaf -> Liggend -> Tabel -> Staaf)', async () => {
     render(<ChartView spec={multiRegionBarSpec()} />);
     // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
     // it now OPENS on Liggend by default (not Staaf) — select Staaf first
     // to make it the active form, then drive the same arrow-key traversal
     // this test always intended.
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
+    await openEdit();
     const barTab = screen.getByRole('tab', { name: 'Staaf' });
     barTab.focus();
     fireEvent.keyDown(barTab, { key: 'ArrowRight' });
@@ -4387,27 +4524,29 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveFocus();
   });
 
-  it('a spec swap from an area-chosen S1 to a disallowed S2 falls back to line', () => {
+  it('a spec swap from an area-chosen S1 to a disallowed S2 falls back to line', async () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     expect(container.querySelector('.recharts-area')).not.toBeNull();
 
     rerender(<ChartView spec={twoSeriesLineSpec()} />);
     expect(container.querySelector('.recharts-area')).toBeNull();
     expect(container.querySelector('.recharts-line')).not.toBeNull();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Vlak' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('a spec swap from an hbar-chosen S3 to a disallowed S1 falls back to bar', () => {
+  it('a spec swap from an hbar-chosen S3 to a disallowed S1 falls back to bar', async () => {
     const { container, rerender } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     expect(container.querySelector('[data-role="region-axis-tick"]')).not.toBeNull();
 
     rerender(<ChartView spec={threePointSpec()} />);
     expect(container.querySelector('[data-role="region-axis-tick"]')).toBeNull();
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('.recharts-line')).toBeNull();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'false');
   });
@@ -4427,8 +4566,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
 describe('ChartView — slope form (phase 5, Task 2)', () => {
   const SLOPE_REASON = 'Beschikbaar zodra je precies twee momenten vergelijkt.';
 
-  it('a 2-series × 2-point spec offers Helling enabled, and selecting it renders the SAME line-chart canvas Lijn does', () => {
+  it('a 2-series × 2-point spec offers Helling enabled, and selecting it renders the SAME line-chart canvas Lijn does', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    await openEdit();
     const slopeTab = screen.getByRole('tab', { name: 'Helling' });
     expect(slopeTab).not.toBeDisabled();
     expect(slopeTab).not.toHaveAttribute('title');
@@ -4437,13 +4577,16 @@ describe('ChartView — slope form (phase 5, Task 2)', () => {
     // Snapshot the Lijn canvas' structure first: two curves, no bars, and
     // the real spec strings as value labels.
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     const lineCurves = container.querySelectorAll('.recharts-line-curve').length;
     expect(lineCurves).toBe(2);
     const lineTexts = [...container.querySelectorAll('svg text')].map((el) => el.textContent).sort();
 
-    fireEvent.click(slopeTab);
-    expect(slopeTab).toHaveAttribute('aria-selected', 'true');
+    await selectForm('Helling');
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    closeEdit();
     // Same subtree: a LineChart with the same two curves and the same text
     // nodes (axis ticks + value labels), no bar/area elements anywhere.
     expect(container.querySelectorAll('.recharts-line-curve').length).toBe(lineCurves);
@@ -4455,8 +4598,9 @@ describe('ChartView — slope form (phase 5, Task 2)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(twoSeriesLineSpec()));
   });
 
-  it('a 2-series × 4-point spec renders Helling disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', () => {
+  it('a 2-series × 4-point spec renders Helling disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', async () => {
     render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    await openEdit();
     const slopeTab = screen.getByRole('tab', { name: 'Helling' });
     expect(slopeTab).toBeDisabled();
     expect(slopeTab).toHaveAttribute('title', SLOPE_REASON);
@@ -4472,42 +4616,51 @@ describe('ChartView — slope form (phase 5, Task 2)', () => {
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('a single-series spec (S1) also disables Helling — a slope needs at least two series to compare', () => {
+  it('a single-series spec (S1) also disables Helling — a slope needs at least two series to compare', async () => {
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
   });
 
-  it('switching to Helling then Undo returns to the prior form through the existing setForm history', () => {
+  it('switching to Helling then Undo returns to the prior form through the existing setForm history', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
     // Start from Staaf so the undo target is an unambiguous, non-default form.
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Helling' }));
+    await selectForm('Helling');
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
 
+    // Undo/Redo now live inside the Edit popup.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'false');
+    closeEdit();
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('.recharts-line-curve')).toBeNull();
 
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
     expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
   });
 
-  it('a spec swap from a slope-chosen spec to one with more than two periods falls back to bar', () => {
+  it('a spec swap from a slope-chosen spec to one with more than two periods falls back to bar', async () => {
     // fallbackForm's own convention (chart-view-state.ts): slope -> bar.
     const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Helling' }));
+    await selectForm('Helling');
     expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
 
     rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
-    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
-    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('.recharts-line-curve')).toBeNull();
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 
@@ -4579,17 +4732,21 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
   }
   const num = (el: Element, attr: string): number => Number(el.getAttribute(attr));
 
-  it('a 2-series × 2-point spec offers Dumbbell enabled; selecting it draws two bound dots per row and no bar or line', () => {
+  it('a 2-series × 2-point spec offers Dumbbell enabled; selecting it draws two bound dots per row and no bar or line', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     const tab = screen.getByRole('tab', { name: 'Dumbbell' });
     expect(tab).not.toBeDisabled();
     expect(tab).not.toHaveAttribute('title');
     expect(tab).not.toHaveAttribute('aria-describedby');
+    closeEdit();
 
-    fireEvent.click(tab);
-    expect(tab).toHaveAttribute('aria-selected', 'true');
+    await selectForm('Dumbbell');
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    closeEdit();
     // The shell carries no graphical item at all — nothing on a dumbbell is
     // a bar, and no line is drawn through Recharts either.
     expect(container.querySelector('.recharts-bar')).toBeNull();
@@ -4605,10 +4762,10 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(container.querySelectorAll('svg [data-role="dumbbell-connector"]')).toHaveLength(2);
   });
 
-  it('every label is its point\'s OWN formattedValue, bound via data-label-for; the whole card passes the digit scan', () => {
+  it('every label is its point\'s OWN formattedValue, bound via data-label-for; the whole card passes the digit scan', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     expect(label(container, 'nl-2020').textContent).toBe('100');
     expect(label(container, 'nl-2021').textContent).toBe('110');
     expect(label(container, 'ut-2020').textContent).toBe('50');
@@ -4620,9 +4777,9 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('geometry: dot x-positions are linear in the values, both ends of a row sit on that row\'s own axis tick, and the connector joins the two dots', () => {
+  it('geometry: dot x-positions are linear in the values, both ends of a row sit on that row\'s own axis tick, and the connector joins the two dots', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     const nl20 = dot(container, 'nl-2020'); // 100
     const nl21 = dot(container, 'nl-2021'); // 110
     const ut20 = dot(container, 'ut-2020'); // 50
@@ -4675,10 +4832,10 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(num(l20, 'y')).toBe(num(nl20, 'cy') + 4);
   });
 
-  it('a row whose value FELL draws its start dot on the right (label side follows the pixel order), and a provisional end gets the shared " *" suffix', () => {
+  it('a row whose value FELL draws its start dot on the right (label side follows the pixel order), and a provisional end gets the shared " *" suffix', async () => {
     const s = fallingSpec();
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     const from = dot(container, 'gr-2020'); // 80
     const to = dot(container, 'gr-2021'); // 60, provisional
     expect(num(to, 'cx')).toBeLessThan(num(from, 'cx'));
@@ -4691,9 +4848,9 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('hiding a series via the legend drops its row entirely (no dots, no connector), order kept', () => {
+  it('hiding a series via the legend drops its row entirely (no dots, no connector), order kept', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     expect(container.querySelector('svg [data-role="dumbbell-dot"][data-result-id="ut-2020"]')).toBeNull();
     expect(container.querySelector('svg [data-role="dumbbell-dot"][data-result-id="ut-2021"]')).toBeNull();
@@ -4702,8 +4859,9 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
   });
 
-  it('a spec with a null point in one series renders Dumbbell disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', () => {
+  it('a spec with a null point in one series renders Dumbbell disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', async () => {
     render(<ChartView spec={nullPointSpec()} />);
+    await openEdit();
     const tab = screen.getByRole('tab', { name: 'Dumbbell' });
     expect(tab).toBeDisabled();
     expect(tab).toHaveAttribute('title', DUMBBELL_REASON);
@@ -4722,11 +4880,13 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
   });
 
-  it('a 2-series × 4-point spec and a single-series spec both render Dumbbell disabled', () => {
+  it('a 2-series × 4-point spec and a single-series spec both render Dumbbell disabled', async () => {
     const { unmount } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
     unmount();
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
   });
 
@@ -4748,35 +4908,41 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(buildDumbbellRows(nullPointSpec()).map((r) => r.key)).toEqual(['s0']);
   });
 
-  it('switching to Dumbbell then Undo returns to the prior form through the existing setForm history', () => {
+  it('switching to Dumbbell then Undo returns to the prior form through the existing setForm history', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
     expect(container.querySelector('.recharts-bar')).toBeNull();
 
+    // Undo/Redo now live inside the Edit popup.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
 
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
   });
 
-  it('a spec swap from a dumbbell-chosen spec to one with more than two periods falls back to bar', () => {
+  it('a spec swap from a dumbbell-chosen spec to one with more than two periods falls back to bar', async () => {
     // fallbackForm's own convention (chart-view-state.ts): dumbbell -> bar.
     const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
 
     rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
-    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
-    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
   });
 
   // Phase 5 final review (Fix 1): the quieter twin of the heatmap crash. The
@@ -4789,49 +4955,56 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
   // axes-only shell with no explanation. The guard now reads the spec that
   // is actually drawn, so the choice falls back to bar (fallbackForm's own
   // dumbbell -> bar policy) with the tab disabled and explained.
-  it('an alternate reading with one point per series, picked while Dumbbell is on screen, falls back to bar — never an empty axes-only shell', () => {
+  it('an alternate reading with one point per series, picked while Dumbbell is on screen, falls back to bar — never an empty axes-only shell', async () => {
     const alt = twoSeriesLineSpec();
     alt.series = alt.series.map((s) => ({ ...s, points: [s.points[1]!] }));
     const { container } = render(
       <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Jaarmutatie', spec: alt }]} />,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
 
+    await openEdit();
     const reading = screen.getByRole('combobox', { name: /lezing|reading/i });
     fireEvent.change(reading, { target: { value: '0' } });
-
-    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
-    expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('title', DUMBBELL_REASON);
     // Slope shares the guard, so it is out of reach on this reading too.
     expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+    closeEdit();
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
 
     // Back on the primary reading the dumbbell returns by itself — the
     // reader's own choice survived the detour.
-    fireEvent.change(reading, { target: { value: 'primary' } });
-    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+    await openEdit();
+    fireEvent.change(screen.getByRole('combobox', { name: /lezing|reading/i }), { target: { value: 'primary' } });
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
   });
 
-  it('a zoom window that leaves one point per series, set while Dumbbell is on screen, falls back to bar the same way', () => {
+  it('a zoom window that leaves one point per series, set while Dumbbell is on screen, falls back to bar the same way', async () => {
     // Same fix, second doorway: the Vanaf/Tot window is applied to what is
     // drawn (`viewSpec`), and it too is offered on every form.
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    await selectForm('Dumbbell');
     expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
 
+    await openEdit();
     fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2021' } });
-    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
-    expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+    closeEdit();
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
 
+    await openEdit();
     fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2020' } });
-    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
     expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
   });
 });
 
@@ -4863,24 +5036,31 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     return Number(m![1]);
   }
 
-  it('the three phase-5 tabs sit after Tabel in the fixed order Dumbbell, Helling, Warmtekaart (the phase-5b trio trails them)', () => {
+  it('the three phase-5 tabs sit after Tabel in the fixed order Dumbbell, Helling, Warmtekaart (the phase-5b trio trails them)', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
-    const names = screen.getAllByRole('tab').map((el) => el.textContent);
+    await openEdit();
+    const names = within(screen.getByRole('tablist', { name: 'Weergave' })).getAllByRole('tab').map((el) => el.textContent);
     expect(names.slice(-7, -3)).toEqual(['Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
   });
 
-  it('a 2-series × 2-point spec offers Warmtekaart enabled; selecting it renders a grid of bound cells and no chart', () => {
+  it('a 2-series × 2-point spec offers Warmtekaart enabled; selecting it renders a grid of bound cells and no chart', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
-    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
-    expect(tab).not.toBeDisabled();
-    expect(tab).not.toHaveAttribute('title');
-    expect(tab).not.toHaveAttribute('aria-describedby');
+    await openEdit();
+    const offered = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(offered).not.toBeDisabled();
+    expect(offered).not.toHaveAttribute('title');
+    expect(offered).not.toHaveAttribute('aria-describedby');
+    closeEdit();
 
-    fireEvent.click(tab);
+    await selectForm('Warmtekaart');
+    await openEdit();
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
     expect(tab).toHaveAttribute('aria-selected', 'true');
     expect(tab).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    const tabControls = tab.getAttribute('aria-controls');
+    closeEdit();
     // Nothing Recharts-shaped is on the card at all, and no plain <table>.
     expect(container.querySelector('.recharts-wrapper')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
@@ -4903,13 +5083,13 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     ]);
     // The tabpanel the tablist points at is the grid's own wrapper.
     expect(grid.parentElement).toHaveAttribute('role', 'tabpanel');
-    expect(grid.parentElement).toHaveAttribute('id', tab.getAttribute('aria-controls'));
+    expect(grid.parentElement).toHaveAttribute('id', tabControls);
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('colour: each cell is mixed by its value\'s place on the ONE grid-wide min..max scale, whole percentages', () => {
+  it('colour: each cell is mixed by its value\'s place on the ONE grid-wide min..max scale, whole percentages', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     // min 50 (ut-2020), max 110 (nl-2021): 100 -> 50/60 = 83%, 55 -> 5/60 = 8%.
     expect(mixPercent(cell(container, 'ut-2020'))).toBe(0);
     expect(mixPercent(cell(container, 'nl-2021'))).toBe(100);
@@ -4917,12 +5097,13 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     expect(mixPercent(cell(container, 'ut-2021'))).toBe(8);
   });
 
-  it('a 2 × 4 grid is offered too (at least two periods, not exactly two) and scales over all eight cells', () => {
+  it('a 2 × 4 grid is offered too (at least two periods, not exactly two) and scales over all eight cells', async () => {
     const s = twoSeriesFourYearLineSpec();
     const { container } = render(<ChartView spec={s} />);
-    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
-    expect(tab).not.toBeDisabled();
-    fireEvent.click(tab);
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).not.toBeDisabled();
+    closeEdit();
+    await selectForm('Warmtekaart');
     const grid = container.querySelector<HTMLElement>('[data-testid="heatmap-grid"]')!;
     expect(grid.querySelectorAll('[role="cell"]')).toHaveLength(8);
     expect([...grid.querySelectorAll('[role="rowheader"]')].map((el) => el.textContent)).toEqual(['2018', '2019', '2020', '2021']);
@@ -4934,48 +5115,56 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('a provisional cell keeps its * suffix — the text is the table\'s own cell text', () => {
+  it('a provisional cell keeps its * suffix — the text is the table\'s own cell text', async () => {
     const s = twoSeriesLineSpec();
     s.series[0]!.points[1]!.provisional = true;
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     expect(cell(container, 'nl-2021').textContent).toBe('110*');
   });
 
-  it('renders in English: translated header words, the same bound cells', () => {
+  it('renders in English: translated header words, the same bound cells', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(
       <LangProvider lang="en">
         <ChartView spec={s} />
       </LangProvider>,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Heatmap' }));
+    await selectForm('Heatmap');
     const grid = container.querySelector<HTMLElement>('[data-testid="heatmap-grid"]')!;
     expect(grid.querySelector('[role="columnheader"]')!.textContent).toBe('Period');
     expect(cell(container, 'ut-2021').textContent).toBe('55');
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('is gated exactly like the table: no Style panel trigger, no legend, no Download while the grid is shown', () => {
+  // WP-LOOK part (a) rewrite: Edit is offered on the grid too (the form tabs
+  // live in the popup); the Style panel section, the legend and Download are
+  // still absent while the grid is shown.
+  it('is gated exactly like the table: no Style panel section, no legend, no Download while the grid is shown (Edit itself stays offered)', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    // Line form (the default here) has all three.
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    // Line form (the default here) has all of them.
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
     expect(container.querySelector('[data-slot="chart-footer-actions"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Nederland' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    await selectForm('Warmtekaart');
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
     expect(container.querySelector('[data-slot="chart-footer-actions"]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Nederland' })).toBeNull();
+    await openEdit();
+    expect(screen.queryByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeNull();
+    closeEdit();
 
     // And back: switching to Lijn restores them.
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    await selectForm('Lijn');
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="chart-footer-actions"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
   });
 
-  it('a single-series spec disables Warmtekaart with its reason, for pointer (title) and screen reader (aria-describedby)', () => {
+  it('a single-series spec disables Warmtekaart with its reason, for pointer (title) and screen reader (aria-describedby)', async () => {
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    await openEdit();
     const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
     expect(tab).toBeDisabled();
     expect(tab).toHaveAttribute('title', HEATMAP_REASON);
@@ -4983,11 +5172,12 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     expect(describedById).toBeTruthy();
     expect(document.getElementById(describedById!)!.textContent).toBe(HEATMAP_REASON);
     fireEvent.click(tab);
-    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
   });
 
-  it('a spec with a null cell disables Warmtekaart (nothing honest to colour there)', () => {
+  it('a spec with a null cell disables Warmtekaart (nothing honest to colour there)', async () => {
     const s = twoSeriesLineSpec();
     s.series[1]!.points[1] = point({
       resultId: 'ut-2021',
@@ -4998,54 +5188,63 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
       status: 'Ontbreekt',
     });
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
   });
 
-  it('a spec whose series cover different periods disables Warmtekaart (an intersection with no cell)', () => {
+  it('a spec whose series cover different periods disables Warmtekaart (an intersection with no cell)', async () => {
     const s = twoSeriesLineSpec();
     s.series[1]!.points = [
       point({ resultId: 'ut-2019', periodCode: '2019', periodLabel: '2019', value: 45, formattedValue: '45' }),
       point({ resultId: 'ut-2020', periodCode: '2020', periodLabel: '2020', value: 50, formattedValue: '50' }),
     ];
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    closeEdit();
     // The table still shows that gap as a gap — the heatmap just is not offered.
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
-  it('switching to Warmtekaart then Undo returns to the prior form through the existing setForm history', () => {
+  it('switching to Warmtekaart then Undo returns to the prior form through the existing setForm history', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
     expect(container.querySelector('.recharts-bar')).toBeNull();
 
+    // Undo/Redo now live inside the Edit popup.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
 
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
   });
 
-  it('a spec swap from a heatmap-chosen spec to a single-series one falls back to the table it came from', () => {
+  it('a spec swap from a heatmap-chosen spec to a single-series one falls back to the table it came from', async () => {
     // fallbackForm's own convention (chart-view-state.ts): heatmap -> table.
     const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
 
     rerender(<ChartView spec={fourYearLineSpec()} />);
-    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
-    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
     expect(container.querySelector('.recharts-wrapper')).toBeNull();
     expect(screen.getByRole('table')).toBeInTheDocument();
-    // Gated as the table it now renders as — no Style trigger while it does.
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    // Gated as the table it now renders as — no Style panel section while it does.
+    await openEdit();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tablist', { name: 'Opmaak-onderdelen' })).toBeNull();
   });
 
   // Phase 5 final review (Fix 1): the guard used to run against the `spec`
@@ -5057,7 +5256,7 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
   // ("heatmapFormAllowed should have refused this spec") — and with no
   // error boundary in web/, that took the whole page down, not just the
   // card. The guard now reads the spec that is actually drawn.
-  it('an alternate reading with a null cell, picked while Warmtekaart is on screen, falls back to the table — never a thrown render', () => {
+  it('an alternate reading with a null cell, picked while Warmtekaart is on screen, falls back to the table — never a thrown render', async () => {
     const alt = twoSeriesLineSpec();
     alt.series[1]!.points[1] = point({
       resultId: 'alt-ut-2021',
@@ -5070,11 +5269,16 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     const { container } = render(
       <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
 
+    await openEdit();
     const reading = screen.getByRole('combobox', { name: /lezing|reading/i });
     expect(() => fireEvent.change(reading, { target: { value: '0' } })).not.toThrow();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('title', HEATMAP_REASON);
+    closeEdit();
 
     // fallbackForm's own heatmap -> table policy, applied to the reading now
     // on screen: the table (with the alternate's own cells, the null one
@@ -5084,18 +5288,17 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     const table = screen.getByRole('table');
     expect(table.querySelector('[data-label-for="alt-ut-2021"]')?.textContent).toBe('—');
     expect(table.querySelector('[data-label-for="ut-2020"]')?.textContent).toBe('50');
-    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
-    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('title', HEATMAP_REASON);
 
     // The reader's own choice was never discarded: back on the primary
     // reading the grid returns by itself.
-    fireEvent.change(reading, { target: { value: 'primary' } });
-    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+    await openEdit();
+    fireEvent.change(screen.getByRole('combobox', { name: /lezing|reading/i }), { target: { value: 'primary' } });
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
   });
 
-  it('an alternate reading whose series cover different periods (ragged), picked while Warmtekaart is on screen, falls back to the table', () => {
+  it('an alternate reading whose series cover different periods (ragged), picked while Warmtekaart is on screen, falls back to the table', async () => {
     const alt = twoSeriesLineSpec();
     alt.series[1]!.points = [
       point({ resultId: 'alt-ut-2019', periodCode: '2019', periodLabel: '2019', value: 45, formattedValue: '45' }),
@@ -5104,16 +5307,18 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     const { container } = render(
       <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    await selectForm('Warmtekaart');
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
 
+    await openEdit();
     expect(() =>
       fireEvent.change(screen.getByRole('combobox', { name: /lezing|reading/i }), { target: { value: '0' } }),
     ).not.toThrow();
-    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
-    expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    closeEdit();
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });
 
@@ -5144,9 +5349,9 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     });
   }
 
-  it('renders a filled Area element (Recharts 3\'s own class) with a gradient url fill by default for a single time series (ADR 042)', () => {
+  it('renders a filled Area element (Recharts 3\'s own class) with a gradient url fill by default for a single time series (ADR 042)', async () => {
     const { container } = render(<ChartView spec={areaSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     const area = container.querySelector('.recharts-area-area');
     expect(area).not.toBeNull();
     // ADR 042: gradient is the default area fill — a literal series colour
@@ -5156,16 +5361,16 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     expect(area?.getAttribute('fill-opacity')).toBe('1');
   });
 
-  it('draws a hollow marker on the provisional point, same R11 convention as the line form', () => {
+  it('draws a hollow marker on the provisional point, same R11 convention as the line form', async () => {
     const { container } = render(<ChartView spec={areaSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     const hollow = container.querySelector('circle[data-point="value"][data-result-id="mid"]');
     expect(hollow?.getAttribute('fill')).toBe('var(--card)');
     const finalDot = container.querySelector('circle[data-point="value"][data-result-id="lo"]');
     expect(finalDot?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 
-  it('floors the Y-axis at zero (the area lock) — the same kind of large, meaningful shift the line form\'s own zero-baseline toggle produces', () => {
+  it('floors the Y-axis at zero (the area lock) — the same kind of large, meaningful shift the line form\'s own zero-baseline toggle produces', async () => {
     const s = areaSpec({
       series: [
         {
@@ -5180,15 +5385,15 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     const autoY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     const zeroY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
     expect(zeroY).toBeLessThan(autoY - 50);
   });
 
   it('locks Y-as vanaf nul with its own area-specific reason rather than hiding the control (unlike bar, which deletes it)', async () => {
     render(<ChartView spec={areaSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await selectForm('Vlak');
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     const toggle = screen.getByRole('button', { name: 'Y-as vanaf nul' });
     expect(toggle).toBeDisabled();
@@ -5196,20 +5401,20 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     expect(document.getElementById(reasonId)?.textContent).toBe('Een gevuld vlak begint altijd bij nul.');
   });
 
-  it('the whole-card membership scan passes in area form (no digit on screen without a source in the spec\'s own strings)', () => {
+  it('the whole-card membership scan passes in area form (no digit on screen without a source in the spec\'s own strings)', async () => {
     const s = areaSpec({
       provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
       nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
       definitionLine: 'Definitie: testdefinitie 2020.',
     });
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('area form fills with a vertical gradient by default (a <linearGradient> per series, fill url(#…)), and flat when areaFill is flat', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    await selectForm('Vlak');
     const gradient = container.querySelector('svg defs linearGradient');
     expect(gradient).not.toBeNull();
     const stops = gradient!.querySelectorAll('stop');
@@ -5217,7 +5422,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     expect(stops[0]!.getAttribute('stop-color')).toBe(DEFAULT_PALETTE[0]);
     const area = container.querySelector('.recharts-area-area');
     expect(area?.getAttribute('fill')).toBe(`url(#${gradient!.getAttribute('id')})`);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Verloop in het vlak' }));
     // WP218 phase 1 (session 101): the panel is now open, so the chart lives
@@ -5229,38 +5434,38 @@ describe('ChartView — area form (WP218 phase 5)', () => {
 describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
   beforeEach(() => vi.unstubAllGlobals());
 
-  it('renders one rect[data-point] per region, in the spec\'s own order, never sorted (R6)', () => {
+  it('renders one rect[data-point] per region, in the spec\'s own order, never sorted (R6)', async () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(3);
     expect([...bars].map((b) => b.getAttribute('data-result-id'))).toEqual(['gr-2021', 'fr-2021', 'dr-2021']);
   });
 
-  it('shows region labels as y-axis text nodes (a custom tick — Recharts\' own default axis text renders nothing in jsdom)', () => {
+  it('shows region labels as y-axis text nodes (a custom tick — Recharts\' own default axis text renders nothing in jsdom)', async () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     const regionTicks = [...container.querySelectorAll('[data-role="region-axis-tick"]')].map((t) => t.textContent);
     expect(regionTicks).toEqual(['Groningen', 'Friesland', 'Drenthe']);
   });
 
-  it('binds each bar\'s own value label to its resultId', () => {
+  it('binds each bar\'s own value label to its resultId', async () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     expect(container.querySelector('[data-role="bar-label"][data-label-for="gr-2021"]')?.textContent).toBe('10');
     expect(container.querySelector('[data-role="bar-label"][data-label-for="fr-2021"]')?.textContent).toBe('20');
     expect(container.querySelector('[data-role="bar-label"][data-label-for="dr-2021"]')?.textContent).toBe('15');
   });
 
-  it('hiding a region via the legend drops its row entirely (order kept for the rest)', () => {
+  it('hiding a region via the legend drops its row entirely (order kept for the rest)', async () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect([...bars].map((b) => b.getAttribute('data-result-id'))).toEqual(['gr-2021', 'dr-2021']);
   });
 
-  it('highlighting one region dims the fill-opacity of the others, marks them data-series-dimmed, and clearing restores all', () => {
+  it('highlighting one region dims the fill-opacity of the others, marks them data-series-dimmed, and clearing restores all', async () => {
     // Session 110 pass 3 row 1's follow-up (ADR 042): RegionBar's fillOpacity
     // was always correctly wired to payload.dimmed, but the data-series-dimmed
     // marker itself — the same marker SeriesBar's rect forwards for the
@@ -5270,7 +5475,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     // directly) would have wrongly concluded hbar had no dim behaviour at
     // all. Both are pinned here.
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     const byResultId = (id: string) =>
       [...container.querySelectorAll('rect[data-point="value"]')].find((b) => b.getAttribute('data-result-id') === id)!;
     // Before any highlight: every row full opacity, none marked dimmed.
@@ -5294,7 +5499,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     expect(container.querySelectorAll('rect[data-point="value"][data-series-dimmed="true"]')).toHaveLength(0);
   });
 
-  it('a provisional region is hatched, not just noted in prose', () => {
+  it('a provisional region is hatched, not just noted in prose', async () => {
     const s = multiRegionBarSpec();
     s.series[1]!.points[0] = point({
       resultId: 'fr-2021',
@@ -5305,17 +5510,17 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
       provisional: true,
     });
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     const bar = container.querySelector('rect[data-point="value"][data-result-id="fr-2021"]');
     expect(bar?.getAttribute('fill')).toMatch(/^url\(#/);
     const finalBar = container.querySelector('rect[data-point="value"][data-result-id="gr-2021"]');
     expect(finalBar?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 
-  it('the whole-card membership scan passes in hbar form', () => {
+  it('the whole-card membership scan passes in hbar form', async () => {
     const s = multiRegionBarSpec();
     const { container } = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
@@ -5328,7 +5533,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
 
     render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    await selectForm('Liggend');
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download als SVG' }));
 
@@ -5347,12 +5552,12 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
 });
 
 describe('Story mode (session 92): a code-built story under the chart', () => {
-  it('offers the colourful Inzichten trigger next to Opmaak on a chart with findings, not on Tabel, not on a one-point chart', () => {
+  it('offers the colourful Inzichten trigger next to Opmaak on a chart with findings, not on Tabel, not on a one-point chart', async () => {
     const { container, unmount } = render(<ChartView spec={threePointSpec()} />);
     const trigger = screen.getByRole('button', { name: 'Inzichten' });
     expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(trigger);
     expect(trigger.querySelector('svg')).not.toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
     unmount();
     render(<ChartView spec={spec()} />);
@@ -5384,12 +5589,12 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // reading and writing the shared `openPanel` state) exactly as before.
   it('opening the story closes Opmaak and vice versa (Style and Story share one open slot)', () => {
     render(<ChartView spec={threePointSpec()} />);
-    const styleTrigger = screen.getByRole('button', { name: 'Opmaak' });
+    const styleTrigger = screen.getByRole('button', { name: 'Bewerken' });
     const storyTrigger = screen.getByRole('button', { name: 'Inzichten' });
     fireEvent.click(styleTrigger);
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Grafiek bewerken' })).toBeInTheDocument();
     fireEvent.click(storyTrigger);
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Grafiek bewerken' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
     fireEvent.click(styleTrigger);
     expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
@@ -5420,9 +5625,9 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // Final-review fix: `activeStoryStep` only ever threaded into SeriesDot
   // (Lijn/Vlak) — a single-series time series shown as Staaf never reacted
   // to the story at all, since SeriesBar had no equivalent thread.
-  it('a single-series time series shown as Staaf reacts to the story too, with a dashed outline around the bar', () => {
+  it('a single-series time series shown as Staaf reacts to the story too, with a dashed outline around the bar', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     const beforeStory = container.querySelectorAll('[data-point]').length;
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
@@ -5444,7 +5649,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     // while Opmaak's dialog is open, so it's captured here, before that
     // dialog ever opens.
     const storyTrigger = screen.getByRole('button', { name: 'Inzichten' });
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // threePointSpec's first finding (chart-insights.ts) already rings "lo"
@@ -5503,9 +5708,9 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(container.querySelectorAll('[data-series-dimmed="true"]').length).toBeGreaterThan(0);
   });
 
-  it('a comparison story highlights the highest bar on Staaf too (explicit non-default form)', () => {
+  it('a comparison story highlights the highest bar on Staaf too (explicit non-default form)', async () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
@@ -5620,7 +5825,11 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // could contradict the active caption (hide/highlight the narrated
   // series, zoom it out of view, switch to small multiples) must be locked
   // — the story drives the chart while it's open.
-  it('locks the legend, the zoom selects and the small-multiples toggle while the story is open, with a readable reason', () => {
+  // WP-LOOK part (a) rewrite: the zoom selects and the small-multiples toggle
+  // now live in the Edit popup, and opening the popup closes an open story
+  // (Style and Story share one slot) — so while the story is open they are
+  // simply not on the card; only the legend stays on the card, locked.
+  it('locks the legend while the story is open, with a readable reason; the zoom selects and small-multiples toggle are not on the card then, and are live again in the popup once the story is closed', async () => {
     render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     // Scoped to the legend's own group: once the story is open, its step-jump
@@ -5633,12 +5842,15 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(utrecht).toBeDisabled();
     expect(utrecht).toHaveAttribute('title', 'Sluit het verhaal om dit te wijzigen.');
     expect(document.getElementById(utrecht.getAttribute('aria-describedby')!)).toHaveTextContent('Sluit het verhaal om dit te wijzigen.');
-    expect(screen.getByLabelText('Vanaf')).toBeDisabled();
-    expect(screen.getByLabelText('Tot')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeDisabled();
+    expect(screen.queryByLabelText('Vanaf')).toBeNull();
+    expect(screen.queryByLabelText('Tot')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
     expect(screen.getByRole('button', { name: 'Utrecht' })).not.toBeDisabled();
+    await openEdit();
     expect(screen.getByLabelText('Vanaf')).not.toBeDisabled();
+    expect(screen.getByLabelText('Tot')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).not.toBeDisabled();
   });
 
   // Final-review fix: every `aria-describedby` pointing at the lock-reason
@@ -5654,16 +5866,16 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(container.querySelector('[id$="-story-lock"]')).toBeNull();
   });
 
-  it("choosing another chart form closes the story and restores the reader's own view", () => {
+  it("choosing another chart form closes the story and restores the reader's own view", async () => {
     const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
     expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Inzichten' })).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    await selectForm('Lijn');
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
   });
 });
@@ -5891,12 +6103,12 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
 
   it('a frame control change fires frame_changed in addition to option_changed', async () => {
     const events: ChartStyleEvent[] = [];
-    setChartUsageSink((e) => {
+    setChartUsageSink(async (e) => {
       events.push(e);
     });
     try {
       render(<ChartView spec={threePointSpec()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
       expect(events).toEqual(['panel_open', 'option_changed', 'frame_changed']);
@@ -5907,12 +6119,12 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
 
   it('a plain (non-frame) control change fires only option_changed, never frame_changed', async () => {
     const events: ChartStyleEvent[] = [];
-    setChartUsageSink((e) => {
+    setChartUsageSink(async (e) => {
       events.push(e);
     });
     try {
       render(<ChartView spec={threePointSpec()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      await openEdit();
       fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
       expect(events).toEqual(['panel_open', 'option_changed']);
@@ -5930,7 +6142,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
   // the refusal threshold) regardless of the hex's absolute luminance.
   it('a frame background that would hide a per-chart series colour is refused; the series override is left untouched', async () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hex = screen.getByRole('textbox', { name: 'Kleur van Nederland (hex-code)' }) as HTMLInputElement;
     fireEvent.change(hex, { target: { value: '#446688' } });
@@ -5967,7 +6179,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Eigen afbeelding' }));
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
@@ -5985,7 +6197,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
@@ -6003,7 +6215,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
       </ChartStyleProvider>,
     );
     // Open the panel (opens on Grafiek tab)
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
 
     // Navigate to Frame tab and upload an image
     fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
@@ -6062,15 +6274,15 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     // `triggerB` is clicked via this held reference rather than a fresh
     // by-role query, exactly like `triggerA` and `triggerB` already were
     // before this change.
-    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
+    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Bewerken' });
     fireEvent.click(triggerA!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('dialog', { name: 'Grafiek bewerken' })).toHaveLength(1);
 
     fireEvent.click(triggerB!);
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(triggerA).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('dialog', { name: 'Grafiek bewerken' })).toHaveLength(1);
   });
 
   // WP218 phase 1 (session 101): rewritten for the real Style modal — and
@@ -6100,7 +6312,7 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
         <ChartView spec={threePointSpec({ title: 'Grafiek B' })} />
       </>,
     );
-    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
+    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Bewerken' });
     fireEvent.click(triggerA!);
     fireEvent.click(triggerB!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
@@ -6108,7 +6320,7 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     // Both dialogs are genuinely still mounted in the DOM...
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
     // ...but only the most recently opened one is reachable by role.
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('dialog', { name: 'Grafiek bewerken' })).toHaveLength(1);
   });
 });
 
@@ -6129,17 +6341,19 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
 // ---------------------------------------------------------------------------
 
 describe('embed mode (spec Part B3)', () => {
-  it('hides the Weergave tablist, the Opmaak trigger and the Inzichten trigger in embedMode', () => {
+  it('hides the Weergave tablist, the Bewerken trigger and the Inzichten trigger in embedMode', async () => {
     const s = threePointSpec();
     render(<ChartView spec={s} />);
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bewerken' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inzichten' })).toBeInTheDocument();
+    // The Weergave tablist now lives in the Edit popup.
+    await openEdit();
+    expect(screen.getByRole('tablist', { name: 'Weergave' })).toBeInTheDocument();
     cleanup();
 
     render(<ChartView spec={s} embedMode embedFooter="x" />);
     expect(screen.queryByRole('tablist')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewerken' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
   });
 
@@ -6154,9 +6368,10 @@ describe('embed mode (spec Part B3)', () => {
     expect(screen.queryByRole('button', { name: /embed/i })).toBeNull();
   });
 
-  it('hides the Vanaf/Tot zoom selects and the small-multiples toggle in embedMode', () => {
+  it('hides the Vanaf/Tot zoom selects and the small-multiples toggle in embedMode', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByLabelText('Vanaf')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
     cleanup();
@@ -6350,19 +6565,23 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
     expect(createEmbedCode).toHaveBeenCalledWith(7);
   });
 
-  it('hides Embed in small-multiples view and brings it back on leaving it, exactly like Download', () => {
+  it('hides Embed in small-multiples view and brings it back on leaving it, exactly like Download', async () => {
     render(<ChartView spec={twoSeriesSpec()} embed={{ auditId: 1 }} />);
     expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    closeEdit();
     expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
   });
 
-  it('hides Embed on the Tabel tab', () => {
+  it('hides Embed on the Tabel tab', async () => {
     render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
     expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
   });
 
@@ -6372,7 +6591,11 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
   // its own row, left-aligned, while Download stayed inline with the source
   // link, so the two actions read as unrelated. They now share one flex
   // group (`flex items-center gap-2 shrink-0`) that wraps as a UNIT.
-  it('Download and Embed share one flex group that wraps as a unit, not two independently-wrapping footer items', () => {
+  // WP-LOOK part (a) rewrite: the footer group is now `display: contents`
+  // inside the card's ONE flex actions row, so Download/Embed/Share join
+  // Edit and Inzichten in that single row (rather than forming their own
+  // nested flex box).
+  it('Download and Embed share one footer group inside the single flex actions row (display: contents), not two independent footer items', () => {
     render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
     const download = screen.getByRole('button', { name: 'Download' });
     const insluiten = screen.getByRole('button', { name: 'Insluiten' });
@@ -6385,10 +6608,13 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
     expect(downloadGroup).not.toBeNull();
     expect(downloadGroup).toBe(embedGroup);
     const group = downloadGroup as HTMLElement;
-    expect(group.className).toContain('flex');
-    expect(group.className).toContain('items-center');
-    expect(group.className).toContain('gap-2');
-    expect(group.className).toContain('shrink-0');
+    expect(group.className).toBe('contents');
+    const row = group.parentElement as HTMLElement;
+    expect(row).toHaveAttribute('data-slot', 'chart-card-actions');
+    expect(row.className).toContain('flex');
+    expect(row.className).toContain('flex-wrap');
+    expect(row.className).toContain('items-center');
+    expect(row.className).toContain('gap-2');
   });
 
   // Reviewer regression finding (Task 3 follow-up): `setEmbedOpen` used to
@@ -6476,21 +6702,21 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
 // openPanel flips straight from 'style' to 'embed', never passing through a
 // frame where both are true.
 describe('Download and Embed inside the Style modal (owner punch-list item 1)', () => {
-  it('offers Download and Embed inside the open Style modal', () => {
+  it('offers Download and Embed inside the open Style modal', async () => {
     render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    await openEdit();
+    const styleDialog = screen.getByRole('dialog', { name: 'Grafiek bewerken' });
     expect(within(styleDialog).getByRole('button', { name: 'Download' })).toBeInTheDocument();
     expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
   });
 
-  it('clicking the in-modal Embed control closes Style and opens Embed, never both at once', () => {
+  it('clicking the in-modal Embed control closes Style and opens Embed, never both at once', async () => {
     createEmbedCode.mockReturnValue(new Promise(() => {}));
     render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    await openEdit();
+    const styleDialog = screen.getByRole('dialog', { name: 'Grafiek bewerken' });
     fireEvent.click(within(styleDialog).getByRole('button', { name: 'Insluiten' }));
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Grafiek bewerken' })).toBeNull();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // Never two dialogs mounted at once — the Style dialog unmounted
     // entirely (it renders `null` while `!open`), not just hidden behind
@@ -6517,7 +6743,7 @@ describe('embed digit-token scan (extends the existing whole-card scan)', () => 
 // prop stands on its own and isn't accidentally coupled to it.
 // ---------------------------------------------------------------------------
 describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)', () => {
-  it('switches to the requested form on mount, with no tab click, when the guard allows it', () => {
+  it('switches to the requested form on mount, with no tab click, when the guard allows it', async () => {
     // twoSeriesLineSpec is kind: 'line' — its own default render (no prop at
     // all) is Lijn. 'bar' is never gated (fallbackForm's own convention), so
     // this also proves the override applies even for the "always allowed"
@@ -6525,10 +6751,11 @@ describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)',
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="bar" />);
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('.recharts-line')).toBeNull();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('applies a genuinely GUARDED form (hbar) on mount when the spec allows it (a multi-region comparison)', () => {
+  it('applies a genuinely GUARDED form (hbar) on mount when the spec allows it (a multi-region comparison)', async () => {
     // multiRegionBarSpec is kind: 'bar', 3 series — hbarFormAllowed is true,
     // but its OWN default render (no prop) is the vertical Staaf form, same
     // as the "horizontal bar form" describe block's own spec. Asserting the
@@ -6538,44 +6765,49 @@ describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)',
     const { container } = render(<ChartView spec={multiRegionBarSpec()} initialFormOverride="hbar" />);
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(3);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('does NOT override when the guard disallows it — e.g. requesting hbar on a non-comparison (line-kind) spec', () => {
+  it('does NOT override when the guard disallows it — e.g. requesting hbar on a non-comparison (line-kind) spec', async () => {
     // twoSeriesLineSpec is kind: 'line' — hbarFormAllowed requires kind ===
     // 'bar', so this must silently fall through to the spec's own default
     // (Lijn), never forcing a form the honesty rules forbid.
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="hbar" />);
     expect(container.querySelector('.recharts-line')).not.toBeNull();
     expect(container.querySelectorAll('rect[data-point="value"]')).toHaveLength(0);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('is a no-op when absent — byte-identical to every existing ChartView render with no prop at all', () => {
+  it('is a no-op when absent — byte-identical to every existing ChartView render with no prop at all', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
     expect(container.querySelector('.recharts-line')).not.toBeNull();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
   });
 
   // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms go
   // through the same guard. `fallbackForm` would never have RENDERED a
   // forbidden form anyway — the gap was a stray, never-valid history entry.
-  it('applies a phase-5 form (heatmap) on mount when the spec qualifies', () => {
+  it('applies a phase-5 form (heatmap) on mount when the spec qualifies', async () => {
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="heatmap" />);
     expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
     expect(container.querySelector('.recharts-line')).toBeNull();
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('does NOT override with a phase-5 form the spec does not qualify for, and leaves no stray history entry', () => {
+  it('does NOT override with a phase-5 form the spec does not qualify for, and leaves no stray history entry', async () => {
     for (const form of ['dumbbell', 'slope', 'heatmap'] as const) {
       // twoSeriesFourYearLineSpec: 2 series × 4 periods — dumbbell/slope need
       // exactly two points; fourYearLineSpec: 1 series — heatmap needs two.
       const s = form === 'heatmap' ? fourYearLineSpec() : twoSeriesFourYearLineSpec();
       const { container, unmount } = render(<ChartView spec={s} initialFormOverride={form} />);
-      expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
       expect(container.querySelector('.recharts-line')).not.toBeNull();
       expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+      await openEdit();
+      expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
       // Nothing was dispatched: the undo stack is empty right after mount.
       expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
       unmount();
@@ -6590,7 +6822,7 @@ describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)',
     // ...and every embedMode-gated control is still gone, exactly as the
     // "embed mode (spec Part B3)" describe block above already covers.
     expect(screen.queryByRole('tablist')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewerken' })).toBeNull();
   });
 });
 
@@ -6602,7 +6834,7 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
     expect(container.querySelector('[role="heading"][aria-level="3"]')?.textContent).toBe(s.title);
     expect(container.textContent).toContain(s.attributionLine);
     expect(container.querySelector('[role="tablist"]')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewerken' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Download/ })).toBeNull();
     expect(container.querySelector('select')).toBeNull();
@@ -6734,8 +6966,9 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
 // stay pixel-identical. Pinned as a CSS-contract test (jsdom has no layout
 // engine to measure real pixels).
 describe('ChartView — phone tap targets (R9.1, #238)', () => {
-  it('gives each form tab a 44px tap target only below sm', () => {
+  it('gives each form tab a 44px tap target only below sm', async () => {
     render(<ChartView spec={threePointSpec()} />);
+    await openEdit();
     for (const name of ['Lijn', 'Tabel']) {
       const className = screen.getByRole('tab', { name }).className;
       expect(className).toContain('min-h-11');
@@ -6751,7 +6984,7 @@ describe('ChartView — phone tap targets (R9.1, #238)', () => {
 describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
   it('initialPresentation is applied as the starting per-chart overrides', async () => {
     render(<ChartView spec={threePointSpec()} initialPresentation={{ markers: 'ends' }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await openEdit();
     fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     // "Standaard" is disabled only on a pristine (no-override) panel — an
     // initialPresentation is itself an override, so it must render enabled
@@ -6819,6 +7052,12 @@ describe('ChartView — alternate reading toggle (#254)', () => {
   }
 
   const readingControl = (): HTMLElement => screen.getByRole('combobox', { name: /lezing|reading/i });
+  /** WP-LOOK part (a): the reading select lives in the Edit popup — open it, pick, close. */
+  async function chooseReading(value: string): Promise<void> {
+    await openEdit();
+    fireEvent.change(readingControl(), { target: { value } });
+    closeEdit();
+  }
 
   /** A REAL alternate label, copied verbatim from the registry
    * (src/registry/defaults.ts, the `cpi_yoy` entry) — digits and all. Task 5's
@@ -6830,25 +7069,20 @@ describe('ChartView — alternate reading toggle (#254)', () => {
    * without one silently removes this test's teeth. */
   const REGISTRY_LABEL = 'CPI indexniveau (2025=100), geen mutatiepercentage';
 
-  /** Returns a detached copy of the rendered card with the reading control's
-   * own subtree (label + <select> + every <option>) removed, so the rest of
-   * the card can be digit-scanned with NO exemption at all. See the decision
+  /** Returns a detached copy of the rendered card, for a digit scan with NO
+   * exemption at all. WP-LOOK part (a) rewrite: the reading control (label +
+   * <select> + every <option>) no longer sits on the card — it lives in the
+   * Edit popup — so the card itself IS the control-free data surface; this
+   * helper asserts that instead of cutting the control out. See the decision
    * note on the scan test below for why that one subtree is the only place a
    * curated string is allowed to put an untraced digit on screen. */
   function cardWithoutReadingControl(container: HTMLElement): HTMLElement {
     const clone = container.cloneNode(true) as HTMLElement;
-    const control = clone.querySelector('select[id$="-reading"]');
-    expect(control, 'the reading control must exist for this helper to be meaningful').not.toBeNull();
-    // `closest('div')` from the <select> is its immediate wrapper (the one
-    // holding the <label> and the <option>s) — never a larger ancestor.
-    control!.closest('div')!.remove();
-    // Guard against this helper quietly gutting the card and making the
-    // strict scan vacuous: the reading control is gone, but the ALTERNATE's
-    // own values, the Vanaf/Tot selects and the attribution are all still
-    // there to be scanned.
     expect(clone.querySelector('select[id$="-reading"]')).toBeNull();
+    // Guard against this helper quietly scanning an empty card and making the
+    // strict scan vacuous: the ALTERNATE's own values and the attribution are
+    // still there to be scanned.
     expect(clone.textContent).toContain('9,8');
-    expect(clone.querySelector('select[id$="-from"]')).not.toBeNull();
     expect(clone.textContent).toContain('12345NED');
     return clone;
   }
@@ -6861,7 +7095,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
   });
 
-  it("shows a reading control when alternates is non-empty, and switching it renders the alternate's own data", () => {
+  it("shows a reading control when alternates is non-empty, and switching it renders the alternate's own data", async () => {
     const alt = altReadingSpec();
     render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
 
@@ -6870,7 +7104,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     const headline = (): HTMLElement => screen.getByTestId('headline-figure');
     expect(headline().querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
 
-    fireEvent.change(readingControl(), { target: { value: '0' } });
+    await chooseReading('0');
 
     // The chart now leads with the ALTERNATE's last plotted point, bound to
     // the ALTERNATE's own cell id — the primary's cell is gone from the card.
@@ -6878,18 +7112,18 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(headline().querySelector('[data-label-for="hi"]')).toBeNull();
 
     // ...and so does the exact-values Tabel view, cell by cell.
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     const table = screen.getByRole('table');
     expect(table.querySelector('[data-label-for="alt-lo"]')?.textContent).toBe('8,5');
     expect(table.querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
     expect(table.querySelector('[data-label-for="lo"]')).toBeNull();
 
     // Switching back returns to the primary's own cells.
-    fireEvent.change(readingControl(), { target: { value: 'primary' } });
+    await chooseReading('primary');
     expect(screen.getByRole('table').querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
   });
 
-  it("the alternate reading brings its OWN coordinate labels, definition line and attribution — never the primary's", () => {
+  it("the alternate reading brings its OWN coordinate labels, definition line and attribution — never the primary's", async () => {
     const alt = altReadingSpec({ attributionLine: 'Bron: CBS StatLine, tabel 99999NED.' });
     const { container } = render(
       <ChartView
@@ -6901,7 +7135,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(container.textContent).toContain('Alle kenmerken');
     expect(container.textContent).toContain('Definitie: gecorrigeerde reeks.');
 
-    fireEvent.change(readingControl(), { target: { value: '0' } });
+    await chooseReading('0');
 
     expect(container.textContent).toContain('Niet gecorrigeerd');
     expect(container.textContent).not.toContain('Alle kenmerken');
@@ -6909,11 +7143,12 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(container.textContent).toContain('Bron: CBS StatLine, tabel 99999NED.');
   });
 
-  it('switching reading does NOT reset the current form/zoom — the spec-identity effect must not fire', () => {
+  it('switching reading does NOT reset the current form/zoom — the spec-identity effect must not fire', async () => {
     const alt = altReadingSpec();
     render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    await selectForm('Staaf');
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2023JJ00' } });
     expect(screen.getByRole('combobox', { name: 'Vanaf' })).toHaveValue('2023JJ00');
@@ -6951,7 +7186,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(screen.getByTestId('headline-figure').querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
 
     // Switch to the alternate reading — 'lo' does not exist there.
-    fireEvent.change(readingControl(), { target: { value: '0' } });
+    await chooseReading('0');
 
     // The headline must NOT disappear: it falls back to the alternate's own
     // default figure (its last plotted point, 'alt-hi', formattedValue
@@ -6961,33 +7196,37 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(headline.querySelector('[data-label-for="lo"]')).toBeNull();
   });
 
-  it('a genuinely different spec DOES still reset the reading back to the primary (contrast: the identity effect works)', () => {
+  it('a genuinely different spec DOES still reset the reading back to the primary (contrast: the identity effect works)', async () => {
     const alt = altReadingSpec();
     const alternates = [{ label: 'Ongecorrigeerd', spec: alt }];
     const { rerender } = render(<ChartView spec={threePointSpec()} alternates={alternates} />);
-    fireEvent.change(readingControl(), { target: { value: '0' } });
+    await chooseReading('0');
+    await openEdit();
     expect(readingControl()).toHaveValue('0');
+    closeEdit();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Andere reeks' })} alternates={alternates} />);
+    await openEdit();
     expect(readingControl()).toHaveValue('primary');
   });
 
-  it("the reading control label uses the registry alternate's own label string, never invented copy", () => {
+  it("the reading control label uses the registry alternate's own label string, never invented copy", async () => {
     render(
       <ChartView
         spec={threePointSpec()}
         alternates={[{ label: 'oorspronkelijke, ongecorrigeerde cijfers', spec: altReadingSpec() }]}
       />,
     );
+    await openEdit();
     expect(screen.getByText('oorspronkelijke, ongecorrigeerde cijfers')).toBeInTheDocument();
   });
 
-  it('the alternate view passes the SAME whole-card digit-honesty scan the primary chart already does', () => {
+  it('the alternate view passes the SAME whole-card digit-honesty scan the primary chart already does', async () => {
     const alt = altReadingSpec();
     const { container } = render(
       <ChartView spec={threePointSpec()} alternates={[{ label: REGISTRY_LABEL, spec: alt }]} />,
     );
-    fireEvent.change(readingControl(), { target: { value: '0' } });
+    await chooseReading('0');
 
     // (1) The DATA surface — the whole card MINUS the reading control itself —
     // is scanned with NO exemption whatsoever: with the ALTERNATE showing,
@@ -6997,7 +7236,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     // may never leak into the chart, the table, the headline figure, the axis
     // or the attribution.
     scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await selectForm('Tabel');
     scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
 
     // (2) The whole card, control included: the ONE extra source needed is the
@@ -7021,7 +7260,12 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     // is not a claim about a plotted number — and costs real clarity: the
     // clearest possible name for that reading IS "(2025=100)". Suppressing the
     // base would make the toggle harder to read, not more honest.
+    // WP-LOOK part (a): the control now sits in the Edit popup, so the popup
+    // (which carries the control AND the chart while it is open) is scanned
+    // with the same one extra source, and the card is re-scanned too.
     scanForUnboundDigits(container, [...harvestSpecStrings(alt), REGISTRY_LABEL]);
+    await openEdit();
+    scanForUnboundDigits(screen.getByRole('dialog'), [...harvestSpecStrings(alt), REGISTRY_LABEL]);
   });
 
   // Task 6 addendum (a gap the Task 5 reviewer flagged): the Embed dialog's
@@ -7033,7 +7277,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
   // the fix; nested here (not a sibling top-level describe) specifically to
   // reuse this block's own `altReadingSpec`/`readingControl` helpers.
   describe('Embed disabled while an alternate reading is selected (#254 Task 6 addendum)', () => {
-    it('disables the Embed trigger once a non-primary reading is selected, with a reason reachable via aria-describedby', () => {
+    it('disables the Embed trigger once a non-primary reading is selected, with a reason reachable via aria-describedby', async () => {
       const alt = altReadingSpec();
       render(
         <ChartView
@@ -7045,7 +7289,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
       const trigger = screen.getByRole('button', { name: 'Insluiten' });
       expect(trigger).not.toBeDisabled();
 
-      fireEvent.change(readingControl(), { target: { value: '0' } });
+      await chooseReading('0');
 
       expect(trigger).toBeDisabled();
       const describedById = trigger.getAttribute('aria-describedby');
@@ -7055,7 +7299,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
       expect(trigger).toHaveAttribute('title', expect.stringContaining('standaardlezing'));
     });
 
-    it('re-enables the Embed trigger when switching back to the primary reading', () => {
+    it('re-enables the Embed trigger when switching back to the primary reading', async () => {
       const alt = altReadingSpec();
       render(
         <ChartView
@@ -7064,10 +7308,10 @@ describe('ChartView — alternate reading toggle (#254)', () => {
           embed={{ auditId: 1 }}
         />,
       );
-      fireEvent.change(readingControl(), { target: { value: '0' } });
+      await chooseReading('0');
       expect(screen.getByRole('button', { name: 'Insluiten' })).toBeDisabled();
 
-      fireEvent.change(readingControl(), { target: { value: 'primary' } });
+      await chooseReading('primary');
       expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
     });
 
@@ -7076,7 +7320,7 @@ describe('ChartView — alternate reading toggle (#254)', () => {
       expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
     });
 
-    it('also disables the in-Style-modal Embed trigger while a non-primary reading is selected', () => {
+    it('also disables the in-Style-modal Embed trigger while a non-primary reading is selected', async () => {
       const alt = altReadingSpec();
       render(
         <ChartView
@@ -7085,9 +7329,9 @@ describe('ChartView — alternate reading toggle (#254)', () => {
           embed={{ auditId: 1 }}
         />,
       );
+      await openEdit();
       fireEvent.change(readingControl(), { target: { value: '0' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+      const styleDialog = screen.getByRole('dialog', { name: 'Grafiek bewerken' });
       expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeDisabled();
     });
   });
@@ -7198,11 +7442,13 @@ function regionSetBarSpec(count: number): ChartSpec {
 }
 
 describe('ChartView — #253 region_set bar chart (Task 5)', () => {
-  it('a 26-series region-set spec renders as bars, one label per region, when the bar/hbar form is used', () => {
+  it('a 26-series region-set spec renders as bars, one label per region, when the bar/hbar form is used', async () => {
     const s = regionSetBarSpec(26);
     expect(s.series.length).toBe(26);
     const { container } = render(<ChartView spec={s} initialFormOverride="hbar" />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(26);
     // Every region's own label is on screen (the y-axis category ticks) —
@@ -7224,10 +7470,12 @@ describe('ChartView — #253 region_set bar chart (Task 5)', () => {
   // Tabel fall-back above BAR_LABEL_MAX. The 26 gemeenten of a provincie are
   // exactly the case this fixes: "no chart at all" for a perfectly readable
   // horizontal bar.
-  it('a 26-series region-set spec opens on the horizontal-bar form BY DEFAULT — the session 110 many-region comparison fix', () => {
+  it('a 26-series region-set spec opens on the horizontal-bar form BY DEFAULT — the session 110 many-region comparison fix', async () => {
     const s = regionSetBarSpec(26);
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('table')).toBeNull();
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(26);
@@ -7262,10 +7510,12 @@ describe('ChartView — #253 region_set bar chart (Task 5)', () => {
 // produce for a real ranked class.
 // ---------------------------------------------------------------------------
 describe('ChartView — #253/row 10 hbar extreme-only value labels above BAR_LABEL_MAX', () => {
-  it('a 26-row hbar renders exactly two value labels, on the first and last row, both real spec strings', () => {
+  it('a 26-row hbar renders exactly two value labels, on the first and last row, both real spec strings', async () => {
     const s = regionSetBarSpec(26);
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(26);
     const labels = container.querySelectorAll('[data-role="bar-label"]');
@@ -7284,10 +7534,12 @@ describe('ChartView — #253/row 10 hbar extreme-only value labels above BAR_LAB
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('a 12-row hbar (at or below BAR_LABEL_MAX) still labels every row — the pre-existing rule, unchanged', () => {
+  it('a 12-row hbar (at or below BAR_LABEL_MAX) still labels every row — the pre-existing rule, unchanged', async () => {
     const s = regionSetBarSpec(12);
     const { container } = render(<ChartView spec={s} />);
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     const bars = container.querySelectorAll('rect[data-point="value"]');
     expect(bars).toHaveLength(12);
     const labels = container.querySelectorAll('[data-role="bar-label"]');
@@ -7318,7 +7570,7 @@ describe('ChartView — #253/row 11 single palette colour for a comparison-shape
     expect(fills.every((f) => f === DEFAULT_PALETTE[0])).toBe(true);
   });
 
-  it('a 3-series time series keeps 3 distinct palette colours (never comparison-shaped)', () => {
+  it('a 3-series time series keeps 3 distinct palette colours (never comparison-shaped)', async () => {
     const s = spec({
       kind: 'bar',
       series: [
@@ -7330,7 +7582,9 @@ describe('ChartView — #253/row 11 single palette colour for a comparison-shape
     const { container } = render(<ChartView spec={s} />);
     // Multi-point series: not comparison-shaped, stays on the vertical Staaf
     // form (spec.kind), never Liggend.
+    await openEdit();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     const bars = container.querySelectorAll('.recharts-bar-rectangle rect, rect[data-point="value"]');
     const fills = new Set(Array.from(bars).map((b) => b.getAttribute('fill')).filter((f): f is string => f != null && f.startsWith('#')));
     expect(fills).toEqual(new Set(DEFAULT_PALETTE.slice(0, 3)));
@@ -7561,6 +7815,8 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     const { container } = render(<ChartView spec={s} />);
 
     // Click the era shading trigger button (dynamic component loads on click)
+    // The era-shading editor lives in the Edit popup on a fresh card.
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
 
     // Wait for the form to be visible and get the inputs. Scoped via the
@@ -7581,6 +7837,7 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
 
     // Save (find the button by regex to match 'Opslaan')
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    closeEdit();
 
     // Assert the visual band renders
     expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
@@ -7597,6 +7854,8 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
 
+    // The era-shading editor lives in the Edit popup on a fresh card.
+    await openEdit();
     fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
     const fromSelect = await screen.findByLabelText('Van');
     fireEvent.change(fromSelect, { target: { value: '2020' } });
@@ -7606,6 +7865,7 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     fireEvent.change(toSelect, { target: { value: '2021' } });
     fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Testperiode label' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    closeEdit();
 
     const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(exportContainer?.textContent).not.toContain('Testperiode label');
@@ -7627,7 +7887,7 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
 // number, formatted by the same formatter and asserted through it.
 // ---------------------------------------------------------------------------
 
-describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
+describe('ChartView — verified-whole forms (phase 5b, Task 4)', async () => {
   const PIE_STRUCTURAL = 'Beschikbaar zodra de grafiek één moment toont voor een volledige set regio’s die het CBS zelf als geheel kent, zoals alle provincies.';
   const STACKED_STRUCTURAL = 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.';
   const SUM_MISMATCH = 'De delen tellen voor deze periode niet op tot het CBS-totaal, dus deze vorm wordt niet getekend. Kies een andere periode.';
@@ -7695,8 +7955,22 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: true, periods });
   }
 
+  /** A Weergave tab — the tablist lives in the Edit popup, so callers `await openEdit()` first. */
   function tab(name: string): HTMLElement {
     return screen.getByRole('tab', { name });
+  }
+
+  /** A verdict the test releases itself: the Edit popup needs a few awaits, so
+   * "before the verdict" states (the checking line, no segments yet) would
+   * otherwise resolve out from under the assertions. */
+  function heldVerdicts(): (periods: Record<string, unknown>) => Promise<void> {
+    let resolve!: (value: unknown) => void;
+    chartWholeActions.requestWholeVerification.mockReturnValueOnce(new Promise((res) => { resolve = res; }));
+    return async (periods) => {
+      await act(async () => {
+        resolve({ ok: true, periods });
+      });
+    };
   }
 
   function labelsByRole(container: HTMLElement, role: string): [string | null, string | null][] {
@@ -7708,14 +7982,16 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: false, reason: 'not resolved in this test' });
   });
 
-  it('the three tabs trail Warmtekaart in the fixed order Taartdiagram, Gestapeld, Gestapeld (%)', () => {
+  it('the three tabs trail Warmtekaart in the fixed order Taartdiagram, Gestapeld, Gestapeld (%)', async () => {
     render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
-    const names = screen.getAllByRole('tab').map((el) => el.textContent);
+    await openEdit();
+    const names = within(screen.getByRole('tablist', { name: 'Weergave' })).getAllByRole('tab').map((el) => el.textContent);
     expect(names.slice(-4)).toEqual(['Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']);
   });
 
-  it('a spec with the SAME province codes but no regionScope disables all three tabs with their structural reason — provenance, not codes', () => {
+  it('a spec with the SAME province codes but no regionScope disables all three tabs with their structural reason — provenance, not codes', async () => {
     render(<ChartView spec={multiRegionBarSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     for (const [name, reason] of [
       ['Taartdiagram', PIE_STRUCTURAL],
       ['Gestapeld', STACKED_STRUCTURAL],
@@ -7730,8 +8006,9 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     expect(chartWholeActions.requestWholeVerification).not.toHaveBeenCalled();
   });
 
-  it('a roster spec with no saved answer (no auditId) offers none of the three — there is nothing to verify against', () => {
+  it('a roster spec with no saved answer (no auditId) offers none of the three — there is nothing to verify against', async () => {
     render(<ChartView spec={provinceRosterSpec()} />);
+    await openEdit();
     expect(tab('Taartdiagram')).toBeDisabled();
     expect(tab('Taartdiagram')).toHaveAttribute('title', NO_AUDIT);
     expect(tab('Gestapeld')).toHaveAttribute('title', NO_AUDIT);
@@ -7739,8 +8016,9 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     expect(chartWholeActions.requestWholeVerification).not.toHaveBeenCalled();
   });
 
-  it('a roster spec with a saved answer offers all three enabled; the check only runs once a whole form is picked', () => {
+  it('a roster spec with a saved answer offers all three enabled; the check only runs once a whole form is picked', async () => {
     render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    await openEdit();
     for (const name of ['Taartdiagram', 'Gestapeld', 'Gestapeld (%)']) {
       expect(tab(name)).not.toBeDisabled();
       expect(tab(name)).not.toHaveAttribute('title');
@@ -7752,16 +8030,21 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
 
   it('pie: picking the tab asks the server for exactly the shown period, shows the checking state, then draws one bound slice per region', async () => {
     verdicts({ '2021': { verified: true } });
+    // Held verdict: the Edit popup needs a few awaits, so the "checking" state is kept observable until released.
+    const release = heldVerdicts();
     const s = provinceRosterSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
+    await openEdit();
     expect(tab('Taartdiagram')).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     // Nothing chart-shaped until the verdict is in — the checking line instead.
     expect(container.querySelector('.recharts-pie')).toBeNull();
     expect(screen.getByTestId('whole-checking')).toHaveTextContent('De delen worden gecontroleerd tegen het CBS-totaal…');
     expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledTimes(1);
     expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2021']);
 
+    await release({ '2021': { verified: true } });
     await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
     expect(screen.queryByTestId('whole-checking')).toBeNull();
     // Three slices, each bound to its region's own cell, in spec order.
@@ -7791,7 +8074,7 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     verdicts({ '2021': { verified: true } });
     const s = provinceRosterSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} initialPresentation={{ pieHole: 'donut' }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
     await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
     for (const path of container.querySelectorAll<SVGPathElement>('.recharts-pie-sector path')) {
       expect((path.getAttribute('d') ?? '').match(/A/g)?.length ?? 0).toBe(2);
@@ -7808,40 +8091,46 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     verdicts({ '2021': { verified: false, reason: 'sum_mismatch' } });
     const s = provinceRosterSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
+    await openEdit();
     await waitFor(() => expect(tab('Taartdiagram')).toBeDisabled());
     expect(tab('Taartdiagram')).toHaveAttribute('title', SUM_MISMATCH);
     expect(document.getElementById(tab('Taartdiagram').getAttribute('aria-describedby')!)).toHaveTextContent(SUM_MISMATCH);
     // The table is what renders (fallbackForm: pie -> table), and is the selected tab.
-    expect(container.querySelector('table')).not.toBeNull();
-    expect(container.querySelector('.recharts-pie')).toBeNull();
     expect(tab('Tabel')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByTestId('whole-note')).toBeNull();
     // Stacked forms share the verdict (one shown period, refused): disabled too.
     expect(tab('Gestapeld')).toBeDisabled();
     expect(tab('Gestapeld')).toHaveAttribute('title', SUM_MISMATCH);
+    closeEdit();
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelector('.recharts-pie')).toBeNull();
+    expect(screen.queryByTestId('whole-note')).toBeNull();
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('pie: a failed round trip (ok: false) is an explained refusal, never a spinner', async () => {
     chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: false });
     render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
+    await openEdit();
     await waitFor(() => expect(tab('Taartdiagram')).toBeDisabled());
     expect(tab('Taartdiagram')).toHaveAttribute('title', UNAVAILABLE);
+    closeEdit();
     expect(screen.queryByTestId('whole-checking')).toBeNull();
   });
 
   it('pie: hiding a series while the pie is on screen refuses the whole (a part is missing), and re-showing it restores the pie', async () => {
     verdicts({ '2021': { verified: true } });
     const { container } = render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
     await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
     fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
     expect(container.querySelector('.recharts-pie')).toBeNull();
     expect(container.querySelector('table')).not.toBeNull();
+    await openEdit();
     expect(tab('Taartdiagram')).toBeDisabled();
     expect(tab('Taartdiagram')).toHaveAttribute('title', HIDDEN_SERIES);
+    closeEdit();
     // The legend stays on the card (the table alone would have dropped it)
     // so the reader can show the series again from right here.
     fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
@@ -7855,9 +8144,11 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     const s = provinceRosterTwoYearSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
     // A two-period roster is not one moment: no pie, but both stacks.
+    await openEdit();
     expect(tab('Taartdiagram')).toBeDisabled();
     expect(tab('Gestapeld')).not.toBeDisabled();
     fireEvent.click(tab('Gestapeld'));
+    closeEdit();
     expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2020', '2021']);
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(6));
     const ids = [...container.querySelectorAll<HTMLElement>('[data-point="value"]')].map((el) => el.getAttribute('data-result-id'));
@@ -7883,38 +8174,43 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     verdicts({ '2020': { verified: true }, '2021': { verified: false, reason: 'missing_whole' } });
     const s = provinceRosterTwoYearSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Gestapeld'));
+    await selectForm('Gestapeld');
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
     const ids = [...container.querySelectorAll<HTMLElement>('[data-point="value"]')].map((el) => el.getAttribute('data-result-id'));
     expect(ids.sort()).toEqual(['dr-2020', 'fr-2020', 'gr-2020']);
     expect(container.querySelector('[data-result-id="gr-2021"]')).toBeNull();
-    // The tab stays enabled (one period still verifies) and explains nothing.
-    expect(tab('Gestapeld')).not.toBeDisabled();
     expect(screen.getByTestId('whole-note')).toHaveTextContent(`${VERIFIED_NOTE} Niet getekend voor 2021 — het CBS-totaal ontbreekt daar of klopt niet.`);
     scanForUnboundDigits(container, harvestSpecStrings(s));
+    // The tab stays enabled (one period still verifies) and explains nothing.
+    await openEdit();
+    expect(tab('Gestapeld')).not.toBeDisabled();
   });
 
   it('stacked: when EVERY shown period is refused the form falls back to the table with the first verdict\'s reason', async () => {
     verdicts({ '2020': { verified: false, reason: 'missing_whole' }, '2021': { verified: false, reason: 'sum_mismatch' } });
     const { container } = render(<ChartView spec={provinceRosterTwoYearSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Gestapeld (%)'));
+    await selectForm('Gestapeld (%)');
+    await openEdit();
     await waitFor(() => expect(tab('Gestapeld (%)')).toBeDisabled());
     expect(tab('Gestapeld (%)')).toHaveAttribute('title', MISSING_WHOLE);
     expect(tab('Gestapeld')).toHaveAttribute('title', MISSING_WHOLE);
+    expect(tab('Tabel')).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
     expect(container.querySelector('table')).not.toBeNull();
     expect(container.querySelectorAll('[data-point="value"]').length).toBe(0);
-    expect(tab('Tabel')).toHaveAttribute('aria-selected', 'true');
   });
 
   it('100%-stacked: each segment is its share of that period\'s own verified total, computed AFTER the verdict and formatted by the app\'s own formatter', async () => {
     const { formatValueNl } = await import('../backend/answer/compose/format.ts');
     verdicts({ '2020': { verified: true }, '2021': { verified: true } });
+    const release = heldVerdicts();
     const s = provinceRosterTwoYearSpec();
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Gestapeld (%)'));
+    await selectForm('Gestapeld (%)');
     // Before the verdict: no segment, no share label anywhere on the card.
     expect(container.querySelectorAll('[data-point="value"]').length).toBe(0);
     expect(container.querySelectorAll('[data-role="stack-label"]').length).toBe(0);
+    await release({ '2020': { verified: true }, '2021': { verified: true } });
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(6));
     // 2020: 10/20/70 of 100; 2021: 15/25/60 of 100 — shares through the
     // SAME formatter the assertion uses, never a hand-typed string.
@@ -7936,7 +8232,7 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
   it('100%-stacked: a refused period contributes no shares at all — the maths never runs for it', async () => {
     verdicts({ '2020': { verified: false, reason: 'withheld_member' }, '2021': { verified: true } });
     const { container } = render(<ChartView spec={provinceRosterTwoYearSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Gestapeld (%)'));
+    await selectForm('Gestapeld (%)');
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
     expect(labelsByRole(container, 'stack-label').map(([id]) => id).sort()).toEqual(['dr-2021', 'fr-2021', 'gr-2021']);
     expect(screen.getByTestId('whole-note')).toHaveTextContent('Niet getekend voor 2020 — het CBS-totaal ontbreekt daar of klopt niet.');
@@ -7984,7 +8280,7 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     });
     verdicts({ '2019': { verified: false, reason: 'missing_whole' }, '2020': { verified: true }, '2021': { verified: true } });
     const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Gestapeld (%)'));
+    await selectForm('Gestapeld (%)');
     expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2019', '2020', '2021']);
     // Only 2021 is drawn: 2019 never reached the maths, 2020 was verified but has no honest share.
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
@@ -8020,7 +8316,7 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
         <ChartView spec={s} embed={{ auditId: 1 }} />
       </LangProvider>,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Stacked (%)' }));
+    await selectForm('Stacked (%)');
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
     const note = screen.getByTestId('whole-note').textContent ?? '';
     expect(note).toContain('Not drawn for 2020 — the parts there add up to zero or include a negative value, so a percentage share cannot be shown.');
@@ -8030,12 +8326,15 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
   it('switching to Taartdiagram then Undo returns to the prior form through the existing setForm history', async () => {
     verdicts({ '2021': { verified: true } });
     const { container } = render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
-    fireEvent.click(tab('Taartdiagram'));
+    await selectForm('Taartdiagram');
     await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    // Undo lives inside the Edit popup now.
+    await openEdit();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
-    expect(container.querySelector('.recharts-pie')).toBeNull();
     expect(tab('Taartdiagram')).toHaveAttribute('aria-selected', 'false');
     expect(tab('Liggend')).toHaveAttribute('aria-selected', 'true');
+    closeEdit();
+    expect(container.querySelector('.recharts-pie')).toBeNull();
   });
 
   it('renders in English: the same bound slices, the translated checking/verified copy', async () => {
@@ -8046,7 +8345,7 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
         <ChartView spec={s} embed={{ auditId: 1 }} />
       </LangProvider>,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Pie chart' }));
+    await selectForm('Pie chart');
     await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
     expect(screen.getByTestId('whole-note')).toHaveTextContent('Checked: the parts add up to the CBS total.');
     expect(labelsByRole(container, 'pie-label').map(([id]) => id)).toEqual(['gr-2021', 'fr-2021', 'dr-2021']);

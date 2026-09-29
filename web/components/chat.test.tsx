@@ -1546,12 +1546,17 @@ describe('Chat — a continuing chart seeds from the earlier card (co-pilot phas
       // promise; resolving it below settles all of them at once, which is
       // fine — none of that changes what this test checks (the EXTENDING
       // card's own co-pilot input, typed into and never remounted).
+      // WP-LOOK part (a): the co-pilot input lives in each card's Edit popup;
+      // open both (the first card's, then the extending card's).
+      const editButtons = screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ });
+      expect(editButtons).toHaveLength(2);
+      fireEvent.click(editButtons[1]!);
+      await screen.findByPlaceholderText('Pas deze grafiek aan');
       const inputsBefore = screen.getAllByPlaceholderText('Pas deze grafiek aan');
-      expect(inputsBefore).toHaveLength(2);
-      // inputsBefore[0] is the first (non-extending) card's own input;
-      // inputsBefore[1] belongs to the extending card (message index 1).
-      fireEvent.change(inputsBefore[1]!, { target: { value: 'nog niet verzonden tekst' } });
-      expect(inputsBefore[1]).toHaveValue('nog niet verzonden tekst');
+      expect(inputsBefore).toHaveLength(1);
+      // The one open popup is the extending card's (message index 1).
+      fireEvent.change(inputsBefore[0]!, { target: { value: 'nog niet verzonden tekst' } });
+      expect(inputsBefore[0]).toHaveValue('nog niet verzonden tekst');
       // Now let the seed resolve and land on `chartSeeds`.
       await act(async () => {
         resolveFetch({
@@ -1568,8 +1573,8 @@ describe('Chat — a continuing chart seeds from the earlier card (co-pilot phas
       // The extending card's input must still hold what was typed — no
       // remount should have discarded it.
       const inputsAfter = screen.getAllByPlaceholderText('Pas deze grafiek aan');
-      expect(inputsAfter).toHaveLength(2);
-      expect(inputsAfter[1]).toHaveValue('nog niet verzonden tekst');
+      expect(inputsAfter).toHaveLength(1);
+      expect(inputsAfter[0]).toHaveValue('nog niet verzonden tekst');
     });
 
     it("(b) carried-over seriesColors follow series IDENTITY, not index, across a different region set", async () => {
@@ -1717,7 +1722,9 @@ describe('Chat — chartAlternates threaded onto message state (#254)', () => {
     render(<Chat />);
     await submit('Toon een grafiek');
     await screen.findByText('Hier is de grafiek.');
-    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
+    // WP-LOOK part (a): the reading control lives in the card's Edit popup.
+    fireEvent.click(screen.getByRole('button', { name: /^(Bewerken|Edit)$/ }));
+    expect(await screen.findByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
   });
 });
 

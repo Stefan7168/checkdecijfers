@@ -33,7 +33,7 @@
 // Base UI's own "first focusable descendant" default would otherwise land
 // on, is responsible for focusing its own active control on mount — see
 // `ChartConfigPanel`'s own mount-time tab focus.
-import type { ReactNode } from 'react';
+import type { KeyboardEventHandler, ReactNode } from 'react';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog.tsx';
 
 export function ChartEditModal({
@@ -43,6 +43,7 @@ export function ChartEditModal({
   closeLabel,
   chartSlot,
   children,
+  onKeyDown,
 }: {
   open: boolean;
   onClose: () => void;
@@ -75,6 +76,11 @@ export function ChartEditModal({
   /** Right pane (below the chart on phone): the feature's own controls
    * (ChartConfigPanel's tabs, or the Embed dialog's fields). */
   children: ReactNode;
+  /** WP-LOOK part (a) (session 142): the card's own keyboard handler (⌘Z /
+   * ⇧⌘Z / Ctrl+Y undo-redo) re-attached to the popup's content — the dialog
+   * is a portal OUTSIDE the card's DOM, so a shortcut pressed while the
+   * reader is editing inside it never bubbled to the card root before. */
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
 }) {
   if (!open) return null;
   return (
@@ -87,6 +93,7 @@ export function ChartEditModal({
       <DialogContent
         aria-modal="true"
         closeLabel={closeLabel}
+        onKeyDown={onKeyDown}
         className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-6 sm:max-w-2xl sm:p-8 lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
       >
         <DialogTitle className="lg:col-span-2">{title}</DialogTitle>

@@ -1283,9 +1283,17 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
 
 - **(a) The answer chart** (`web/components/chart.tsx` and the chat card in `web/components/chat.tsx`): after a question
   the reader sees a headline, one big number, the chart as the hero (target: 70 % or more of the card), one source line,
-  and three buttons — Edit, Download, Share. Everything else that is on the card today (the 11 form tabs, the period
+  and one row of buttons — Edit, Download, Embed, Share, Insights (the owner's own five, session 142; the plan said three). Everything else that is on the card today (the 11 form tabs, the period
   dropdowns, undo/redo/history, Insights, goal lines, period ranges, notes/caption, derived overlays, the co-pilot input)
   moves INTO the Edit popup. Nothing is removed. Also the gallery card, which renders the same component.
+  **Round 1 BUILT (session 142, 2026-09-29):** the card is title → headline/big number → chart → caveats → source line
+  → one action row **Edit · Download · Embed · Share · Insights** (the owner's own five, open-questions #346); every
+  control moved into the one popup (form tabs, reading, period, overlays, small multiples, headline draft, undo/redo/
+  history, Style panel, Download/Embed, co-pilot input), the popup opens in table form too, and the caption / notes /
+  goal-line / period-range strips show on the card only when they hold something. Share = copy a link to the chart's
+  public embed page (same signed token as Embed; `web/components/chart-share-button.tsx`). Verified in the hermetic
+  harness at desktop dark + light and phone width. Residual for (b): keyboard cost of the bottom row (#348). Awaiting
+  the owner's "I would share this" (#346).
 - **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
   session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
   and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the
