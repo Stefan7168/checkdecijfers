@@ -23,8 +23,11 @@ import {
   maybeAlertHealthProbeFailure,
   maybeAlertIngestionRunProblems,
   maybeAlertMissedSyncs,
+  maybeAlertNewCbsData,
 } from '../../../backend/answer/audit/alerts.ts';
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
+import { assessFreshness, findNewCbsData } from '../../../backend/ingestion/freshness.ts';
+import { scanFreshness } from '../../../backend/ingestion/freshness-check.ts';
 import { runOnboardingJob } from '../../../backend/ingestion/onboarding.ts';
 import { runTableLaneJob } from '../../../backend/ingestion/table-lane-job.ts';
 import { productionNotifier } from '../../../backend/ingestion/onboarding-notify.ts';
@@ -39,6 +42,19 @@ import { runHealthChecks } from '../health/checks.ts';
 // referenceDate(): 'today' in the product's own timezone — the SAME shared
 // helper the chat action uses (web/lib/turn-options.ts), so the delivery
 // re-run resolves relative periods exactly as a live turn would.
+
+// The new-CBS-data check (#355) reads ~4 tiny CBS documents per served table (~80 requests in
+// all, a few seconds when CBS is healthy). 90s is generous headroom inside the 300s budget and
+// still cuts off a stalled socket.
+const NEW_CBS_DATA_DEADLINE_MS = 90_000;
+
+function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`did not finish within ${ms} ms`)), ms);
+  });
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
 
 export async function GET(request: Request): Promise<Response> {
   const cronSecret = process.env.CRON_SECRET;
@@ -161,6 +177,29 @@ export async function GET(request: Request): Promise<Response> {
       await maybeAlertMissedSyncs({ overdue });
     } catch (missedSyncError) {
       console.warn('onboarding-cron: missed-sync check failed (job result unaffected):', missedSyncError);
+    }
+
+    // #355 (new-CBS-data alert, session 148): compare CBS's own `Modified` date for every served
+    // CBS table with our last successful sync and e-mail the owner when CBS has newer data —
+    // nothing else tells anyone (syncs are run by hand). Read-only: ~4 small CBS requests per
+    // table, no write, no AI, and it NEVER syncs anything itself. Same fail-open guard as the
+    // blocks above, plus a hard deadline: the adapter's fetches carry no timeout of their own,
+    // and this check must not be able to hold the function until the platform limit.
+    // Cadence/dedupe rule (day 0, then every 7th): src/ingestion/freshness.ts.
+    try {
+      const scan = await withDeadline(
+        scanFreshness(db, new ODataV4Source(), (tableId, readError) => {
+          console.warn(
+            `onboarding-cron: could not read CBS's date for ${tableId}:`,
+            readError instanceof Error ? readError.message : String(readError),
+          );
+        }),
+        NEW_CBS_DATA_DEADLINE_MS,
+      );
+      const behind = findNewCbsData(assessFreshness(scan.inputs), new Date());
+      await maybeAlertNewCbsData({ behind });
+    } catch (newCbsDataError) {
+      console.warn('onboarding-cron: new-CBS-data check failed (job result unaffected):', newCbsDataError);
     }
 
     return Response.json(summary, { status: 200 });

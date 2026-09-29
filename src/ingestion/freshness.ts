@@ -75,6 +75,54 @@ export function assessFreshness(rows: readonly FreshnessInputRow[]): FreshnessFi
 }
 
 // ---------------------------------------------------------------------------
+// The daily "CBS has newer data" e-mail (#355): which behind tables to name, and on which
+// days the owner hears about it.
+//
+// Same no-schema dedupe as the missed-sync alert (./stale-sync.ts shouldAlertToday): the
+// cron recomputes everything fresh each run from two dates already stored/fetched, so there is
+// no "last alerted at" column to add. The clock that matters is how long ago CBS CHANGED the
+// table (not how far behind our sync is): a daily cron first sees a change on a run where it
+// is under 24 hours old (age 0 — the day the news breaks), and again every 7th day while we
+// are still behind (7, 14, ...). Known limit: if the cron itself missed the age-0 day, the
+// first mail comes at age 7 — the session-start / monthly `npm run ingest:freshness` check is
+// the backstop.
+// ---------------------------------------------------------------------------
+export interface NewCbsDataEntry {
+  tableId: string;
+  lastSyncAt: string;
+  cbsModifiedAt: string;
+  /** Whole days between our last sync and CBS's change (assessFreshness's daysBehind). */
+  daysBehind: number;
+  /** Whole days between CBS's change and `now` (>= 0). */
+  cbsChangedDaysAgo: number;
+}
+
+/** Pure — the 'behind' findings, each with how long ago CBS changed the table. Tables that
+ * could not be compared ('unknown') are left out on purpose: an unreadable date is not news. */
+export function findNewCbsData(findings: readonly FreshnessFinding[], now: Date): NewCbsDataEntry[] {
+  const out: NewCbsDataEntry[] = [];
+  for (const f of findings) {
+    if (f.status !== 'behind' || f.lastSyncAt == null || f.cbsModifiedAt == null || f.daysBehind == null) continue;
+    const modified = parse(f.cbsModifiedAt);
+    if (modified == null) continue;
+    out.push({
+      tableId: f.tableId,
+      lastSyncAt: f.lastSyncAt,
+      cbsModifiedAt: f.cbsModifiedAt,
+      daysBehind: f.daysBehind,
+      cbsChangedDaysAgo: Math.max(0, Math.floor((now.getTime() - modified) / MS_PER_DAY)),
+    });
+  }
+  return out;
+}
+
+/** Pure — true on the day the news breaks (age 0) and on every 7th day after while still
+ * behind. */
+export function shouldAlertAboutNewData(cbsChangedDaysAgo: number): boolean {
+  return cbsChangedDaysAgo >= 0 && cbsChangedDaysAgo % 7 === 0;
+}
+
+// ---------------------------------------------------------------------------
 // The RUNBOOK's release-day step 2, as a function: is this table's new release
 // only "the next period was added", or did something else move?
 //

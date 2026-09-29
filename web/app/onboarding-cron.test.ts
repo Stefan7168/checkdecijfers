@@ -165,6 +165,32 @@ describe('onboarding-cron wiring (source pins)', () => {
     expect(responseJson).toBeGreaterThan(ownCatch);
   });
 
+  // #355 (new-CBS-data alert, session 148): the same daily cron also compares CBS's own
+  // `Modified` date with our last sync and e-mails the owner. Behavioral coverage lives in
+  // tests/ingestion/freshness.test.ts, freshness-check.test.ts and
+  // tests/audit/new-cbs-data-alert.test.ts (hermetic); this pins the WIRING.
+  it('#355: runs the new-CBS-data check via the shared scan, read-only (no sync is ever started here)', () => {
+    expect(source).toContain('scanFreshness(db, new ODataV4Source()');
+    expect(source).toContain('findNewCbsData(assessFreshness(scan.inputs), new Date())');
+    expect(source).toContain('maybeAlertNewCbsData({ behind })');
+    // The alert only e-mails a command for a person to run; this block never syncs a CBS table.
+    const block = source.slice(source.indexOf('await withDeadline('), source.indexOf('new-CBS-data check failed'));
+    expect(block.length).toBeGreaterThan(0);
+    expect(block).not.toMatch(/sync/i);
+  });
+
+  it('#355: the new-CBS-data check is fail-open, deadline-bounded, and runs AFTER the onboarding job, BEFORE the 200 response', () => {
+    const jobCallEnd = source.indexOf('});', source.indexOf('await runOnboardingJob({'));
+    const blockStart = source.indexOf('await withDeadline(');
+    const ownCatch = source.indexOf('new-CBS-data check failed', blockStart);
+    const responseJson = source.indexOf('Response.json(summary');
+    expect(jobCallEnd).toBeGreaterThan(-1);
+    expect(blockStart).toBeGreaterThan(jobCallEnd);
+    expect(source).toContain('NEW_CBS_DATA_DEADLINE_MS');
+    expect(ownCatch).toBeGreaterThan(blockStart);
+    expect(responseJson).toBeGreaterThan(ownCatch);
+  });
+
   // #23 (health-probe alert, session 110): re-runs /api/health's own checks
   // (#114) after the main job and alerts once on a failure. Behavioral
   // coverage of the alert pair itself lives in

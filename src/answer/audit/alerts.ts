@@ -12,6 +12,7 @@
 // → the console.error line is the floor (visible in Vercel logs); an email
 // failure is logged and can never affect the served response.
 import type { AuditedResponse } from './respond-audited.ts';
+import { shouldAlertAboutNewData, type NewCbsDataEntry } from '../../ingestion/freshness.ts';
 import { shouldAlertToday } from '../../ingestion/stale-sync.ts';
 
 /** Same verified sender the onboarding notifier uses (onboarding-notify.ts). */
@@ -667,5 +668,73 @@ export async function maybeAlertMissedSyncs(
     await alertMissedSyncs({ overdue: due }, fetchImpl);
   } catch (err) {
     console.error('[missed-sync] alert e-mail failed:', err);
+  }
+}
+
+// #355 (2026-09-29, session 148): the NEW-CBS-DATA alert. A different question from the
+// missed-sync alert above (which asks "was this table forgotten for longer than its cadence
+// allows?" with deliberately generous thresholds): here CBS's own `Modified` date is newer than
+// our last successful sync, so a newer release — or a revision of a figure we show — exists that
+// our copy does not hold. Nothing refreshes our CBS copy automatically (syncs are run by hand),
+// so this is the owner's only signal. It changes no data: the e-mail names the tables and the
+// command; a person runs it (owner-supervised, RUNBOOK release-day sync). The rule for WHICH
+// days to mail (shouldAlertAboutNewData) lives in src/ingestion/freshness.ts as a pure,
+// DB-free function, same split as the missed-sync alert.
+export interface NewCbsDataAlert {
+  behind: NewCbsDataEntry[];
+}
+
+export async function alertNewCbsData(
+  alert: NewCbsDataAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.behind.length === 1
+      ? `graphmaker.studio: CBS heeft nieuwere cijfers voor tabel ${alert.behind[0]!.tableId}`
+      : `graphmaker.studio: CBS heeft nieuwere cijfers voor ${alert.behind.length} tabellen`;
+  const lines = alert.behind.map(
+    (e) =>
+      `- ${e.tableId}: CBS wijzigde de tabel op ${e.cbsModifiedAt.slice(0, 10)} ` +
+      `(${e.cbsChangedDaysAgo} dag(en) geleden); wij synchroniseerden voor het laatst op ${e.lastSyncAt.slice(0, 10)}`,
+  );
+  const body = [
+    'CBS heeft voor een of meer tabellen nieuwere gegevens gepubliceerd dan onze kopie bevat (#355). ' +
+      'Onze kopie van de CBS-data wordt niet automatisch ververst.',
+    '',
+    'Wat dit betekent: de cijfers op de site zijn niet fout, maar kunnen achterlopen — een nieuwe ' +
+      'periode ontbreekt, of CBS heeft een eerder gepubliceerd cijfer herzien. Er is niets aan de ' +
+      'data of de site veranderd door deze melding.',
+    '',
+    'Actie (in een sessie met Claude): draai `npm run ingest:freshness`. Dat toont per tabel of ' +
+      'verversen veilig is (SAFE: alleen de volgende periode is erbij) of dat eerst een mens moet ' +
+      'kijken (REVIEW), en geeft het exacte sync-commando. Verversen gaat altijd onder toezicht, ' +
+      'tabel voor tabel (RUNBOOK, "release-day sync").',
+    '',
+    ...lines,
+    '',
+    'Je krijgt op de dag zelf één mail, daarna elke 7 dagen een herinnering zolang een tabel achterloopt.',
+    `Tijd: ${new Date().toISOString()}`,
+  ].join('\n');
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws — the daily cron this is wired into must
+ * never fail or block on this. Sends ONE e-mail naming EVERY table that is behind, but only on
+ * a day when at least one of them is due (shouldAlertAboutNewData) — a run where everything is
+ * mid-reminder-cooldown, or nothing is behind, sends nothing and logs nothing. */
+export async function maybeAlertNewCbsData(
+  alert: NewCbsDataAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (!alert.behind.some((e) => shouldAlertAboutNewData(e.cbsChangedDaysAgo))) return;
+  for (const e of alert.behind) {
+    console.error(
+      `[new-cbs-data] ${e.tableId}: CBS changed ${e.cbsModifiedAt}, we last synced ${e.lastSyncAt} (${e.cbsChangedDaysAgo} day(s) ago)`,
+    );
+  }
+  try {
+    await alertNewCbsData(alert, fetchImpl);
+  } catch (err) {
+    console.error('[new-cbs-data] alert e-mail failed:', err);
   }
 }

@@ -14,51 +14,21 @@
 // (Eurostat refreshes twice a day and has its own adapter).
 import { connectFromEnv } from '../src/db/client.ts';
 import { adapterFor } from '../src/sources/adapters.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../src/sources/registry.ts';
+import { CBS_SOURCE_KEY } from '../src/sources/registry.ts';
 import { computeFingerprint } from '../src/ingestion/fingerprint.ts';
 import { allowListedMeasures } from '../src/ingestion/measure-allow-list.ts';
 import { fetchAllCodeLists } from '../src/ingestion/pipeline.ts';
-import {
-  assessFreshness,
-  classifyRelease,
-  type FreshnessInputRow,
-  type ReleaseVerdict,
-} from '../src/ingestion/freshness.ts';
+import { assessFreshness, classifyRelease, type ReleaseVerdict } from '../src/ingestion/freshness.ts';
+import { scanFreshness } from '../src/ingestion/freshness-check.ts';
 
 const asJson = process.argv.includes('--json');
 const { db, pool } = connectFromEnv();
 
 try {
-  const tables = await db.query(
-    `select id, last_sync_at, slice, schema_fingerprint from cbs_tables
-      where status = 'active' and ingest_mode = 'full' order by id`,
-  );
   const source = adapterFor(CBS_SOURCE_KEY);
-  const inputs: FreshnessInputRow[] = [];
-  const notChecked: string[] = [];
-  const registered = new Map<string, { slice: unknown; fingerprint: string | null }>();
-  for (const t of tables.rows) {
-    const tableId = t.id as string;
-    if (sourceKeyForTableId(tableId) !== CBS_SOURCE_KEY) {
-      notChecked.push(tableId);
-      continue;
-    }
-    registered.set(tableId, {
-      slice: typeof t.slice === 'string' ? JSON.parse(t.slice) : (t.slice ?? null),
-      fingerprint: (t.schema_fingerprint as string | null) ?? null,
-    });
-    let cbsModifiedAt: string | null = null;
-    try {
-      cbsModifiedAt = (await source.fetchTableSchema(tableId)).modified ?? null;
-    } catch (err) {
-      console.error(`could not read CBS's date for ${tableId}: ${err instanceof Error ? err.message : String(err)}`);
-    }
-    inputs.push({
-      tableId,
-      lastSyncAt: t.last_sync_at == null ? null : new Date(t.last_sync_at as string | Date).toISOString(),
-      cbsModifiedAt,
-    });
-  }
+  const { inputs, notChecked, registered } = await scanFreshness(db, source, (tableId, err) => {
+    console.error(`could not read CBS's date for ${tableId}: ${err instanceof Error ? err.message : String(err)}`);
+  });
   const findings = assessFreshness(inputs);
 
   // Step 2, only for tables that are behind.

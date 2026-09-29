@@ -1251,6 +1251,33 @@ delivery end-to-end.
 quarantines (above), the *missed-sync* trigger (below) and the `/api/health` probe (the "Health-probe
 alert" section above). Nothing of #23 remains open.
 
+### New-CBS-data alert (#355, built session 149, 2026-09-29/30)
+
+**What it is.** The daily cron (`/api/onboarding-cron`, 06:00, the same run as the missed-sync alert) also compares CBS's own
+`Modified` date for every served, bulk-synced CBS table with our `cbs_tables.last_sync_at` (the shared read-only scan
+`src/ingestion/freshness-check.ts` — the same one `npm run ingest:freshness` uses). When CBS changed a table after our last sync it
+sends the owner **one Dutch e-mail** naming every table that is behind (both dates, days since CBS's change) and the command to run.
+Same channel and posture as every alert in this section: `sendAdminAlertEmail` (Resend, `RESEND_API_KEY` + `ADMIN_ALERT_EMAIL`),
+fail-soft, console line as the floor (`[new-cbs-data]` in the Vercel logs), and it never fails the cron's own job.
+
+**It changes nothing.** No sync, no write, no AI call, no schema change: ~4 small CBS requests per table (~80 in all, a few seconds),
+one SELECT on `cbs_tables`, a 90-second deadline so a stalled CBS socket cannot hold the function. Refreshing stays owner-supervised.
+
+**When you get mail.** The day the news breaks (the first daily run that sees a change under 24 hours old), then a reminder every 7th
+day (7, 14, 21 …) while any table is still behind — `shouldAlertAboutNewData`, `src/ingestion/freshness.ts`; no "last alerted at"
+column (the age is recomputed from CBS's own date every run). **Known limit:** if the cron itself did not run on day 0 the first mail
+comes on day 7 — which is why `npm run ingest:freshness` at the start of each session and in the monthly maintenance session stays the
+backstop. **Not covered:** Eurostat (own adapter, refreshes twice a day) and slice-cache tables (fetched on demand).
+
+**What to do on a mail.** Run `npm run ingest:freshness` (SAFE / REVIEW verdict per table + the exact sync command), then the release-day
+procedure above: one table at a time, most-showcased last, stop on failure. Tables the check could not compare (CBS's date unreadable)
+are never mailed as news — the report lists them.
+
+**If the alert misbehaves.** No mail although the report shows a table behind: check that the day rule applies (a change 1–6 days old is
+mid-cooldown by design) and that `RESEND_API_KEY`/`ADMIN_ALERT_EMAIL` are set (the console line still appears without them). Mail every
+day: not possible by construction (age 0 happens once per change); if it happens, CBS's `Modified` is changing daily — look at the table.
+Roll back by deleting the `#355` block in the route (the pure helpers and the report script are independent of it).
+
 ### Missed-sync alert (#23 residual, built session 110, 2026-09-17)
 
 **What it is.** The row's other original trigger: a *registered, actively-served* table
@@ -2350,7 +2377,7 @@ The on-demand-fetch code was built and merged (2026-07-06, hermetic — full det
    - **✅ [#192](open-questions.md) FIXED 2026-08-07 (session 61) — the hatch can now complete a release sync.** It previously called `syncTable(db, source, tableId)` with **no options bag**, so `acceptNewCodes` was permanently false and unreachable from its CLI, while every CBS release brings a new period code by definition. Following this step on a release day would fail `dimension_mapping`, set the table to `needs_review`, and (quarantine being enforced on the value path) make it **refuse in production** — it had only ever been used for FIRST-TIME registration, where nothing is new. It now accepts `--accept-new-codes` and `--rebaseline` with the same spelling and the same never-implicit defaults as `ingest sync`, and on a bare `dimension_mapping` failure it prints the recovery command instead of leaving you to work it out. Pinned by `tests/ingestion/sync-from-capture.test.ts`, which drives the script's own exported entry points (driving `syncTable` directly would have proven the pipeline works and said nothing about the entry point that was broken).
 
 6. **Release-day sync procedure (added 2026-08-07 after the ~30/7 syncs; read this BEFORE running one).** A release always adds a period code, and a bare sync therefore does not "play it safe" — it quarantines the table and takes it out of service. Order:
-   **Steps 1–2 are automated since session 148 (#355): `npm run ingest:freshness`** (read-only, ~40 s, no AI, no write) does the `Modified` comparison for every CBS table and, for each table that is behind, the code-list + fingerprint diff — it prints `SAFE` (the only change is the next period: sync with `--accept-new-codes`) or `REVIEW` (a person looks first; the reasons are listed) and the exact command for the SAFE ones. Run it at the start of every maintenance session, and whenever a chart's "Data synced on …" date looks old. The steps below stay as the manual fallback and the explanation. Sync ONE table at a time, most-showcased last, and re-read the report after: a table that trips a validator is quarantined and refuses until re-baselined.
+   **You will usually be told to do this by e-mail since session 149 (#355, "New-CBS-data alert" section): the daily cron mails the owner when CBS has newer data. Steps 1–2 are automated since session 148 (#355): `npm run ingest:freshness`** (read-only, ~40 s, no AI, no write) does the `Modified` comparison for every CBS table and, for each table that is behind, the code-list + fingerprint diff — it prints `SAFE` (the only change is the next period: sync with `--accept-new-codes`) or `REVIEW` (a person looks first; the reasons are listed) and the exact command for the SAFE ones. Run it at the start of every maintenance session, and whenever a chart's "Data synced on …" date looks old. The steps below stay as the manual fallback and the explanation. Sync ONE table at a time, most-showcased last, and re-read the report after: a table that trips a validator is quarantined and refuses until re-baselined.
    1. **Measure**: `curl -s https://datasets.cbs.nl/odata/v1/CBS/<id>/Properties` → compare `Modified` against `cbs_tables.last_sync_at`. Nothing newer ⇒ nothing to do.
    2. **Diff the code lists read-only, per dimension**, CBS (`…/<Dimension>Codes`) against `dimension_labels`. This IS the "reviewed mapping update" the guard demands — do it before, not after.
    3. If the only delta is the expected next period (and nothing was removed): `node --env-file=.env src/ingestion/cli.ts sync <id> --accept-new-codes`. **With the flag from the start.** Anything else — removed codes, a new non-period code, a changed schema fingerprint — is a genuine stop: report it, do not force it.

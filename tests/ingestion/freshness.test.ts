@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   assessFreshness,
   classifyRelease,
+  findNewCbsData,
+  shouldAlertAboutNewData,
   type FreshnessInputRow,
   type ReleaseDiffInput,
 } from '../../src/ingestion/freshness.ts';
@@ -95,5 +97,48 @@ describe('classifyRelease', () => {
       'dimension Bestedingscategorieen is no longer published',
     );
     expect(classifyRelease(diff({ timeDimension: null })).verdict).toBe('review');
+  });
+});
+
+describe('findNewCbsData (#355 alert input)', () => {
+  const now = new Date('2026-09-30T06:00:00.000Z');
+
+  it('lists only the behind tables, each with how long ago CBS changed it', () => {
+    const findings = assessFreshness([
+      row({ tableId: 'A-behind', cbsModifiedAt: '2026-09-23T06:00:00.000Z' }),
+      row({ tableId: 'B-current' }),
+      row({ tableId: 'C-unknown', cbsModifiedAt: null }),
+    ]);
+    expect(findNewCbsData(findings, now)).toEqual([
+      {
+        tableId: 'A-behind',
+        lastSyncAt: '2026-08-26T10:00:00.000Z',
+        cbsModifiedAt: '2026-09-23T06:00:00.000Z',
+        daysBehind: 27,
+        cbsChangedDaysAgo: 7,
+      },
+    ]);
+  });
+
+  it('an unreadable CBS date is not news: unknown tables never appear', () => {
+    expect(findNewCbsData(assessFreshness([row({ cbsModifiedAt: 'not a date' })]), now)).toEqual([]);
+  });
+
+  it('a change from the last few hours is age 0, and a clock a hair behind CBS never goes negative', () => {
+    const fresh = findNewCbsData(assessFreshness([row({ cbsModifiedAt: '2026-09-30T02:00:00.000Z' })]), now);
+    expect(fresh[0]!.cbsChangedDaysAgo).toBe(0);
+    const future = findNewCbsData(assessFreshness([row({ cbsModifiedAt: '2026-09-30T09:00:00.000Z' })]), now);
+    expect(future[0]!.cbsChangedDaysAgo).toBe(0);
+  });
+});
+
+describe('shouldAlertAboutNewData (#355 dedupe)', () => {
+  it('fires the day the news breaks, then every 7th day, and stays quiet in between', () => {
+    const days = Array.from({ length: 23 }, (_, d) => d).filter(shouldAlertAboutNewData);
+    expect(days).toEqual([0, 7, 14, 21]);
+  });
+
+  it('never fires for a negative age', () => {
+    expect(shouldAlertAboutNewData(-7)).toBe(false);
   });
 });
