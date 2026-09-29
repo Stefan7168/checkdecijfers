@@ -1,5 +1,45 @@
 # STATUS archive — the session log
 
+**Session 144 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
+
+1. **Opened by asking for the pending decision** (session 143 closed on "this project is going nowhere" + the launch-to-ten
+   recommendation): owner chose **"Keep building The Look"** over launch/pause (#352).
+2. **Part (c) the homepage, round 1 (`8afcd17a`; CI 36551609780 red on the old headline in `web/e2e/landing.spec.ts`,
+   fixed `3c72d922`, run 36554179148 green + deploy):** a real chart above the fold — `HeroStory` (the inflation story's
+   question as a chat bubble + the product's own answer card, first built story as fallback, placeholder on a cold read),
+   new hero copy nl/en (`landing.heroTitleV3/heroLeadV3/heroClaim/heroExampleLabel`), the frozen text example retired, teaser
+   three-in-a-row minus the hero, how-it-works one row of four, `max-w-6xl`. **#347 fixed:** `web/lib/ontdek.ts` persists
+   the built set in Next's Data Cache (`unstable_cache`, 30 min, SWR; empty outcomes never persisted — code-review
+   finding); the deploy smoke warms `/galerij` three times. Measured before: cold `/galerij` 5.6 s (placeholder). After
+   (production logs): the deadline warning fired once, on the smoke's own first request; warm-ups 0.83/0.42/0.29 s; a later
+   fresh instance logged no warning. **Owner: "I would share this" → (c) signed off (#346).**
+3. **Part (b) the popup, round 2 (`39ed880a`, CI 36558081051 green + deploy):** the owner picked a second round but wrote no
+   notes; the session named four defects from its own screenshots and got a GO on all four: fixed-height popup
+   (`chart-edit-modal.tsx` one flex column, footer pinned at the bottom of the screen), compact phone preview, unavailable
+   chart forms folded behind "Nog {n} vormen…", Titel + Bijschrift fields on the Grafiek tab. **Owner: "I would share
+   this" → (b) signed off. THE ADR 063 GATE IS PASSED.** Launch raised again in one dialog: owner **"Keep building, no
+   launch yet"** (#352; returns at the 2026-10-27 revisit trigger).
+4. **Part (a2) the share picture, round 2 (`5e5608c1`, CI 36561713912 green + deploy):** the round-1 picture was not
+   shareable (24 monthly labels smeared; fallback font). New: the renderer's plot-only mode (`renderChartPlot` — marks in
+   the SVG, text handed back; `renderChartSvg` byte-identical over 24 snapshots), the image tool sets the text in Inter
+   (shipped in `web/assets/fonts`, traced via `outputFileTracingIncludes`), thinned x labels, ends + extremes labelled,
+   line/area/bars follow `?form=`, a route handler `/embed/<token>/preview` (og:image + twitter:image; `?download=1`),
+   a "share picture" item in the card's Download menu, CDN cache one hour (review finding). Tests: `render-plot`,
+   `share-preview`, `preview/route` (real PNGs), `chart-download`. **Owner: "Fine, and keep going" → (a2) signed off.**
+5. **Rebrand (`66197f14` + test fixes `35b69c73`; CI 36563648186 RED on a typecheck error the session's truncated `tsc`
+   output hid, re-run 36564105092 — see the top block for its result):** owner mid-turn: "we've rebranded, remember?
+   graphmaker.studio". Checked #7 (domain bought 09-17, "not the focus, no copy"), stated the facts (25 strings / 69
+   files; the domain resolves nowhere), one dialog → **rename everything visible**. Done per ADR 064: wordmark, titles,
+   footer credits, embed titles/backlink, share picture, CSV/PNG names (`graphmaker-…`), derived-data marking, upload
+   disclaimer, llms.txt, alert subjects. Kept: the vercel address, mail domains, embed protocol strings, prompt bytes, dev
+   seams. README + CLAUDE.md opener note the rebrand. Owner's SEO-pages idea recorded as #353.
+6. **Domain wiring started:** `graphmaker.studio` + `www` ADDED to the Vercel project (`vercel domains add`); DNS is at
+   Cloudflare (owner-only): two A records → 76.76.21.21, proxy off. Owner chose "later". RUNBOOK "Wiring
+   graphmaker.studio"; the `NEXT_PUBLIC_APP_URL` switch waits for the records.
+7. Docs: ADR 064; open-questions #7 (decided+applied), #347 (fixed+measured), #351/#346 (sign-offs), #352 (launch
+   deferred twice), #353 (SEO pages); build plan WP-LOOK as-built for (b2)/(a2 r2)/(c); STATUS; RUNBOOK; 04-architecture
+   rows (share picture, homepage/Data Cache); lessons (8); kickoff for session 145.
+
 **Session 143 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
 
 1. **Part (a) round 2 (`df33e9c4`, CI 36536732798 green incl. deploy):** the owner saw the round-1 screenshots and ruled

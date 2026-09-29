@@ -102,6 +102,13 @@ looks finished untouched.
   verbatim, the brand, and the ADR 014 server SVG (attribution footer included) embedded whole, rasterised by Next's
   built-in image tool. No new dependency, no AI, no schema change, no outside service. Part (b) was ruled "good
   enough for now, revisit later" by the owner (not signed off); (c) the homepage is next.
+- **Session 144, 2026-09-29 — THE GATE PASSED.** (c) round 1 (`8afcd17a`: a real chart above the fold, #347 fixed) —
+  "I would share this"; (b) round 2 (`39ed880a`: fixed-height popup, pinned footer, compact phone preview, folded
+  unavailable forms, Titel + Bijschrift fields) — "I would share this"; (a2) round 2 (`5e5608c1`: Inter via a plot-only
+  renderer mode, thinned labels, the reader's form, a Download of the PNG, route `/embed/<token>/preview`) — "Fine".
+  **The consequence "then the owner invites people" did NOT follow: the owner chose "Keep building, no launch yet"
+  (#352), twice that day. The revisit trigger below (2026-10-27) is the next time launch is raised.** The same day the
+  owner applied the rebrand to graphmaker.studio (ADR 064) — a separate decision, as this ADR's last trigger foresaw.
 
 ## Revisit triggers
 

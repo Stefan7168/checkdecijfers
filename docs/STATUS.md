@@ -17,52 +17,36 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 143 — verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](session-briefs/2026-09-29-session-144-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 144 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-145-kickoff.md](session-briefs/2026-09-29-session-145-kickoff.md).**
 
-- **⚑ OWNER STATEMENT, end of session 143 (2026-09-29): "This project is going absolutely fucking nowhere."** Three
-  months, zero outside users, a taste-only gate. The session's one recommendation: stop building, put it in front of
-  ten real people this week, build only what they say. **Owner decision, session 144 (2026-09-29): "Keep building
-  The Look"** — chosen in one dialog over launch-to-ten / pause. So part (c) the homepage is the work; the
-  launch-to-ten recommendation stays recorded ([#352](open-questions.md)) and is raised again at the (c) sign-off.
-- **⚑ DIRECTION (owner vision interview, session 141, ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)):
-  ONE product — a beautiful, sourced chart of official Dutch and European statistics, for anyone who has to publish a
-  number. Ask a question, see the chart. ONE Edit button opens ONE popup holding ALL editing. Nothing removed, everything
-  tidied. Competitor G is the reference for simplicity, not a template.** Review that fed the interview:
-  [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
-- **THE GATE:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
-  Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
-  **⚑ THE GATE IS PASSED (session 144, 2026-09-29): (a) done s143, (b) signed off s144 round 2, (c) signed off s144.
-  ADR 063 says the owner now invites people — **the owner chose "Keep building, no launch yet" (same session, after the
-  gate passed; [#352](open-questions.md)); the launch recommendation returns at the 2026-10-27 revisit trigger, not
-  before.** (a2) share image signed off too — The Look is complete.**
-- **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
-  with screenshots shown next to Competitor G until the owner says done:
-  - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
-    session 143, SHAs in the archive entries):** title → headline / one number → chart → caveats → source line → one
-    row Edit · Download · Embed · Share · Insights (the owner's five); every control lives in the one Edit popup (opens
-    in table form too); owner-owned strips show on the card only when they hold something. The owner's two round-1
-    change requests (the row wrapped; the subtitle showed a raw CBS code) are fixed in round 2 — the row is a CSS
-    container with measured icon-collapse tiers, the code is stripped display-only ([#346](open-questions.md));
-  - (b) the Edit popup — round 1 built session 143; **round 2 BUILT + SIGNED OFF (session 144, `39ed880a`, CI
-    36558081051 green + deployed, "I would share this"):** fixed-height popup that never jumps, footer pinned at the
-    bottom of the screen, compact phone preview (tabs + Klaar on the first screen), unavailable chart types folded
-    behind one line, Titel + Bijschrift fields on the Grafiek tab ([#346](open-questions.md));
-  - (a2, owner decision [#351](open-questions.md)) — round 1 built session 143; **round 2 BUILT + SIGNED OFF (session
-    144, `5e5608c1`, owner "Fine"):** the share picture in Inter (fonts shipped in the repo), 24 months readable, the
-    reader's form (line/area/bars), a Download of that exact PNG in the card's menu; route `/embed/<token>/preview`;
-  - (c) the homepage — **round 1 BUILT (session 144, 2026-09-29, `8afcd17a`):** a real chart above the fold (the
-    inflation story as question bubble + the product's own answer card), new hero copy nl/en, the frozen text example
-    retired, teaser three-in-a-row minus the hero's story, how-it-works one row of four; **#347 fixed** — the built
-    story set persists in Next's Data Cache across instances (30 min, SWR), empty outcomes never persisted, the deploy
-    smoke warms `/galerij`. **SIGNED OFF — the owner: "I would share this" (session 144, 2026-09-29).** CI 36551609780
-    went red on the old headline in `web/e2e/landing.spec.ts` (fixed `3c72d922`, run 36554179148).
-- **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
-  dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch
-  `regional-stats-part2`), Eurostat in chat, Pro plan, brand colours. Owner-supervised items (migrations 037 + 038, the
-  table-parser recording run after 2026-10-01, #245, #275, #313, #328, #330) also wait.
-- **Spend:** the $50 monthly roof resets 2026-10-01; The Look needs no AI spend (UI work, hermetic tests, the local harness).
-- **Phase 0 gate** (below) is passed and unchanged; principles (a)/(b)/(c) untouched by ADR 063.
+- **⚑ THE ADR 063 GATE IS PASSED (session 144, 2026-09-29):** the owner said "I would share this" about (a) the answer
+  card (s143), (b) the Edit popup (s144 round 2, `39ed880a`), (c) the homepage (s144, `8afcd17a`), and "Fine" about the
+  share picture (a2 round 2, `5e5608c1`). WP-LOOK is COMPLETE — nothing of The Look is open.
+- **⚑ LAUNCH DEFERRED BY THE OWNER, twice in one day ([#352](open-questions.md)):** at the session start ("Keep building
+  The Look") and again after the gate passed ("Keep building, no launch yet"). The launch-to-ten recommendation stands
+  and returns at ADR 063's revisit trigger (2026-10-27) — **do not raise it a third time before then unless the owner
+  brings it up.** Session 143's "this project is going nowhere" statement is recorded there too.
+- **⚑ REBRAND APPLIED (ADR [064](decisions/064-rebrand-graphmaker-studio.md), `66197f14`+`35b69c73`):** every
+  reader-visible name is **graphmaker.studio**; the repo, the address `checkdecijfers.vercel.app`, mail domains, the
+  embed protocol strings and the model prompts keep the old name (each with its own step in the ADR). **Domain wiring
+  started:** both hostnames are ADDED to the Vercel project; the two Cloudflare A records are the owner's step (chose
+  "later") — RUNBOOK "Wiring graphmaker.studio". The `NEXT_PUBLIC_APP_URL` switch waits for the records. Owner idea
+  [#353](open-questions.md): SEO landing pages per data source under the new domain, after the domain is live.
+- **NEXT (owner-chosen order, nothing picked yet — the kickoff recommends):** (1) wire the domain when the owner sets
+  DNS (a session can verify and switch the address, owner present); (2) **breadth** — the owner's own pre-Look priority
+  ([#335](open-questions.md)): apply migrations 037 + 038 (owner-supervised live DDL), then the recording + calibration
+  run after the spend reset (2026-10-01, [#338](open-questions.md)), then step 6 and the `TABLE_LANE_ENABLED` flip;
+  (3) regional statistics Part 2 (branch `regional-stats-part2`), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)),
+  Pro plan, brand colours — all still paused by the owner's call, no longer by the gate.
+- **Direction (ADR 063, unchanged):** ONE product — a beautiful, sourced chart of official Dutch and European
+  statistics. Review that fed it: [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
+- **#347 (gallery cold start) FIXED + measured:** the curated set persists in Next's Data Cache across instances; the
+  5 s deadline fired once per deploy (the smoke's own request), not once per fresh instance.
+- **CI:** every push of session 144 ended green except two red-then-fixed runs (36551609780 → 36554179148 on the landing
+  e2e; 36563648186 → 36564105092 on a typecheck pin) — see the archive entry.
+- **Spend:** zero AI spend in session 144; the $50 monthly roof resets 2026-10-01.
+- **Phase 0 gate** (below) is passed and unchanged; principles (a)/(b)/(c) untouched.
 
 ---
 

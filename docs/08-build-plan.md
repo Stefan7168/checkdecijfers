@@ -1272,7 +1272,7 @@ Plan: [superpowers/plans/2026-09-27-two-measure-scatter.md](superpowers/plans/20
   validation accepting `regionSet` + `pairWith` gated on `REGIONAL_KEYS`), the web `ScatterView`, docs (ADR 060).
   Carry-overs from Part 1's review are in the plan's Part 2 section.
 
-## WP-LOOK — "The Look": chart-first surface, one Edit popup, homepage (owner decision 2026-09-29, session 141; ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)) — ▶ THE ONLY OPEN WORK PACKAGE
+## WP-LOOK — "The Look": chart-first surface, one Edit popup, homepage (owner decision 2026-09-29, session 141; ADR [063](decisions/063-chart-first-refocus-look-is-the-gate.md)) — ✅ COMPLETE (session 144, 2026-09-29: (a) done s143, (b) round 2, (c), (a2) round 2 all owner-signed; launch deferred by the owner, #352)
 
 **Why:** the vision interview ([review](session-briefs/2026-09-29-vision-vs-build-review.md)) found three positionings
 layered in the code, no launch gate, zero outside users, and a chart surface where the chart is a quarter of the card
@@ -1391,5 +1391,6 @@ no template chosen.
 [#346](open-questions.md) with the date. Then the owner invites people (sanity-check move 1). Verification block +
 `/code-review` LOW + green CI per change as always; no prompt bytes, no AI spend, no DDL.
 
-**Explicitly paused until the gate:** breadth step 6 / `TABLE_LANE_ENABLED`, regional statistics Part 2, Eurostat in
-chat, Pro plan, brand colours, and every owner-supervised item in STATUS's top block.
+**Was paused until the gate — the gate is passed (session 144); these are now paused only by the owner's own call
+(no pick yet, the session-145 kickoff recommends breadth first):** breadth step 6 / `TABLE_LANE_ENABLED`, regional
+statistics Part 2, Eurostat in chat, Pro plan, brand colours, and every owner-supervised item in STATUS's top block.

@@ -6,6 +6,42 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 144 — the gate passed (homepage, popup round 2, share picture round 2), then the rebrand
+
+1. **Truncating a typecheck's output cost a red CI run.** `npx tsc --noEmit | head -3` showed the first three errors of the
+   rename sweep; two were fixed, the fourth (`lib/dock-visuals.test.ts`) never scrolled into view, and the push went red
+   on the typecheck step (run 36563648186). Count the errors (`grep -c "error TS"`) or read the whole list — never
+   `head` a gate. Same trap as "a log without a summary line is a kill, not a pass".
+2. **The Next image tool cannot see a font inside a nested SVG.** With `sharp` installed, `ImageResponse` rasterises Satori's
+   SVG through librsvg, which only knows system fonts — so an `<img>`-embedded chart SVG came out in a fallback face no
+   matter which fonts were passed. The fix that works is structural: the renderer emits marks only and hands every label
+   back as coordinates, and Satori sets the text (fonts passed as bytes; Inter shipped in the repo; the files listed in
+   `outputFileTracingIncludes` because a `readFile` behind a computed path is invisible to tracing — confirmed in the
+   route's `.nft.json` after `next build`).
+3. **The `opengraph-image` file convention takes no query string.** The reader's form could not reach it; a route handler
+   returning `ImageResponse` plus explicit `openGraph.images` in `generateMetadata` does everything the convention did and
+   more (download header, cache header). Also: a `'use client'` module's constant cannot be imported into a Server
+   Component — `APP_URL` moved to a plain module (`web/lib/app-url.ts`) and the dialog re-exports it.
+4. **A persisted (cross-instance) cache needs a "never store an empty result" guard.** `buildCuratedCharts` does not throw
+   on a saturated pooler; it resolves with every story skipped. Without the guard one bad second would have emptied the
+   gallery on every instance for 30 minutes. The in-process cache had the same flaw for years, harmlessly, because it only
+   ever poisoned one instance — the blast radius changed with the mechanism. Verified by a hermetic test that stubs
+   `unstable_cache` and asserts nothing is written.
+5. **Measure the production cold start from the logs, not from your own curl.** A 6 s TTFB after the deploy looked like the
+   old bug; `vercel logs` showed the deadline warning fired exactly once (the smoke's own first request) and never on the
+   later fresh instance — that 6 s was a function cold boot serving from the shared cache. Without the log line the
+   after-measurement would have been wrong in either direction.
+6. **A "one dialog" verdict works, but an empty free-text box is not a spec.** Twice the owner chose "change/keep going"
+   and wrote nothing; the productive move was to do the critique myself (four concrete defects with screenshots) and
+   ask for a GO on a committed list — not to ask "what bothers you?" again.
+7. **Check the docs before saying "that's not decided" — and still expect to be corrected.** The rebrand was recorded
+   (#7: domain bought, "not the focus now"); the owner's "we've rebranded, remember?" was a decision change, not a lapse.
+   The right sequence was: quote the record, state the two facts (25 strings/69 files; the domain resolves nowhere), and
+   ask the scope in one dialog. Renaming everything visible took one grep-classified sweep plus 80 test lines; the
+   protected set (URLs, mail, the embed protocol, prompt bytes) is the part worth writing down (ADR 064).
+8. **Playwright against the running harness, again, for every owner-facing screenshot** — 2× captures at desktop and
+   phone in ~20 s; the browser pane's screenshot stayed the wrong tool for this (session-143 lesson confirmed).
+
 ## Session 143 — part (a) round 2: the action row that would not stay on one line
 
 1. **Owner-facing screenshots: Playwright, not the browser pane.** The pane's screenshot is capped at ~800 px wide and

@@ -1,6 +1,6 @@
 # CLAUDE.md — working agreements for AI sessions
 
-You are working on **checkdecijfers.nl**: chat Q&A over official CBS statistics where deterministic code computes every number and the LLM only parses questions and phrases validated results. The product owner (Stefan) is a non-developer; write and explain accordingly.
+You are working on **graphmaker.studio** (repo and address still `checkdecijfers`; rebranded 2026-09-29, ADR 064 — every reader-visible name is graphmaker.studio): chat Q&A over official CBS statistics where deterministic code computes every number and the LLM only parses questions and phrases validated results. The product owner (Stefan) is a non-developer; write and explain accordingly.
 
 ## Reading order for a fresh session
 

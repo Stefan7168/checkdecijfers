@@ -2429,17 +2429,22 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
 
-## The share preview image (`/embed/<token>/opengraph-image`) — session 143
+## The share preview image (`/embed/<token>/preview`) — session 143, rebuilt session 144
 
-Every Share link's embed page has an Open Graph image (WP-LOOK a2, `web/app/embed/[token]/opengraph-image.tsx`).
-To look at one: open a share link's URL with `/opengraph-image` appended (e.g.
-`https://checkdecijfers.vercel.app/embed/<token>/opengraph-image`) — a 1200×630 PNG. Paste a share link into
-LinkedIn's Post Inspector or Slack to see the unfurl. **The local harness has no `EMBED_TOKEN_SECRET`**, so there
-every token resolves to nothing and the route serves the neutral brand card (valid PNG, no digits) — the real card
-is exercised by `web/lib/share-preview.test.tsx` and `web/app/embed/[token]/opengraph-image.test.tsx`, which
-rasterise for real in vitest. Gotcha found on the first visual run: the image tool re-encodes a percent-encoded SVG
-data URI through a Latin-1-only `btoa` — the em dash in every CBS attribution line threw; the SVG is therefore
-embedded as base64 we encode ourselves (`svgDataUri`).
+Every Share link's embed page points its Open Graph / Twitter image at `web/app/embed/[token]/preview/route.tsx` (a
+route handler since session 144 — the `opengraph-image` file convention could not receive the reader's `?form=`). To
+look at one: `https://checkdecijfers.vercel.app/embed/<token>/preview` (add `?form=bar` / `?form=area` for those
+forms; `&download=1` makes the browser save it — the card's Download menu does exactly that, signed-in). Paste a
+share link into LinkedIn's Post Inspector or Slack to see the unfurl. **The local harness has no
+`EMBED_TOKEN_SECRET`**, so there every token resolves to nothing and the route serves the neutral brand card (valid
+PNG, no digits) — the real card is exercised by `web/lib/share-preview.test.tsx` and
+`web/app/embed/[token]/preview/route.test.tsx`, which rasterise for real in vitest with the bundled Inter files
+(`web/assets/fonts`, listed in `next.config.ts`'s `outputFileTracingIncludes` so they ship in the function bundle —
+check the route's `.nft.json` after `next build` if the picture ever comes out in a fallback face again). Gotchas: the
+image tool re-encodes a percent-encoded SVG data URI through a Latin-1-only `btoa` — the em dash in every CBS
+attribution line threw, so the SVG is base64 we encode ourselves (`svgDataUri`); and the tool rasterises through
+librsvg, which never sees bundled fonts inside a nested SVG — that is why the plot SVG holds marks only and every label
+is set by the tool itself (`renderChartPlot`). CDN cache one hour (a redacted chart's picture must not linger).
 
 ## The hermetic test database cache (`node_modules/.cache/cdc-fixture-db`) — bounded since session 143
 
