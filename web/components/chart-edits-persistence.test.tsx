@@ -289,7 +289,9 @@ describe('chart_edits persistence', () => {
 describe('an unsealed colour drag is still saved', () => {
   async function openColorPicker() {
     fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
-    await screen.findByRole('tab', { name: 'Grafiek' });
+    // WP-LOOK part (b): the Style panel sits behind the popup's Opmaak tab.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Opmaak' }));
+    await screen.findByRole('tab', { name: 'Lijnen en assen' });
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     return (await screen.findByLabelText('Kleur van Nederland kiezen')) as HTMLInputElement;
   }

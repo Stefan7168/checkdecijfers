@@ -257,6 +257,26 @@ function kindsInDom(root: HTMLElement): Set<string> {
 
 /** WP-LOOK part (a) (session 142): every reader control now lives in the one
  * Edit popup (next/dynamic — its content lands a tick after the click). */
+/** WP-LOOK part (b) (session 143): the popup mounts ONE of its three tabs at
+ * a time (Grafiek · Markeringen · Opmaak), so a kind scan over document.body
+ * has to visit all three. Markeringen's goal-line and period-mark forms are
+ * opened too, because `addGoalLine`/`addEraShading` sit on each form's SAVE
+ * button, not its trigger (same gating as addNote, see NOTE_KINDS). */
+async function kindsAcrossEditTabs(): Promise<Set<string>> {
+  const found = new Set<string>();
+  const collect = () => kindsInDom(document.body).forEach((k) => found.add(k));
+  collect();
+  fireEvent.click(screen.getByRole('tab', { name: 'Markeringen' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+  collect();
+  fireEvent.click(screen.getByRole('tab', { name: 'Opmaak' }));
+  await screen.findByRole('tablist', { name: 'Opmaak-onderdelen' });
+  collect();
+  fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+  return found;
+}
+
 async function openEdit(index = 0): Promise<void> {
   fireEvent.click(screen.getAllByRole('button', { name: /^(Bewerken|Edit)$/ })[index]!);
   await screen.findAllByRole('tablist', { name: /^(Weergave|Chart type)$/ });
@@ -283,15 +303,8 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // before the scan; without this the scan can run before their lazy
     // import settles and flag them as missing when they are not.
     fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
-    await screen.findByRole('tab', { name: 'Grafiek' });
-    // Goal line's and era shading's own `addGoalLine`/`addEraShading`
-    // data-command-kind sits on each form's SAVE button, not its trigger —
-    // same gating as addNote (see NOTE_KINDS), so the forms are opened here
-    // rather than exempting the kinds outright.
-    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
-
-    const found = kindsInDom(document.body);
+    await screen.findByRole('tab', { name: 'Lijn' });
+    const found = await kindsAcrossEditTabs();
     const missing = CHART_COMMAND_KINDS.filter(
       (k) => !found.has(k) && !NOTE_KINDS.includes(k) && !OWN_DATA_KINDS.includes(k),
     );
@@ -308,17 +321,12 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
   it('every kind cbsViewCommandSchema can produce has an on-screen control', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bewerken' }));
-    await screen.findByRole('tab', { name: 'Grafiek' });
-    // Co-pilot phase 6 (Tasks 3 and 5): the CBS schema now names
-    // addEraShading and addGoalLine too. Each one's `data-command-kind`
-    // sits on its form's SAVE button, not on the trigger — the same gating
-    // the phase-1 assertion above handles by opening both forms — so they
-    // are opened here as well, rather than exempting the two kinds (which
-    // would hollow out the very contract this test exists to hold).
-    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
-
-    const found = kindsInDom(document.body);
+    await screen.findByRole('tab', { name: 'Lijn' });
+    // Co-pilot phase 6 (Tasks 3 and 5): the CBS schema names addEraShading and
+    // addGoalLine too — kindsAcrossEditTabs opens both forms on the
+    // Markeringen tab rather than exempting the two kinds (which would hollow
+    // out the very contract this test exists to hold).
+    const found = await kindsAcrossEditTabs();
     const cbsKinds = cbsViewCommandSchema.options.map((option) => option.shape.kind.value as string);
     // addNote's control only exists once a point has been clicked (same
     // NOTE_KINDS carve-out the phase-1 assertion above makes) — asserted
@@ -553,6 +561,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // "Gemiddelde tonen" control: hide one of the two series first.
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     await openEdit();
+    fireEvent.click(screen.getByRole('tab', { name: 'Markeringen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
     // `addDerivedOverlay`'s recipe lands in state.derivedOverlayRequests
     // synchronously (the reducer never awaits the async resolution), so the
@@ -633,7 +642,7 @@ describe('own-data card — the same command ↔ control contract (Task 6)', () 
   it('every command kind except the CBS-only ones is reachable from an on-screen control', async () => {
     render(<UserChartView spec={twoSeriesUserSpec()} edit={userEdit()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    await screen.findByRole('tab', { name: 'Grafiek' });
+    await screen.findByRole('tab', { name: 'Lijnen en assen' });
     fireEvent.click(screen.getByRole('button', { name: 'Data' }));
 
     const found = kindsInDom(document.body);

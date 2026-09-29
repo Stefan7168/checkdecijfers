@@ -13,9 +13,13 @@
 // would pass the whole suite and quietly poison it.
 import { describe, expect, it } from 'vitest';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   fixtureInputFiles,
   fixtureInputsHash,
+  pruneSnapshots,
   restoreFromSnapshot,
 } from '../helpers/fixture-snapshot.ts';
 
@@ -109,3 +113,43 @@ describe('createIngestedDb hands out isolated databases', () => {
     }
   });
 });
+
+// Session 143 (2026-09-29): the cache key hashes all of src/, so every edit
+// mints a new ~160 MB snapshot; with no eviction the cache reached 166 files
+// and 24.5 GB in four days. ensureSnapshot() now prunes after every write.
+describe('pruneSnapshots keeps the cache bounded', () => {
+  it('keeps the N newest ingested-*.tar files, removes older ones and stale .tmp files, ignores everything else', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cdc-fixture-db-'));
+    try {
+      const day = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const mk = (name: string, ageMs: number) => {
+        const path = join(dir, name);
+        writeFileSync(path, 'x');
+        utimesSync(path, (now - ageMs) / 1000, (now - ageMs) / 1000);
+        return path;
+      };
+      mk('ingested-0000000000000001.tar', 5 * day);
+      mk('ingested-0000000000000002.tar', 4 * day);
+      const keep3 = mk('ingested-0000000000000003.tar', 3 * day);
+      const keep4 = mk('ingested-0000000000000004.tar', 2 * day);
+      const keep5 = mk('ingested-0000000000000005.tar', 0);
+      const staleTmp = mk('ingested-00000000000000ab.tar.123.tmp', 2 * 60 * 60 * 1000);
+      const freshTmp = mk('ingested-00000000000000cd.tar.456.tmp', 60 * 1000);
+      const other = mk('README.txt', 10 * day);
+
+      const removed = pruneSnapshots(dir, 3).sort();
+
+      expect(removed).toEqual([join(dir, 'ingested-0000000000000001.tar'), join(dir, 'ingested-0000000000000002.tar'), staleTmp].sort());
+      const left = readdirSync(dir).map((n) => join(dir, n)).sort();
+      expect(left).toEqual([keep3, keep4, keep5, freshTmp, other].sort());
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a missing directory is not an error', () => {
+    expect(pruneSnapshots(join(tmpdir(), 'cdc-does-not-exist-' + Date.now()), 3)).toEqual([]);
+  });
+});
+

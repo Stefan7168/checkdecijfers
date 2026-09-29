@@ -522,7 +522,7 @@ describe('UserChartView — Publish button (own-data publish, ADR 057, Task 6)',
   it('A4: an unsealed colour drag is part of the published log', async () => {
     render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    await screen.findByRole('tab', { name: 'Grafiek' });
+    await screen.findByRole('tab', { name: 'Lijnen en assen' });
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     const picker = (await screen.findByLabelText('Kleur van Amsterdam kiezen')) as HTMLInputElement;
     fireEvent.change(picker, { target: { value: '#ff8800' } });

@@ -55,8 +55,12 @@ export const test = base.extend<{ consoleErrors: string[] }>({
 export { expect };
 export type { Page };
 
-/** WP-LOOK part (a) (session 142): every reader control lives in the one Edit popup. */
-export async function openEdit(page: Page): Promise<void> {
+/** WP-LOOK part (a) (session 142): every reader control lives in the one Edit popup.
+ * Part (b) (session 143): the popup has three tabs — Grafiek (default: form,
+ * reading, period), Markeringen (goal lines, period marks, guide lines, notes),
+ * Opmaak (the Style panel) — pass `tab` to land on one of the other two. */
+export async function openEdit(page: Page, tab?: 'Markeringen' | 'Opmaak'): Promise<void> {
   await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
   await expect(page.getByRole('dialog', { name: 'Grafiek bewerken' })).toBeVisible();
+  if (tab) await page.getByRole('tab', { name: tab, exact: true }).click();
 }

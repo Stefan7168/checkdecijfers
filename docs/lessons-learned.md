@@ -26,7 +26,26 @@ on top.
    progress. Recorded as #349 in the same minute — with the competitor codenamed ("Competitor L"), because the repo is
    public and the Competitor-G rule applies — and the real name only in the session's local memory. No task chip
    (owner rule), no scope creep into the current work.
-4. **CBS dimension titles can carry their own classification code.** 568 titles in the fixtures start with a COICOP
+4. **A cache with a content-hash key and no eviction is a disk bomb.** The hermetic test-database snapshot keys on a
+   hash of all of `src/` (deliberately, so a stale database can never lie to a test) and wrote a new 160 MB tar on
+   every source edit, never deleting the old ones: 166 files and 24.5 GB in four days, found only when the owner's
+   disk ran low and `node_modules` "measured 25 GB". Any cache whose key includes source content needs a keep-N
+   prune on write, from day one; `du -sk node_modules/* node_modules/.[!.]* | sort -rn | head` finds this kind of
+   thing in seconds. Fixed with `pruneSnapshots()` (keep 3) and a unit test.
+5. **A shared artifact in a cross-origin frame is nearly unreadable from the browser tools.** The owner's colleague's
+   plan page rendered inside a sandboxed `frame.claudeusercontent.com` iframe: `get_page_text` and the accessibility
+   tree stop at the frame boundary, wheel scrolling and most keys do not reach it (only `End` did, once), the frame
+   URL does not work standalone, and the content is not fetched over any XHR the extension can replay. After the
+   first screen, ask the owner to paste the text — it took one question and cost nothing, where forty tool calls
+   got two screens. (Recorded in the Chrome skill's own "stop after 2–3 failed attempts" spirit.)
+6. **Tabs that mount one panel at a time relocate the tests again.** Putting the popup's controls behind three tabs
+   broke 64 tests, all for one reason: a control the test reached right after `openEdit()` now sits on a tab that is
+   not mounted. The mechanical fix was an optional `tab` argument on the test helper plus a script that classified
+   each failure by the control it looked for and rewrote that test's `openEdit()` call; the contract test that scans
+   the DOM for every command kind now visits all three tabs. Naming trap: the popup's own "Grafiek" tab collided with
+   the Style panel's "Grafiek" sub-tab (`getByRole` ambiguity AND a real UX ambiguity) — renamed the sub-tab to
+   "Lijnen en assen" rather than special-casing the queries.
+7. **CBS dimension titles can carry their own classification code.** 568 titles in the fixtures start with a COICOP
    code ("000000 Alle bestedingen"); the card showed it verbatim for months because the label was correctly treated as
    an untouchable spec string. Stripping digits from a spec string is safe under the whole-card digit scan (it can only
    remove numbers), so a display-only regex at the render site was enough — the proof panel keeps the raw title.

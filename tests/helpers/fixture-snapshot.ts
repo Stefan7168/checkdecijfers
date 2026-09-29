@@ -39,6 +39,7 @@ import {
   readFileSync,
   renameSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -114,6 +115,44 @@ function snapshotPathFor(hash: string): string {
   return join(CACHE_DIR, `ingested-${hash}.tar`);
 }
 
+/** How many snapshots the cache keeps. The key above hashes ALL of `src/`, so
+ * every source edit mints a new ~160 MB snapshot — and until session 143
+ * (2026-09-29) nothing ever deleted the old ones: 166 files, 24.5 GB, in four
+ * days of editing, found only because the owner's disk ran low. Three covers
+ * switching between a couple of branches without a rebuild; anything older is
+ * a 7-second rebuild away. */
+export const SNAPSHOTS_TO_KEEP = 3;
+
+/** Deletes every `ingested-*.tar` in `dir` except the `keep` most recently
+ * modified ones, plus any `.tmp` left behind by an interrupted write older than
+ * an hour. Never throws: a failed prune leaves extra files, never a red suite.
+ * Returns the paths it removed (for the test). */
+export function pruneSnapshots(dir: string = CACHE_DIR, keep: number = SNAPSHOTS_TO_KEEP): string[] {
+  const removed: string[] = [];
+  try {
+    if (!existsSync(dir)) return removed;
+    const now = Date.now();
+    const tars: { path: string; mtime: number }[] = [];
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (/^ingested-[0-9a-f]+\.tar$/.test(name)) {
+        tars.push({ path, mtime: statSync(path).mtimeMs });
+      } else if (/\.tmp$/.test(name) && now - statSync(path).mtimeMs > 60 * 60 * 1000) {
+        unlinkSync(path);
+        removed.push(path);
+      }
+    }
+    tars.sort((a, b) => b.mtime - a.mtime);
+    for (const stale of tars.slice(Math.max(0, keep))) {
+      unlinkSync(stale.path);
+      removed.push(stale.path);
+    }
+  } catch (error) {
+    console.warn('[fixture-db] snapshot prune skipped:', error instanceof Error ? error.message : error);
+  }
+  return removed;
+}
+
 /** The cold path: boot PGlite, migrate, register, sync all 17 seed tables.
  * This is what every suite used to do on its own. */
 async function buildIngested(): Promise<PGlite> {
@@ -160,6 +199,8 @@ export async function ensureSnapshot(): Promise<{ path: string; built: boolean }
   const temp = `${path}.${process.pid}.tmp`;
   writeFileSync(temp, Buffer.from(await blob.arrayBuffer()));
   renameSync(temp, path);
+  // The file just written is the newest by mtime, so it always survives.
+  pruneSnapshots();
   return { path, built: true };
 }
 

@@ -628,7 +628,7 @@ export function SeriesDot(
           data-marker={hiddenFinal ? 'hidden' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
-          tabIndex={onPointClick ? 0 : undefined}
+          tabIndex={onPointClick ? -1 : undefined}
           aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
@@ -819,7 +819,7 @@ export function SeriesBar(
           data-series-dimmed={opacity < 1 ? 'true' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
-          tabIndex={onPointClick ? 0 : undefined}
+          tabIndex={onPointClick ? -1 : undefined}
           aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
@@ -1047,7 +1047,7 @@ export function RegionBar(
           data-series-dimmed={dimmed ? 'true' : undefined}
           data-result-id={value_resultId ?? undefined}
           role={onPointClick ? 'button' : undefined}
-          tabIndex={onPointClick ? 0 : undefined}
+          tabIndex={onPointClick ? -1 : undefined}
           aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: label, period: periodLabel }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}

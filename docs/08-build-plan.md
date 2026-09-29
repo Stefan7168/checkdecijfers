@@ -1301,11 +1301,28 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   (2) the subtitle showed CBS's raw classification code ("% 000000 Alle bestedingen") → `stripDimensionCode`
   (`web/lib/dim-label.ts`, display-only; spec, audit row and proof panel keep the raw title). Measured one line at 430,
   366 and 258 px row widths. **Part (a) is DONE on the owner's ruling once this lands green (#346).**
+- **(a2) Share preview image — added session 143 (2026-09-29, owner decision, open-questions #351), built AFTER (b) and BEFORE
+  (c):** every Share link gets a server-made image of the chart (same numbers, same look) — an Open Graph image on
+  `/embed/<token>` so a shared chart shows as a picture on LinkedIn / Slack / WhatsApp, and the same PNG downloadable.
+  Zero AI, no schema change; cheapest mechanism first (own SVG renderer + `sharp`, already a dependency, vs. Satori —
+  measure parity with the on-screen chart before choosing). Not a rebuild of the on-screen renderer.
 - **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
   session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
   and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the
   design skills available to the session (interface design, data-visualisation, component-library guidance) — a
   required step, not optional. Light and dark. Keyboard and screen-reader behaviour at least as today.
+  **Round 1 BUILT (session 143, 2026-09-29, owner GO on the plain-English design; open-questions #346):** header row =
+  title + undo · redo · history next to the close cross; LEFT a preview of the card as it will be shared (title,
+  subtitle, headline number, the live plot + legend, caption, source line); RIGHT three tabs — **Grafiek** (chart type
+  as pills, reading, from/to, small multiples, headline draft), **Markeringen** (difference/mean guide lines, goal
+  lines, period marks, notes), **Opmaak** (the Style panel, disabled in table form with the reason as title) — over a
+  pinned footer with the "ask to change" box and **Klaar**. Download and Embed left the popup (they stay on the card).
+  Only the active tab is mounted; a point clicked in the preview switches to Markeringen. The Style panel's own
+  sub-tab "Grafiek" was renamed **"Lijnen en assen"** so no two tabs in the dialog share a name. #348 fixed: the plot
+  is ONE tab stop, Left/Right/Home/End walk the points, Enter/Space still opens a note. Files:
+  `web/components/chart-edit-modal.tsx` (header + footer slots), `web/components/chart-edit-tabs.tsx` (new),
+  `chart.tsx` (composition), `chart-parts.tsx` (tabindex −1 on points). Screenshots to the owner; awaiting the
+  owner's "I would share this" for (b).
 - **(c) The homepage** (`web/components/landing.tsx`): a real chart above the fold; the gallery must never show empty
   skeletons on a cold visit ([#347](open-questions.md): the curated feed's first request took over 5 s on 2026-09-29 —
   pre-warm, pre-render or cache it).

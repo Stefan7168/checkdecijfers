@@ -35,8 +35,12 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-143-kickoff.md](sess
     in table form too); owner-owned strips show on the card only when they hold something. The owner's two round-1
     change requests (the row wrapped; the subtitle showed a raw CBS code) are fixed in round 2 — the row is a CSS
     container with measured icon-collapse tiers, the code is stripped display-only ([#346](open-questions.md));
-  - (b) the Edit popup, redesigned with the design skills (interface, data-viz, component library), light + dark — the
-    owner will decide its shape when they see it; residual to fix there: keyboard cost of the bottom row ([#348](open-questions.md));
+  - (b) the Edit popup — **round 1 BUILT (session 143, owner GO on the design; SHA in the archive entry):** header
+    with undo · redo · history, a preview of the card on the left, three tabs on the right (Grafiek · Markeringen ·
+    Opmaak), a pinned footer with the "ask to change" box and Klaar; Download/Embed stay on the card; #348 fixed (the
+    plot is one tab stop). **Waiting for the owner's "I would share this" on (b)** ([#346](open-questions.md));
+  - (a2, added session 143, owner decision [#351](open-questions.md)) after (b), before (c): a server-made preview image
+    for every Share link (Open Graph image on the embed page + the same PNG to download), zero AI, no schema change;
   - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).
 - **PAUSED until the gate (built, dark, no further work):** breadth step 6 + `TABLE_LANE_ENABLED` flip (step 5 is MERGED
   dark on `main` — see the session-140 archive entry for the SHA), regional statistics Part 2 (branch

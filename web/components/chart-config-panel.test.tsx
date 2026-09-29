@@ -116,7 +116,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     const tablist = screen.getByRole('tablist');
     expect(within(tablist).getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Sjablonen',
-      'Grafiek',
+      'Lijnen en assen',
       'Kleuren',
       'Lettertype',
       'Kader',
@@ -412,7 +412,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijnen en assen' }));
     expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
   });
 });
@@ -2048,7 +2048,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
     expect(tabs[0]).toBe('Sjablonen');
-    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Lijnen en assen' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
     const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal|Warm|Aards)$/ });
     expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual([
@@ -2090,7 +2090,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: 'Lijnen en assen' })).toHaveAttribute('aria-selected', 'false');
     unmount();
 
     render(
@@ -2105,7 +2105,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Lijnen en assen' })).toHaveAttribute('aria-selected', 'true');
   });
 
   // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
@@ -2185,7 +2185,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     openTab('Sjablonen');
     const tablist = screen.getByRole('tablist');
     fireEvent.keyDown(tablist, { key: 'ArrowRight' });
-    const grafiekTab = screen.getByRole('tab', { name: 'Grafiek' });
+    const grafiekTab = screen.getByRole('tab', { name: 'Lijnen en assen' });
     expect(document.activeElement).toBe(grafiekTab);
     expect(grafiekTab).toHaveAttribute('aria-selected', 'true');
   });

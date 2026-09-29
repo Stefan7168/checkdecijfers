@@ -92,7 +92,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Open the goal line form by clicking "Doellijn toevoegen"
     const addGoalLineButton = page.getByRole('button', { name: 'Doellijn toevoegen' });
@@ -232,7 +232,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Open the era shading form
     const markButton = page.getByRole('button', { name: 'Periode markeren' });
@@ -297,7 +297,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Final-review fix I8: "Gemiddelde tonen" now only offers itself when
     // exactly ONE series is visible (averaging across several different
@@ -319,7 +319,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Final-review fix I8: see the previous test — the mean control needs
     // exactly one visible series.
@@ -341,7 +341,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Click "Verschil aanduiden" to activate picker mode. Located by its
     // `title` attribute (stable across the picker toggle) rather than by
@@ -408,7 +408,7 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await openEdit(page);
+    await openEdit(page, 'Markeringen');
 
     // Activate difference picker (see the previous test for why this is
     // located by `title` rather than by accessible name or `[aria-pressed]`).

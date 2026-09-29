@@ -23,6 +23,16 @@
 // Below `lg` the two columns stack (chart on top, controls under it) — a
 // side-by-side split has no room under ~1024px (open-questions #243(d)).
 //
+// WP-LOOK part (b) (session 143, 2026-09-29, ADR 063 — owner GO on the
+// plain-English design): the shell grew a HEADER ROW and a FOOTER slot.
+// The header holds the title on the left and the caller's `headerActions`
+// (undo · redo · history) on the right, next to the dialog's own close
+// button; the footer sits under the right-hand column and stays visible
+// while that column scrolls (the "ask to change" box and the Klaar button).
+// The right column is a flex column for exactly that reason: `children`
+// scroll in the middle, `footer` is pinned below. Nothing here decides what
+// goes into the slots — chart.tsx does.
+//
 // This shell does NOT manage initial focus itself beyond what the Dialog
 // primitive already does (focus the popup, trap Tab inside it) — it makes
 // no assumption about which pane a caller wants focused first, and it
@@ -41,8 +51,10 @@ export function ChartEditModal({
   onClose,
   title,
   closeLabel,
+  headerActions,
   chartSlot,
   children,
+  footer,
   onKeyDown,
 }: {
   open: boolean;
@@ -69,6 +81,10 @@ export function ChartEditModal({
    * callers deliberately don't depend on (see chart-embed-dialog.tsx's own
    * header comment on that convention). */
   closeLabel?: string;
+  /** Part (b): controls that belong to the whole popup, rendered in the
+   * header row right of the title (chart.tsx passes undo · redo · history).
+   * Leaves room for the dialog's own absolute-positioned close button. */
+  headerActions?: ReactNode;
   /** Left pane (top on phone): the live chart (+ legend) — chart.tsx's own
    * lifted canvas/legend/notes, the exact same rendered output shown in
    * the dock, relocated here rather than duplicated (see the file header). */
@@ -76,6 +92,9 @@ export function ChartEditModal({
   /** Right pane (below the chart on phone): the feature's own controls
    * (ChartConfigPanel's tabs, or the Embed dialog's fields). */
   children: ReactNode;
+  /** Part (b): pinned under the right pane, visible while `children`
+   * scroll — the co-pilot input and the Klaar button. */
+  footer?: ReactNode;
   /** WP-LOOK part (a) (session 142): the card's own keyboard handler (⌘Z /
    * ⇧⌘Z / Ctrl+Y undo-redo) re-attached to the popup's content — the dialog
    * is a portal OUTSIDE the card's DOM, so a shortcut pressed while the
@@ -94,16 +113,30 @@ export function ChartEditModal({
         aria-modal="true"
         closeLabel={closeLabel}
         onKeyDown={onKeyDown}
-        className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-6 sm:max-w-2xl sm:p-8 lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
+        className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-5 sm:max-w-2xl sm:p-6 lg:max-h-[88vh] lg:max-w-6xl lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-x-6 lg:overflow-hidden"
       >
-        <DialogTitle className="lg:col-span-2">{title}</DialogTitle>
+        {/* Header row: title left, the caller's actions right. `pr-10` keeps
+          * the actions clear of the dialog's own × (absolute, top-2 right-2). */}
+        <div className="flex min-w-0 items-center justify-between gap-3 pr-10 lg:col-span-2" data-slot="chart-edit-header">
+          <DialogTitle className="min-w-0 truncate">{title}</DialogTitle>
+          {headerActions ? <div className="flex shrink-0 items-center gap-1">{headerActions}</div> : null}
+        </div>
         {/* WP-LOOK part (a) (session 142): the chart column scrolls on its own
           * at desktop width too — with the notes / goal-line / period-range
           * strips under the chart, a 720–800 px laptop window otherwise put
           * the note form and "Periode markeren" below an unreachable fold
           * (found by the Playwright smoke). */}
-        <div className="min-w-0 lg:max-h-[85vh] lg:overflow-y-auto">{chartSlot}</div>
-        <div className="min-w-0 lg:max-h-[85vh] lg:overflow-y-auto">{children}</div>
+        <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto" data-slot="chart-edit-chart-column">
+          {chartSlot}
+        </div>
+        <div className="flex min-w-0 flex-col gap-3 lg:min-h-0" data-slot="chart-edit-controls-column">
+          <div className="min-w-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">{children}</div>
+          {footer ? (
+            <div className="shrink-0 border-t border-border pt-3" data-slot="chart-edit-footer">
+              {footer}
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );

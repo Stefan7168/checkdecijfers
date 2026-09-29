@@ -2409,6 +2409,18 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
 
+## The hermetic test database cache (`node_modules/.cache/cdc-fixture-db`) — bounded since session 143
+
+The backend suite and the local harness restore a fully ingested PGlite database from a ~160 MB `.tar` snapshot in
+`node_modules/.cache/cdc-fixture-db/` (`tests/helpers/fixture-snapshot.ts`). The cache key hashes **all of `src/`**,
+the migrations and the CBS fixtures on purpose (a stale database may never lie to a test), so every source edit
+mints a new snapshot. Until 2026-09-29 nothing deleted old ones: **166 files, 24.5 GB in four days**, found only
+because the owner's disk ran low (the folder made `node_modules` look 25 GB when the packages are ~150 MB).
+Since session 143 `ensureSnapshot()` prunes after every write, keeping the **3 newest** (`SNAPSHOTS_TO_KEEP`) and
+removing `.tmp` leftovers older than an hour. If disk is ever tight again: `du -sh node_modules/.cache/cdc-fixture-db`
+first; deleting the whole folder is always safe (one rebuild of ~7 s on the next run). Never touch anything else
+under `node_modules` for space — it is small. `web/.next` (1.6 GB) is build output and equally safe to delete.
+
 ## Local real-browser harness — the whole product with NO secrets (added session 98, 2026-09-12, autonomous)
 
 **Why.** A remote (cloud) session has no `DATABASE_URL`, no Supabase keys and no LLM key, and an autonomous session

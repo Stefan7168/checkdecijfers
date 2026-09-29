@@ -40,6 +40,10 @@ function template(id: ChartTemplateId, overrides: PresentationOverrides): ChartT
 // account default). Colours/font/language are left to the base.
 const { seriesColors: _c, fontFamily: _f, language: _l, ...STOCK_LOOK } = STOCK_PRESENTATION;
 
+// WP-LOOK (session 143, 2026-09-29, open-questions #351): this list is THE one
+// place the five looks are defined — the popup's Opmaak tab reads it, and the
+// planned server-made share preview image (part (a2)) must read the same
+// values, so screen and image never drift. Add a look here, nowhere else.
 export const CHART_TEMPLATES: readonly ChartTemplate[] = [
   // The designed default itself (ADR 043) — the full stock look, explicitly.
   template('standard', STOCK_LOOK),

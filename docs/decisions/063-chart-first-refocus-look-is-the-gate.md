@@ -89,6 +89,14 @@ looks finished untouched.
   bestedingen"). Fixed with no JS and no schema change: the row is a CSS container whose button words collapse to icons
   in measured tiers (`web/lib/chart-action-row.ts`), and a display-only `stripDimensionCode` (`web/lib/dim-label.ts`).
   With that, **part (a) is signed off on the owner's ruling (#346)**; part (b) is next.
+- **Part (b), round 1 — session 143, 2026-09-29 (SHA in the status-archive entry):** the popup got its shape on the
+  owner's GO of a plain-English design: header (title, undo · redo · history, close), a left-hand preview of the card
+  as it will be shared, three tabs on the right (Grafiek · Markeringen · Opmaak), a pinned footer (co-pilot box +
+  Klaar). Download/Embed left the popup for the card's row; the Style panel's sub-tab "Grafiek" became "Lijnen en
+  assen"; #348 (keyboard cost of the bottom row) fixed with one tab stop on the plot. Sign-off pending (#346).
+- **Owner rethink, session 143 (#351):** after seeing a code-drawn-images content pipeline, the owner asked whether to
+  rethink; decision: **popup first, then a server-made preview image for every Share link (part (a2), before (c))**.
+  Not a rebuild of the on-screen renderer; the image model belongs to the homepage/white-glove page, never to a chart.
 
 ## Revisit triggers
 
