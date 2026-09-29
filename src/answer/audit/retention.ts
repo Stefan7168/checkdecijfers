@@ -112,6 +112,12 @@ const AUDIT_PURGE_WHERE =
  * always the cutoff ISO string in both callers. */
 const PENDING_PURGE_WHERE = `created_at < $1` as const;
 
+/** Breadth step 5 (migration 038): the ONE place the "finished" table-lane
+ * statuses are written for the three erasure/purge legs below. Only a finished
+ * row is deleted; a pending/running row's job still needs its question and
+ * table id to finish (the same in-flight residual as pending_table_requests). */
+const TABLE_LANE_TERMINAL = `status in ('done', 'failed')` as const;
+
 /** #151 (session-47 GDPR hunt): the ONE place the pending_table_requests
  * redaction SET clause is written — both legs (self-service + purge) apply it,
  * so the scope can only ever widen in one place (same discipline as AUDIT_SCOPE).
@@ -379,6 +385,17 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
             (select id from audit_answers where user_id = $1)`,
         params: [userId],
       },
+      {
+        // Breadth step 5 (migration 038): this user's finished table-lane
+        // requests carry the question text and the CBS table id a SECOND
+        // time — hard-delete. TERMINAL rows only: an in-flight job still needs
+        // its row (the same documented in-flight residual as
+        // pending_table_requests; the next deletion/purge sweeps it once it
+        // ends). Money lives in the ledger, untouched.
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests where user_id = $1 and ${TABLE_LANE_TERMINAL}`,
+        params: [userId],
+      },
     ],
   );
 }
@@ -451,6 +468,14 @@ export async function deleteThreadQuestionHistory(
             (select id from audit_answers where user_id = $1 and thread_id = $2)`,
         params: [userId, threadId],
       },
+      {
+        // Breadth step 5 (migration 038): this thread's finished table-lane
+        // requests (see the whole-history leg above for the terminal-only rule).
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests
+              where user_id = $1 and thread_id = $2 and ${TABLE_LANE_TERMINAL}`,
+        params: [userId, threadId],
+      },
     ],
   );
 }
@@ -521,6 +546,14 @@ export async function purgeExpiredQuestionHistory(
         sql: `delete from chart_edits where audit_answer_id in
             (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
         params: [cutoffIso, anonIso],
+      },
+      {
+        // Breadth step 5 (migration 038): finished table-lane requests older
+        // than the ACCOUNT cutoff (a lane row always has a user, so there is no
+        // anonymous window here, like pending_table_requests).
+        table: 'table_lane_requests',
+        sql: `delete from table_lane_requests where created_at < $1 and ${TABLE_LANE_TERMINAL}`,
+        params: [cutoffIso],
       },
     ],
   );
