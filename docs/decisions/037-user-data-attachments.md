@@ -36,6 +36,10 @@ lessons-learned.md's session-86 entries.
 (real-LLM-spend, owner-supervised), and migrations 026/027 remain file-only pending the
 owner-supervised apply. See [docs/08-build-plan.md](../08-build-plan.md)'s WP202a section.
 
+**As-built (session 146, 2026-09-29):** the v1 format list grew — XLSX/ODS/JSON uploads, pasted tables and public-link Google Sheets
+(no OAuth) all end in the same `cells → profile → store` path, so no new trust rule; the Google fetch is the tier's only server-side
+fetch (URL rebuilt from a validated sheet id, Google-hosts-only redirects). Migration 039 widens `source_kind`. See [#354](../open-questions.md).
+
 ## Context
 
 Open-questions [#201](../open-questions.md) (Google Sheets as a data source) and

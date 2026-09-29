@@ -1582,6 +1582,13 @@ alias; the deploy job's log of each run prints the SHA it shipped (`gh run view 
 the deployment built from the newest commit (the `vercel deploy` line in that run's deploy log). Habit that
 avoids it entirely: after a merge, let its run finish before pushing anything else.
 
+## Trying own-data imports locally with the REAL AI (session 146)
+
+Generate fake sheets: `node scripts/make-fake-sheets.ts` (writes `tests/fixtures/attachments/sheets/`). Start the harness with real
+answers (costs real money, a few cents per question): `HARNESS_REAL_LLM=1 node --env-file=.env scripts/dev-harness/start-all.mjs`, then
+drive `http://localhost:3102` (login is stubbed). If ports 9911/9912/3102 are busy, an old harness is still running — stop it first.
+Migration `039_user_dataset_import_kinds.sql` (applied live 2026-09-29) must precede any deploy that imports ods/json/paste/Google.
+
 ## WP202 eigen data (chat with your own data) — the supervised go-live (✅ LIVE 2026-09-18, session 114: steps 2, 3, 4, 5 done — `pricing:apply` upserted `dataset_turn`, `ATTACHMENTS_ENABLED=1` set in Vercel Production and deployed by re-running CI run 35325857423; step 4b `attachments:record` BLOCKED by the Anthropic workspace usage cap until 2026-10-01 00:00 UTC, see [#288](open-questions.md); step 6's model-backed turns refuse until then too — the upload, chart, Data panel and undo persistence are the live smoke test for now)
 
 **Status when this section was written:** the entire feature (backend + UI) is built, tested, and

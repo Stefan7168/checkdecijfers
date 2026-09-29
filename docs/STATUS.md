@@ -17,6 +17,12 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 146 (2026-09-29, owner present) — OWN DATA IMPORT BUILT + LIVE-PUSHED ([#354](open-questions.md)):** Excel/ODS/JSON
+  uploads, pasted tables, Google Sheet share links, starter questions, euro/percent + quarter columns, readable dense lines.
+  Migration 039 applied live (constraint verified read-only). Tried 7 fake sheets (`npm run` n/a — `node scripts/make-fake-sheets.ts`
+  → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
+  build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145 — verify against `git log` / Actions runs before
 trusting this). Kickoff: [session-briefs/2026-09-29-session-146-kickoff.md](session-briefs/2026-09-29-session-146-kickoff.md).**
 

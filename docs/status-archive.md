@@ -1,5 +1,20 @@
 # STATUS archive — the session log
 
+**Session 146 (2026-09-29, owner present; ~ $0.3 real AI spend, inside the $2 the owner OK'd).**
+
+1. Owner asked for own-data import: more sheet types, Google Drive sheets, fake sheets to try end to end. Dialog decisions: Google
+   **share-link first** (real Drive OAuth waits for a Google Cloud project), file types xlsx + xls/ods + pasted text + JSON.
+2. Built (`src/attachments/ingest/`): `xlsx.ts`, `ods.ts` (fflate + own linear XML scanner `xml-scan.ts`; zip-bomb, far-cell and
+   repeat-padding guards), `json.ts`, `formats.ts` (one door), `gsheet.ts` (SSRF-closed fetch). `dataset-actions.ts`: shared
+   `storeImport`, new `ingestPastedTable`, `ingestGoogleSheet`. UI: working "Link sheet" row, paste detection prompt, wider file
+   picker, starter chips (`web/lib/dataset-starters.ts`). `.xls` refused with a re-save hint. Migration `039` (4 new source kinds).
+3. Real-browser run (harness `HARNESS_REAL_LLM=1`, new flag in `run-next-dev.mjs`) found and fixed: euro/percent columns were text;
+   `2023-Q1` quarters unchartable; per-point labels on dense lines; y-axis clipping; empty new dataset had no guidance. One real public
+   Google Sheet imported. Code review LOW: 1 finding (ODS merged-cell shift), fixed.
+4. Verified: root tsc/web tsc 0 errors; 4650 root + 3475 web tests; benchmark gate PASS; `next build`; own-data e2e 10/10.
+   Migration 039 applied live by the owner's go (`npm run db:migrate`: exactly 039), constraint read back. Pushed `175a20ea`, CI 36576714588.
+5. Owner asked whether pushing costs money: repo is PUBLIC (free Actions); Vercel is on Hobby (no billing, pauses instead) per RUNBOOK.
+
 **Session 145 (2026-09-29, owner present throughout, answering in dialogs; spent nothing on AI).**
 
 1. **State verified at start** (clean tree at `093d6f29`, CI 36564105092 green, no open PRs, prod 200, no A records for

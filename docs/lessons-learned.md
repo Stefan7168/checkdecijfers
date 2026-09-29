@@ -6,6 +6,15 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 146 — own-data import (Excel/ODS/JSON/paste/Google Sheet)
+
+1. **Trying the feature with realistic fake files found five real defects that 4,600 green tests had not** (euro-formatted numbers
+   read as text, `2023-Q1` quarters not chartable, a label on every point of a 48-point line, y-axis clipping, an empty first screen).
+   Generate messy, realistic fixtures (`scripts/make-fake-sheets.ts`) and drive the real UI before calling an import feature done.
+2. **Recharts ignores `valueAccessor` whenever `dataKey` is set** — to label only some points, drop `dataKey` and read the row's display
+   string in the accessor.
+3. **A stale local dev harness on ports 9911/9912/3102 makes a new one die with EADDRINUSE** — check `lsof` first.
+
 ## Session 145 — migrations 037/038 live, the first SEO page (dark), the 1 October recording plan
 
 1. **A code-review pass caught a pre-existing production gap that every test had passed over: `/robots.txt` had 307'd to

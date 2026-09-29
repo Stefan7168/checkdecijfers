@@ -668,6 +668,10 @@ suite green (697/697, unaffected — no new test needed at this layer, matching 
 `websearchEnabled`/`WORKSPACE_ENABLED` precedent of no page-level test file), both typechecks + a
 real `next build` clean, `/code-review` LOW: 0 findings.
 
+**Import formats (session 146, [#354](open-questions.md)) — BUILT + LIVE:** Excel `.xlsx`, OpenDocument `.ods`, JSON, pasted tables and
+Google Sheet share links now ingest through the same pipeline as CSV (`src/attachments/ingest/formats.ts`, `gsheet.ts`); migration 039
+added the source kinds. Real Drive OAuth, `.xls`, PDF and web-page links remain unbuilt (WP202b/c).
+
 **"Link toevoegen" demo preview (session 86, owner request — NOT WP202b):** the owner asked to see
 the attachment entry points for demoing the product to other people, before WP202b's real
 `url_html` ingest is designed/built. `chat.tsx`'s "Link toevoegen" button is now clickable — it
