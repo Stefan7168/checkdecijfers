@@ -13,6 +13,7 @@
 // chart-config-panel.test.tsx import keeps resolving.
 import type { ReactNode } from 'react';
 import { Pencil, SlidersHorizontal } from 'lucide-react';
+import { EDIT_ACTION_ICON_CLASS } from '../lib/chart-action-row.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 
@@ -49,7 +50,10 @@ export function ChartConfigTrigger({
   if (edit) {
     return (
       <Button id={triggerId} type="button" variant="default" size="sm" aria-expanded={open} aria-controls={controlsId} onClick={onToggle}>
-        <Pencil aria-hidden="true" />
+        {/* Round 2 (session 143): the pencil goes on the phone card
+          * (< 20rem action row), the word never does — see
+          * web/lib/chart-action-row.ts for the measured tiers. */}
+        <Pencil aria-hidden="true" className={EDIT_ACTION_ICON_CLASS} />
         {t(lang, 'chart.edit.trigger')}
       </Button>
     );

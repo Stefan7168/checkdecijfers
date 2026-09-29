@@ -29,12 +29,12 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-143-kickoff.md](sess
   Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
-  - (a) the answer chart — **round 1 BUILT and on `main` (session 142, see the session-142 archive entry for the SHA):**
-    title → headline / one number → chart → caveats → source line → one row Edit · Download · Embed · Share · Insights
-    (the owner's five); every control lives in the one Edit popup (opens in table form too); owner-owned strips
-    (caption, notes, goal lines, period ranges) show on the card only when they hold something. Screenshots (desktop
-    dark + light, phone, popup) were sent to the owner; **waiting for "I would share this" or change requests
-    ([#346](open-questions.md))**;
+  - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
+    session 143, SHAs in the archive entries):** title → headline / one number → chart → caveats → source line → one
+    row Edit · Download · Embed · Share · Insights (the owner's five); every control lives in the one Edit popup (opens
+    in table form too); owner-owned strips show on the card only when they hold something. The owner's two round-1
+    change requests (the row wrapped; the subtitle showed a raw CBS code) are fixed in round 2 — the row is a CSS
+    container with measured icon-collapse tiers, the code is stripped display-only ([#346](open-questions.md));
   - (b) the Edit popup, redesigned with the design skills (interface, data-viz, component library), light + dark — the
     owner will decide its shape when they see it; residual to fix there: keyboard cost of the bottom row ([#348](open-questions.md));
   - (c) the homepage with a real chart above the fold, plus the gallery cold-start fix ([#347](open-questions.md)).

@@ -6,6 +6,31 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 143 — part (a) round 2: the action row that would not stay on one line
+
+1. **Owner-facing screenshots: Playwright, not the browser pane.** The pane's screenshot is capped at ~800 px wide and
+   its `zoom` region crop is "not yet supported", so a card shot from the pane is unreadable on a phone. The repo's
+   Playwright helpers against the already-running harness (`preview_start` name `harness`, then a script that reuses
+   :3102) give 2× captures in ~20 s per width. Two traps met on the way: (a) `getByRole('button', { name: 'Bewerken' })`
+   also matches the title's "Titel bewerken" pencil — use `exact: true`; (b) an element screenshot of the card inside
+   the chat's inner scroll container comes back clipped to the viewport — give the phone context a tall viewport
+   (390×1900) first, then `locator.screenshot()`.
+2. **Measure before choosing responsive tiers, then measure again.** The first icon-collapse tier was sized from the
+   desktop numbers (five words = 483 px) and still wrapped on the phone: "Bewerken" + four icon buttons at the default
+   `size="sm"` padding is 273 px against a 258 px card. One `page.evaluate` that reports the row width, the number of
+   distinct button `top`s and each button's visible word turned the guesswork into a 30-second loop; the final tiers
+   (32rem / 20rem, tighter padding and gap, pencil hidden) are documented with their arithmetic in
+   `web/lib/chart-action-row.ts`. Tailwind v4's `@container` + `@max-lg:` variants did all of it without JS.
+3. **A mid-turn owner idea goes into open-questions immediately, under a codename.** The owner dropped a "note this
+   for later" request (a white-glove service page, benchmarked against a named competitor) while the fix was in
+   progress. Recorded as #349 in the same minute — with the competitor codenamed ("Competitor L"), because the repo is
+   public and the Competitor-G rule applies — and the real name only in the session's local memory. No task chip
+   (owner rule), no scope creep into the current work.
+4. **CBS dimension titles can carry their own classification code.** 568 titles in the fixtures start with a COICOP
+   code ("000000 Alle bestedingen"); the card showed it verbatim for months because the label was correctly treated as
+   an untouchable spec string. Stripping digits from a spec string is safe under the whole-card digit scan (it can only
+   remove numbers), so a display-only regex at the render site was enough — the proof panel keeps the raw title.
+
 ## Session 142 — moving every chart control into one popup (WP-LOOK part (a))
 
 1. **A UI relocation is mostly a test relocation.** Moving the form tabs, selects, undo/redo and co-pilot input from the

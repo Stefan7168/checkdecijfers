@@ -1292,8 +1292,15 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   history, Style panel, Download/Embed, co-pilot input), the popup opens in table form too, and the caption / notes /
   goal-line / period-range strips show on the card only when they hold something. Share = copy a link to the chart's
   public embed page (same signed token as Embed; `web/components/chart-share-button.tsx`). Verified in the hermetic
-  harness at desktop dark + light and phone width. Residual for (b): keyboard cost of the bottom row (#348). Awaiting
-  the owner's "I would share this" (#346).
+  harness at desktop dark + light and phone width. Residual for (b): keyboard cost of the bottom row (#348).
+  **Round 2 BUILT (session 143, 2026-09-29) — the owner's two change requests on the round-1 screenshots, ruling "fix
+  those two first, then it's done":** (1) the five-button row wrapped (two lines with the chat list open, three on a
+  phone) → the row is a CSS container and the words collapse to icons in measured tiers driven by the row's own width
+  (`web/lib/chart-action-row.ts`: all five words ≥ 32rem; Download/Embed/Share icon-only below that; Insights icon-only
+  and Edit without its pencil below 20rem — the phone card); accessible names unchanged (sr-only), hover titles added.
+  (2) the subtitle showed CBS's raw classification code ("% 000000 Alle bestedingen") → `stripDimensionCode`
+  (`web/lib/dim-label.ts`, display-only; spec, audit row and proof panel keep the raw title). Measured one line at 430,
+  366 and 258 px row widths. **Part (a) is DONE on the owner's ruling once this lands green (#346).**
 - **(b) The Edit popup** (extend `web/components/chart-edit-modal.tsx`, which already holds Style and Embed since
   session 101): one popup, the live chart on one side, on the other a tidy, sectioned set of controls (chart type, style
   and template, period, annotations = goal lines + period ranges + notes, insights, "ask to change"). Designed with the

@@ -14,7 +14,8 @@
 // toast: "Link copied", or the reason it did not work. Every string is a
 // digit-free catalogue string (the whole-card digit scan, R6/#254, is
 // unaffected).
-import { Link2 } from 'lucide-react';
+import { Check, Link2 } from 'lucide-react';
+import { UTILITY_ACTION_BUTTON_CLASS, UTILITY_ACTION_LABEL_CLASS } from '../lib/chart-action-row.ts';
 import { useEffect, useState } from 'react';
 import { createEmbedCode } from '../app/embed-actions.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
@@ -87,9 +88,16 @@ export function ChartShareButton({
       title={disabled ? t(lang, 'chart.embed.readingDisabledReason') : t(lang, 'chart.share.hint')}
       aria-live="polite"
       data-slot="chart-share"
+      className={UTILITY_ACTION_BUTTON_CLASS}
     >
-      <Link2 aria-hidden="true" />
-      {label}
+      {/* Round 2 (session 143): the word collapses to sr-only below the
+        * action row's 32rem width (web/lib/chart-action-row.ts) — so the
+        * "copied" confirmation also shows as a tick in the icon, not only
+        * in the (then invisible) word. aria-live still announces it. */}
+      {status === 'copied' ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />}
+      <span className={UTILITY_ACTION_LABEL_CLASS} data-slot="chart-action-label">
+        {label}
+      </span>
     </Button>
   );
 }

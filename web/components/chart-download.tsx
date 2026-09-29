@@ -21,6 +21,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject 
 import { Download } from 'lucide-react';
 import { Button } from './ui/button.tsx';
 import { t, type Lang } from '../lib/i18n/messages.ts';
+import { UTILITY_ACTION_BUTTON_CLASS, UTILITY_ACTION_LABEL_CLASS } from '../lib/chart-action-row.ts';
 import {
   FRAME_CORNER_PX,
   FRAME_GRADIENT_ANGLE,
@@ -1115,9 +1116,16 @@ export function ChartDownloadMenu({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
+        title={t(lang, 'chart.download.trigger')}
+        className={UTILITY_ACTION_BUTTON_CLASS}
       >
         <Download aria-hidden="true" />
-        {t(lang, 'chart.download.trigger')}
+        {/* Round 2 (session 143): the word collapses to sr-only below the
+          * action row's 32rem width (web/lib/chart-action-row.ts); the
+          * accessible name and the hover title stay. */}
+        <span className={UTILITY_ACTION_LABEL_CLASS} data-slot="chart-action-label">
+          {t(lang, 'chart.download.trigger')}
+        </span>
       </Button>
       {open ? (
         <div className="absolute right-0 z-10 mt-1 rounded-md border border-border bg-card shadow-sm">

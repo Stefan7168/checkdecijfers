@@ -81,8 +81,14 @@ looks finished untouched.
 - **Part (a), round 1 — session 142, 2026-09-29, `14e1687a` + `298d4d80` (CI 36529117701 green):** the card is title →
   headline / big number → chart → caveats → source line → one action row Edit · Download · Embed · Share · Insights (the
   owner's own five, open-questions #346); every control lives in the one Edit popup, nothing removed. Share = a link to
-  the public embed page (cheapest mechanism, same signed token as Embed). Owner sign-off pending (#346). Residual for
-  part (b): #348 (keyboard cost of the bottom row).
+  the public embed page (cheapest mechanism, same signed token as Embed). Residual for part (b): #348 (keyboard cost
+  of the bottom row).
+- **Part (a), round 2 — session 143, 2026-09-29 (SHA in the status-archive entry):** the owner's reaction to the
+  round-1 screenshots was two change requests with the ruling "fix those two first, then it's done" — the action row
+  wrapped (chat list open: two lines; phone: three) and the subtitle carried CBS's raw code ("% 000000 Alle
+  bestedingen"). Fixed with no JS and no schema change: the row is a CSS container whose button words collapse to icons
+  in measured tiers (`web/lib/chart-action-row.ts`), and a display-only `stripDimensionCode` (`web/lib/dim-label.ts`).
+  With that, **part (a) is signed off on the owner's ruling (#346)**; part (b) is next.
 
 ## Revisit triggers
 

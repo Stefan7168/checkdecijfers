@@ -9,6 +9,7 @@
 // existing chart-story.test.tsx import keeps resolving.
 import type { ReactNode } from 'react';
 import { WandSparkles } from 'lucide-react';
+import { INSIGHTS_ACTION_BUTTON_CLASS, INSIGHTS_ACTION_LABEL_CLASS } from '../lib/chart-action-row.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 
@@ -39,10 +40,15 @@ export function ChartStoryTrigger({ open, onToggle, controlsId, triggerId, lang 
         aria-expanded={open}
         aria-controls={controlsId}
         onClick={onToggle}
-        className="rounded-[6px] bg-card text-foreground hover:bg-muted aria-expanded:bg-muted"
+        className={`rounded-[6px] bg-card text-foreground hover:bg-muted aria-expanded:bg-muted ${INSIGHTS_ACTION_BUTTON_CLASS}`}
       >
         <WandSparkles aria-hidden="true" />
-        {t(lang, 'chart.story.trigger')}
+        {/* Round 2 (session 143): the word collapses to sr-only only below
+          * the action row's 20rem width — the phone card — where Bewerken
+          * plus four icons is all that fits (web/lib/chart-action-row.ts). */}
+        <span className={INSIGHTS_ACTION_LABEL_CLASS} data-slot="chart-action-label">
+          {t(lang, 'chart.story.trigger')}
+        </span>
       </Button>
     </span>
   );

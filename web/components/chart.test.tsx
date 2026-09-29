@@ -2337,6 +2337,45 @@ describe('chart-card polish (2026-09-15) — a quiet control row and header acti
     expect(container.querySelector('[data-slot="chart-controls"]')).toBeNull();
     expect(screen.queryByRole('tablist', { name: 'Weergave' })).toBeNull();
   });
+  // WP-LOOK part (a) round 2 (session 143): the owner's first reaction to
+  // the round-1 screenshots — the five-button row wrapped onto two lines
+  // with the chat list open and onto three on a phone. The row is now a
+  // CSS container: below 32rem the three utility buttons (Download,
+  // Insluiten, Delen) keep only their icon and their accessible name; below
+  // 20rem Inzichten does too. Bewerken, the primary, always keeps its word.
+  // The names never change (sr-only, not removed), so every getByRole in
+  // this file and the e2e smoke keep resolving.
+  it('the action row is a CSS container whose labels collapse to icons in tiers, so it never wraps; the accessible names stay', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
+    expect(actions.className).toContain('@container');
+    expect(actions.className).toContain('@max-xs:gap-1.5');
+    const labelOf = (name: string) =>
+      screen.getByRole('button', { name }).querySelector('[data-slot="chart-action-label"]') as HTMLElement;
+    for (const name of ['Download', 'Insluiten', 'Delen']) {
+      expect(labelOf(name).className).toContain('@max-lg:sr-only');
+      expect(labelOf(name).textContent).toBe(name);
+    }
+    expect(labelOf('Inzichten').className).toContain('@max-xs:sr-only');
+    // The primary never loses its word.
+    expect(screen.getByRole('button', { name: 'Bewerken' }).querySelector('[data-slot="chart-action-label"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Bewerken' }).textContent).toBe('Bewerken');
+    // Icon-only states still explain themselves on hover: every utility
+    // button carries an icon and a title.
+    for (const name of ['Download', 'Insluiten', 'Delen']) {
+      const b = screen.getByRole('button', { name });
+      expect(b.querySelector('svg')).not.toBeNull();
+      expect(b.getAttribute('title')).toBeTruthy();
+    }
+  });
+  it('the subtitle shows the human dimension label without CBS’s leading code ("000000 Alle bestedingen" reads "Alle bestedingen")', () => {
+    const s = spec({ dimLabels: { Bestedingscategorieen: '000000 Alle bestedingen' } });
+    const { container } = render(<ChartView spec={s} />);
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    const subtitle = heading.nextElementSibling as HTMLElement;
+    expect(subtitle.textContent).toContain('Alle bestedingen');
+    expect(subtitle.textContent).not.toContain('000000');
+  });
   it('the Vanaf/Tot selects share the Weergave row — one control row, not two — and keep their labels; that row now sits inside the Edit popup', async () => {
     const { container } = render(<ChartView spec={fourYearLineSpec()} />);
     // Not on the card at all any more.

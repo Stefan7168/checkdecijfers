@@ -147,6 +147,8 @@ import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { ChartShareButton } from './chart-share-button.tsx';
+import { stripDimensionCode } from '../lib/dim-label.ts';
+import { ACTION_ROW_CLASS } from '../lib/chart-action-row.ts';
 import { buildFindings } from '../lib/chart-insights.ts';
 import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
@@ -3562,7 +3564,13 @@ export function ChartView({
               * value here is still a spec string (dimLabels), so R6/#254's
               * digit-scan exemption is unaffected — only the machine-key
               * prefix is dropped, never the label itself. */}
-            {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => v).join(' · ')}</span> : null}
+            {/* WP-LOOK part (a) round 2 (session 143): CBS's own title can
+              * carry the classification code in front ("000000 Alle
+              * bestedingen" — the CPI categories); the reader gets the words
+              * only (stripDimensionCode, display-only — the spec, the audit
+              * row and the proof panel keep the raw title). Dropping digits
+              * from a spec string cannot add a number to the card. */}
+            {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => stripDimensionCode(v)).join(' · ')}</span> : null}
           </div>
         </div>
       </div>
@@ -4790,9 +4798,16 @@ export function ChartView({
         * gates (never in small-multiples view: ChartDownloadMenu exports the
         * first <svg>, one series' own mini panel — the same #46(c) risk as
         * before; Embed/Share republish the PRIMARY reading's audit row).
-        * Never in embed or stage mode, exactly as the old header actions. */}
+        * Never in embed or stage mode, exactly as the old header actions.
+        *
+        * Round 2 (session 143): the row is a CSS container (`@container`) —
+        * the words next to the icons collapse to sr-only spans in tiers
+        * driven by THIS row's width (web/lib/chart-action-row.ts), so the
+        * five stay on one line in the dock with the chat list open and on
+        * a phone, where round 1 wrapped to two and three lines. `flex-wrap`
+        * stays as the last-resort safety net only. */}
       {!embedMode && !inStage ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-slot="chart-card-actions">
+        <div className={ACTION_ROW_CLASS} data-slot="chart-card-actions">
           <ChartConfigTrigger
             open={styleOpen}
             onToggle={toggleStylePanel}

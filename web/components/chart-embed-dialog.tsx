@@ -42,7 +42,9 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Code } from 'lucide-react';
 import { createEmbedCode, startProSubscriptionCheckout } from '../app/embed-actions.ts';
+import { UTILITY_ACTION_BUTTON_CLASS, UTILITY_ACTION_LABEL_CLASS } from '../lib/chart-action-row.ts';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import { ChartEditModal } from './chart-edit-modal.tsx';
@@ -239,11 +241,18 @@ export function ChartEmbedButton({
         variant="ghost"
         size="sm"
         disabled={disabled}
-        title={disabled ? t(lang, 'chart.embed.readingDisabledReason') : undefined}
+        title={disabled ? t(lang, 'chart.embed.readingDisabledReason') : t(lang, 'chart.embed.trigger')}
         aria-describedby={disabled ? disabledReasonId : undefined}
         onClick={() => onOpenChange(true)}
+        className={UTILITY_ACTION_BUTTON_CLASS}
       >
-        {t(lang, 'chart.embed.trigger')}
+        {/* Round 2 (session 143): an icon like its neighbours, so the
+          * button still reads when its word collapses to sr-only below the
+          * action row's 32rem width (web/lib/chart-action-row.ts). */}
+        <Code aria-hidden="true" />
+        <span className={UTILITY_ACTION_LABEL_CLASS} data-slot="chart-action-label">
+          {t(lang, 'chart.embed.trigger')}
+        </span>
       </Button>
       {disabled ? (
         <span id={disabledReasonId} className="sr-only">
