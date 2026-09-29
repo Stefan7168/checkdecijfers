@@ -45,7 +45,7 @@ on-demand onboarding only delivers time-only tables (7% of current tables), cost
 
 ## As built — step 2 (session 138, 2026-09-28, branch `breadth-step-2`)
 
-- Migration **037 (FILE-ONLY)**: `cbs_tables.ingest_mode` ('full' | 'slice_cache'), `cbs_tables.schema_cbs_modified`,
+- Migration **037** (file-only at build time; **applied to the live database 2026-09-29, session 145, together with 038**): `cbs_tables.ingest_mode` ('full' | 'slice_cache'), `cbs_tables.schema_cbs_modified`,
   table `slice_fetches` (filter_key, normalized filter, cbs_modified, checked_at, row_count, batch_id — cascade on table
   and batch delete), `ingestion_batches` failure stage `ingest_mode`. Everything new is probe-guarded or unreachable
   until 037 is applied; full tables are byte-identical (verified by the unchanged test suites).
@@ -138,7 +138,7 @@ exactly as before (pinned by the existing suites). Nothing here has run against 
 1. **Routing (request path, our database only).** A curated miss in a thread-aware turn (the workspace chat) that the
    existing table finder matches to a CBS table used to become the 100-credit onboarding offer. With the flag on it
    becomes a **table-lane request** instead: `createTableLaneRequest` reserves the normal question price and inserts a
-   `table_lane_requests` row in ONE transaction (migration **038**, FILE-ONLY; a failed insert rolls the charge back). The
+   `table_lane_requests` row in ONE transaction (migration **038**, file-only at build time, applied live 2026-09-29 session 145; a failed insert rolls the charge back). The
    routing turn itself stays free (the gate already refunded it) and is not attached to the thread; the row links it
    (`routing_audit_id`) so the question history hides it and per-conversation deletion redacts it (final review I2/I3).
    A web add-on on that turn is settled before the row is created (final review M1). If queueing throws,
@@ -235,7 +235,7 @@ input tokens for the recording run.
 
 **Process.** Subagent-driven development: seven build tasks, each reviewed by the most capable tier, six with a fix round.
 
-**Go-live needs ALL of:** migrations 037 + 038 applied (owner, `npm run db:migrate`); `TABLE_LANE_ENABLED=1`;
+**Go-live needs ALL of:** migrations 037 + 038 applied (✅ DONE 2026-09-29, session 145, owner present — `npm run db:migrate`, exactly those two, verified read-only); `TABLE_LANE_ENABLED=1`;
 `ONBOARDING_ENABLED=1` (already set); `CRON_SECRET` (already set — the job route and the daily sweep both refuse to run
 without it, so a queued row would hold the reader's credits with nothing to answer or refund it); the parser recording + calibration run (after 2026-10-01, [#338](../open-questions.md));
 and step 6's benchmark. Sequence and manual job kick: RUNBOOK "Table lane (breadth step 5)".

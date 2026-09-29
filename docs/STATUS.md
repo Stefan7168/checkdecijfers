@@ -17,7 +17,7 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 144 — verify against `git log` / Actions runs before
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 144, updated session 145 — verify against `git log` / Actions runs before
 trusting this). Kickoff: [session-briefs/2026-09-29-session-145-kickoff.md](session-briefs/2026-09-29-session-145-kickoff.md).**
 
 - **⚑ THE ADR 063 GATE IS PASSED (session 144, 2026-09-29):** the owner said "I would share this" about (a) the answer
@@ -33,12 +33,16 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-145-kickoff.md](sess
   started:** both hostnames are ADDED to the Vercel project; the two Cloudflare A records are the owner's step (chose
   "later") — RUNBOOK "Wiring graphmaker.studio". The `NEXT_PUBLIC_APP_URL` switch waits for the records. Owner idea
   [#353](open-questions.md): SEO landing pages per data source under the new domain, after the domain is live.
-- **NEXT (owner-chosen order, nothing picked yet — the kickoff recommends):** (1) wire the domain when the owner sets
-  DNS (a session can verify and switch the address, owner present); (2) **breadth** — the owner's own pre-Look priority
-  ([#335](open-questions.md)): apply migrations 037 + 038 (owner-supervised live DDL), then the recording + calibration
-  run after the spend reset (2026-10-01, [#338](open-questions.md)), then step 6 and the `TABLE_LANE_ENABLED` flip;
-  (3) regional statistics Part 2 (branch `regional-stats-part2`), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)),
-  Pro plan, brand colours — all still paused by the owner's call, no longer by the gate.
+- **⚑ BREADTH RESUMED (session 145, 2026-09-29, owner pick): migrations 037 + 038 APPLIED on the live database**
+  (owner present; `npm run db:migrate` applied exactly those two; `slice_fetches`, `table_lane_requests`, the two
+  `cbs_tables` columns, 8 indexes, RLS and the widened `failure_stage` check verified read-only; all 21 tables read
+  `ingest_mode = 'full'`; prod 200 after). Still dark for readers: `TABLE_LANE_ENABLED` unset, parser never recorded.
+- **NEXT (owner-chosen order):** (1) **breadth** ([#335](open-questions.md)) — on/after 2026-10-01 the recording +
+  calibration run (owner-supervised AI spend, ~114k input tokens cheap tier, [#338](open-questions.md), RUNBOOK
+  "Table-parser recording run"), then step 6's table-lane benchmark, then the `TABLE_LANE_ENABLED` flip; (2) wire the
+  domain when the owner sets DNS (no A records as of 2026-09-29 12:00 UTC; a session verifies and switches the address,
+  owner present); (3) regional statistics Part 2 (branch `regional-stats-part2`), Eurostat E2a steps 0/5/6
+  ([#313](open-questions.md)), Pro plan, brand colours — still paused by the owner's call, no longer by the gate.
 - **Direction (ADR 063, unchanged):** ONE product — a beautiful, sourced chart of official Dutch and European
   statistics. Review that fed it: [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
 - **#347 (gallery cold start) FIXED + measured:** the curated set persists in Next's Data Cache across instances; the

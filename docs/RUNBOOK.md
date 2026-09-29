@@ -1082,9 +1082,11 @@ publishes no machine status for it. Three things to know:
 A **slice-cache** table (`cbs_tables.ingest_mode = 'slice_cache'`) holds only the cells questions asked for, fetched on
 demand (`src/ingestion/slice-cache.ts`). Operational facts:
 
-1. **Migration 037 is FILE-ONLY** until the owner runs `npm run db:migrate` (owner-supervised live DDL). Apply it together
-   with 038 before the table lane goes live (see "Table lane (breadth step 5)" below); until then every code path is
-   probe-guarded, and with `TABLE_LANE_ENABLED` off nothing calls the slice cache.
+1. **Migration 037 is APPLIED on the live database (2026-09-29, session 145, owner present — together with 038, the
+   only two that applied; `schema_migrations` 37 + 38, `slice_fetches` and both `cbs_tables` columns verified read-only
+   afterwards, all 21 registered tables read `ingest_mode = 'full'`).** Every code path stays probe-guarded (it still runs
+   on a database without the column, e.g. an older PGlite snapshot), and with `TABLE_LANE_ENABLED` off nothing calls the
+   slice cache.
 2. **`ingest sync <id>` refuses a slice-cache table** (failure stage `ingest_mode`, not quarantined); **`sync --all`
    skips them** with a log line. They are refreshed per question by `ensureSlice`, never by a whole-table sync.
 3. **A quarantined slice-cache table has no `--rebaseline` path yet.** Recovery: evict it (`tables:evict --apply`,
@@ -1102,9 +1104,11 @@ the answer, a button question or a refusal into the conversation. Every non-answ
 down to the small clarification price).
 
 **Go-live sequence (owner present, in this order; each step is a separate supervised action):**
-1. **Apply migrations 037 and 038** — `npm run db:migrate` from the repo root (live DDL; additive only, a new table and
-   new columns, nothing existing changes). Expect exactly those two to apply. Verify afterwards that `slice_fetches` and
-   `table_lane_requests` exist (read-only recipe: "Read-only questions to the live database").
+1. ✅ **DONE 2026-09-29 (session 145, owner present): migrations 037 and 038 applied** — `npm run db:migrate` reported
+   exactly `037_slice_cache.sql, 038_table_lane_requests.sql`; verified read-only afterwards: both tables exist with RLS
+   auto-enabled (migration 003's mechanism), all 8 expected indexes present, the `failure_stage` check now includes
+   `ingest_mode`, `cbs_tables.ingest_mode` defaults to `'full'` on all 21 rows; prod still answered 200. `db:migrate` is
+   idempotent — running it again reports "up to date".
 2. **Recording + calibration run of the table parser** — only after 2026-10-01 (the monthly $50 Anthropic spend limit starts over), see
    "Table-parser recording run" below. Now 39 cases, prompt version 3. Nothing about the lane is trustworthy before this.
 3. **Step 6: the table-lane benchmark** (its own work package: 0 fabricated numbers, refusals correct) on the recorded parser.

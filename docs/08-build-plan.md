@@ -1208,24 +1208,25 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
-## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), STEP 6 PAUSED until the look gate (ADR 063, session 141)
+## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), MIGRATIONS 037+038 ✅ APPLIED LIVE (session 145), NEXT = recording run after 2026-10-01 then STEP 6 (the look gate passed session 144)
 
 Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.md)) chose breadth over depth. Design:
 [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
 - **Step 1 ✅** all 1,277 current tables measured (metadata only): reach ≈ 88%; 57% need no follow-up question.
 - **Step 2 ✅** slice cache (plan [step 2](superpowers/plans/2026-09-28-breadth-step-2-slice-cache.md)): `registerSchemaOnly`,
-  `fetchSlice`, `ensureSlice`, slice-cache answering with per-slice confirmation dates; migration 037 FILE-ONLY; wired to chat in step 5.
+  `fetchSlice`, `ensureSlice`, slice-cache answering with per-slice confirmation dates; migration 037 (APPLIED live 2026-09-29, session 145); wired to chat in step 5.
 - **Step 3 ✅** breakdown resolver (plan [step 3](superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md), session 139): `src/query/breakdowns.ts` — CBS grand total by a measured rule (tightened in review), else one button question; 1,362 of 1,785 breakdowns resolved, 575 of 923 tables need no follow-up question; used by the table lane since step 5.
 - **Step 4 ✅ built hermetically** (session 139): plan [step 4](superpowers/plans/2026-09-28-breadth-step-4-table-parser.md) — `src/answer/table-parse/` (closed-choice parser + allowlist validator + bridge), 34-case labelled set, eval script. Recording + calibration run: owner-supervised after 2026-10-01, after the pre-recording items in [#339](open-questions.md).
 - **Step 4b ✅** (session 139): plan [step 4b](superpowers/plans/2026-09-29-breadth-step-4b-pre-recording.md) — measure groups, place kinds, versions 2, seasonal default; #339 items 1–4 closed.
 - **Step 5 ✅ built, merged DARK behind `TABLE_LANE_ENABLED`** (session 140, 2026-09-29): plan [step 5](superpowers/plans/2026-09-29-breadth-step-5-table-lane-wiring.md) —
-  migration 038 (`table_lane_requests`, FILE-ONLY), a request store with debit + settlement in one transaction, `planTableLane`
+  migration 038 (`table_lane_requests`; APPLIED live 2026-09-29, session 145), a request store with debit + settlement in one transaction, `planTableLane`
   (the one tagged outcome: refuse / ask / fetch), the audited answer / button question / refusal with a `tableLane` envelope, the
   background job (`/api/table-lane-job`, kicked per question + swept daily), the chat progress bubble, breakdown buttons and
   typed replies, follow-ups that reuse the table, parser prompt v3 (39 labelled cases). Only the workspace chat routes to the lane.
   Design items closed in [#336](open-questions.md) / [#339](open-questions.md) (status blocks there); new rows #340–#345 (deliberate
   refusals, the 24 h cached-slice assumption, where the lane does not reach, hygiene minors). ADR 062 "As built — step 5".
-- **Next (owner-supervised, in order):** apply migrations 037 + 038 → the recording + calibration run (after 2026-10-01, ~114k input tokens,
+- **Migrations 037 + 038 ✅ APPLIED on the live database (session 145, 2026-09-29, owner present; RUNBOOK "Table lane" step 1).**
+- **Next (owner-supervised, in order):** the recording + calibration run (after 2026-10-01, ~114k input tokens,
   cheap tier; [#338](open-questions.md)) → **step 6** table-lane benchmark (0 fabricated, refusals correct; also measures #340/#342/#343/#344) →
   flip `TABLE_LANE_ENABLED` (RUNBOOK "Table lane (breadth step 5)").
 
