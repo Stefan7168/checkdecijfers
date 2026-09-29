@@ -7,7 +7,7 @@ Read order: `CLAUDE.md` → `docs/STATUS.md` top block → this file. Verify eve
 
 - **Direction (ADR 063, session 141):** ONE product = a sourced chart of official statistics; ONE Edit button → ONE popup
   with ALL editing; nothing removed; gate = the owner says "I would share this" for (a) chart, (b) popup, (c) homepage.
-- **Part (a), round 1, is on `main` (session 142):** the card is title → headline / big number → chart → caveats →
+- **Part (a), round 1, is on `main` (session 142: `14e1687a`, then `298d4d80` for the e2e smoke + popup scroll; CI 36529117701 green incl. deploy):** the card is title → headline / big number → chart → caveats →
   source line → one action row **Edit · Download · Embed · Share · Insights** (the owner's own five, open-questions
   #346). Every control moved into the popup (`web/components/chart.tsx`, `chart-edit-modal.tsx`); the popup opens in
   table form too; the caption / notes / goal-line / period-range strips show on the card only when they hold content;

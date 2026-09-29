@@ -98,7 +98,7 @@ markers alone (closing the one exception decision 10 above had left standing). (
 gallery article pad **`p-5 sm:p-6`** (was `p-4`); the dock's own narrow side panel stays `p-4` by design.
 (3) The Weergave tabs are now **quiet underline tabs** (no filled track, no raised segment) sharing one control
 row with the Vanaf/Tot selects; `Opmaak` moved into the card's **header** as an icon-only button next to
-`Inzichten` — see "Answer card and chart panel layout" below, corrected in the same session. (4) A **headline
+`Inzichten` — see "Answer card and chart panel layout" below, corrected in the same session **(superseded 2026-09-29, session 142: the tabs, selects and Opmaak now all live in the one Edit popup — see the superseded note in that section)**. (4) A **headline
 figure** leads the card: the last plotted value of a single-series line chart, large above the chart, with the
 existing trend-headline sentence moved directly under it — a selection over the spec, never a computation, null
 for multi-series/comparison/table/stage. Not built in this pass (owner-gated, Task 5): a small frame padding

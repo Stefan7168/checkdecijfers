@@ -76,6 +76,14 @@ looks finished untouched.
 - The public claim ("every number traceable to an official CBS cell, with source and date shown") is unchanged.
   Principles (a), (b), (c) are unchanged; this ADR moves nothing in the answer pipeline.
 
+## As built
+
+- **Part (a), round 1 — session 142, 2026-09-29, `14e1687a` + `298d4d80` (CI 36529117701 green):** the card is title →
+  headline / big number → chart → caveats → source line → one action row Edit · Download · Embed · Share · Insights (the
+  owner's own five, open-questions #346); every control lives in the one Edit popup, nothing removed. Share = a link to
+  the public embed page (cheapest mechanism, same signed token as Embed). Owner sign-off pending (#346). Residual for
+  part (b): #348 (keyboard cost of the bottom row).
+
 ## Revisit triggers
 
 - The look phase passes four weeks (2026-10-27) without the owner saying "done" on part (a): re-run the sanity check

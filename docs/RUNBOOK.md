@@ -2489,6 +2489,13 @@ The harness is no longer only a manual tool: **seven Playwright tests run it on 
 `web/playwright.config.ts`, inside the existing `web` job — no new job, the owner pays for these minutes). Still
 hermetic: no secrets, no network beyond npm + the browser download, no LLM spend.
 
+**Run it locally BEFORE pushing a change to the chart card's controls (added session 142, 2026-09-29):**
+`cd web && npx playwright test e2e/cbs-copilot.spec.ts e2e/chart-copilot.spec.ts --reporter=line` (~2 min once the
+harness has booted; Playwright's `webServer` starts the harness itself, so nothing else may listen on 3102). The
+verification block (`scripts/verify-block.sh`) does NOT include this smoke — session 142's first push was green in the
+block and red in CI for exactly this reason (docs/lessons-learned.md, session 142, lesson 6). The specs open the Edit
+popup with `openEdit(page)` from `web/e2e/harness.ts` before touching any control.
+
 **Why.** Session 110's third UX audit found "Bewijs deze cijfers" — the product's namesake action — present on a
 LIVE answer and missing from every STORED one: `buildAnswerProof` imported `syncDateLabel` from a `'use client'`
 module, which throws when a Server Action calls it, and the throw was swallowed by a catch. vitest loads both

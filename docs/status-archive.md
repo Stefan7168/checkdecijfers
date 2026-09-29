@@ -1,5 +1,33 @@
 # STATUS archive — the session log
 
+**Session 142 (2026-09-29, local UTC+7, owner present for the four mockup questions, then autonomous — WP-LOOK part (a),
+round 1; spent nothing on AI).**
+
+1. **Owner answers on the part (a) mockup** (open-questions #346): chart ≈ 70 % of the card; the action row is **Edit,
+   Download, Embed, Share, Insights** (the owner typed five, the mockup offered three); the popup's shape is decided later,
+   when the owner sees it; light/dark follows the visitor's system setting.
+2. **Built (`14e1687a`):** the card is title → headline / big number → chart → caveats → source line → one action row;
+   every reader control moved into the one Edit popup (`web/components/chart.tsx` → `chart-edit-modal.tsx`: undo/redo/
+   history, form tabs, reading, period, derived overlays, small multiples, headline draft, Style panel, Download/Embed,
+   co-pilot input); the popup opens in table form too; the caption / notes / goal-line / period-range strips show on
+   the card only when they hold content; ⌘Z works inside the popup; Edit is the filled primary button (`ChartConfigTrigger
+   edit`); Download became a ghost button; new `chart-share-button.tsx` copies a link to the public embed page (same signed
+   token as Embed); 8 new interface strings (nl + en). 241 unit tests in 10 files follow the controls into the popup
+   (`chart.test.tsx` by a cheap-tier agent; nine files by hand). Three real bugs found by the tests, fixed: selecting Tabel
+   closed the popup; the Style section stole focus when it remounted; ⌘Z was dead inside the popup.
+3. **Verification on `14e1687a`:** typechecks green; backend 4,622/4,622; benchmark GATE PASS (6/6 refusals, 0
+   fabricated); web 3,406/3,406; `next build` green; `/code-review` LOW no findings. **CI 36526710931 RED** — the
+   Playwright e2e smoke only (7 specs still clicked controls on the card); deploy skipped.
+4. **Fix (`298d4d80`):** the two smoke specs open the popup first (`openEdit` in `web/e2e/harness.ts`, 1100 px viewport);
+   the smoke also found that the popup's chart column could not scroll at laptop height (note form and "Periode
+   markeren" unreachable) — fixed in `chart-edit-modal.tsx`. Playwright 23/23 locally; web 3,406/3,406; **CI 36529117701
+   GREEN incl. deploy**; prod answers 200.
+5. **Visual check:** hermetic harness + the built-in browser (session cookie via `document.cookie`), desktop dark + light,
+   phone width, the popup — four screenshots sent to the owner. Waiting for "I would share this" (#346) or changes.
+6. **Docs:** 08-build-plan WP-LOOK (a) round 1; STATUS top block; open-questions #346 (owner answers) + #348 (keyboard
+   cost of the bottom row, for part (b)); 12-huisstijl superseded note; ADR 063 as-built; 04-architecture row; RUNBOOK
+   e2e note; lessons (6); [session-143 kickoff](session-briefs/2026-09-29-session-143-kickoff.md).
+
 **Session 141 (2026-09-29, local UTC+7, owner present — the vision review and interview; ran in parallel with session
 140's wrap-up in the SAME checkout; spent nothing on AI).**
 
