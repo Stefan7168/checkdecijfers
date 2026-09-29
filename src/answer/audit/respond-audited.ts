@@ -122,6 +122,13 @@ interface WrapContext {
    * reader — mirrors `options.lang` already threaded into `respondToQuestion`/
    * `respondToClarificationReply` themselves. */
   lang?: 'nl' | 'en';
+  /** Breadth step 5 (table lane, Task 3 fix round 1): set ONLY by
+   * respondPreparsedAudited from PreparsedTurn.decorate — applied to the
+   * fail-closed internal-refusal REPLACEMENT below, so a replacement row of a
+   * table-lane turn still carries the lane's envelope (its llm_calls record
+   * the table parse; reconstruct pairs the two). Absent on the curated entry
+   * points ⇒ their replacement is byte-identical. */
+  decorate?: (response: ComposedResponse) => ComposedResponse;
 }
 
 function auditContext(wrap: WrapContext): AuditContext {
@@ -161,7 +168,10 @@ async function persistOrFailClosed(
         (annotated.webSection ?? null) !== null ? { ...annotated, webSection: null } : annotated;
       return { response: stripped, auditId: null };
     }
-    const refusal = toInternalRefusal(wrap.question, note, wrap.lang);
+    const plain = toInternalRefusal(wrap.question, note, wrap.lang);
+    // A decorator may only ADD envelope keys; a kind it changed is ignored.
+    const decorated = wrap.decorate ? wrap.decorate(plain) : plain;
+    const refusal: RefusalResponse = decorated.kind === 'refusal' ? decorated : plain;
     try {
       const auditId = await insertAuditRecord(db, buildAuditRow(refusal, auditContext(wrap)));
       return { response: refusal, auditId };
@@ -345,6 +355,17 @@ export interface PreparsedTurn {
     answerClient: LlmClient;
     semanticCheck?: RespondOptions['semanticCheck'];
   }) => Promise<ComposedResponse>;
+  /** Applied to every fail-closed REPLACEMENT this wrap builds (a throw inside
+   * `produce`, or the internal refusal persistOrFailClosed substitutes when
+   * the first audit write fails) — so a replacement row carries the same
+   * turn-level envelope `produce` puts on its own responses (the table lane's
+   * `tableLane`, which reconstruct pairs with the recorded table parse).
+   * Must not throw. */
+  decorate?: (response: ComposedResponse) => ComposedResponse;
+  /** performance.now() at the start of the turn's work that preceded this
+   * wrap (the table parse), so latencyMs covers it — as the curated path's
+   * latency covers its intent parse. Absent ⇒ the wrap's own start. */
+  startedAt?: number;
 }
 
 /** Breadth step 5 (table lane, Task 3): the audited entry point for a turn
@@ -372,8 +393,9 @@ export async function respondPreparsedAudited(
     pendingClarification: null,
     conversationContext: null,
     tracker,
-    startedAt: performance.now(),
+    startedAt: turn.startedAt ?? performance.now(),
     lang: options.lang,
+    ...(turn.decorate ? { decorate: turn.decorate } : {}),
   };
   let response: ComposedResponse;
   try {
@@ -389,7 +411,8 @@ export async function respondPreparsedAudited(
         : {}),
     });
   } catch (error) {
-    response = toInternalRefusal(turn.question, `preparsed turn failed: ${errorMessage(error)}`, options.lang);
+    const plain = toInternalRefusal(turn.question, `preparsed turn failed: ${errorMessage(error)}`, options.lang);
+    response = turn.decorate ? turn.decorate(plain) : plain;
   }
   return attachAndPersist(db, response, wrap, options);
 }

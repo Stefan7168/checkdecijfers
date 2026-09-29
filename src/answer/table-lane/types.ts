@@ -4,6 +4,7 @@
 import type { CbsCode, CbsTableSchema } from '../../cbs-adapter/types.ts';
 import type { BreakdownQuestion } from '../../query/breakdowns.ts';
 import type { TableParseAudit, TableParseResult } from '../table-parse/parse.ts';
+import type { TableLaneSelection } from './selection-note.ts';
 
 /** One accumulated reader answer to a breakdown or region question: the
  * dimension it answers and the member code the reader picked. Codes are
@@ -46,9 +47,25 @@ export interface TableLaneEnvelope {
    * the question line) — reproducible from the same table metadata. Null
    * when the plan carried no offered menu (a refusal). */
   offeredMenuHash: string | null;
-  /** "Selectie: … · Uitgangspunt: …" in the reader's language — rendered by
-   * the client under the answer, never part of `text`. Null off the fetch
-   * path or when nothing was fixed. */
+  /** Fix round 1 (M2): the table-parse prompt + output-schema versions in
+   * force when this row's parse ran (TABLE_PARSE_PROMPT_VERSION /
+   * TABLE_PARSE_SCHEMA_VERSION). Kept HERE, not in the row's prompt_versions:
+   * that column records the curated prompts on EVERY row, and adding a key
+   * there would change every curated row. Null exactly when parseAudit is
+   * null (no model call ran). */
+  parsePromptVersion: number | null;
+  parseSchemaVersion: number | null;
+  /** Fix round 1 (Ruling R8): the language the lane's own texts on this row
+   * (the selection note) are in — the response's respondOptions.lang. */
+  lang: 'nl' | 'en';
+  /** Fix round 1 (Ruling R8): every fixed breakdown coordinate of the fetch
+   * plan, CBS titles verbatim — the ground truth `selectionNote` is built
+   * from; reconstruct re-derives the note from it byte-identically. Null off
+   * the fetch path. */
+  selection: TableLaneSelection | null;
+  /** "Selectie: … · Uitgangspunt: …" in `lang` = selectionNote(selection,
+   * lang) — rendered by the client under the answer, never part of `text`.
+   * Null off the fetch path or when nothing was fixed. */
   selectionNote: string | null;
   /** slice_fetches.filter_key of the stored slice the answer ran over. */
   sliceFilterKey: string | null;

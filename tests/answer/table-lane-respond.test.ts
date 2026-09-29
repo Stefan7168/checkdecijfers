@@ -2,7 +2,7 @@
 // audited ComposedResponse (src/answer/table-lane/respond.ts):
 //  - fetch  → an answer through the EXISTING respondToIntent + audited wrap
 //             (same checks, same audit write), carrying `tableLane`;
-//  - ask    → a clarification ("Welke <dim> bedoelt u?") with the first 12
+//  - ask    → a clarification ("Welke <dim> bedoel je?") with the first 12
 //             members, a STRIPPED rescue carrier as `pending` (a typed reply
 //             on a stale client is a fresh question, never a curated merge);
 //  - refuse → a typed refusal from deterministic nl + en templates.
@@ -11,7 +11,7 @@
 // CBS fixtures, stub LLM clients — no real LLM call, no live DB.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { ensureSlice, registerSchemaOnly } from '../../src/ingestion/slice-cache.ts';
 import { loadAuditRecord } from '../../src/answer/audit/read.ts';
@@ -21,7 +21,12 @@ import { toInternalRefusal } from '../../src/answer/respond/refusals.ts';
 import { planTableLane, type TableLanePlan, type TableLaneRefusalReason } from '../../src/answer/table-lane/plan.ts';
 import { offeredMenuHash, respondTableLane } from '../../src/answer/table-lane/respond.ts';
 import type { TableLaneTable } from '../../src/answer/table-lane/types.ts';
-import type { TableParseAudit, TableParseResult } from '../../src/answer/table-parse/parse.ts';
+import {
+  TABLE_PARSE_PROMPT_VERSION,
+  TABLE_PARSE_SCHEMA_VERSION,
+  type TableParseAudit,
+  type TableParseResult,
+} from '../../src/answer/table-parse/parse.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import {
   LANE_MEASURE,
@@ -154,6 +159,10 @@ describe('respondTableLane — fetch plan → audited answer', () => {
       parse: plan.parse,
       parseAudit: plan.parseAudit,
       offeredMenuHash: offeredMenuHash(plan.offered),
+      parsePromptVersion: TABLE_PARSE_PROMPT_VERSION,
+      parseSchemaVersion: TABLE_PARSE_SCHEMA_VERSION,
+      lang: 'nl',
+      selection: plan.selection,
       selectionNote: "Selectie: Regio's: Amsterdam",
       sliceFilterKey: filterKey,
       question: null,
@@ -198,6 +207,19 @@ describe('respondTableLane — fetch plan → audited answer', () => {
     expect(audited.response.tableLane?.selectionNote).toBe("Selection: Regio's: Amsterdam");
   });
 
+  it('latencyMs covers the table parse when the job passes its start time (M1)', async () => {
+    const audited = await respondTableLane(db, {
+      row: laneRow(),
+      plan: refusePlan('table_lane_no_measure'),
+      fetch: null,
+      referenceDate: REF,
+      startedAt: performance.now() - 5_000,
+      respondOptions: options(),
+    });
+    const record = await loadAuditRecord(db, audited.auditId!);
+    expect(record!.latencyMs).toBeGreaterThanOrEqual(5_000);
+  });
+
   it('a cached slice answer is marked fromCachedSlice', async () => {
     const plan = await fetchPlan();
     const filterKey = await storeSlice(plan);
@@ -219,13 +241,22 @@ describe('respondTableLane — fetch plan → audited answer', () => {
     const source = await laneSource();
     const reg = await registerSchemaOnly(db, source, LANE_TABLE);
     if (!reg.ok) throw new Error(reg.summary);
-    const audited = await respondTableLane(db, {
-      row: laneRow(),
-      plan,
-      fetch: { ok: true, filterKey: 'not-stored', fromCache: false },
-      referenceDate: REF,
-      respondOptions: options(),
-    });
+    // The query layer's never-serve-an-unaccounted-cell rule makes this an
+    // 'internal' refusal, which pages the owner — asserted, not printed.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let audited;
+    try {
+      audited = await respondTableLane(db, {
+        row: laneRow(),
+        plan,
+        fetch: { ok: true, filterKey: 'not-stored', fromCache: false },
+        referenceDate: REF,
+        respondOptions: options(),
+      });
+      expect(consoleError.mock.calls.some((c) => String(c[0]).startsWith('ADMIN ALERT: INTERNAL refusal'))).toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
     expect(audited.response.kind).toBe('refusal');
     expect(audited.response.tableLane?.sliceFilterKey).toBe('not-stored');
     expect(audited.response.tableLane?.selectionNote).toBe("Selectie: Regio's: Amsterdam");
@@ -243,13 +274,20 @@ describe('respondTableLane — fetch plan → audited answer', () => {
       },
       withTransaction: (fn) => db.withTransaction(fn),
     };
-    const audited = await respondTableLane(failing, {
-      row: laneRow(),
-      plan,
-      fetch: { ok: true, filterKey, fromCache: false },
-      referenceDate: REF,
-      respondOptions: options(),
-    });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let audited;
+    try {
+      audited = await respondTableLane(failing, {
+        row: laneRow(),
+        plan,
+        fetch: { ok: true, filterKey, fromCache: false },
+        referenceDate: REF,
+        respondOptions: options(),
+      });
+      expect(consoleError.mock.calls.some((c) => String(c[0]).startsWith('ADMIN ALERT: INTERNAL refusal'))).toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
     expect(audited.auditId).toBeNull();
     expect(audited.response.kind).toBe('refusal');
     if (audited.response.kind !== 'refusal') return;
@@ -277,13 +315,13 @@ describe('respondTableLane — ask plan → audited clarification', () => {
     return plan;
   }
 
-  it('asks "Welke <dimension> bedoelt u?" with the first 12 members and the full count', async () => {
+  it('asks "Welke <dimension> bedoel je?" with the first 12 members and the full count', async () => {
     const plan = await askPlan();
     const row = laneRow({ question: waterQ, tableId: '82883NED' });
     const audited = await respondTableLane(db, { row, plan, fetch: null, referenceDate: REF, respondOptions: options() });
     const response = audited.response;
     if (response.kind !== 'clarification') throw new Error(`expected a clarification, got ${response.kind}`);
-    expect(response.text).toBe('Welke Watergebruikers bedoelt u? (of typ een andere naam uit de lijst van 52)');
+    expect(response.text).toBe('Welke Watergebruikers bedoel je? (of typ een andere naam uit de lijst van 52)');
     const titles = plan.question.options.map((o) => o.title);
     expect(titles).toHaveLength(12);
     expect(response.options).toEqual(titles);
@@ -311,7 +349,7 @@ describe('respondTableLane — ask plan → audited clarification', () => {
     const audited = await respondTableLane(db, { row, plan, fetch: null, referenceDate: REF, respondOptions: options('en') });
     const response = audited.response;
     if (response.kind !== 'clarification') throw new Error('expected a clarification');
-    expect(response.text).toBe('Welke Watergebruikers bedoelt u? (of typ een andere naam uit de lijst van 52)');
+    expect(response.text).toBe('Welke Watergebruikers bedoel je? (of typ een andere naam uit de lijst van 52)');
     expect(response.english?.text).toBe('Which Watergebruikers do you mean? (or type another name from the list of 52)');
     expect(response.english?.chips).toEqual(response.options.map((o) => ({ label: o, submit: o })));
   });
@@ -329,7 +367,7 @@ describe('respondTableLane — ask plan → audited clarification', () => {
       referenceDate: REF,
       respondOptions: options('en'),
     });
-    expect(audited.response.text).toBe('Welke Watergebruikers bedoelt u?');
+    expect(audited.response.text).toBe('Welke Watergebruikers bedoel je?');
     if (audited.response.kind !== 'clarification') throw new Error('expected a clarification');
     expect(audited.response.english?.text).toBe('Which Watergebruikers do you mean?');
   });
@@ -351,7 +389,7 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
     en: `CBS table "${TITLE}" has no figure that matches this question exactly.`,
   },
   table_lane_unsure: {
-    nl: `Ik weet niet zeker welk cijfer uit CBS-tabel "${TITLE}" u bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
+    nl: `Ik weet niet zeker welk cijfer uit CBS-tabel "${TITLE}" je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
     en: `I'm not sure which figure from CBS table "${TITLE}" you mean. Please ask a more specific question, for example naming the topic, the group or the period.`,
   },
   table_lane_period_unsupported: {
@@ -359,7 +397,7 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
     en: `I can't look up this kind of period in CBS table "${TITLE}" yet. Name a year, quarter or month, or a range of years.`,
   },
   table_lane_period_grain: {
-    nl: `CBS-tabel "${TITLE}" heeft geen cijfers per jaar, kwartaal of maand zoals u vraagt. Probeer een andere periode-indeling.`,
+    nl: `CBS-tabel "${TITLE}" heeft geen cijfers per jaar, kwartaal of maand zoals je vraagt. Probeer een andere periode-indeling.`,
     en: `CBS table "${TITLE}" has no figures per year, quarter or month the way you ask. Try a different kind of period.`,
   },
   table_lane_period_missing: {
@@ -367,15 +405,15 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
     en: `CBS table "${TITLE}" has no figure for the period you asked about. The most recent period in this table is 2025.`,
   },
   table_lane_region_class: {
-    nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel "${TITLE}" nog geen antwoord geven. Noem de plaats of regio die u bedoelt.`,
+    nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel "${TITLE}" nog geen antwoord geven. Noem de plaats of regio die je bedoelt.`,
     en: `I can't yet answer for a whole group of regions at once (such as all provinces or municipalities) from CBS table "${TITLE}". Name the place or region you mean.`,
   },
   region_unknown: {
-    nl: `De plaats of regio die u noemt, staat niet in CBS-tabel "${TITLE}". Controleer de naam of noem een andere plaats.`,
+    nl: `De plaats of regio die je noemt, staat niet in CBS-tabel "${TITLE}". Controleer de naam of noem een andere plaats.`,
     en: `The place or region you name is not in CBS table "${TITLE}". Check the name or name another place.`,
   },
   region_unavailable: {
-    nl: `CBS-tabel "${TITLE}" heeft geen cijfers voor de plaats of regio die u noemt.`,
+    nl: `CBS-tabel "${TITLE}" heeft geen cijfers voor de plaats of regio die je noemt.`,
     en: `CBS table "${TITLE}" has no figures for the place or region you name.`,
   },
   table_lane_too_large: {
@@ -387,7 +425,7 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
     en: "CBS can't be reached right now, so I can't fetch this figure. Please try again later.",
   },
   table_lane_failed: {
-    nl: 'Het ophalen van deze CBS-tabel is niet gelukt. U betaalt hier niets voor.',
+    nl: 'Het ophalen van deze CBS-tabel is niet gelukt. Je betaalt hier niets voor.',
     en: "Fetching this CBS table didn't work. You won't be charged for this.",
   },
 };

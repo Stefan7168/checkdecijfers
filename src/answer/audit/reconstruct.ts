@@ -77,6 +77,9 @@ import { composeScatterAnswer, isScatterAnswer, pairedResultOf } from '../respon
 // WP129+130 (ADR 032): the ⟨W3⟩ skip-list is shared with src/websearch/attach.ts
 // (the pure leaf) so reconstruct check (d) can never drift from the owed-check.
 import { WEBSEARCH_SKIP_REASONS } from '../../websearch/types.ts';
+// Breadth step 5 (table lane, fix round 1): the SAME pure builder that wrote
+// tableLane.selectionNote, from the lane's leaf module (no planner graph).
+import { selectionNote } from '../table-lane/selection-note.ts';
 
 export interface ReconstructionReport {
   ok: boolean;
@@ -975,12 +978,13 @@ function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: stri
 /** Verifies that the record reconstructs its response, from the stored row
  * alone. Empty problems = R8 holds for this record. */
 /** Breadth step 5 (table lane, Task 3): the present-only `tableLane` envelope
- * key, shape-checked against the rest of the stored record. Its CONTENT (the
- * table parse, the selection note, the menu hash) is recorded, not
- * re-derived — the live table schema the plan ran over is not stored, so
- * nothing at audit time could re-derive it; the served numbers are covered by
- * the answer checks as on every answer. What IS checked is that the key and
- * the record agree about themselves:
+ * key, shape-checked against the rest of the stored record. The table parse
+ * and the menu hash are recorded, not re-derived — the live table schema the
+ * plan ran over is not stored, so nothing at audit time could re-derive them;
+ * the served numbers are covered by the answer checks as on every answer. The
+ * selection note IS re-derived, byte-identically, from the stored selection
+ * (fix round 1, Ruling R8). What else is checked is that the key and the
+ * record agree about themselves:
  *  - version pin (1);
  *  - the table-parse call appears in llm_calls exactly once, with the
  *    envelope's parseAudit model + tokens — and never on a row without the
@@ -1020,6 +1024,19 @@ function checkTableLane(record: AuditRecord, problems: string[]): void {
   }
   if (lane.parse !== null && audit === null) {
     problems.push('tableLane carries a parse without its parseAudit');
+  }
+  // Fix round 1 (M2): the parse's prompt/schema versions ride with its audit.
+  if ((audit === null) !== (lane.parsePromptVersion === null) || (audit === null) !== (lane.parseSchemaVersion === null)) {
+    problems.push('tableLane parse prompt/schema versions do not pair with its parseAudit');
+  }
+  // Fix round 1 (Ruling R8): the selection note RE-DERIVES byte-identically
+  // from the stored selection, through the same builder that produced it.
+  if (lane.lang !== 'nl' && lane.lang !== 'en') {
+    problems.push(`tableLane lang '${String(lane.lang)}' is neither 'nl' nor 'en'`);
+  }
+  const expectedNote = lane.selection === null ? null : selectionNote(lane.selection, lane.lang);
+  if (lane.selectionNote !== expectedNote) {
+    problems.push('tableLane selectionNote does not re-derive from the stored selection');
   }
   if ((response.kind === 'clarification') !== (lane.question !== null)) {
     problems.push(`tableLane question ${lane.question !== null ? 'present' : 'absent'} on a '${response.kind}' row`);

@@ -9,6 +9,7 @@
 // dimension's own title, a member count, and on `table_lane_period_missing`
 // the readable label of the table's latest PERIOD CODE (a period, never a
 // value). A refusal never ends in '?' (docs/05: refusals open no round).
+// Informal "je", like every other refusal/clarification template (Ruling R7).
 import type { BuiltRefusal } from '../respond/refusals.ts';
 import { periodCodeToNl } from '../respond/period-nl.ts';
 import { periodCodeToEn } from '../respond/english.ts';
@@ -50,7 +51,7 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
       };
     case 'table_lane_unsure':
       return {
-        nl: `Ik weet niet zeker welk cijfer uit CBS-tabel ${t} u bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
+        nl: `Ik weet niet zeker welk cijfer uit CBS-tabel ${t} je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
         en: `I'm not sure which figure from CBS table ${t} you mean. Please ask a more specific question, for example naming the topic, the group or the period.`,
       };
     case 'table_lane_period_unsupported':
@@ -60,7 +61,7 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
       };
     case 'table_lane_period_grain':
       return {
-        nl: `CBS-tabel ${t} heeft geen cijfers per jaar, kwartaal of maand zoals u vraagt. Probeer een andere periode-indeling.`,
+        nl: `CBS-tabel ${t} heeft geen cijfers per jaar, kwartaal of maand zoals je vraagt. Probeer een andere periode-indeling.`,
         en: `CBS table ${t} has no figures per year, quarter or month the way you ask. Try a different kind of period.`,
       };
     case 'table_lane_period_missing': {
@@ -76,17 +77,17 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
     }
     case 'table_lane_region_class':
       return {
-        nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel ${t} nog geen antwoord geven. Noem de plaats of regio die u bedoelt.`,
+        nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel ${t} nog geen antwoord geven. Noem de plaats of regio die je bedoelt.`,
         en: `I can't yet answer for a whole group of regions at once (such as all provinces or municipalities) from CBS table ${t}. Name the place or region you mean.`,
       };
     case 'region_unknown':
       return {
-        nl: `De plaats of regio die u noemt, staat niet in CBS-tabel ${t}. Controleer de naam of noem een andere plaats.`,
+        nl: `De plaats of regio die je noemt, staat niet in CBS-tabel ${t}. Controleer de naam of noem een andere plaats.`,
         en: `The place or region you name is not in CBS table ${t}. Check the name or name another place.`,
       };
     case 'region_unavailable':
       return {
-        nl: `CBS-tabel ${t} heeft geen cijfers voor de plaats of regio die u noemt.`,
+        nl: `CBS-tabel ${t} heeft geen cijfers voor de plaats of regio die je noemt.`,
         en: `CBS table ${t} has no figures for the place or region you name.`,
       };
     case 'table_lane_too_large':
@@ -101,7 +102,7 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
       };
     case 'table_lane_failed':
       return {
-        nl: 'Het ophalen van deze CBS-tabel is niet gelukt. U betaalt hier niets voor.',
+        nl: 'Het ophalen van deze CBS-tabel is niet gelukt. Je betaalt hier niets voor.',
         en: "Fetching this CBS table didn't work. You won't be charged for this.",
       };
   }
@@ -136,14 +137,14 @@ export function buildTableLaneRefusal(reason: TableLaneRefusalReason, ctx: Table
   };
 }
 
-/** The button question: "Welke <dimension> bedoelt u?" — with the "type
+/** The button question: "Welke <dimension> bedoel je?" — with the "type
  * another name" hint when the dimension has more members than the buttons
  * show. CBS's own dimension title, verbatim, in both languages. */
 export function tableLaneQuestionText(question: BreakdownQuestion): Texts {
   const more = question.totalOptions > question.options.length;
   return {
     nl:
-      `Welke ${question.dimensionTitle} bedoelt u?` +
+      `Welke ${question.dimensionTitle} bedoel je?` +
       (more ? ` (of typ een andere naam uit de lijst van ${question.totalOptions})` : ''),
     en:
       `Which ${question.dimensionTitle} do you mean?` +

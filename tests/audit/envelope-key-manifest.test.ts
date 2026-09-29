@@ -112,7 +112,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: "Breadth step 5 (table lane, Task 3): present-only, set only by respondTableLane (src/answer/table-lane/respond.ts). checkTableLane pins its version, pairs it with the rest of the record — on an answer the table it names must be the answer's attributed table and a stored slice (sliceFilterKey) must back it; the table-parse call must appear in llm_calls exactly once, with the envelope's parseAudit model + tokens (and never without an envelope); `question` iff the row is a clarification. Its own content (the parse, the selection note, the menu hash) is recorded, not re-derived: the table's live schema the plan ran over is not stored, so there is nothing at audit time to re-derive it from — the served NUMBERS are covered by `result`/`body` as on every answer.",
+      note: "Breadth step 5 (table lane, Task 3): present-only, set only by respondTableLane (src/answer/table-lane/respond.ts). checkTableLane pins its version, pairs it with the rest of the record — on an answer the table it names must be the answer's attributed table and a stored slice (sliceFilterKey) must back it; the table-parse call must appear in llm_calls exactly once, with the envelope's parseAudit model + tokens (and never without an envelope); `question` iff the row is a clarification. The selection note is RE-DERIVED byte-identically from the stored `selection` + `lang` (fix round 1, Ruling R8), and the parse prompt/schema versions must pair with parseAudit. The parse and the menu hash are recorded, not re-derived: the table's live schema the plan ran over is not stored, so there is nothing at audit time to re-derive them from — the served NUMBERS are covered by `result`/`body` as on every answer. Named `shape-checked` because the treatment is a mix (pairings + one byte-identical re-derivation), like `english`.",
     },
   },
   ClarificationResponse: {
@@ -134,7 +134,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, question iff clarification — on a clarification its offered titles must equal `options`).',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
     },
   },
   RefusalResponse: {
@@ -158,7 +158,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     tableLane: {
       category: 'shape-checked',
-      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, question iff clarification — on a clarification its offered titles must equal `options`).',
+      note: 'Breadth step 5 (table lane, Task 3): same checkTableLane pairing as AnswerResponse.tableLane (version pin, llm_calls table_parse = parseAudit, parse versions paired, selectionNote re-derived from `selection`, question iff clarification — on a clarification its offered titles must equal `options`). Fail-closed internal replacements of a lane turn carry it too (fix round 1).',
     },
   },
   ComposedAnswer: {

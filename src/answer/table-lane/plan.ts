@@ -77,6 +77,9 @@ import { REGION_MEMBER_CODE } from '../table-parse/places.ts';
 import { resolveTablePeriod } from './periods.ts';
 import { isNationalTerm, resolveTableRegions } from './regions.ts';
 import type { TableLaneChoice, TableLaneTable } from './types.ts';
+import type { TableLaneSelection } from './selection-note.ts';
+
+export { selectionNote, type TableLaneSelection } from './selection-note.ts';
 
 export type TableLaneRefusalReason =
   | 'table_lane_ineligible' // TableParseIneligibleTableError, or registerSchemaOnly refused (Task 4)
@@ -91,14 +94,6 @@ export type TableLaneRefusalReason =
   | 'table_lane_too_large' // slice > SLICE_MAX_CELLS
   | 'cbs_unreachable' // Task 4 only
   | 'table_lane_failed'; // Task 4 only (give-up)
-
-export interface TableLaneSelection {
-  named: StatedDefault[];
-  defaults: StatedDefault[];
-  /** Present-only: "Nederland" was absorbed by a national-only table
-   * (Settled design choice 5) — its own line in the selection note. */
-  nationalTable?: true;
-}
 
 export type TableLanePlan =
   /** `parse` is null on the step-1/2 refusals (no validated result);
@@ -453,22 +448,4 @@ export async function planTableLane(input: {
   };
 
   return { kind: 'fetch', slice, intent, selection, parse: result, parseAudit, offered };
-}
-
-/**
- * The deterministic note under a table-lane answer (Settled design choice 9):
- * every fixed breakdown coordinate, CBS titles verbatim — named ones
- * ("Selectie: <dim>: <member>"), the national-table line, then defaults
- * ("Uitgangspunt: <dim>: <member>"). Never part of the answer text. null when
- * nothing is fixed.
- */
-export function selectionNote(sel: TableLaneSelection, lang: 'nl' | 'en'): string | null {
-  const item = (s: StatedDefault) => `${s.dimensionTitle}: ${s.memberTitle}`;
-  const parts: string[] = [];
-  if (sel.named.length > 0) parts.push((lang === 'nl' ? 'Selectie: ' : 'Selection: ') + sel.named.map(item).join('; '));
-  if (sel.nationalTable) {
-    parts.push(lang === 'nl' ? 'Regio: Nederland (landelijke tabel)' : 'Region: the Netherlands (national table)');
-  }
-  if (sel.defaults.length > 0) parts.push((lang === 'nl' ? 'Uitgangspunt: ' : 'Assumed: ') + sel.defaults.map(item).join('; '));
-  return parts.length > 0 ? parts.join(' · ') : null;
 }

@@ -35,8 +35,14 @@ import { respondToIntent } from '../respond/respond.ts';
 import { toClarificationResponse, toInternalRefusal, toRefusalResponse } from '../respond/refusals.ts';
 import type { ClarificationResponse, ComposedResponse } from '../respond/types.ts';
 import type { TableParseSchema } from '../table-parse/input.ts';
-import { serializeTableParseInput, type TableParseAudit } from '../table-parse/parse.ts';
-import { selectionNote, type TableLanePlan } from './plan.ts';
+import {
+  serializeTableParseInput,
+  TABLE_PARSE_PROMPT_VERSION,
+  TABLE_PARSE_SCHEMA_VERSION,
+  type TableParseAudit,
+} from '../table-parse/parse.ts';
+import type { TableLanePlan } from './plan.ts';
+import { selectionNote } from './selection-note.ts';
 import { buildTableLaneRefusal, tableLaneQuestionText } from './templates.ts';
 import type { TableLaneEnvelope } from './types.ts';
 
@@ -60,6 +66,10 @@ export interface RespondTableLaneInput {
   /** CBS's own table title for the refusal templates; absent ⇒ the table id
    * names the table (the job knows the title once it read the schema). */
   tableTitle?: string | null;
+  /** performance.now() when the job started this turn's table parse, so the
+   * audit row's latencyMs covers the parse (fix round 1, M1). Absent ⇒ the
+   * audited wrap's own start. */
+  startedAt?: number;
 }
 
 /** sha256 (hex) of the offered menu — serializeTableParseInput's output
@@ -118,6 +128,10 @@ function envelope(input: RespondTableLaneInput, lang: 'nl' | 'en'): TableLaneEnv
     parse: plan.parse,
     parseAudit: plan.parseAudit,
     offeredMenuHash: plan.kind === 'refuse' ? null : offeredMenuHash(plan.offered),
+    parsePromptVersion: plan.parseAudit === null ? null : TABLE_PARSE_PROMPT_VERSION,
+    parseSchemaVersion: plan.parseAudit === null ? null : TABLE_PARSE_SCHEMA_VERSION,
+    lang,
+    selection: onFetchPath && plan.kind === 'fetch' ? plan.selection : null,
     selectionNote: onFetchPath && plan.kind === 'fetch' ? selectionNote(plan.selection, lang) : null,
     sliceFilterKey: onFetchPath && fetch !== null ? fetch.filterKey : null,
     question: plan.kind === 'ask' && input.refusalOverride === undefined ? plan.question : null,
@@ -125,7 +139,7 @@ function envelope(input: RespondTableLaneInput, lang: 'nl' | 'en'): TableLaneEnv
   };
 }
 
-/** The ask outcome: "Welke <dim> bedoelt u?" with the first 12 member titles
+/** The ask outcome: "Welke <dim> bedoel je?" with the first 12 member titles
  * as options and chips. `pending` is a STRIPPED rescue carrier (rescueOnly,
  * no options, no clickOptions — isStrippedCarrier in respond.ts): a stale
  * client that posts a typed reply through the curated reply path gets it
@@ -200,7 +214,14 @@ export async function respondTableLane(db: Db, input: RespondTableLaneInput): Pr
             outputTokens: plan.parseAudit.usage.outputTokens,
           },
         ];
-  const withLane = (response: ComposedResponse): ComposedResponse => ({ ...response, tableLane: lane });
+  // Every response of this turn carries the envelope — including the audited
+  // wrap's fail-closed replacements (decorate below), whose llm_calls record
+  // the table parse too (fix round 1, I1). The button question rides only a
+  // clarification: a replacement refusal of an ask turn carries none.
+  const withLane = (response: ComposedResponse): ComposedResponse => ({
+    ...response,
+    tableLane: response.kind === 'clarification' ? lane : { ...lane, question: null },
+  });
   const templateContext = { tableId: row.tableId, tableTitle: input.tableTitle ?? null };
 
   return respondPreparsedAudited(
@@ -208,6 +229,8 @@ export async function respondTableLane(db: Db, input: RespondTableLaneInput): Pr
     {
       question: row.question,
       priorLlmCalls,
+      decorate: withLane,
+      ...(input.startedAt !== undefined ? { startedAt: input.startedAt } : {}),
       produce: async (clients) => {
         if (input.refusalOverride !== undefined) {
           const built = buildTableLaneRefusal(input.refusalOverride.reason, {
