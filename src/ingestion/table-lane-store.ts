@@ -413,3 +413,69 @@ export async function readTableLaneRequest(db: Db, rowId: number, userId: string
   const { rows } = await db.query('select * from table_lane_requests where id = $1 and user_id = $2', [rowId, userId]);
   return rows[0] === undefined ? null : fromRow(rows[0]);
 }
+
+/** Task 5 (pollTableLane): what this row's question debit has settled to —
+ * the debit it took (bucket + ledger legs, as recorded on the row) minus every
+ * compensation that reversed either leg. The same debit-minus-compensations
+ * arithmetic chargeAndRun's netCost mirrors, read back from the ledgers
+ * because the settlement happened later, in the job. Scoped to the owner:
+ * another user's row or an unknown id reads as null. */
+export async function readTableLaneNetCost(db: Db, rowId: number, userId: string): Promise<number | null> {
+  const { rows } = await db.query(
+    `select
+       r.debit_from_bucket + r.debit_from_ledger
+       - coalesce((
+           select sum(c.delta) from credit_transactions c
+            where r.debit_transaction_id is not null
+              and c.related_transaction_id = r.debit_transaction_id
+              and c.reason = 'compensation'
+         ), 0)
+       - coalesce((
+           select sum(b.delta) from pro_bucket_ledger b
+            where r.debit_bucket_entry_id is not null
+              and b.related_entry_id = r.debit_bucket_entry_id
+              and b.reason = 'compensation'
+         ), 0) as net
+     from table_lane_requests r
+     where r.id = $1 and r.user_id = $2`,
+    [rowId, userId],
+  );
+  return rows[0] === undefined ? null : Number(rows[0].net);
+}
+
+/** Task 5: the audited response (the stored envelope, as jsonb) and the thread
+ * the job attached it to, for a row's audit id — owner-scoped: another user's
+ * audit row or an unknown id reads as null. The job attaches the thread AFTER
+ * settling, so `threadId` can briefly be null on a row that is already done. */
+export async function readTableLaneAuditResult(
+  db: Db,
+  auditId: number,
+  userId: string,
+): Promise<{ response: unknown; threadId: number | null } | null> {
+  const { rows } = await db.query('select response, thread_id from audit_answers where id = $1 and user_id = $2', [
+    auditId,
+    userId,
+  ]);
+  const row = rows[0];
+  if (row === undefined) return null;
+  const response = typeof row.response === 'string' ? JSON.parse(row.response) : row.response;
+  return { response, threadId: numOrNull(row.thread_id as number | string | null) };
+}
+
+/** Task 5 (replyToTableLane): ALL stored members of one dimension of a table,
+ * from `dimension_labels` (the job's registerSchemaOnly wrote CBS's full code
+ * lists there), in CBS order. A typed or clicked reply is checked against
+ * this full list — never only the options a question showed. */
+export async function readTableLaneDimensionMembers(
+  db: Db,
+  tableId: string,
+  dimension: string,
+): Promise<{ code: string; title: string }[]> {
+  const { rows } = await db.query(
+    `select code, label from dimension_labels
+      where table_id = $1 and dimension = $2
+      order by sort_index nulls last, code`,
+    [tableId, dimension],
+  );
+  return rows.map((r) => ({ code: String(r.code), title: String(r.label) }));
+}

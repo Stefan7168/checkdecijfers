@@ -14,6 +14,9 @@ import {
   createTableLaneRequest,
   finishTableLaneRequest,
   findExhaustedTableLaneRequests,
+  readTableLaneAuditResult,
+  readTableLaneDimensionMembers,
+  readTableLaneNetCost,
   readTableLaneRequest,
   releaseForRetry,
   setTableLaneThread,
@@ -626,5 +629,90 @@ describe('setTableLaneThread (Ruling R3)', () => {
     expect((await readTableLaneRequest(db, row.id, userId))!.threadId).toBe(first);
     await expect(setTableLaneThread(db, row.id, second)).rejects.toThrow(/thread/);
     expect((await readTableLaneRequest(db, row.id, userId))!.threadId).toBe(first);
+  });
+});
+
+describe('readTableLaneNetCost (Task 5: the poll\'s netCost)', () => {
+  async function running(userId: string): Promise<TableLaneRow> {
+    await created(userId);
+    return (await claimTableLaneRequest(db))!;
+  }
+
+  it('is the row\'s debit minus its compensations, per outcome', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const pending = await created(userId);
+    expect(await readTableLaneNetCost(db, pending.id, userId)).toBe(20);
+    await claimTableLaneRequest(db);
+    await finishTableLaneRequest(db, pending.id, 1, { kind: 'answer', auditId: null });
+    expect(await readTableLaneNetCost(db, pending.id, userId)).toBe(20);
+
+    const clar = await running(userId);
+    await finishTableLaneRequest(db, clar.id, 1, { kind: 'clarification', auditId: null });
+    expect(await readTableLaneNetCost(db, clar.id, userId)).toBe(10);
+
+    const ref = await running(userId);
+    await finishTableLaneRequest(db, ref.id, 1, { kind: 'refusal', auditId: null });
+    expect(await readTableLaneNetCost(db, ref.id, userId)).toBe(0);
+
+    const failed = await running(userId);
+    await finishTableLaneRequest(db, failed.id, 1, { kind: 'failed', summary: 'x', auditId: null });
+    expect(await readTableLaneNetCost(db, failed.id, userId)).toBe(0);
+  });
+
+  it('nets both legs of a Pro split (bucket + ledger)', async () => {
+    const userId = randomUUID();
+    const grantId = randomUUID();
+    await seedSignup(userId, 100);
+    await seedSubscription(userId, grantId);
+    await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
+    const row = await running(userId); // 15 bucket + 5 ledger
+    expect(await readTableLaneNetCost(db, row.id, userId)).toBe(20);
+    await finishTableLaneRequest(db, row.id, 1, { kind: 'clarification', auditId: null });
+    expect(await readTableLaneNetCost(db, row.id, userId)).toBe(10);
+  });
+
+  it('is null for another user\'s row or an unknown id', async () => {
+    const userId = randomUUID();
+    await seedSignup(userId, 100);
+    const row = await created(userId);
+    expect(await readTableLaneNetCost(db, row.id, randomUUID())).toBeNull();
+    expect(await readTableLaneNetCost(db, 424242, userId)).toBeNull();
+  });
+});
+
+describe('readTableLaneAuditResult (Task 5)', () => {
+  it('returns the stored response and thread id for the owner only', async () => {
+    const userId = randomUUID();
+    const auditId = await insertAuditRow(userId);
+    expect(await readTableLaneAuditResult(db, auditId, userId)).toEqual({ response: {}, threadId: null });
+    const { rows: t } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [userId]);
+    const threadId = Number(t[0]!.id);
+    await db.query('update audit_answers set thread_id = $2 where id = $1', [auditId, threadId]);
+    expect(await readTableLaneAuditResult(db, auditId, userId)).toEqual({ response: {}, threadId });
+    expect(await readTableLaneAuditResult(db, auditId, randomUUID())).toBeNull();
+    expect(await readTableLaneAuditResult(db, 424242, userId)).toBeNull();
+  });
+});
+
+describe('readTableLaneDimensionMembers (Task 5)', () => {
+  it('lists every stored member of one dimension, in CBS order', async () => {
+    await db.query(
+      `insert into cbs_tables (id, title, expected_dimensions) values ('85000NED', 'T', '[]'::jsonb)`,
+    );
+    await db.query(
+      `insert into dimension_labels (table_id, dimension, code, label, sort_index) values
+         ('85000NED', 'Geslacht', '4000', 'Vrouwen', 2),
+         ('85000NED', 'Geslacht', 'T001038', 'Totaal', 0),
+         ('85000NED', 'Geslacht', '3000', 'Mannen', 1),
+         ('85000NED', 'Perioden', '2024JJ00', '2024', 0)`,
+    );
+    expect(await readTableLaneDimensionMembers(db, '85000NED', 'Geslacht')).toEqual([
+      { code: 'T001038', title: 'Totaal' },
+      { code: '3000', title: 'Mannen' },
+      { code: '4000', title: 'Vrouwen' },
+    ]);
+    expect(await readTableLaneDimensionMembers(db, '85000NED', 'Nope')).toEqual([]);
+    expect(await readTableLaneDimensionMembers(db, 'OTHER', 'Geslacht')).toEqual([]);
   });
 });

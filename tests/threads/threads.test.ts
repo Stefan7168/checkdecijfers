@@ -33,6 +33,11 @@ import {
 import { debitBucket, grantBucket } from '../../src/billing/pro-bucket.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
+import {
+  claimTableLaneRequest,
+  createTableLaneRequest,
+  finishTableLaneRequest,
+} from '../../src/ingestion/table-lane-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { resetTestDb } from '../helpers/reset-db.ts';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
@@ -984,6 +989,89 @@ describe('getThreadRows — Pro bucket cost display (#246 fix, session 109)', ()
       await getThreadRows(db, userId, threadId);
       const after = { ledger: await countRows('credit_transactions'), bucket: await countRows('pro_bucket_ledger') };
       expect(after).toEqual(before);
+    });
+  });
+});
+
+// Breadth step 5 (Task 5): the table lane debits under the DERIVED ledger id
+// deriveAddonRequestId(requestId, 'table-lane'); its answer's audit row keeps
+// the raw request id (shared with the free, never-thread-attached routing
+// turn) and carries the `tableLane` envelope key. The resumed caption must
+// show what the lane actually charged.
+describe('getThreadRows — table-lane rows (breadth step 5)', () => {
+  async function laneRow(
+    db: Db,
+    userId: string,
+    threadId: number,
+    outcome: 'answer' | 'clarification' | 'refusal',
+    routed: boolean,
+  ): Promise<number> {
+    const requestId = randomUUID();
+    if (routed) {
+      // the routing turn: debited + fully refunded on the raw id, NOT in the thread
+      const routingAuditId = await insertRow(db, userId, { kind: 'refusal', question: 'q', requestId });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'refusal', question: 'q', text: 'x' } as unknown as AuditedResponse['response'],
+        auditId: routingAuditId,
+      }));
+      expect(gated).toMatchObject({ kind: 'ok', netCost: 0 });
+    }
+    const created = await createTableLaneRequest(db, {
+      userId,
+      requestId,
+      threadId,
+      lang: 'nl',
+      question: 'q',
+      tableId: '85000NED',
+      finderConfidence: 0.9,
+    });
+    if (created.kind !== 'created') throw new Error(created.kind);
+    await claimTableLaneRequest(db);
+    const auditId = await insertRow(db, userId, {
+      kind: outcome,
+      question: 'q',
+      threadId,
+      requestId,
+      response: { schemaVersion: 1, kind: outcome, question: 'q', text: 'lane', tableLane: { rowId: created.row.id } },
+    });
+    await finishTableLaneRequest(db, created.row.id, 1, { kind: outcome, auditId });
+    return auditId;
+  }
+
+  it('each lane outcome shows its settled cost (answer 20, clarification 10, refusal 0)', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 200');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const threadId = await createThread(db, userId);
+      const answer = await laneRow(db, userId, threadId, 'answer', true);
+      const clarification = await laneRow(db, userId, threadId, 'clarification', true);
+      const refusal = await laneRow(db, userId, threadId, 'refusal', true);
+      const child = await laneRow(db, userId, threadId, 'answer', false);
+      const rows = await getThreadRows(db, userId, threadId);
+      const cost = (id: number) => rows.find((r) => r.id === id)!.creditsCharged;
+      expect(cost(answer)).toBe(20);
+      expect(cost(clarification)).toBe(10);
+      expect(cost(refusal)).toBe(0);
+      expect(cost(child)).toBe(20);
+      expect(rows).toHaveLength(4); // the routing rows are not in the thread
+    });
+  });
+
+  it('a Pro split lane debit is netted across both legs', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
+      const threadId = await createThread(db, userId);
+      const auditId = await laneRow(db, userId, threadId, 'answer', false);
+      const rows = await getThreadRows(db, userId, threadId);
+      expect(rows.find((r) => r.id === auditId)!.creditsCharged).toBe(20);
     });
   });
 });

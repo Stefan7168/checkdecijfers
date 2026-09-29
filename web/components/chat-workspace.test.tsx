@@ -43,7 +43,7 @@ function outcome(
 ): AskOutcome {
   // #252: AskOutcome also gained proofRequestUrls (session 109); none of
   // this suite's tests exercise it, so it defaults to null.
-  return { gated, context, threadId, onboardingOffer: null, proofRequestUrls: null };
+  return { gated, context, threadId, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
 }
 
 const WEB_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';

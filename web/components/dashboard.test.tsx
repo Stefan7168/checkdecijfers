@@ -52,7 +52,7 @@ function outcome(gated: GatedResponse): AskOutcome {
   // (not thread-aware), so it is null here.
   // #252: AskOutcome also gained proofRequestUrls (session 109); the
   // Dashboard doesn't render a proof panel, so it's null here too.
-  return { gated, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
+  return { gated, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null, tableLane: null };
 }
 
 /** Same documented narrow-cast discipline as chat.test.tsx, via the shared
