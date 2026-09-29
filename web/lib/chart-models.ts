@@ -13,7 +13,7 @@ import { DEFAULT_PALETTE } from './chart-presentation.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import { lastPlottedPoint } from './chart-plotted-point.ts';
 import { BAR_LABEL_MAX } from './chart-view-state.ts';
-import { translateUnit } from './i18n/cbs-words.ts';
+import { translateUnitForDisplay } from './i18n/cbs-words.ts';
 import { toEnglishChartSpec } from '../backend/chart/index.ts';
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import { displayDifferenceUnit, displayValueUnit } from '../backend/answer/compose/template.ts';
@@ -704,11 +704,11 @@ export function formatOverlayValue(
   if (lang === 'en') {
     // #294 (session 129, owner-decisions brief item 4): an English chart's
     // overlay label uses the SAME hand-written CBS-word table as the rest of
-    // the translated spec (translateSpecForDisplay's `translateUnit`) — the
+    // the translated spec (translateSpecForDisplay's `translateUnitForDisplay`) — the
     // number itself is formatted exactly as in Dutch (same helper, same
     // decimals); only the unit word after it changes. A difference over %
     // cells is a percentage point, never % (R10), in English too.
-    const unit = record.kind === 'difference' && record.unit.trim() === '%' ? 'percentage point' : translateUnit(record.unit);
+    const unit = record.kind === 'difference' && record.unit.trim() === '%' ? 'percentage point' : translateUnitForDisplay(record.unit);
     return displayValueUnit(record.value, decimals, unit);
   }
   return record.kind === 'mean'

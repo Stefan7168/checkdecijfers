@@ -26,7 +26,7 @@ verification block + `/code-review` LOW + green CI before every push. Zero live 
 | Recording | Calls | Tokens (floor) | Cost (floor) | Budget ×1.5 |
 |---|---|---|---|---|
 | A. Table parser: 1 record + 1 replay (free) + 1 second record as stability | 39 + 39 | ~230K | ~$0.25 | $0.40 |
-| B. Regional Part 2: intent 66 cases × (1 probe + 1 record + 3 stability) + clarify 7 + follow-up 24 legs | ~360 | ~2.4M | ~$2.45 | $3.70 |
+| B. Regional Part 2: intent 66 cases × (1 probe + 1 record + 3 stability) + clarify 7 + follow-up 24 legs + 1 onboarding-delivery call | ~360 | ~2.4M | ~$2.45 | $3.70 |
 | C. Eurostat step 0: ~10 country questions × 2 (probe + record) | ~20 | ~130K | ~$0.15 | $0.25 |
 | **Total** | | **~2.8M** | **~$2.85** | **~$4.35** |
 
@@ -56,6 +56,16 @@ grep -c ANTHROPIC_API_KEY .env          # 1 — the MAIN key (the trial key is a
 
 Confirm in the Anthropic Console → Billing → Spend limits that the month has reset (spend ≈ $0 of $50). Do NOT
 proceed on 2026-09-30 evening local time: the reset is 00:00 UTC on the 1st (02:00 CEST).
+
+## Pre-flight already done for B (session 148, 2026-09-29, zero spend — re-run only if `main` moved a lot)
+
+`regional-stats-part2` rebased onto that day's `main` in a throwaway branch: **no conflicts** (108 commits of drift, 6 of
+its own), both typechecks clean. Full root suite on the rebased tree: **65 failed | 4480 passed | 169 skipped, all 65
+downstream of intent-fixture hash misses** — `no recorded LLM fixture for this request` (the parse throws, the pipeline
+refuses "internal", so the visible symptom is `expected 'refusal' to be 'answer'`) — across 19 files
+(`tests/answer/*`, `tests/audit/*`, `tests/benchmark/scorer-teeth.test.ts`, `tests/invariants/invariants.test.ts`, and the
+one the plan had missed, `tests/ingestion/onboarding-job.test.ts`). That is the expected shape; step B3 turns them
+green. The throwaway branch was deleted; the real branch is untouched.
 
 ## A. Table parser recording + calibration (RUNBOOK "Table-parser recording run", #338, #339)
 
@@ -92,9 +102,15 @@ regional cases). Its replay tests are KNOWN RED until this step (fixtures keyed 
 2. **Probe first, cheap:** `npm run intent:eval` once live (~66 × 6.6K ≈ 440K tokens, ~$0.45). Read the failures:
    a failing NEW case = fix `everydayTerms`/`notes` in the registry entry, never loosen the expectation. Iterate the
    probe until the set is clean (each iteration ~$0.45).
-3. **Record:** `npm run intent:record`, `npm run clarify:record`, `npm run followup:record` (delete the orphaned
-   fixtures first — `git rm` the old `tests/fixtures/llm/intent|clarify|followup/*.json` that the record does not
-   rewrite; the session-130 lesson: orphans left behind make the hermetic gate pass by luck).
+3. **Record — FOUR scripts, not three (corrected session 148):** `npm run intent:record`, `npm run clarify:record`,
+   `npm run followup:record` **and `npm run onboarding-delivery:record`** (one call, cents). The fourth embeds the same
+   intent prompt; the pre-flight run below proved it goes red on the rebased branch
+   (`tests/ingestion/onboarding-job.test.ts` → "the 37789ksz delivery parse ANSWERS…" got `unanswerable`), and
+   [RUNBOOK](../RUNBOOK.md) "a prompt change needs" says the same (all four dirs). Delete the orphaned fixtures first —
+   `git rm` the old `tests/fixtures/llm/{intent,clarify,followup,onboarding-delivery}/*.json` that the record does not
+   rewrite; the session-130 lesson: orphans left behind make the hermetic gate pass by luck. After the delivery record,
+   check its confidence stays ≥ 0.9 (#198). If the prompt text itself is edited (Decision 1's renames), bump
+   `PROMPT_VERSION` first (RUNBOOK).
 4. **Stability:** `npm run intent:eval -- --repeat=3` (~1.3M tokens, ~$1.35). **Pass:** all 66 pass, zero flips.
    A flip on an OLD case = a prompt regression → stop and diagnose before spending more.
 5. Full `scripts/verify-block.sh` (benchmark 14/14 + 6/6 + 0 fabricated stays the gate), `/code-review` LOW, the
@@ -112,7 +128,11 @@ Duitsland", "inflatie België vs Frankrijk", "EU-gemiddelde", "de eurozone", …
 as typed, which `kind`, does the parser still pick the CBS measure key? Also: can the Eurostat adapter register a
 filtered (country-only) slice (`npm run eurostat:siblings` dry run prints the request URLs — no spend).
 
-1. Add the ~10 questions to the intent labelled set as NEW cases with the expected shape from spec §4.
+1. Add the ~10 questions to the intent labelled set as NEW cases with the expected shape from spec §4 — **drafted in
+   session 148: [2026-10-01-eurostat-step0-cases.json](2026-10-01-eurostat-step0-cases.json)** (6 labelled + 4
+   `probe: true` observe-only cases; the file's `note` says how to copy them and how a label may be adjusted). The
+   "can the adapter register a filtered slice" half of step 0 is ALREADY resolved (spec §4.1: branch
+   `eurostat-server-filter`, merged) — only the ten parses remain.
 2. `npm run intent:eval -- --only=<id-prefix>` live for those cases only (give the new cases one shared id
    prefix, e.g. `eurostat-`; `--only` exists, verified 2026-09-29; the report is not written for a subset run). **Pass:** names as typed, CBS key still picked, no prompt change needed → steps 1–4 of
    E2a stay as built, step 5 (register the three sibling tables) becomes the next owner step. **Fail:** the plan

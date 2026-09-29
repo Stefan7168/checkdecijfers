@@ -11,7 +11,22 @@ import {
   translatePeriodLabel,
   translateRegion,
   translateUnit,
+  translateUnitForDisplay,
 } from './cbs-words.ts';
+
+describe('translateUnitForDisplay (chart surfaces, session 148)', () => {
+  it("finds CBS's capitalised 'Aantal' (bankruptcies table) that the exact lookup misses", () => {
+    expect(translateUnit('Aantal')).toBe('Aantal'); // the answer-path lookup stays exact on purpose
+    expect(translateUnitForDisplay('Aantal')).toBe('number');
+    expect(translateUnitForDisplay('aantal')).toBe('number');
+    expect(translateUnitForDisplay('Mln euro')).toBe('million euros');
+  });
+
+  it('never guesses: an unlisted or neutral unit stays as CBS wrote it', () => {
+    expect(translateUnitForDisplay('%')).toBe('%');
+    expect(translateUnitForDisplay('Index')).toBe('Index');
+  });
+});
 
 describe('translateUnit', () => {
   it('translates known CBS units (tests/fixtures/cbs/85773NED, 85224NED)', () => {

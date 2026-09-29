@@ -37,7 +37,7 @@ import {
   translateMeasureTitle,
   translatePeriodLabel,
   translateTableTitle,
-  translateUnit,
+  translateUnitForDisplay,
 } from '../registry/english-names.ts';
 import { ENGLISH_MEASURE_LABELS } from '../answer/respond/english-measure-labels.ts';
 import { regionLabelEn } from '../answer/respond/english.ts';
@@ -236,7 +236,7 @@ export function toEnglishChartSpec(spec: ChartSpec): ChartSpec {
     title: translateMeasureTitle(spec.title),
     dims: { ...spec.dims },
     dimLabels,
-    unit: translateUnit(spec.unit),
+    unit: translateUnitForDisplay(spec.unit),
     series: spec.series.map(translateSeries),
     provisionalNote: spec.provisionalNote === PROVISIONAL_NOTE ? PROVISIONAL_NOTE_EN : spec.provisionalNote,
     nullNotes: spec.nullNotes.map(translateNullNote),

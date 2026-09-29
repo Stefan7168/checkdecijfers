@@ -1,0 +1,100 @@
+{
+  "note": "DRAFT labelled cases for the 1 October recording run, step C1 (Eurostat E2a step 0, #313, spec section 6 step 0). Written session 148 (2026-09-29), zero spend. NOT loaded by anything: on 1 October, after step B is merged, copy the objects in `cases` into benchmark/intent-labelled-set.json (same shape as its other cases; ids share the prefix `eurostat-` so `npm run intent:eval -- --only=eurostat-` runs exactly these). `expect.checks.regions` holds the name AS TYPED. If the probe shows the model writes another spelling, change the label ONLY to a spelling src/sources/eurostat-geo-names.ts already resolves (its aliases) - never to one it does not, and never loosen a label to make a case pass. Cases with `\"probe\": true` are observe-only: run them, read what the parser did, then fix the label to the honest, safe behaviour and record it in #313; a probe case must not become a benchmark task until it has a settled label. Remove the `probe` field before copying.",
+  "referenceDate": "2026-09-29",
+  "cases": [
+    {
+      "id": "eurostat-werkloosheid-duitsland",
+      "category": "eurostat_country",
+      "question": "Wat was de werkloosheid in Duitsland in 2024?",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["Duitsland"] }
+      }
+    },
+    {
+      "id": "eurostat-inflatie-belgie-frankrijk",
+      "category": "eurostat_country",
+      "question": "Vergelijk de inflatie in België en Frankrijk in maart 2025.",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "cpi_yearly_inflation", "regions": ["België", "Frankrijk"] }
+      }
+    },
+    {
+      "id": "eurostat-groei-duitsland",
+      "category": "eurostat_country",
+      "question": "Hoe groot was de economische groei in Duitsland in 2024?",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "gdp_growth_yoy_volume", "regions": ["Duitsland"] }
+      }
+    },
+    {
+      "id": "eurostat-werkloosheid-nl-de",
+      "category": "eurostat_country",
+      "question": "Vergelijk de werkloosheid in Nederland en Duitsland in 2024.",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["Nederland", "Duitsland"] }
+      }
+    },
+    {
+      "id": "eurostat-belgie-zonder-trema",
+      "category": "eurostat_country",
+      "question": "Wat was de inflatie in Belgie in 2024?",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "cpi_yearly_inflation", "regions": ["Belgie"] }
+      }
+    },
+    {
+      "id": "eurostat-werkloosheid-griekenland",
+      "category": "eurostat_country",
+      "question": "Wat was de werkloosheid in Griekenland in 2024?",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["Griekenland"] }
+      }
+    },
+    {
+      "id": "eurostat-inflatie-eurozone",
+      "category": "eurostat_country",
+      "question": "Hoe hoog was de inflatie in de eurozone in maart 2025?",
+      "probe": true,
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "cpi_yearly_inflation", "regions": ["de eurozone"] }
+      }
+    },
+    {
+      "id": "eurostat-werkloosheid-eu-gemiddelde",
+      "category": "eurostat_country",
+      "question": "Wat was het EU-gemiddelde voor de werkloosheid in 2024?",
+      "probe": true,
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["EU-gemiddelde"] }
+      }
+    },
+    {
+      "id": "eurostat-werkloosheid-japan",
+      "category": "eurostat_country",
+      "question": "Wat was de werkloosheid in Japan in 2024?",
+      "probe": true,
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["Japan"] }
+      }
+    },
+    {
+      "id": "eurostat-werkloosheid-beieren",
+      "category": "eurostat_country",
+      "question": "Wat was de werkloosheid in Beieren in 2024?",
+      "probe": true,
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "regions": ["Beieren"] }
+      }
+    }
+  ]
+}

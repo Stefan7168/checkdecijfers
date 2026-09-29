@@ -7,4 +7,5 @@ export {
   translatePeriodLabel,
   translateRegion,
   translateUnit,
+  translateUnitForDisplay,
 } from '../../backend/registry/english-names.ts';

@@ -77,7 +77,8 @@
     "fixtures:capture:catalog": "node scripts/capture-cbs-fixtures.ts --catalog",
     "fixtures:capture:eurostat": "node scripts/capture-eurostat-fixtures.ts",
     "backfill:eurostat-doi": "node --env-file=.env scripts/backfill-eurostat-doi.ts",
-    "eurostat:siblings": "node --env-file=.env scripts/register-eurostat-siblings.ts"
+    "eurostat:siblings": "node --env-file=.env scripts/register-eurostat-siblings.ts",
+    "ingest:freshness": "node --env-file=.env scripts/freshness-report.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

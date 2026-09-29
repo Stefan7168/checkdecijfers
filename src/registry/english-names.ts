@@ -24,6 +24,15 @@ export function translateUnit(unit: string): string {
   return UNITS[unit] ?? unit;
 }
 
+/** Chart-card / axis display only (session 148): CBS capitalises some unit labels ('Aantal' on the
+ * bankruptcies table) where the list holds the lowercase form, so the exact lookup left the Dutch word
+ * on the English chart. Kept OFF `translateUnit` on purpose — that one feeds the English-answer glossary
+ * (src/answer/translate/translate.ts), and widening it would change the translator prompt bytes and so
+ * the recorded fixtures' request hashes. Same never-guess contract: an unlisted unit stays as CBS wrote it. */
+export function translateUnitForDisplay(unit: string): string {
+  return UNITS[unit] ?? UNITS[unit.toLowerCase()] ?? unit;
+}
+
 export function translateRegion(label: string): string {
   return REGIONS[label] ?? label;
 }

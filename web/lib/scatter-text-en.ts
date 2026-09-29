@@ -28,7 +28,7 @@ import { hasEnglishName } from '../backend/registry/english-names.ts';
 import type { RegionScope } from '../backend/query/types.ts';
 import { resolveSourceForTable } from '../backend/sources/registry.ts';
 import { translateStalenessWarning } from '../backend/answer/translate/staleness-en.ts';
-import { translateMeasureTitle, translatePeriodLabel, translateUnit } from './i18n/cbs-words.ts';
+import { translateMeasureTitle, translatePeriodLabel, translateUnitForDisplay } from './i18n/cbs-words.ts';
 import { t, type Lang } from './i18n/messages.ts';
 
 /** Mirrors lines.ts's private REGION_SET_NOUNS_EN (itself the English of
@@ -193,7 +193,7 @@ export function scatterStalenessLinesEn(spec: ScatterSpec, warning: string | nul
  * that axis is currently drawn on a log scale. An empty unit adds nothing. */
 export function scatterAxisTitle(axis: ScatterAxis, lang: Lang, log: boolean): string {
   const title = lang === 'en' ? measureEn(axis) : axis.measureTitle;
-  const unit = lang === 'en' ? translateUnit(axis.unit) : axis.unit;
+  const unit = lang === 'en' ? translateUnitForDisplay(axis.unit) : axis.unit;
   const withUnit = unit.trim() === '' ? title : `${title} (${unit})`;
   return log ? `${withUnit}${t(lang, 'chart.scatter.logSuffix')}` : withUnit;
 }
