@@ -1332,8 +1332,17 @@ under eleven form tabs, two disclaimer boxes and a wall of controls. The owner: 
   sub-tab "Grafiek" was renamed **"Lijnen en assen"** so no two tabs in the dialog share a name. #348 fixed: the plot
   is ONE tab stop, Left/Right/Home/End walk the points, Enter/Space still opens a note. Files:
   `web/components/chart-edit-modal.tsx` (header + footer slots), `web/components/chart-edit-tabs.tsx` (new),
-  `chart.tsx` (composition), `chart-parts.tsx` (tabindex −1 on points). Screenshots to the owner; awaiting the
-  owner's "I would share this" for (b).
+  `chart.tsx` (composition), `chart-parts.tsx` (tabindex −1 on points). Round-1 ruling: "good enough for now, come back to it later".
+  **Round 2 BUILT + SIGNED OFF (session 144, 2026-09-29, `39ed880a`, CI 36558081051 green + deployed; owner GO on the
+  four-point plan, then "I would share this"):** (1) the popup keeps ONE fixed height at every width —
+  `chart-edit-modal.tsx` is one flex column: header / scrolling body (two self-scrolling columns from `lg`) / footer
+  pinned at the bottom of the screen, so tabs never resize the dialog; (2) on a phone the preview hides subtitle,
+  caption strip and source line, so tabs, controls and Klaar sit on the first screen; (3) the chart forms the series
+  cannot take stay in the DOM with their reasons (`title` + `aria-describedby`, keyboard order unchanged) but are
+  hidden behind "Nog {n} vormen, niet mogelijk voor deze reeks" (`aria-expanded`); (4) the Grafiek tab gets a Titel
+  field and a Bijschrift field next to type and period (`commitTitleText` shared with the inline editor; the CBS
+  title typed back = no override, no history step; story lock honoured). Tests: `chart-title-caption.test.tsx`
+  (3 new), two e2e steps unfold the forms first.
 - **(c) The homepage** (`web/components/landing.tsx`): a real chart above the fold; the gallery must never show empty
   skeletons on a cold visit ([#347](open-questions.md): the curated feed's first request took over 5 s on 2026-09-29 —
   pre-warm, pre-render or cache it).

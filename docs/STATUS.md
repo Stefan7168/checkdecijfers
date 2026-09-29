@@ -32,7 +32,8 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
   [session-briefs/2026-09-29-vision-vs-build-review.md](session-briefs/2026-09-29-vision-vs-build-review.md).
 - **THE GATE:** the owner says "I would share this" about (a) the answer chart, (b) the Edit popup, (c) the homepage.
   Then the owner invites people. No calendar date (owner's choice; revisit trigger 2026-10-27 in ADR 063).
-  **Score at end of session 144: (a) done, (c) signed off, (b) not yet ("good enough for now"), (a2) verdict pending.**
+  **⚑ THE GATE IS PASSED (session 144, 2026-09-29): (a) done s143, (b) signed off s144 round 2, (c) signed off s144.
+  ADR 063's consequence is now due: the owner invites people. (a2) share-image verdict still pending.**
 - **THE ONLY WORK PACKAGE: "The Look"** ([08-build-plan.md](08-build-plan.md) → WP-LOOK), three parts, each iterated
   with screenshots shown next to Competitor G until the owner says done:
   - (a) the answer chart — **DONE on the owner's ruling (session 143, 2026-09-29; round 1 = session 142, round 2 =
@@ -41,11 +42,10 @@ trusting this). Kickoff: [session-briefs/2026-09-29-session-144-kickoff.md](sess
     in table form too); owner-owned strips show on the card only when they hold something. The owner's two round-1
     change requests (the row wrapped; the subtitle showed a raw CBS code) are fixed in round 2 — the row is a CSS
     container with measured icon-collapse tiers, the code is stripped display-only ([#346](open-questions.md));
-  - (b) the Edit popup — **round 1 BUILT (session 143, owner GO on the design; SHA in the archive entry):** header
-    with undo · redo · history, a preview of the card on the left, three tabs on the right (Grafiek · Markeringen ·
-    Opmaak), a pinned footer with the "ask to change" box and Klaar; Download/Embed stay on the card; #348 fixed (the
-    plot is one tab stop). **Owner ruling: "good enough for now, come back to it later"** — not signed off, another
-    round after (a2)/(c) ([#346](open-questions.md));
+  - (b) the Edit popup — round 1 built session 143; **round 2 BUILT + SIGNED OFF (session 144, `39ed880a`, CI
+    36558081051 green + deployed, "I would share this"):** fixed-height popup that never jumps, footer pinned at the
+    bottom of the screen, compact phone preview (tabs + Klaar on the first screen), unavailable chart types folded
+    behind one line, Titel + Bijschrift fields on the Grafiek tab ([#346](open-questions.md));
   - (a2, owner decision [#351](open-questions.md)) — **round 1 BUILT (session 143, SHA in the archive entry):** every
     Share link unfurls with a 1200×630 picture of the chart (`/embed/<token>/opengraph-image`, Next's built-in image
     tool around the ADR 014 server SVG); the embed page has title/description metadata. Owner's look at the picture
