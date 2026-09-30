@@ -17,6 +17,18 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ THE PLOT (owner, 2026-09-30, session 152 — read this before anything else):** the product is a LAYER. A question comes in; the
+  layer finds the right table anywhere in CBS or Eurostat, fetches only what it needs, checks it, and answers. It is NOT a set of curated
+  copies kept fresh. Work, in order, and nothing else:
+  1. **CBS: switch on the any-table route** (ADR 062 table lane) — record + calibrate its table reader (1 October plan part A, owner
+     present, ~$0.25), the table-lane benchmark (step 6), then the flag flip; then evict `37789ksz`.
+  2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way (built,
+     dark), fetch only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5).
+  3. **Stop:** converting, refreshing, curating or polishing specific tables/datasets. The four Eurostat datasets are NOT converted or
+     refreshed by hand any more; they go when the Eurostat route answers. Storage work only as far as the two routes need it.
+  The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
+  mistake as pinning one welfare table (CLAUDE.md "Breadth comes from the layer").
+
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,
   each proven cell-for-cell IDENTICAL to CBS before and after (0 differences; consumer prices 616,714 cells); refreshing them is now the
