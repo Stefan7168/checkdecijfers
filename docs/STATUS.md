@@ -25,6 +25,14 @@
   table-lane split at 150 codes (#358 11), `--budget-seconds` a hard bound (5), period-note status in slice storage so `70072ned` can
   convert (3), slice storage as the default test build (2, first half). Still whole-table: 3 unpinned tables (#358 12 — recommendation:
   pin `37789ksz`, drop `83694NED` + `85615NED`, owner decision), `70072ned` (not loaded), 4 Eurostat datasets (#358 4, agent building).
+  **Later the same session:** owner correction — breadth comes from the LAYER, never from curating one table (rule in CLAUDE.md);
+  the `37789ksz` pin was withdrawn (owner: keep it until the table lane is on, then evict — a step in the 1 October plan);
+  `83694NED` + `85615NED` EVICTED from production with the new targeted `tables:evict --table` (`ed68a522`). Owner asked for a deeper
+  look at the Eurostat connector by cyanheads: [deep study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) — borrow his portal
+  plumbing, keep our answer rules. Built + pushed (`585d9bad`, all dark, no AI, no schema): the four Eurostat datasets can ride slice
+  storage (#358 4 — converting them is an owner-present step), Eurostat call limits + permanent-error classes + the confidentiality
+  split (study step 0), the SDMX structure reader (step 1: 30/30 sampled datasets read, 28/30 fit), combined-flag notes by the owner's
+  "join the notes" rule. Open before generic Eurostat registration: decimals source + licence gap (agent building), EA21, mixed grains (#357).
 
 **▶ SESSION 151 (2026-09-30, owner present) — THE WHOLE-TABLE COPIES ARE BEING RETIRED; EVERYTHING BUILT EXCEPT THE PRODUCTION CONVERSION
   (ADR [065](decisions/065-retire-whole-table-copies-one-route.md), [#356](open-questions.md)–[#358](open-questions.md)):**

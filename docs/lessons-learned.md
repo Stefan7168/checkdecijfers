@@ -6,6 +6,34 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 152 — the production conversion, the layer correction, and the Eurostat portal study
+
+1. **"Stop at the first problem" earned its keep twice, and both were false alarms in our own code.** The conversion loop
+   stopped on `37789ksz` (not pinned — the tables to convert were 17, not 20) and on `83932NED` (the after-check compared
+   measure text the conversion itself refreshes; the cells were identical). Neither touched data. But the loop printed only
+   `tail -8` of each command, which cut the headline reason; the second stop needed a source read to diagnose. **Next time:**
+   a batch script prints the first lines of a failure (the verdict), not the tail.
+2. **The owner corrected a recurring direction error: breadth comes from the layer, not from curating single tables.** A
+   read-only research agent recommended pinning `37789ksz` as "the only table answering welfare questions", and the session
+   dispatched a build without testing that against the product direction. Now a CLAUDE.md convention with a one-line test:
+   does this make the general route better, or does it hand-tend one table?
+3. **Agent worktrees start from `origin/main`, so parallel agents branched from different bases and collided on the one
+   long `#358` open-questions row** — five merges needed a hand resolution of that single line, and one merge was committed
+   WITH conflict markers because a resolve script failed silently before `git add -A`. **Next time:** after any scripted
+   resolve, grep for markers before committing (`grep -c '^<<<<<<<'`); point new agents at a named local integration branch
+   up front; never put a raw pipe character in an open-questions table cell (it split row 357 into an extra column twice).
+4. **Two timing faults only showed under load.** A retry wait capped to "the time left" let one more attempt through when a
+   timer fired a millisecond early (CI caught it); fixed by not starting a wait that reaches the deadline. A parity test
+   split a 13,568-cell table into ~1,400 ten-cell requests and hit its 120 s limit three times when agents ran tests in
+   parallel; 1,000-cell requests prove the same (file 100 s+ → 17 s).
+5. **A live read-only probe through the real query path (`probe: true`, no AI) is the cheap proof after a storage change.**
+   It confirmed every curated measure still served — but its first run piped through `tail -60` and lost the two lines that
+   mattered. Filter for the problems and a per-table summary; never tail a long probe.
+6. **The owner's instinct about the Eurostat connector was right and the deep read paid off:** reading a dataset's layout
+   from Eurostat's SDMX structure (no numbers) is what makes "any Eurostat dataset" possible; session 151's skim had listed
+   it only as tricks. The structure crawl then measured three open assumptions instead of leaving them as guesses (A3 false:
+   XML only; A4: totals vary per dataset; A5: ~3% without a unit dimension).
+
 ## Session 151 — the value research, the one-route redesign, and parallel builders
 
 1. **A read-only dry run against production found three defects the hermetic suite could not.** The conversion command
