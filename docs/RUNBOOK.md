@@ -2596,6 +2596,12 @@ removing `.tmp` leftovers older than an hour. If disk is ever tight again: `du -
 first; deleting the whole folder is always safe (one rebuild of ~7 s on the next run). Never touch anything else
 under `node_modules` for space — it is small. `web/.next` (1.6 GB) is build output and equally safe to delete.
 
+**Storage mode (since 2026-09-30, ADR 065, #358 item 2).** By default the snapshot is the **slice** build, mirroring
+production: the 17 pinned CBS seed tables slice-stored (warmed from the fixtures), `70072ned` whole-table
+(`WHOLE_TABLE_IN_PRODUCTION`). `INGEST_FIXTURE_MODE=full npm test` runs every suite on the whole-table build instead;
+`slice-all` slice-stores every seed table (the parity test uses it). An unknown value fails the run. Each mode has its
+own snapshot (the key folds the mode in), so switching modes costs one cold build, never a wrong database.
+
 ## Local real-browser harness — the whole product with NO secrets (added session 98, 2026-09-12, autonomous)
 
 **Why.** A remote (cloud) session has no `DATABASE_URL`, no Supabase keys and no LLM key, and an autonomous session

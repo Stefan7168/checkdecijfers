@@ -4,14 +4,17 @@
 // through the other storage route. Both databases come from the committed
 // fixtures (tests/helpers/fixture-snapshot.ts, buildIngested per mode); every
 // seed table is compared except the documented whole-table fallback, which the
-// slice build does not slice-store at all.
+// slice build does not slice-store at all. The comparison uses the `slice-all`
+// build, so the tables the default build keeps whole-table because production
+// does (WHOLE_TABLE_IN_PRODUCTION) are proven slice-storable too; the default
+// build's own storage modes are pinned at the end (#358 item 2).
 //
 // Strict on purpose: every reader-relevant column, exact values as text. A
 // difference here is a finding to explain, never a comparison to loosen.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
-import { SLICE_BUILD_FULL_FALLBACK } from '../helpers/fixture-snapshot.ts';
+import { SLICE_BUILD_FULL_FALLBACK, WHOLE_TABLE_IN_PRODUCTION } from '../helpers/fixture-snapshot.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 
 let fullDb: Db;
@@ -21,7 +24,7 @@ let closeSlice: () => Promise<void>;
 
 beforeAll(async () => {
   ({ db: fullDb, close: closeFull } = await createIngestedDb({ mode: 'full' }));
-  ({ db: sliceDb, close: closeSlice } = await createIngestedDb({ mode: 'slice' }));
+  ({ db: sliceDb, close: closeSlice } = await createIngestedDb({ mode: 'slice-all' }));
 });
 
 afterAll(async () => {
@@ -121,5 +124,24 @@ describe('the slice-mode build holds what the whole-table build holds', () => {
     const full = await canonicalMeasures(fullDb);
     expect(full.length).toBeGreaterThan(0);
     expect(await canonicalMeasures(sliceDb)).toEqual(full);
+  });
+});
+
+describe('the default build mirrors production storage (#358 item 2)', () => {
+  it('slice-stores every seed table except the ones production keeps whole-table', async () => {
+    const { db, close } = await createIngestedDb({ mode: 'slice' });
+    try {
+      const { rows } = await db.query('select id, ingest_mode, status from cbs_tables order by id');
+      const seedIds = SEED_TABLES.map((t) => t.id);
+      expect(rows.map((r) => r.id as string).sort()).toEqual([...seedIds].sort());
+      for (const id of Object.keys(WHOLE_TABLE_IN_PRODUCTION)) expect(seedIds, id).toContain(id);
+      const whole = new Set([...Object.keys(WHOLE_TABLE_IN_PRODUCTION), ...Object.keys(SLICE_BUILD_FULL_FALLBACK)]);
+      for (const r of rows) {
+        expect(r.ingest_mode, r.id as string).toBe(whole.has(r.id as string) ? 'full' : 'slice_cache');
+        expect(r.status, r.id as string).toBe('active');
+      }
+    } finally {
+      await close();
+    }
   });
 });

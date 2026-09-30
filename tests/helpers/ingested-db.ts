@@ -12,8 +12,10 @@
 // (the isolation the answer-first suites depend on). The mechanism, the
 // measurement and the proof of isolation live in fixture-snapshot.ts.
 //
-// The storage mode (whole-table vs slice-stored seed tables, ADR 065 step 6)
-// comes from INGEST_FIXTURE_MODE via fixtureMode(). A suite that tests the
+// The storage mode (ADR 065 step 6, #358 item 2) comes from INGEST_FIXTURE_MODE
+// via fixtureMode(): by default `slice`, which mirrors production (the pinned
+// CBS tables slice-stored, WHOLE_TABLE_IN_PRODUCTION whole-table); `full` keeps
+// every seed table whole-table. A suite that tests the
 // whole-table storage mechanism itself passes `{ mode: 'full' }` so it keeps
 // testing that mechanism whatever the run's mode is.
 import {

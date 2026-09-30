@@ -108,7 +108,7 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
   note text), so one extra CBS request per slice request, for this table only. No schema change.
 - A pinned registration of a seed table with a reviewed note map is accepted (`no_machine_period_status` still refuses
   every on-demand table); `convert-to-slices` no longer refuses `70072ned`.
-- **Proven hermetically:** the slice-mode test build now slice-stores every seed table, `70072ned` included, with the
+- **Proven hermetically:** the all-slice test build (`INGEST_FIXTURE_MODE=slice-all`) slice-stores every seed table, `70072ned` included, with the
   same cells, statuses (Definitief, Voorlopig and NaderVoorlopig), registry row and labels as the whole-table build
   (`tests/ingestion/slice-build-parity.test.ts`); an unrecognised note fails in slice mode with the whole-table
   failure's exact stage and summary and quarantines (`tests/ingestion/slice-period-notes.test.ts`); a dry run and a
@@ -116,6 +116,17 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
 - **Assumption:** CBS moves the table's `Modified` date when it rewrites a period note, as it does for any other change.
   A cached slice is re-confirmed without re-reading the notes while `Modified` stands still — the same assumption every
   slice-stored table already makes about machine statuses.
+
+## As built (2026-09-30, #358 item 2, first half) — slice storage is the default test build
+
+- The hermetic test database (`tests/helpers/fixture-snapshot.ts`) now defaults to `INGEST_FIXTURE_MODE=slice`, which
+  mirrors production: the 17 pinned CBS seed tables slice-stored and warmed from the fixtures, and the seed tables
+  production does not slice-store (`WHOLE_TABLE_IN_PRODUCTION`: `70072ned`) kept whole-table. Every data-loading suite,
+  the 20-task benchmark and the local browser harness run on it. `INGEST_FIXTURE_MODE=full` keeps the whole-table build
+  selectable; `slice-all` slice-stores every seed table for the parity proof. CI runs only the default build (no second
+  run, no extra Actions minutes); the parity test builds `full` and `slice-all` itself, so the whole-table path stays
+  tested until it is deleted (the second half of item 2).
+- When production slice-stores `70072ned`, remove its `WHOLE_TABLE_IN_PRODUCTION` entry in the same change.
 
 ## Alternatives considered
 

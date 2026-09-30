@@ -131,8 +131,10 @@ Steps 2, 3 and 4 touch different files and can be built in parallel; 5 needs all
   node count limit of '1000' has been exceeded"; 165 accepted, 180 refused, measured). The planner now caps a request at
   150 codes across all axes. With the job's real caps (25,000 cells, 6,000 characters, 150 codes) the 20 pinned tables
   need **108 requests** in total, 32 of them for `86141NED` (`npm run ingest:warm-plan -- --max-cells 25000`).
-- **Not done:** step 9 (converting production, owner present; then the deletions of D10). The test default stays
-  whole-table until production is converted, because production still runs that path. `70072ned`'s period-note
+- **Not done:** step 9 (converting production, owner present; then the deletions of D10). With the conversion of the
+  17 pinned tables (2026-09-30) the test default became the slice build, mirroring production (`70072ned` kept
+  whole-table; `INGEST_FIXTURE_MODE=full` still selects the whole-table build; ADR 065 as-built note, #358 item 2
+  first half). `70072ned`'s period-note
   status in the slice store is built (#358 item 3, ADR 065 as-built note).
 
 ## 5. Invariants at stake
