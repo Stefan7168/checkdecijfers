@@ -299,6 +299,42 @@ database schema or production.
   (`TableParseAmbiguousMeasureError`) — no non-curated fixture table has two measures the model cannot tell apart (checked
   over all 8), so it stays covered by calibration case `ambiguous-arbeid-werklozen` (80590ned) and the unit tests.
 
+## As built — step 5 follow-up: the refused question shapes (2026-10-01, worktree branch, dark)
+
+Built before the parser's first recording, **without touching the parser's prompt or output schema** (no recorded byte
+changes). The table lane now answers four of the shapes step 5 refused, with the curated lane's own rules — shared, not
+copied — and still no AI in any number:
+
+- **A class of regions** ("per provincie", "alle gemeenten", "welke gemeente in Utrecht …", [#340](../open-questions.md)).
+  The parser already reported the class (`regionScope`). `resolveTableRegionClass` (`src/answer/table-lane/regions.ts`)
+  applies the curated rules (named places win over a class; "gemeenten in X" resolves X as a province; only "Nederland"
+  means every gemeente) and reads the roster from CBS's own dimension groups with the query layer's own rule
+  (`regionRoster`, extracted from `src/query/region-set.ts`, used by both). The slice holds exactly that roster (split
+  into pieces of at most 150 codes by the existing splitter) and the intent carries it as `regionSet`, so the query layer's
+  coverage, "not applicable" and ranking checks (ADR 054) run unchanged. Still refused (`table_lane_region_class`, text
+  reworded): a class over more than one period (checked before any fetch), a table whose regions are not one CBS
+  GeoDimension, a missing or empty CBS group (never a code-prefix scan).
+- **Now versus N units ago, explicit date ranges, relative periods** ("vorig jaar") ([#342](../open-questions.md) (b)).
+  The pure period arithmetic moved out of `src/answer/intent/resolve.ts` into `src/answer/intent/period-rules.ts`; the
+  curated resolver and the lane's `resolveTablePeriod` both call it (curated behaviour byte-identical, benchmark
+  unchanged). The lane applies it to the table's own published codes: both periods of a comparison must be listed (never a
+  nearest period); a date range resolves at the finest published grain that expresses its whole-month boundaries; a
+  relative period is the calendar period before the reference date and must be listed. The parser's grain flag for a date
+  range now follows the same rule (flagged only when no published grain expresses it — "1 januari t/m 31 december 2022" is
+  exactly the year 2022 on a yearly table); validator code only.
+- **The derivation follows the curated normalization** (a range, `since` or `last_n` is a series; a multi-month date range
+  too, unless it collapsed to one period). A series or change over ONE period is refused before any fetch with the new
+  reason `table_lane_single_period` (its own Dutch and English template).
+- **Still refused: change during a year** ("hoeveel steeg X in 2023", `change_over_year`). Which two cells that means
+  depends on whether the measure is a stand per 1 januari or a flow; the curated lane reads that from a hand-curated key
+  list and an arbitrary CBS table states nothing structural about it, so any choice would be a guess (principle c).
+- Hermetic tests: `tests/answer/table-lane-periods.test.ts`, `tests/answer/table-lane-plan.test.ts` (region classes,
+  period shapes, derivations), `tests/ingestion/table-lane-job.test.ts` (end to end through the real query layer over the
+  stored slice: per provincie, gemeenten in Utrecht with a ranking, alle gemeenten fetched in pieces, now vs 5 years ago
+  with the difference derivation, a date range as a series, "vorig jaar").
+- Question phrasings the parser prompt does not map to these shapes yet ("gestegen sinds vorig jaar", "nu vergeleken met
+  2015", "2015 tot 2020") and labelled cases for the recording are proposals for the session, not built here.
+
 ## Trade-offs and open points (after step 5)
 
 - A quarantined slice-cache table has no rebaseline path yet (syncTable refuses it) — recovery = eviction or a supervised

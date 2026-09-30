@@ -20,8 +20,13 @@
 //     member) absorbs "Nederland"/"heel Nederland" — unless its title says
 //     "Caribisch" — and states "Regio: Nederland (landelijke tabel)"; any
 //     other place there is `region_unavailable`;
-//   - a region class (`regionScope`) is `table_lane_region_class`.
+//   - a region class (`regionScope`) is resolved by resolveTableRegionClass
+//     below (2026-10-01, #340) BEFORE this resolver runs; resolveTableRegions
+//     itself still refuses a non-null class (`table_lane_region_class`), so a
+//     caller that skips the class step can never answer a class as places.
 import type { RegionScopeKind, RegionTerm } from '../intent/types.ts';
+import { regionRoster } from '../../query/region-set.ts';
+import type { RegionScope } from '../../query/types.ts';
 import {
   REGION_MEMBER_CODE,
   memberPlaceKey,
@@ -86,8 +91,10 @@ export function resolveTableRegions(input: {
 }): TableRegionResolution {
   const { terms, regionScope, table, regionDims, hasRegionCodedBreakdownMember, choices } = input;
 
-  // Defence in depth: planTableLane already refuses a region class at its
-  // step 6, before this resolver runs; kept so a direct caller cannot skip it.
+  // Defence in depth: planTableLane resolves a region class through
+  // resolveTableRegionClass first and calls this resolver with null (or with
+  // the named places, when those win); kept so a direct caller cannot answer
+  // a class as if it were places.
   if (regionScope !== null) {
     return refuse('table_lane_region_class', `the question asks about the region class '${regionScope}'`);
   }
@@ -236,4 +243,111 @@ export function resolveTableRegions(input: {
   }
   coordinates[dim.name] = codes;
   return { ok: true, coordinates, defaults, named };
+}
+
+export type TableRegionClassResolution =
+  /** Named places win over a class (the curated rule): the caller resolves
+   * the terms as places, exactly as without a class. */
+  | { kind: 'places' }
+  /** The class, as the query layer's additive `regionSet`, plus the roster
+   * the slice must hold — read from CBS's own dimension groups with the query
+   * layer's own rule (src/query/region-set.ts regionRoster), so the stored
+   * slice and the query's roster are the same codes. */
+  | { kind: 'class'; scope: RegionScope; dimension: string; codes: string[] }
+  | { kind: 'ask'; question: BreakdownQuestion }
+  | { kind: 'refuse'; reason: 'region_unknown' | 'region_unavailable' | 'table_lane_region_class'; detail: string };
+
+/**
+ * A region CLASS on the table lane (#340, 2026-10-01) — the curated
+ * resolver's rules (src/answer/intent/resolve.ts resolveRegionScope), over
+ * one table's own code lists instead of the registry:
+ *
+ *  - a class next to places the reader NAMED (other than Nederland itself) →
+ *    the named places win (`places`);
+ *  - gemeenten_in_provincie → exactly one named place, resolved as a
+ *    provincie on this table (resolveTableRegions, kind forced to provincie);
+ *    only "Nederland" named → every gemeente; no place or several → refused
+ *    `region_unknown` (the lane has no free-text region question);
+ *  - the class is served only over the table's ONE CBS GeoDimension: the
+ *    query layer reads a roster from a GeoDimension only, and a geo-like
+ *    plain dimension carries one coordinate per question — refused
+ *    `table_lane_region_class` otherwise;
+ *  - the roster comes from CBS's dimension groups (regionRoster); a group
+ *    that is missing or empty refuses — never a prefix scan, never a guess.
+ *
+ * No db, no LLM: the roster rule runs over the in-memory code lists.
+ */
+export async function resolveTableRegionClass(input: {
+  scope: RegionScopeKind;
+  terms: RegionTerm[];
+  table: TableLaneTable;
+  regionDims: BreakdownDimension[];
+  hasRegionCodedBreakdownMember: boolean;
+  choices: TableLaneChoice[];
+}): Promise<TableRegionClassResolution> {
+  const { scope, terms, table, regionDims, hasRegionCodedBreakdownMember, choices } = input;
+  const tableId = table.schema.tableId;
+  const places = terms.filter((t) => !isNationalTerm(t));
+
+  if (scope !== 'gemeenten_in_provincie' && places.length > 0) return { kind: 'places' };
+
+  if (regionDims.length !== 1 || classifyDimension(regionDims[0]!) !== 'geo') {
+    return {
+      kind: 'refuse',
+      reason: 'table_lane_region_class',
+      detail:
+        `the region class '${scope}' is served only over one CBS GeoDimension; table '${tableId}' has ` +
+        `${regionDims.length} region dimension(s)${regionDims.length === 1 ? ' that is not a GeoDimension' : ''}`,
+    };
+  }
+  const dim = regionDims[0]!;
+
+  let regionScope: RegionScope;
+  if (scope !== 'gemeenten_in_provincie') {
+    regionScope = { kind: scope };
+  } else if (places.length === 0 && terms.length > 0) {
+    // "de gemeenten in Nederland" — every gemeente (the curated rule).
+    regionScope = { kind: 'all_gemeenten' };
+  } else if (places.length !== 1) {
+    return {
+      kind: 'refuse',
+      reason: 'region_unknown',
+      detail:
+        places.length === 0
+          ? 'the question asks about the gemeenten of a provincie but names no provincie'
+          : `the question asks about the gemeenten of one provincie but names ${places.length} places: ` +
+            places.map((t) => `"${t.name}"`).join(', '),
+    };
+  } else {
+    // The class itself says the place is a provincie, so "gemeenten in
+    // Utrecht" is never gemeente-vs-provincie ambiguous.
+    const parent = resolveTableRegions({
+      terms: [{ name: places[0]!.name, kind: 'provincie' }],
+      regionScope: null,
+      table,
+      regionDims,
+      hasRegionCodedBreakdownMember,
+      choices,
+    });
+    if (!parent.ok) {
+      if ('question' in parent) return { kind: 'ask', question: parent.question };
+      return { kind: 'refuse', reason: parent.reason, detail: parent.detail };
+    }
+    regionScope = { kind: 'gemeenten_in_provincie', parent: parent.coordinates[dim.name]![0]! };
+  }
+
+  // CBS's own dimension groups, in CBS's own order (Index, then code — the
+  // query layer's codesInGroups order over the same metadata).
+  const codeList = table.codeLists[dim.name] ?? [];
+  const codesIn = (groups: string[]): string[] =>
+    codeList
+      .filter((c) => c.dimensionGroup !== null && groups.includes(c.dimensionGroup))
+      .sort(
+        (a, b) =>
+          (a.index ?? Number.MAX_SAFE_INTEGER) - (b.index ?? Number.MAX_SAFE_INTEGER) || a.code.localeCompare(b.code),
+      )
+      .map((c) => c.code);
+  const roster = await regionRoster(codesIn, tableId, dim.name, regionScope);
+  if (!roster.ok) return { kind: 'refuse', reason: 'table_lane_region_class', detail: roster.detail };
+  return { kind: 'class', scope: regionScope, dimension: dim.name, codes: roster.codes };
 }

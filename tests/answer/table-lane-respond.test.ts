@@ -423,8 +423,12 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
     en: `CBS table "${TITLE}" has no figure for the period you asked about. The most recent period in this table is 2025.`,
   },
   table_lane_region_class: {
-    nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel "${TITLE}" nog geen antwoord geven. Noem de plaats of regio die je bedoelt.`,
-    en: `I can't yet answer for a whole group of regions at once (such as all provinces or municipalities) from CBS table "${TITLE}". Name the place or region you mean.`,
+    nl: `Deze vraag over een hele groep regio's (zoals alle provincies of gemeenten) kan ik niet uit CBS-tabel "${TITLE}" beantwoorden. Dat lukt alleen voor één periode tegelijk, en alleen als de tabel die groep zelf indeelt. Noem één jaar, kwartaal of maand, of de plaats die je bedoelt.`,
+    en: `I can't answer this question about a whole group of regions (such as all provinces or municipalities) from CBS table "${TITLE}". That only works for one period at a time, and only when the table groups those regions itself. Name one year, quarter or month, or the place you mean.`,
+  },
+  table_lane_single_period: {
+    nl: `Voor een verloop of een verandering zijn minstens twee perioden nodig, maar CBS-tabel "${TITLE}" heeft voor deze vraag maar één periode (2025). Vraag naar die ene periode, of noem een langere periode.`,
+    en: `A trend or a change needs at least two periods, but CBS table "${TITLE}" has only one period for this question (2025). Ask about that one period, or name a longer period.`,
   },
   region_unknown: {
     nl: `De plaats of regio die je noemt, staat niet in CBS-tabel "${TITLE}". Controleer de naam of noem een andere plaats.`,
@@ -451,7 +455,10 @@ const EXPECTED: Record<TableLaneRefusalReason, { nl: string; en: string }> = {
 describe('respondTableLane — refusals', () => {
   for (const reason of Object.keys(EXPECTED) as TableLaneRefusalReason[]) {
     it(`${reason} → its template (nl + en), audited once as a refusal`, async () => {
-      const plan = refusePlan(reason, reason === 'table_lane_period_missing' ? { latestPeriodCode: '2025JJ00' } : {});
+      const plan = refusePlan(
+        reason,
+        reason === 'table_lane_period_missing' || reason === 'table_lane_single_period' ? { latestPeriodCode: '2025JJ00' } : {},
+      );
       for (const lang of ['nl', 'en'] as const) {
         const audited = await respondTableLane(db, {
           row: laneRow({ lang }),

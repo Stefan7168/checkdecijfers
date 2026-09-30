@@ -16,6 +16,14 @@
 // forget one. Each step's failure is the plan's outcome; later steps never
 // run.
 //
+// 2026-10-01 (#340, #342 (b)): a region class is no longer refused outright —
+// step 10 resolves it over the table's ONE GeoDimension with the curated
+// rules and the query layer's own roster rule, and the intent carries it as
+// `regionSet` (one period only). The periods now_vs_ago, date_range and
+// relative resolve with the curated rules (periods.ts), and the derivation
+// follows the curated normalization (step 11b, period-rules.ts) instead of
+// the model's raw hint. change_over_year stays refused (periods.ts).
+//
 // Principle (a): the LLM (tableParse) only ever chooses codes from the
 // table's own lists; every code in the result is re-checked against the
 // table's full code lists (bridge, resolver, region + period resolvers). No
@@ -75,8 +83,15 @@ import {
 } from '../table-parse/parse.ts';
 import { namedFromParse } from '../table-parse/bridge.ts';
 import { REGION_MEMBER_CODE } from '../table-parse/places.ts';
+import { normalizeDerivation } from '../intent/period-rules.ts';
 import { resolveTablePeriod } from './periods.ts';
-import { isNationalTerm, resolveTableRegions } from './regions.ts';
+import {
+  isNationalTerm,
+  resolveTableRegionClass,
+  resolveTableRegions,
+  type TableRegionClassResolution,
+  type TableRegionResolution,
+} from './regions.ts';
 import type { TableLaneChoice, TableLaneTable } from './types.ts';
 import type { TableLaneSelection } from './selection-note.ts';
 
@@ -93,6 +108,7 @@ export type TableLaneRefusalReason =
   | 'region_unknown'
   | 'region_unavailable' // TableParseRegionUnavailableError, the Caribisch/geo+coded-member rules
   | 'table_lane_too_large' // slice > SLICE_MAX_CELLS
+  | 'table_lane_single_period' // a series/difference over one period (2026-10-01)
   | 'cbs_unreachable' // Task 4 only
   | 'table_lane_failed'; // Task 4 only (give-up)
 
@@ -296,10 +312,10 @@ export async function planTableLane(input: {
     );
   }
 
-  // --- 6. Region classes --------------------------------------------------------------
-  if (result.regionScope !== null) {
-    return refuse('table_lane_region_class', `the question asks about the region class '${result.regionScope}'`, result, parseAudit);
-  }
+  // --- 6. Region classes: resolved at step 10 (#340, 2026-10-01) ------------------------
+  // A class ("per provincie", "welke gemeente in Utrecht …") is no longer
+  // refused here: step 10 resolves it with the curated rules over this
+  // table's own dimension groups (regions.ts resolveTableRegionClass).
 
   // --- 7. Reader choices from earlier button rounds -------------------------------------
   const offeredNames = new Set(offered.breakdowns.map((b) => b.name));
@@ -350,14 +366,35 @@ export async function planTableLane(input: {
   }
 
   // --- 10. Regions ------------------------------------------------------------------------
-  const regions = resolveTableRegions({
-    terms: result.regions,
-    regionScope: result.regionScope,
-    table,
-    regionDims,
-    hasRegionCodedBreakdownMember,
-    choices: regionChoices,
-  });
+  // A region class first (#340): the class becomes the query layer's
+  // additive `regionSet`, its CBS roster the slice's region members; named
+  // places next to a class win (the curated rule) and fall through to the
+  // plain place resolver below.
+  let regionClass: Extract<TableRegionClassResolution, { kind: 'class' }> | null = null;
+  if (result.regionScope !== null) {
+    const cls = await resolveTableRegionClass({
+      scope: result.regionScope,
+      terms: result.regions,
+      table,
+      regionDims,
+      hasRegionCodedBreakdownMember,
+      choices: regionChoices,
+    });
+    if (cls.kind === 'ask') return { kind: 'ask', question: cls.question, parse: result, parseAudit, offered };
+    if (cls.kind === 'refuse') return refuse(cls.reason, cls.detail, result, parseAudit);
+    if (cls.kind === 'class') regionClass = cls;
+  }
+  const regions: TableRegionResolution =
+    regionClass !== null
+      ? { ok: true, coordinates: { [regionClass.dimension]: regionClass.codes }, defaults: [], named: [] }
+      : resolveTableRegions({
+          terms: result.regions,
+          regionScope: null,
+          table,
+          regionDims,
+          hasRegionCodedBreakdownMember,
+          choices: regionChoices,
+        });
   if (!regions.ok) {
     if ('question' in regions) return { kind: 'ask', question: regions.question, parse: result, parseAudit, offered };
     return refuse(regions.reason, regions.detail, result, parseAudit);
@@ -373,6 +410,36 @@ export async function planTableLane(input: {
   // --- 11. Period -------------------------------------------------------------------------
   const period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
   if (!period.ok) return refuse(period.reason, period.detail, result, parseAudit, period.latestPeriodCode);
+  if (regionClass !== null && period.codes.length !== 1) {
+    // The query layer answers a class for ONE period (ADR 054's one varying
+    // axis); refused here, before any fetch, rather than after one.
+    return refuse(
+      'table_lane_region_class',
+      `the region class '${regionClass.scope.kind}' is answered for one period at a time; the question spans ${period.codes.length}`,
+      result,
+      parseAudit,
+    );
+  }
+
+  // --- 11b. Derivation: the curated rules (src/answer/intent/period-rules.ts) --------------
+  // The period spec outranks the model's hint (a range/since/last_n is a
+  // series, a multi-month date range too); a date range that collapsed to ONE
+  // period code at this table's grain keeps the model's own hint (the
+  // curated collapse rule); a series or difference over a single period can
+  // never execute — refused before any fetch (principle c).
+  let derivation = normalizeDerivation(result.period, result.derivation);
+  if (result.period.kind === 'date_range' && derivation !== result.derivation && period.codes.length < 2) {
+    derivation = result.derivation;
+  }
+  if ((derivation === 'series' || derivation === 'difference') && period.codes.length < 2) {
+    return refuse(
+      'table_lane_single_period',
+      `derivation '${derivation}' needs more than one period, but the question resolves to ${period.codes.join(', ')} only`,
+      result,
+      parseAudit,
+      period.codes[0],
+    );
+  }
 
   // --- 12. The slice ----------------------------------------------------------------------
   const members: Record<string, string[]> = {};
@@ -415,7 +482,10 @@ export async function planTableLane(input: {
     }
     dims[d.name] = codes[0]!;
   }
-  const regionCodes = geoDims.length === 1 ? members[geoDims[0]!.name]! : [];
+  // A class travels as `regionSet` ONLY (the query layer re-reads the same
+  // roster from the table's stored CBS dimension groups and refuses an intent
+  // naming both); named places travel as `regions`.
+  const regionCodes = regionClass === null && geoDims.length === 1 ? members[geoDims[0]!.name]! : [];
   const intentPeriod: IntentPeriod =
     period.codes.length >= 2 && contiguousPeriodCodes(period.codes)
       ? { kind: 'range', from: period.codes[0]!, to: period.codes[period.codes.length - 1]! }
@@ -424,8 +494,9 @@ export async function planTableLane(input: {
     schemaVersion: INTENT_SCHEMA_VERSION,
     target: { kind: 'explicit', tableId: schema.tableId, measure: measureCode, dims },
     ...(regionCodes.length > 0 ? { regions: regionCodes } : {}),
+    ...(regionClass !== null ? { regionSet: regionClass.scope } : {}),
     period: intentPeriod,
-    derivation: result.derivation,
+    derivation,
   };
 
   // --- Selection: every fixed coordinate, named vs. defaulted, in table order ---------------

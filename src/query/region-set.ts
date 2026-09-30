@@ -92,36 +92,42 @@ export async function codesInGroups(
   return rows.map((r) => r.code as string);
 }
 
+
+/** Where a roster's members come from: the codes of one or more CBS dimension
+ * groups of ONE table's region dimension, in CBS's own order. The query layer
+ * reads them from `dimension_labels` (codesInGroups); the table lane reads the
+ * SAME CBS metadata from the code lists its job just fetched
+ * (src/answer/table-lane/regions.ts) — one roster rule, two readers. */
+export type GroupCodesLookup = (groups: string[]) => Promise<string[]> | string[];
+
+export type RegionRosterOutcome =
+  | { ok: true; codes: string[]; describe: string }
+  | { ok: false; reason: 'empty_roster'; detail: string };
+
 /**
- * Resolves a region CLASS to the region codes of ONE table.
- *
- * Per table, deliberately: 03759ned carries 892 region codes and 83625NED 745,
- * and they disagree on which gemeenten exist (PV26 has 54 in the first and 42
- * in the second). A single global list would be wrong for one of them, which
- * is the whole reason this reads CBS's per-table metadata instead.
- *
- * @param slicePrefixes the table's registered geo-slice prefixes
- *   (`slice.dimensionPrefixes[geoDimension]`), or null/undefined when the full
- *   region dimension is ingested.
+ * The roster rule itself — extracted from resolveRegionSet (2026-10-01) so
+ * the table lane plans its slice with exactly this rule: a region CLASS → the
+ * member codes CBS's own dimension groups name, each group verified non-empty,
+ * never a prefix scan, never a guess. No slice filtering here
+ * (resolveRegionSet adds that for a registered whole-table slice).
  */
-export async function resolveRegionSet(
-  db: Db,
+export async function regionRoster(
+  codesIn: GroupCodesLookup,
   tableId: string,
   geoDimension: string,
   scope: RegionScope,
-  slicePrefixes: string[] | null | undefined,
-): Promise<RegionSetOutcome> {
+): Promise<RegionRosterOutcome> {
   let roster: string[];
   let describe: string;
 
   switch (scope.kind) {
     case 'all_provincies': {
-      roster = await codesInGroups(db, tableId, geoDimension, [PROVINCE_GROUP]);
+      roster = await codesIn([PROVINCE_GROUP]);
       describe = `dimension group "${PROVINCE_GROUP}"`;
       break;
     }
     case 'all_landsdelen': {
-      roster = await codesInGroups(db, tableId, geoDimension, [LANDSDEEL_GROUP]);
+      roster = await codesIn([LANDSDEEL_GROUP]);
       describe = `dimension group "${LANDSDEEL_GROUP}"`;
       break;
     }
@@ -129,7 +135,7 @@ export async function resolveRegionSet(
       // Verify the parent is a real PROVINCE of this table before composing a
       // group name from it — an unknown or non-province code must refuse, not
       // produce a group name nobody can vouch for.
-      const provinces = await codesInGroups(db, tableId, geoDimension, [PROVINCE_GROUP]);
+      const provinces = await codesIn([PROVINCE_GROUP]);
       if (!provinces.includes(scope.parent)) {
         return {
           ok: false,
@@ -138,7 +144,7 @@ export async function resolveRegionSet(
         };
       }
       const group = gemeenteGroupFor(scope.parent);
-      roster = await codesInGroups(db, tableId, geoDimension, [group]);
+      roster = await codesIn([group]);
       if (roster.length === 0) {
         return {
           ok: false,
@@ -150,7 +156,7 @@ export async function resolveRegionSet(
       break;
     }
     case 'all_gemeenten': {
-      const provinces = await codesInGroups(db, tableId, geoDimension, [PROVINCE_GROUP]);
+      const provinces = await codesIn([PROVINCE_GROUP]);
       if (provinces.length === 0) {
         return {
           ok: false,
@@ -162,9 +168,7 @@ export async function resolveRegionSet(
       // Verified per province, not in bulk: a union that silently loses one
       // province would answer for eleven of twelve and still call itself
       // "alle gemeenten".
-      const perGroup = await Promise.all(
-        groups.map(async (group) => ({ group, codes: await codesInGroups(db, tableId, geoDimension, [group]) })),
-      );
+      const perGroup = await Promise.all(groups.map(async (group) => ({ group, codes: await codesIn([group]) })));
       const emptyGroup = perGroup.find((g) => g.codes.length === 0);
       if (emptyGroup) {
         return {
@@ -190,6 +194,36 @@ export async function resolveRegionSet(
       detail: `${describe} is empty for table "${tableId}" (dimension "${geoDimension}") — no roster to answer over`,
     };
   }
+  return { ok: true, codes: roster, describe };
+}
+
+/**
+ * Resolves a region CLASS to the region codes of ONE table.
+ *
+ * Per table, deliberately: 03759ned carries 892 region codes and 83625NED 745,
+ * and they disagree on which gemeenten exist (PV26 has 54 in the first and 42
+ * in the second). A single global list would be wrong for one of them, which
+ * is the whole reason this reads CBS's per-table metadata instead.
+ *
+ * @param slicePrefixes the table's registered geo-slice prefixes
+ *   (`slice.dimensionPrefixes[geoDimension]`), or null/undefined when the full
+ *   region dimension is ingested.
+ */
+export async function resolveRegionSet(
+  db: Db,
+  tableId: string,
+  geoDimension: string,
+  scope: RegionScope,
+  slicePrefixes: string[] | null | undefined,
+): Promise<RegionSetOutcome> {
+  const outcome = await regionRoster(
+    (groups) => codesInGroups(db, tableId, geoDimension, groups),
+    tableId,
+    geoDimension,
+    scope,
+  );
+  if (!outcome.ok) return outcome;
+  const { codes: roster, describe } = outcome;
 
   if (!slicePrefixes || slicePrefixes.length === 0) {
     return { ok: true, codes: roster, excludedBySlice: [] };

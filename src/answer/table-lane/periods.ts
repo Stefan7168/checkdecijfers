@@ -10,16 +10,33 @@
 //     no fallback to another grain),
 //   - a period this table does not list → `table_lane_period_missing`, naming
 //     the latest available CODE at that grain (a code, never a value),
-//   - a spec kind this lane does not resolve (change_over_year, now_vs_ago,
-//     date_range, relative) or an insane year/index →
-//     `table_lane_period_unsupported`.
+//   - a spec kind this lane does not resolve (change_over_year) or an insane
+//     year/index → `table_lane_period_unsupported`.
 // The only default is `none` (no period in the question at all): the latest
 // period at the coarsest grain the table has, returned as `defaulted` so the
 // answer states it ("Uitgangspunt: Perioden: <label>").
+//
+// now_vs_ago, date_range and relative (2026-10-01, #342 (b)) run on the
+// curated resolver's OWN rules (src/answer/intent/period-rules.ts — the grain
+// preference, the date arithmetic, the calendar step), applied to this
+// table's published codes instead of a registry lookup. change_over_year
+// stays refused: which two cells "the change during year X" is depends on
+// whether the measure is a stand per 1 januari or a flow over the year — the
+// curated lane reads that from a hand-curated key list
+// (STAND_START_OF_YEAR_KEYS), and an arbitrary CBS table carries no
+// structural signal for it, so any pick here would be a guess (principle c).
 import type { CbsCode } from '../../cbs-adapter/types.ts';
 import { parsePeriodCode, type ParsedPeriod } from '../../ingestion/periods.ts';
 import type { PeriodGrain } from '../../query/types.ts';
 import type { PeriodSpec } from '../intent/types.ts';
+import {
+  dateRangeCode,
+  dateRangeGrain,
+  dateRangeToMonths,
+  nowVsAgoGrain,
+  nowVsAgoPastCode,
+  relativePeriodCode,
+} from '../intent/period-rules.ts';
 
 export type TablePeriodResolution =
   | { ok: true; codes: string[]; defaulted: { code: string; label: string } | null }
@@ -65,9 +82,10 @@ function unitGrain(unit: 'month' | 'quarter' | 'year'): PeriodGrain {
 /**
  * Resolves `spec` against the time dimension's stored codes. Unreadable codes
  * (parsePeriodCode → null) are ignored. "Latest" is the maximum by (year,
- * sub-period) at one grain. `referenceDate` (YYYY-MM-DD) is accepted for the
- * caller's contract but not consulted: the table's own published codes decide
- * what "latest" is, never the calendar.
+ * sub-period) at one grain. `referenceDate` (YYYY-MM-DD) is consulted ONLY by
+ * `relative` ("vorig jaar" is a calendar fact — the curated resolver's rule);
+ * everywhere else the table's own published codes decide what "latest" is,
+ * never the calendar.
  */
 export function resolveTablePeriod(
   spec: PeriodSpec,
@@ -204,7 +222,80 @@ export function resolveTablePeriod(
       };
     }
 
+    case 'now_vs_ago': {
+      // Curated rule (period-rules.ts): TWO periods — the freshest published
+      // one and the one exactly `amount` units earlier, at the finest
+      // published grain that expresses the unit exactly. Both must be listed
+      // by this table (never a nearest period).
+      if (!Number.isInteger(spec.amount) || spec.amount < 1 || spec.amount > 120) {
+        return unsupported(`a comparison ${spec.amount} ${spec.unit}s back is not supported (1..120)`);
+      }
+      const grain = nowVsAgoGrain(spec.unit, (g) => at(g).length > 0);
+      if (grain === null) return grainAbsent(unitGrain(spec.unit));
+      const latest = latestCode(grain);
+      const past = nowVsAgoPastCode(latest, grain, spec);
+      if (!past.ok) return unsupported(`period code ${latest} cannot be stepped back ${spec.amount} ${spec.unit}(s)`);
+      if (!at(grain).some((p) => p.code === past.code)) {
+        // The earlier period is what is missing — naming the latest period
+        // would not help the reader, so no latestPeriodCode here.
+        return {
+          ok: false,
+          reason: 'table_lane_period_missing',
+          detail: `period ${past.code} (${spec.amount} ${spec.unit}(s) before ${latest}) is not published in this table`,
+        };
+      }
+      return { ok: true, codes: [past.code, latest], defaulted: null };
+    }
+
+    case 'date_range': {
+      // Curated rule (ADR 023, period-rules.ts): whole-month boundaries only,
+      // resolved at the finest published grain that expresses them exactly.
+      const months = dateRangeToMonths(spec);
+      if (months.kind === 'invalid') return unsupported(months.message);
+      if (months.kind === 'misaligned') {
+        return unsupported('the date boundaries cut into a month, and CBS data is monthly at finest');
+      }
+      const grain = dateRangeGrain(months, (g) => at(g).length > 0);
+      if (grain === null) {
+        return {
+          ok: false,
+          reason: 'table_lane_period_grain',
+          detail: 'no period precision this table publishes expresses these exact date boundaries',
+        };
+      }
+      const from = dateRangeCode(months.fromIdx, grain);
+      const to = dateRangeCode(months.toIdx, grain);
+      const fromKey = sortKey(parsePeriodCode(from)!);
+      const toKey = sortKey(parsePeriodCode(to)!);
+      const codes = at(grain)
+        .filter((p) => sortKey(p.parsed) >= fromKey && sortKey(p.parsed) <= toKey)
+        .map((p) => p.code);
+      if (codes.length === 0) return missing(grain, `no period in ${from}..${to}`);
+      return { ok: true, codes, defaulted: null };
+    }
+
+    case 'relative': {
+      // Curated rule (period-rules.ts): the calendar period `offset` units
+      // before the reference date; this table must list it.
+      if (!Number.isInteger(spec.offset) || spec.offset > 0 || spec.offset < -120) {
+        return unsupported(`relative offset ${spec.offset} is not supported (0..-120)`);
+      }
+      const relative = relativePeriodCode(spec, {
+        year: Number(referenceDate.slice(0, 4)),
+        month: Number(referenceDate.slice(5, 7)),
+      });
+      return single(relative.grain, relative.code);
+    }
+
+    case 'change_over_year':
+      // See the module doc: needs the measure's stock-vs-flow semantics,
+      // which an un-curated table does not state.
+      return unsupported(
+        `period kind 'change_over_year' needs the measure's period semantics (stand per 1 januari or a flow), ` +
+          'which this table does not state',
+      );
+
     default:
-      return unsupported(`period kind '${spec.kind}' is not supported by the table lane`);
+      return unsupported(`period kind '${(spec as { kind: string }).kind}' is not supported by the table lane`);
   }
 }

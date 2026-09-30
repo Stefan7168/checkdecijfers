@@ -604,7 +604,10 @@ describe('validateTableParseOutput — period grain availability', () => {
     ).toBe(false);
   });
 
-  it('date_range requires MM (unavailable here)', () => {
+  // 2026-10-01 (#342 (b)): a date range is flagged only when NO published
+  // grain expresses its whole-month boundaries (the curated rule, ADR 023) —
+  // "januari t/m december 2022" is exactly the year 2022 on a yearly table.
+  it('date_range over whole calendar years is expressible at JJ (available here)', () => {
     const input = landbouwInput();
     const result = validateTableParseOutput(
       validJson(input, {
@@ -617,7 +620,39 @@ describe('validateTableParseOutput — period grain availability', () => {
       }),
       input,
     );
+    expect(result.periodGrainUnavailable).toBe(false);
+  });
+
+  it('date_range whose boundaries only months express (March..August) is flagged on a yearly-only table', () => {
+    const input = landbouwInput();
+    const result = validateTableParseOutput(
+      validJson(input, {
+        period: {
+          kind: 'date_range',
+          from: { year: 2022, month: 3, day: null },
+          to: { year: 2022, month: 8, day: null },
+          toInclusive: true,
+        },
+      }),
+      input,
+    );
     expect(result.periodGrainUnavailable).toBe(true);
+  });
+
+  it('a date_range that cuts into a month is not flagged here (the lane resolver refuses it with its own reason)', () => {
+    const input = landbouwInput();
+    const result = validateTableParseOutput(
+      validJson(input, {
+        period: {
+          kind: 'date_range',
+          from: { year: 2022, month: 1, day: 15 },
+          to: { year: 2022, month: 12, day: 31 },
+          toInclusive: true,
+        },
+      }),
+      input,
+    );
+    expect(result.periodGrainUnavailable).toBe(false);
   });
 
   it("'since' with a month set requires MM (unavailable)", () => {
