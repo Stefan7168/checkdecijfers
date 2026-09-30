@@ -1278,7 +1278,8 @@ still apply to every whole-table table.
      conversion takes CBS's current wording and says how many it refreshed;
    - a stored cell outside the declared scope, or a sync still marked running → read the message, do not force it.
 3. `npm run ingest -- convert-to-slices <tableId> --yes [--budget-seconds N]` (default budget 900 s, shared by the proof
-   and the refill). Outcomes:
+   and the refill; a real upper bound — every CBS request is cut when the budget runs out, and a request cut that
+   way is "not done": nothing of it is stored, the run reports it as remaining). Outcomes:
    - `converted` — done; the after-check found the cells equal to before.
    - `converted_incomplete` — the switch happened, the refill ran out of time: run `npm run ingest -- warm <tableId>`
      until it reports `complete`. Until then the table answers only for cells already refilled.
@@ -1293,7 +1294,8 @@ still apply to every whole-table table.
 
 **After conversion, refreshing is automatic.** The daily job kicks `/api/warm-job`, which refreshes every pinned
 slice table (one CBS schema check per table; only a table CBS changed is re-fetched) and keeps kicking itself, at most
-20 times, while it makes progress. By hand: `npm run ingest -- warm [tableId ...] [--budget-seconds N]`.
+20 times, while it makes progress. By hand: `npm run ingest -- warm [tableId ...] [--budget-seconds N]` (a request still
+running when the budget ends is cut; it shows as `partial` with that request counted in `remaining`, and the next run repeats it).
 
 **If the e-mail "a table could not be refreshed" arrives:**
 

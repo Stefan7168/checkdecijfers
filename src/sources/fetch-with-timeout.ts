@@ -43,6 +43,12 @@ export async function fetchAndRead<T>(
   }
 }
 
+/** The phrase in the error of a request cut (or refused to start) because the run's time budget was
+ * spent (`ODataV4SourceOptions.stopAt`). The message survives into failure summaries, so the warm job
+ * recognises a budget cut by this phrase and records the request as not done (remaining), not as a
+ * source failure. Nothing else may use it. */
+export const BUDGET_ENDED_PHRASE = "the run's time budget ran out";
+
 /** Like `fetch`, but rejects with a timeout error after `timeoutMs`. Covers the
  * headers phase (and, for a real fetch, the body via the attached signal); use
  * `fetchAndRead` when the body read must be bounded regardless of the fetch. */
