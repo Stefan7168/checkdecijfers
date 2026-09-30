@@ -144,7 +144,8 @@ export async function compareTableWithSource(
     for (const label of periodLabels.rows) {
       if (label.status != null) periodStatusByCode.set(label.code as string, label.status as string);
     }
-    const schema = await source.fetchTableSchema(tableId);
+    // The registered scope narrows a Eurostat dataset's request, as in fetchSlice (CBS ignores it).
+    const schema = await source.fetchTableSchema(tableId, registrySlice ?? undefined);
     const dimensionNames = schema.dimensions.map((d) => d.name);
     // ADR 061 / ADR 065 (#358 item 3): a table whose periods carry no machine
     // status gets each fetched cell's status from CBS's current period notes —

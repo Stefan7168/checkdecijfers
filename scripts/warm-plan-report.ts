@@ -1,4 +1,4 @@
-// ADR 065 step 2: what would filling each active CBS table's declared scope through bounded slice
+// ADR 065 step 2: what would filling each active CBS or Eurostat table's declared scope through bounded slice
 // requests look like? READ-ONLY: SELECT statements only — no write, no CBS call, no AI.
 //
 //   npm run ingest:warm-plan                       one line per table + totals
@@ -43,7 +43,7 @@ const { db, pool } = connectFromEnv();
 
 try {
   const tables = await db.query(
-    `select id from cbs_tables where status = 'active' and id not like 'eurostat:%' order by id`,
+    `select id from cbs_tables where status = 'active' order by id`,
   );
   const lines: TableLine[] = [];
   for (const row of tables.rows) {

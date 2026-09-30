@@ -1,0 +1,22 @@
+{
+ "synthetic": false,
+ "capturedAt": "2026-09-30T16:58:48.979Z",
+ "datasets": {
+  "tipsbd30": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/TIPSBD30/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/TIPSBD30/1.0"
+  },
+  "une_rt_q": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/UNE_RT_Q/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/UNE_RT_Q/1.0"
+  },
+  "prc_hicp_minr": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/PRC_HICP_MINR/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/PRC_HICP_MINR/1.0"
+  },
+  "namq_10_gdp": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/NAMQ_10_GDP/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/NAMQ_10_GDP/1.0"
+  }
+ }
+}

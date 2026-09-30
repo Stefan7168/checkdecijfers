@@ -11,7 +11,12 @@
 import type { CbsSlice } from '../cbs-adapter/types.ts';
 import { sliceToFilter } from '../cbs-adapter/odata-v4.ts';
 import type { Db } from '../db/types.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 import { SLICE_MAX_CELLS, type SliceRequest } from './slice-cache.ts';
+
+/** The time dimension each source applies a scope's `periodFloor` to: CBS's filter and fixture use
+ * 'Perioden', the Eurostat adapter 'time' (jsonstat.ts matchesSlice). ADR 065, #358 item 4. */
+const FLOOR_DIMENSION: Readonly<Record<string, string>> = { [CBS_SOURCE_KEY]: 'Perioden', [EUROSTAT_SOURCE_KEY]: 'time' };
 
 export interface WarmScopeInput {
   tableId: string;
@@ -210,9 +215,19 @@ export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions =
   if (new Set(dimNames).size !== dimNames.length) fail('the layout lists a dimension name twice.');
   const memberDims = dimNames.filter((n) => n !== timeDim).sort();
 
+  // A Eurostat dataset's unit is not a dimension: the adapter folds it into the measure code
+  // (`<dataset>|<unit>`), so a scope pinning `unit` is checked against the measures instead.
+  const eurostat = sourceKeyForTableId(tableId) === EUROSTAT_SOURCE_KEY;
+  const pinnedUnit = eurostat ? slice?.dimensionEquals?.unit : undefined;
+  if (pinnedUnit !== undefined) {
+    const other = input.measures.filter((m) => !m.endsWith(`|${pinnedUnit}`));
+    if (other.length > 0) {
+      fail(`the scope pins unit "${pinnedUnit}", but measure(s) ${other.slice(0, 5).join(', ')} have another unit.`);
+    }
+  }
   // A scope naming a dimension the table does not have is a stale or wrong scope.
   for (const [clause, dims] of [
-    ['dimensionEquals', Object.keys(slice?.dimensionEquals ?? {})],
+    ['dimensionEquals', Object.keys(slice?.dimensionEquals ?? {}).filter((d) => !(pinnedUnit !== undefined && d === 'unit'))],
     ['dimensionPrefixes', Object.keys(slice?.dimensionPrefixes ?? {})],
     ['dimensionIn', Object.keys(slice?.dimensionIn ?? {})],
   ] as const) {
@@ -223,9 +238,13 @@ export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions =
   if (slice?.periodIn && slice.periodIn.dimension !== timeDim) {
     fail(`the scope's periodIn names "${slice.periodIn.dimension}", but the time dimension is "${timeDim}".`);
   }
-  // Both sliceToFilter and matchesSlice hard-code the name 'Perioden' for the floor.
-  if (slice?.periodFloor && timeDim !== 'Perioden') {
-    fail(`the scope has a periodFloor, but the time dimension is "${timeDim}", not "Perioden" — the floor would not apply.`);
+  // Each source's filter hard-codes the name of the dimension the floor applies to.
+  const floorDim = FLOOR_DIMENSION[sourceKeyForTableId(tableId)];
+  if (slice?.periodFloor && timeDim !== floorDim) {
+    fail(
+      `the scope has a periodFloor, but the time dimension is "${timeDim}", not "${floorDim ?? '(no floor for this source)'}" ` +
+        `— the floor would not apply.`,
+    );
   }
 
   const storedOf = (dim: string): string[] => {
