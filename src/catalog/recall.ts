@@ -24,6 +24,25 @@
 // ever gets revisited in E2's own design round, alongside the ambiguity
 // clarification (D5a) and comparability-break refusal (D5b) that are
 // supposed to gate Eurostat's first real chat exposure.
+//
+// #357 step 3 ("Finding", ADR 048 addendum, 2026-10-01): that design round
+// has started — THE PLOT's Eurostat route. The gate is now lifted ONLY by its
+// own flag, EUROSTAT_FINDER_ENABLED=1 (never EUROSTAT_EXPLORER_ENABLED, for
+// the reason above), read at call time through eurostatFinderEnabled(), and
+// overridable per call (RecallOptions.includeEurostat) so tests and the
+// measurement never touch process.env. Flag off (the default, and
+// production): the SQL text and the filter below are the pre-step-3 ones,
+// byte for byte; the one changed parameter is the Eurostat entry of the
+// current-status list, which no row surviving the filter reads (proven in
+// tests/catalog/eurostat-finder.test.ts). Flag on: Eurostat rows (language
+// 'en') join the same full-text search and the same current-first quota; a
+// frozen or unjudged Eurostat dataset is never "current" (status from
+// parseJsonStatCatalog, registry currentCatalogStatuses = ['current']), so it
+// competes only for the historic slots and whatever the current class leaves
+// empty, exactly like a discontinued CBS table, and candidateWalk never
+// walks it. The flag must stay off in
+// production until Eurostat can actually answer from a found dataset
+// (study §5.4 steps 4-5, the D3(d) public-claim sweep).
 import type { Db } from '../db/types.ts';
 import type { CatalogCandidate } from './types.ts';
 import { ALIAS_HINTS, expandTopicTerms, type AliasHint } from './aliases.ts';
@@ -50,6 +69,14 @@ export const RECALL_LIMIT = RECALL_REGULIER_SLOTS + RECALL_HISTORIC_SLOTS;
 export interface RecallOptions {
   limit?: number;
   aliasHints?: AliasHint[];
+  /** #357 step 3: let Eurostat catalogue rows into the shortlist. Absent: eurostatFinderEnabled(). */
+  includeEurostat?: boolean;
+}
+
+/** #357 step 3: the Eurostat-finder switch. Exactly '1' ⇒ on; unset or anything else ⇒ off (the
+ * EUROSTAT_SIBLINGS_ENABLED / TABLE_LANE_ENABLED convention). Read at call time. */
+export function eurostatFinderEnabled(): boolean {
+  return process.env.EUROSTAT_FINDER_ENABLED === '1';
 }
 
 /**
@@ -63,6 +90,7 @@ export async function recallCandidates(
   options: RecallOptions = {},
 ): Promise<CatalogCandidate[]> {
   const limit = options.limit ?? RECALL_LIMIT;
+  const includeEurostat = options.includeEurostat ?? eurostatFinderEnabled();
   const terms = expandTopicTerms(topic, options.aliasHints ?? ALIAS_HINTS).filter(
     (t) => t.trim().length > 0,
   );
@@ -79,6 +107,11 @@ export async function recallCandidates(
   const orParts = terms.map((_, i) => `plainto_tsquery('dutch', $${i + 1})`).join(' || ');
   const limitParam = `$${terms.length + 1}`;
   const isCurrent = buildIsCurrentPredicate(undefined, terms.length + 2);
+  // Flag off: the pre-step-3 clause verbatim. Flag on: Eurostat's English rows too (its id prefix is the
+  // registry's own source rule, sourceKeyForTableId; D4 discovery for other languages stays closed).
+  const languageClause = includeEurostat
+    ? `(language is null or language = 'nl' or (language = 'en' and table_id like '${EUROSTAT_SOURCE_KEY}:%'))`
+    : `(language is null or language = 'nl')`;
   const sql = `
     with q as (select (${orParts}) as tsq),
     ranked as (
@@ -92,7 +125,7 @@ export async function recallCandidates(
         from cbs_catalog, q
        where cbs_catalog.tsv @@ q.tsq
          and (dataset_type is null or dataset_type <> 'Text')
-         and (language is null or language = 'nl')
+         and ${languageClause}
     )
     select table_id, title, summary, status, dataset_type, rank, is_current
       from ranked
@@ -118,7 +151,11 @@ export async function recallCandidates(
   // (D3); E1 registers zero real Eurostat tables today (Constraint 0), so
   // this gate is otherwise never exercised in production — proven with a
   // hand-inserted synthetic candidate in tests/catalog/recall.test.ts.
-  const rows = rawRows.filter((r) => sourceKeyForTableId(r.table_id as string) !== EUROSTAT_SOURCE_KEY);
+  //
+  // #357 step 3: lifted ONLY when includeEurostat (see this file's header).
+  const rows = includeEurostat
+    ? rawRows
+    : rawRows.filter((r) => sourceKeyForTableId(r.table_id as string) !== EUROSTAT_SOURCE_KEY);
 
   const toCandidate = (r: Record<string, unknown>): CatalogCandidate => ({
     tableId: r.table_id as string,
@@ -131,6 +168,17 @@ export async function recallCandidates(
   const regulier = rows.filter((r) => r.is_current === true).map(toCandidate);
   const historic = rows.filter((r) => r.is_current !== true).map(toCandidate);
 
+  return quotaMerge(regulier, historic, limit);
+}
+
+/** The shortlist from the two status classes (each already in class order, strongest first). Exported for
+ * the #357 step-3 measurement (scripts/eurostat-finder-recall.ts), which ranks with other text configurations
+ * and must merge exactly as the finder does. Pure. */
+export function quotaMerge(
+  regulier: CatalogCandidate[],
+  historic: CatalogCandidate[],
+  limit: number,
+): CatalogCandidate[] {
   // Quota merge (amendment A2): reserve the historic slots only when the
   // caller's limit has room beyond the Regulier quota (the default 24 does;
   // a small test limit degrades to plain Regulier-first fill). Unused slots

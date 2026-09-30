@@ -9,6 +9,6 @@
   ],
   "declaredPeriodStatuses": ["Published", "p", "e", "s", "f", "b", "c", "d", "u", "n", "z", ":"],
   "declaredValueAttributes": ["None", "p", "e", "s", "f", "b", "c", "d", "u", "n", "z", ":"],
-  "declaredCatalogStatuses": [],
+  "declaredCatalogStatuses": ["current", "possibly_frozen"],
   "declaredDatasetTypes": ["dataset", "table"]
 }

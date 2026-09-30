@@ -279,10 +279,10 @@ describe('ingestCatalog', () => {
   // refresh's own source's fetchCatalog() entries — so a registered table
   // from a DIFFERENT source would always resolve `newStatus` to null (never
   // actually refreshed by this call), spuriously reporting a flip whenever
-  // it happened to be "current" beforehand. Dormant with the REAL registry
-  // today only because Eurostat's currentCatalogStatuses ships empty
-  // (Constraint 0) — this test proves the SQL scoping fix directly,
-  // independent of that dormancy, using a table registered under a made-up
+  // it happened to be "current" beforehand. (Since #357 step 3 Eurostat's
+  // currentCatalogStatuses is ['current'], so the real registry could now
+  // trigger it too.) This test proves the SQL scoping fix directly,
+  // independent of the real registry, using a table registered under a made-up
   // source key. `sourceKeyForTableId`/`resolveSource`'s A1 fail-direction
   // falls an UNKNOWN key back to the 'cbs' entry (currentCatalogStatuses:
   // ['Regulier']) — a real, non-empty list — so `wasCurrent` can genuinely

@@ -6,6 +6,7 @@ export {
   RECALL_LIMIT,
   RECALL_REGULIER_SLOTS,
   RECALL_HISTORIC_SLOTS,
+  eurostatFinderEnabled,
   type RecallOptions,
 } from './recall.ts';
 export {

@@ -69,6 +69,9 @@ interface EurostatCatalogFixture {
    * original `link.item[]` JSON shape here was Constraint 0's own disclosed,
    * unverified guess and was wrong). */
   raw: string;
+  /** When it was captured (ISO). #357 step 3: `fetchCatalog` judges each row's `data end` at this moment, so
+   * a replay's current / possibly-frozen statuses never drift with the real clock. Absent: statuses stay null. */
+  capturedAt?: string;
 }
 
 /** Global (non-per-table) catalog fixture, `_catalog.json` under `dir` —
@@ -187,6 +190,10 @@ export class EurostatFixtureSource implements CbsSource {
         'EurostatFixtureSource has no captured catalog fixture (pass loadEurostatCatalogFixture(dir) as the second constructor arg)',
       );
     }
-    return parseJsonStatCatalog(this.catalogFixture.raw);
+    const { capturedAt } = this.catalogFixture;
+    return parseJsonStatCatalog(
+      this.catalogFixture.raw,
+      typeof capturedAt === 'string' && !Number.isNaN(Date.parse(capturedAt)) ? { now: new Date(capturedAt) } : {},
+    );
   }
 }

@@ -23,6 +23,7 @@ import type {
   CbsTableSchema,
 } from '../cbs-adapter/types.ts';
 import { decimalsOf } from '../ingestion/decimals.ts';
+import { lagOfDataEnd } from '../ingestion/data-end-lag.ts';
 import { encodePeriodCode } from '../ingestion/periods.ts';
 import { parseFactorUnit } from '../query/derivations.ts';
 import { AsyncApiRequiredError, UnsupportedGrainError, type JsonStatCategory, type JsonStatDataset } from './types.ts';
@@ -704,6 +705,24 @@ function splitTocLine(line: string): string[] {
   return line.split('\t').map((cell) => cell.replace(/^"|"$/g, ''));
 }
 
+/** #357 step 3: the catalogue statuses a Eurostat row gets when the parser is given a clock (`now`). Eurostat's
+ * file carries no lifecycle field, so "current" is OUR judgement from the row's own `data end`, by the same
+ * limits the freshness report and the warm job use (src/ingestion/data-end-lag.ts): a row whose newest period is
+ * later than its grain allows is `possibly_frozen` (Eurostat retires datasets without notice, e.g.
+ * `prc_hicp_manr`), a row whose `data end` is blank or of a grain those limits do not cover (weekly, daily,
+ * semester) stays `null` — neither is ever "current" (src/sources/registry.ts `currentCatalogStatuses`). The
+ * registry spells `'current'` as a literal (it is a pure leaf); tests pin the two equal. */
+export const EUROSTAT_CATALOG_CURRENT = 'current';
+export const EUROSTAT_CATALOG_POSSIBLY_FROZEN = 'possibly_frozen';
+
+/** Where two theme folders nest in the breadcrumb (`Economy and finance › National accounts › …`). */
+export const EUROSTAT_BREADCRUMB_SEPARATOR = ' › ';
+
+export interface ParseEurostatCatalogOptions {
+  /** The moment the catalogue is judged at. Absent: every row's `status` stays `null` (the pre-step-3 output). */
+  now?: Date;
+}
+
 /**
  * Eurostat's REAL Catalogue "table of contents" endpoint
  * (`.../catalogue/toc/txt?lang=EN`) is not JSON at all — it is a
@@ -713,20 +732,31 @@ function splitTocLine(line: string): string[] {
  * own disclosed, UNVERIFIED best-effort guess and was wrong). Columns:
  * `title \t code \t type \t last update of data \t last table structure
  * change \t data start \t data end \t values`. `title`'s leading spaces
- * encode the node's depth in the theme hierarchy (folders nest datasets/
- * tables); trimmed away here since `CbsCatalogEntry` is a flat list, exactly
- * like CBS's own catalog.
+ * encode the node's depth in the theme hierarchy (4 per level; folders nest
+ * datasets/tables); trimmed away from the title since `CbsCatalogEntry` is a
+ * flat list, exactly like CBS's own catalog.
+ *
+ * #357 step 3 ("Finding", ADR 048 addendum): the depth is no longer thrown
+ * away. Each leaf's THEME BREADCRUMB — its ancestor folder titles, the
+ * top-level root ("Database by themes" / "Cross cutting topics", generic words
+ * on every row) left out — is written into `summary`, so theme words
+ * ("labour market", "regional", "national accounts") reach the finder's
+ * full-text index (the `summary` column, weight B) without a schema change.
+ * A code filed under several folders (2,031 of 7,569 in the 2026-09-16
+ * capture; the rows are otherwise identical) becomes ONE entry at its first
+ * placement, its distinct breadcrumbs one per line; before step 3 every
+ * placement was a separate entry and the database upsert kept the last.
  *
  * Only `type === 'dataset' | 'table'` rows are real, independently queryable
  * leaf nodes (both verified live against the Statistics API endpoint) —
  * `'folder'` rows are pure navigation with no data behind them and are
  * dropped. Eurostat's toc file carries no per-entry lifecycle/status field
  * at all (unlike CBS's 'Regulier'/'Gediscontinueerd'/'Vervallen') — `status`
- * stays `null` for every entry, not "unknown pending a capture" (that
- * capture has now happened; the field genuinely does not exist here). See
- * open-questions #250 for what this means for `currentCatalogStatuses`.
+ * stays `null` unless the caller passes `now`, in which case it is our own
+ * `data end` judgement (`EUROSTAT_CATALOG_CURRENT` above). See
+ * open-questions #250 and #357.
  */
-export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
+export function parseJsonStatCatalog(raw: string, options: ParseEurostatCatalogOptions = {}): CbsCatalogEntry[] {
   if (typeof raw !== 'string' || raw.trim().length === 0) {
     throw new Error('Eurostat catalogue response is empty or not a string');
   }
@@ -736,9 +766,19 @@ export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
     throw new Error(`Eurostat catalogue response is missing the expected header row: ${JSON.stringify(header)}`);
   }
   const entries: CbsCatalogEntry[] = [];
+  const byId = new Map<string, { entry: CbsCatalogEntry; crumbs: string[] }>();
+  // folderPath[d] = the title of the folder open at depth d (depth = leading spaces / 4).
+  const folderPath: string[] = [];
   for (const line of rows) {
     const cells = splitTocLine(line);
     const [rawTitle, code, type, lastUpdate, , dataStart, dataEnd, values] = cells;
+    const indent = (rawTitle ?? '').length - (rawTitle ?? '').trimStart().length;
+    const depth = Math.floor(indent / 4);
+    if (type === 'folder') {
+      folderPath.length = depth;
+      folderPath[depth] = (rawTitle ?? '').trim();
+      continue;
+    }
     if (type !== 'dataset' && type !== 'table') continue;
     if (typeof code !== 'string' || code.length === 0) {
       throw new Error(`Eurostat catalogue row is missing a code: ${JSON.stringify(line)}`);
@@ -747,18 +787,44 @@ export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
     if (title.length === 0) {
       throw new Error(`Eurostat catalogue item '${code}' is missing a title`);
     }
-    entries.push({
-      tableId: `eurostat:${code}`,
+    // Ancestors only (depth 1 up to the leaf's parent); a gap in the file's nesting just leaves a level out, and
+    // so does a placeholder folder title without a letter or digit (the real file has '___' and '-----').
+    const crumb = folderPath
+      .slice(1, depth)
+      .filter((t): t is string => typeof t === 'string' && /[\p{L}\p{N}]/u.test(t))
+      .join(EUROSTAT_BREADCRUMB_SEPARATOR);
+    const tableId = `eurostat:${code}`;
+    const seen = byId.get(tableId);
+    if (seen !== undefined) {
+      if (crumb.length > 0 && !seen.crumbs.includes(crumb)) {
+        seen.crumbs.push(crumb);
+        seen.entry.summary = seen.crumbs.join('\n');
+      }
+      continue;
+    }
+    const end = tocText(dataEnd);
+    const entry: CbsCatalogEntry = {
+      tableId,
       title,
-      summary: '',
-      status: null,
+      summary: crumb,
+      status: options.now === undefined ? null : eurostatCatalogStatus(end, options.now),
       datasetType: type,
       language: 'en',
       modified: typeof lastUpdate === 'string' ? parseEurostatTocDate(lastUpdate) : null,
       dataStart: tocText(dataStart),
-      dataEnd: tocText(dataEnd),
+      dataEnd: end,
       valueCount: /^\d+$/.test((values ?? '').trim()) ? Number((values ?? '').trim()) : null,
-    });
+    };
+    byId.set(tableId, { entry, crumbs: crumb.length > 0 ? [crumb] : [] });
+    entries.push(entry);
   }
   return entries;
+}
+
+/** Pure. `current` / `possibly_frozen` from the row's `data end`, `null` when that cannot be judged. */
+export function eurostatCatalogStatus(dataEnd: string | null, now: Date): string | null {
+  if (dataEnd === null) return null;
+  const lag = lagOfDataEnd(dataEnd, now);
+  if (lag === null) return null;
+  return lag.frozen ? EUROSTAT_CATALOG_POSSIBLY_FROZEN : EUROSTAT_CATALOG_CURRENT;
 }

@@ -804,7 +804,8 @@ undeclared status is exactly how a typo'd flag could slip outside both `definiti
 
 **Still unchanged by this addendum:** Constraint 0's two remaining E1 inertness gates — `chatSelectable: false`
 (Eurostat is still not selectable in live chat) and `currentCatalogStatuses: []` (confirmed permanent for that
-endpoint, [#250](../open-questions.md)) — and the open owner sign-off on the Dutch suffix / null-reason
+endpoint, [#250](../open-questions.md); *superseded 2026-10-01 by the "finding a Eurostat dataset" addendum:
+`['current']`, our own data-end judgement*) — and the open owner sign-off on the Dutch suffix / null-reason
 wording (Amendment 11, [#250](../open-questions.md)(a)). **Update 2026-09-26 (session 131): the owner approved that wording as drafted — the sign-off is no longer open.**
 
 ## Fifth As-built addendum — footer trust line made source-aware for the Eurostat explorer only (session 110 UX audit pass 2, row 18, 2026-09-17)
@@ -1055,3 +1056,72 @@ any capture.
 Mixed-grain datasets (#357 (e)) get their decimals read at whichever grain's latest code sorts last. Tests:
 `tests/eurostat-adapter/decimals-and-geography.test.ts`; fixtures `tests/fixtures/eurostat-decimals/` (refresh:
 `node scripts/capture-eurostat-fixtures.ts --decimals-probe <code>`).
+
+## Addendum — finding a Eurostat dataset: theme breadcrumbs, a frozen-aware status, the finder behind a flag (2026-10-01, #357 study step 3, dark)
+
+The Eurostat route (STATUS "THE PLOT") needs the same finder the CBS table lane uses to reach any Eurostat dataset.
+Three changes, no schema change, no model call, off by default.
+
+**1. Theme breadcrumbs into `summary`.** `parseJsonStatCatalog` no longer throws the table of contents' indentation
+away: each dataset's ancestor folders (the generic roots "Database by themes" / "Cross cutting topics" and placeholder
+folders such as `___` left out) become its breadcrumb, e.g. `Economy and finance › Prices › Harmonised index of
+consumer prices (HICP)`, written into the empty `summary` column, which is already in the full-text index at weight B.
+A code filed under several folders (2,031 of 7,569 in the 2026-09-16 capture; the rows are otherwise identical) is now
+ONE entry at its first place, its distinct breadcrumbs one per line (before, every placement was an entry and the
+upsert kept the last).
+
+**2. A status Eurostat does not publish, judged from `data end`.** The file has no lifecycle field (#250(b)). Given a
+clock, the parser sets `status` to `current` or `possibly_frozen` by the SAME limits the freshness report and the warm
+job use (`src/ingestion/data-end-lag.ts`: monthly 4 months, quarterly 3 quarters, annual 30 months), and `null` when
+`data end` is blank or of a grain those limits do not cover (weekly, daily, semester). `StatisticsApiSource` judges at
+fetch time (new `now` option, default the real clock); the fixture source judges at the capture's own `capturedAt`, so
+a replay never drifts; without a clock the status stays `null` as before. The registry's Eurostat
+`currentCatalogStatuses` goes `[]` → `['current']`: a frozen or unjudged dataset is never "current" — not in the
+finder's current quota, never added to the deliverability walk (`candidateWalk`), and a registered Eurostat table
+leaving `current` would be reported by the #108 check once a Eurostat catalogue refresh runs (none exists yet;
+`catalog:refresh` stays CBS-only, so production's mirror is unchanged).
+**Measured on the 2026-09-16 capture: 3,772 current, 3,756 possibly frozen, 41 unjudged.** Of the possibly frozen,
+3,569 are annual and 1,430 end in 2020–2023 (412 in 2023, 33 months before the capture) — many are slow annual
+collections Eurostat still updates. **Assumption:** the 30-month annual limit, built to catch a retired series,
+over-flags slow annual datasets; they still reach the shortlist through the historic slots and any slots the current
+class leaves empty, shown as `possibly_frozen`. Whether to also weigh Eurostat's "last update of data" (a dataset
+updated this year is not retired) is open (#357).
+
+**3. The finder, behind `EUROSTAT_FINDER_ENABLED`.** `recallCandidates` reads the flag at call time
+(`eurostatFinderEnabled()`: exactly `'1'` ⇒ on, the `EUROSTAT_SIBLINGS_ENABLED` / `TABLE_LANE_ENABLED` convention;
+`RecallOptions.includeEurostat` overrides per call). Off (default, production): the SQL text and the Eurostat filter
+are the pre-step-3 ones; the only difference is the Eurostat entry of the current-status parameters, which no CBS row
+reads — a test compares every labelled topic's shortlist against a mirror with no Eurostat row at all, and the CBS
+rerank replay hashes (`tests/catalog/find-replay.test.ts`) are unchanged. On: Eurostat's English rows join the same
+Dutch full-text search and the same current-first quota. It is a separate flag from `EUROSTAT_EXPLORER_ENABLED` for the
+reason in `recall.ts`'s header. **It must stay off in production** until a found Eurostat dataset can be answered
+(study §5.4 steps 4–5, with the D3(d) sweep) and the rerank prompt knows Eurostat's statuses: today it tells the model
+to prefer CBS's `Regulier`, a word no Eurostat row carries.
+
+**Measured recall (Stage 1 only, no model call).** Labelled set `benchmark/eurostat-finder-labelled-set.json`: 12
+Eurostat topics asked once in Dutch and once in English, plus the 6 CBS topics of the existing finder set. Script
+`scripts/eurostat-finder-recall.ts`, report `benchmark/eurostat-finder-recall-report.json`, pinned by
+`tests/catalog/eurostat-finder.test.ts`. There are no recorded rerank replies for these questions and recording them is
+live spend, so this measures whether a right dataset is in the 24-row shortlist the rerank would see, and where.
+
+| Group (flag on unless said) | top-1 | top-5 | in shortlist |
+|---|---|---|---|
+| English questions | 6/12 | 9/12 | 10/12 |
+| Dutch questions | 0/12 | 0/12 | 0/12 |
+| CBS questions (flag off and on: same places) | 2/6 | 6/6 | 6/6 |
+| English, without the breadcrumbs | 4/12 | 7/12 | 9/12 |
+| English, Eurostat rows ranked with the `english` configuration | 6/12 | 9/12 | 11/12 |
+| English, Eurostat rows ranked with the `simple` configuration | 6/12 | 9/12 | 10/12 |
+
+What it says: (i) **Dutch questions never reach a Eurostat dataset** — the Dutch topic ("werkloosheid",
+"staatsschuld") shares no word with English titles; the next finding step is a Dutch→English bridge for the TOPIC
+before recall, not a text configuration. (ii) The breadcrumbs earn their place: +2 top-1, +2 top-5, +1 shortlist.
+(iii) **The Dutch text configuration costs one English case** (`minimum wage`: the Dutch stemmer does not join "wage"
+and "wages"); the English configuration finds it and lifts `asylum applications` from 18th to 7th, but drops
+`unemployment rate` from 3rd to 6th and `renewable energy` from 1st to 2nd — same top-1 and top-5. On this evidence a
+per-source configuration (a migration) is not worth it. (iv) A one-word topic ("population") matches thousands of rows,
+many through the "Population and social conditions" breadcrumb, and the right dataset misses the 24 — the rerank sees
+the full question, recall does not. (v) The CBS questions keep their places with the flag on; no Eurostat row entered
+their shortlists. Caveat: the CBS mirror here is the 83-row fixture, not production's 4,858 rows.
+Tests: `tests/catalog/eurostat-finder.test.ts`, `tests/eurostat-adapter/jsonstat.test.ts` (breadcrumb, one entry per
+code, status), `tests/sources/registry.test.ts`, `tests/eurostat-adapter/statistics-api.test.ts`.

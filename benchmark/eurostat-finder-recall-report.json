@@ -1,0 +1,1506 @@
+{
+  "note": "Written by scripts/eurostat-finder-recall.ts --write. Stage-1 recall only (no model call). flag-off = today; production = EUROSTAT_FINDER_ENABLED=1 as built (Dutch text configuration for every row); english / simple = the Eurostat rows ranked with that configuration instead, computed in the measurement only (no migration); dutch-title-only = production without the theme breadcrumb in summary (what step 3 adds). Positions are 1-based places in the shortlist the rerank would see (at most 24).",
+  "catalogue": "tests/fixtures/eurostat/_catalog.json (captured 2026-09-16) + tests/fixtures/cbs/_catalog.json",
+  "report": {
+    "flag-off": {
+      "summary": {
+        "eurostat-nl": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-en": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-all": {
+          "cases": 24,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "cbs-nl": {
+          "cases": 6,
+          "top1": 2,
+          "top5": 6,
+          "inShortlist": 6
+        }
+      },
+      "cases": [
+        {
+          "id": "unemployment-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "unemployment-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-huizenprijzen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "85773NED",
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-inflatie",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 4,
+          "hit": "86141NED",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-werkloosheid",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 2,
+          "hit": "80590ned",
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-faillissementen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "82242NED",
+          "shortlistSize": 3,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-bevolking",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "03759ned",
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-zonnepanelen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "85004NED",
+          "shortlistSize": 2,
+          "eurostatInShortlist": 0
+        }
+      ]
+    },
+    "production": {
+      "summary": {
+        "eurostat-nl": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-en": {
+          "cases": 12,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 10
+        },
+        "eurostat-all": {
+          "cases": 24,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 10
+        },
+        "cbs-nl": {
+          "cases": 6,
+          "top1": 2,
+          "top5": 6,
+          "inShortlist": 6
+        }
+      },
+      "cases": [
+        {
+          "id": "unemployment-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "unemployment-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:teilm020",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "inflation-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:tec00118",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 4
+        },
+        {
+          "id": "gdp-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:namq_10_gdp",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "population-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "asylum-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 18,
+          "hit": "eurostat:tps00189",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "renewables-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_ind_ren",
+          "shortlistSize": 21,
+          "eurostatInShortlist": 21
+        },
+        {
+          "id": "ghg-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 2,
+          "hit": "eurostat:sdg_13_10",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "house-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:prc_hpi_a",
+          "shortlistSize": 15,
+          "eurostatInShortlist": 15
+        },
+        {
+          "id": "minimum-wage-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 2,
+          "eurostatInShortlist": 2
+        },
+        {
+          "id": "life-expectancy-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:tps00208",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "government-debt-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:gov_10dd_ggd",
+          "shortlistSize": 20,
+          "eurostatInShortlist": 20
+        },
+        {
+          "id": "electricity-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_pc_204_c",
+          "shortlistSize": 19,
+          "eurostatInShortlist": 19
+        },
+        {
+          "id": "cbs-huizenprijzen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "85773NED",
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-inflatie",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 4,
+          "hit": "86141NED",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-werkloosheid",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 2,
+          "hit": "80590ned",
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-faillissementen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "82242NED",
+          "shortlistSize": 3,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-bevolking",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "03759ned",
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-zonnepanelen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "85004NED",
+          "shortlistSize": 2,
+          "eurostatInShortlist": 0
+        }
+      ]
+    },
+    "dutch-title-only": {
+      "summary": {
+        "eurostat-nl": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-en": {
+          "cases": 12,
+          "top1": 4,
+          "top5": 7,
+          "inShortlist": 9
+        },
+        "eurostat-all": {
+          "cases": 24,
+          "top1": 4,
+          "top5": 7,
+          "inShortlist": 9
+        },
+        "cbs-nl": {
+          "cases": 6,
+          "top1": 2,
+          "top5": 6,
+          "inShortlist": 6
+        }
+      },
+      "cases": [
+        {
+          "id": "unemployment-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "unemployment-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:ei_lmhr_m",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "inflation-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:tec00118",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 4
+        },
+        {
+          "id": "gdp-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 15,
+          "hit": "eurostat:nama_10_gdp",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "population-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 17,
+          "hit": "eurostat:demo_gind",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "asylum-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 17,
+          "eurostatInShortlist": 17
+        },
+        {
+          "id": "renewables-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:sdg_07_40",
+          "shortlistSize": 9,
+          "eurostatInShortlist": 9
+        },
+        {
+          "id": "ghg-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 2,
+          "hit": "eurostat:env_air_gge",
+          "shortlistSize": 6,
+          "eurostatInShortlist": 6
+        },
+        {
+          "id": "house-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 2,
+          "eurostatInShortlist": 2
+        },
+        {
+          "id": "life-expectancy-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:demo_mlexpec",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "government-debt-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:gov_10dd_ggd",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "electricity-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_pc_204",
+          "shortlistSize": 8,
+          "eurostatInShortlist": 8
+        },
+        {
+          "id": "cbs-huizenprijzen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "85773NED",
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-inflatie",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 4,
+          "hit": "86141NED",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-werkloosheid",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 2,
+          "hit": "80590ned",
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-faillissementen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "82242NED",
+          "shortlistSize": 3,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-bevolking",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "03759ned",
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-zonnepanelen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "85004NED",
+          "shortlistSize": 2,
+          "eurostatInShortlist": 0
+        }
+      ]
+    },
+    "english": {
+      "summary": {
+        "eurostat-nl": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-en": {
+          "cases": 12,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 11
+        },
+        "eurostat-all": {
+          "cases": 24,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 11
+        },
+        "cbs-nl": {
+          "cases": 6,
+          "top1": 2,
+          "top5": 6,
+          "inShortlist": 6
+        }
+      },
+      "cases": [
+        {
+          "id": "unemployment-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "unemployment-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 6,
+          "hit": "eurostat:teilm020",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "inflation-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:tec00118",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 4
+        },
+        {
+          "id": "gdp-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:namq_10_gdp",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "population-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "asylum-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 7,
+          "hit": "eurostat:tps00189",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "renewables-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 2,
+          "hit": "eurostat:nrg_ind_ren",
+          "shortlistSize": 23,
+          "eurostatInShortlist": 23
+        },
+        {
+          "id": "ghg-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 2,
+          "hit": "eurostat:sdg_13_10",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "house-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:prc_hpi_a",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "minimum-wage-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:tps00155",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 4
+        },
+        {
+          "id": "life-expectancy-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:tps00208",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "government-debt-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:gov_10dd_ggd",
+          "shortlistSize": 20,
+          "eurostatInShortlist": 20
+        },
+        {
+          "id": "electricity-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_pc_204_c",
+          "shortlistSize": 19,
+          "eurostatInShortlist": 19
+        },
+        {
+          "id": "cbs-huizenprijzen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "85773NED",
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-inflatie",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 4,
+          "hit": "86141NED",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-werkloosheid",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 2,
+          "hit": "80590ned",
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-faillissementen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "82242NED",
+          "shortlistSize": 3,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-bevolking",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "03759ned",
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-zonnepanelen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "85004NED",
+          "shortlistSize": 2,
+          "eurostatInShortlist": 0
+        }
+      ]
+    },
+    "simple": {
+      "summary": {
+        "eurostat-nl": {
+          "cases": 12,
+          "top1": 0,
+          "top5": 0,
+          "inShortlist": 0
+        },
+        "eurostat-en": {
+          "cases": 12,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 10
+        },
+        "eurostat-all": {
+          "cases": 24,
+          "top1": 6,
+          "top5": 9,
+          "inShortlist": 10
+        },
+        "cbs-nl": {
+          "cases": 6,
+          "top1": 2,
+          "top5": 6,
+          "inShortlist": 6
+        }
+      },
+      "cases": [
+        {
+          "id": "unemployment-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "unemployment-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:teilm020",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "inflation-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "inflation-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 3,
+          "hit": "eurostat:tec00118",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 4
+        },
+        {
+          "id": "gdp-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "gdp-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:namq_10_gdp",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "population-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "population-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "asylum-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "asylum-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 18,
+          "hit": "eurostat:tps00189",
+          "shortlistSize": 24,
+          "eurostatInShortlist": 24
+        },
+        {
+          "id": "renewables-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "renewables-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_ind_ren",
+          "shortlistSize": 21,
+          "eurostatInShortlist": 21
+        },
+        {
+          "id": "ghg-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "ghg-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 2,
+          "hit": "eurostat:sdg_13_10",
+          "shortlistSize": 13,
+          "eurostatInShortlist": 13
+        },
+        {
+          "id": "house-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "house-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:prc_hpi_a",
+          "shortlistSize": 15,
+          "eurostatInShortlist": 15
+        },
+        {
+          "id": "minimum-wage-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "minimum-wage-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 2,
+          "eurostatInShortlist": 2
+        },
+        {
+          "id": "life-expectancy-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 1,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "life-expectancy-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:tps00208",
+          "shortlistSize": 14,
+          "eurostatInShortlist": 14
+        },
+        {
+          "id": "government-debt-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "government-debt-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:gov_10dd_ggd",
+          "shortlistSize": 20,
+          "eurostatInShortlist": 20
+        },
+        {
+          "id": "electricity-prices-nl",
+          "lang": "nl",
+          "expectSource": "eurostat",
+          "position": null,
+          "hit": null,
+          "shortlistSize": 0,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "electricity-prices-en",
+          "lang": "en",
+          "expectSource": "eurostat",
+          "position": 1,
+          "hit": "eurostat:nrg_pc_204_c",
+          "shortlistSize": 19,
+          "eurostatInShortlist": 19
+        },
+        {
+          "id": "cbs-huizenprijzen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "85773NED",
+          "shortlistSize": 11,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-inflatie",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 4,
+          "hit": "86141NED",
+          "shortlistSize": 4,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-werkloosheid",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 2,
+          "hit": "80590ned",
+          "shortlistSize": 10,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-faillissementen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 3,
+          "hit": "82242NED",
+          "shortlistSize": 3,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-bevolking",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "03759ned",
+          "shortlistSize": 22,
+          "eurostatInShortlist": 0
+        },
+        {
+          "id": "cbs-zonnepanelen",
+          "lang": "nl",
+          "expectSource": "cbs",
+          "position": 1,
+          "hit": "85004NED",
+          "shortlistSize": 2,
+          "eurostatInShortlist": 0
+        }
+      ]
+    }
+  }
+}

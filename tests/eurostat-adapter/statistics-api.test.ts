@@ -119,14 +119,15 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
       '"    Population on 1 January"\t"demo_pjan"\t"dataset"\t"14.08.2026"\t"13.02.2026"\t"1960"\t"2025"\t742730',
     ].join('\n');
     const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => textResponse(toc));
-    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    // #357 step 3: the injected clock judges each row's `data end` (2025, annual: 9 months late on 2026-10-01).
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch, { now: () => new Date('2026-10-01T00:00:00Z') });
     const entries = await source.fetchCatalog();
     expect(entries).toEqual([
       {
         tableId: 'eurostat:demo_pjan',
         title: 'Population on 1 January',
         summary: '',
-        status: null,
+        status: 'current',
         datasetType: 'dataset',
         language: 'en',
         modified: '2026-08-14',

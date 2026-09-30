@@ -74,11 +74,10 @@ export async function ingestCatalog(
     // below is built only from THIS source's fetchCatalog() entries — so
     // that other-source table's `newStatus` would always resolve to null
     // (never actually refreshed by this call), spuriously reporting a flip
-    // on every run whenever it happened to be "current" beforehand. Dormant
-    // today only because Eurostat's currentCatalogStatuses ships empty
-    // (Constraint 0) — the moment a real capture fills it in AND at least
-    // one Eurostat table is registered, a CBS-only refresh would start
-    // spuriously flagging every registered Eurostat table (and vice versa).
+    // on every run whenever it happened to be "current" beforehand. Since
+    // #357 step 3 (2026-10-01) Eurostat's currentCatalogStatuses is
+    // ['current'], so without this scoping a CBS-only refresh WOULD
+    // spuriously flag every registered Eurostat table (and vice versa).
     const { rows: registeredRows } = await tx.query(
       `select t.id as table_id, c.status as old_status
        from cbs_tables t

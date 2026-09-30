@@ -11,7 +11,11 @@ import {
   SOURCES,
   sourceKeyForTableId,
 } from '../../src/sources/registry.ts';
-import { EUROSTAT_DEFINITIVE_STATUS } from '../../src/eurostat-adapter/jsonstat.ts';
+import {
+  EUROSTAT_CATALOG_CURRENT,
+  EUROSTAT_CATALOG_POSSIBLY_FROZEN,
+  EUROSTAT_DEFINITIVE_STATUS,
+} from '../../src/eurostat-adapter/jsonstat.ts';
 import { fakeSourceInfo } from '../helpers/fake-source-info.ts';
 import { nullReasonText, renderTemplateBody } from '../../src/answer/compose/index.ts';
 import { buildAttributionLine } from '../../src/answer/compose/format.ts';
@@ -222,8 +226,11 @@ describe('WP30c/E1 (ADR 048 D6/D7; Amendment B1 superseded by #251): the eurosta
     expect(eurostat.nullReasonLabels['z']).toBeTruthy();
   });
 
-  it('Constraint 0: currentCatalogStatuses ships empty, pending a live catalog capture', () => {
-    expect(resolveSource(EUROSTAT_SOURCE_KEY).currentCatalogStatuses).toEqual([]);
+  // #357 step 3 (was "Constraint 0: ships empty"): the catalogue file has no lifecycle field, so the status is
+  // our data-end judgement; only 'current' counts, and the literal is the parser's own constant.
+  it('#357 step 3: currentCatalogStatuses is exactly the parser\'s current status; possibly-frozen never counts', () => {
+    expect(resolveSource(EUROSTAT_SOURCE_KEY).currentCatalogStatuses).toEqual([EUROSTAT_CATALOG_CURRENT]);
+    expect(resolveSource(EUROSTAT_SOURCE_KEY).currentCatalogStatuses).not.toContain(EUROSTAT_CATALOG_POSSIBLY_FROZEN);
   });
 
   // Integration fix (found in this brief's own whole-branch pass, not by

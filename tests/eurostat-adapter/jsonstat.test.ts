@@ -13,6 +13,7 @@ import {
   eurostatBaseLabel,
   eurostatFactorUnit,
   mapEurostatPeriod,
+  eurostatCatalogStatus,
   parseJsonStatCatalog,
   parseJsonStatDataset,
   SYNC_CELL_THRESHOLD,
@@ -529,6 +530,65 @@ describe('parseJsonStatCatalog — the real "table of contents" TSV shape (verif
 
   it('throws loudly on a response missing the expected header row', () => {
     expect(() => parseJsonStatCatalog('not a catalog at all')).toThrow();
+  });
+
+  // #357 step 3: the theme breadcrumb from the title indentation, into `summary`.
+  it('writes each leaf\'s theme breadcrumb (root left out, placeholder folders skipped) into summary', () => {
+    const raw = [
+      HEADER,
+      '"Database by themes"\t"data"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"    Economy and finance"\t"economy"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"        National accounts (ESA 2010)"\t"na10"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"            GDP main aggregates"\t"nama_10_gdp"\t"dataset"\t"01.09.2026"\t"01.09.2026"\t"1975"\t"2025"\t10',
+      '"            ___"\t"na10_x"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"                Real GDP growth rate"\t"tec00115"\t"table"\t"01.09.2026"\t"01.09.2026"\t"2015"\t"2025"\t10',
+      '"    Population and social conditions"\t"popul"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"        Population on 1 January"\t"demo_pjan"\t"dataset"\t"14.08.2026"\t"13.02.2026"\t"1960"\t"2025"\t7',
+    ].join('\n');
+    const bySummary = Object.fromEntries(parseJsonStatCatalog(raw).map((e) => [e.tableId, e.summary]));
+    expect(bySummary).toEqual({
+      'eurostat:nama_10_gdp': 'Economy and finance › National accounts (ESA 2010)',
+      'eurostat:tec00115': 'Economy and finance › National accounts (ESA 2010)',
+      'eurostat:demo_pjan': 'Population and social conditions',
+    });
+  });
+
+  it('a code filed under several folders becomes ONE entry at its first place, one breadcrumb per line', () => {
+    const raw = [
+      HEADER,
+      '"Database by themes"\t"data"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"    Economy and finance"\t"economy"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"        House price index"\t"prc_hpi_q"\t"dataset"\t"01.07.2026"\t"01.07.2026"\t"2005-Q1"\t"2026-Q1"\t9',
+      '"Cross cutting topics"\t"data"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"    Housing"\t"housing"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"        House price index"\t"prc_hpi_q"\t"dataset"\t"01.07.2026"\t"01.07.2026"\t"2005-Q1"\t"2026-Q1"\t9',
+      '"    Economy and finance"\t"economy2"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"        House price index"\t"prc_hpi_q"\t"dataset"\t"01.07.2026"\t"01.07.2026"\t"2005-Q1"\t"2026-Q1"\t9',
+    ].join('\n');
+    const entries = parseJsonStatCatalog(raw);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.summary).toBe('Economy and finance\nHousing');
+  });
+
+  it('with a clock, status is our data-end judgement: current, possibly_frozen, or null when it cannot be judged', () => {
+    const { raw } = JSON.parse(readFileSync('tests/fixtures/eurostat-toc/toc-freshness-2026-09-30.json', 'utf8')) as { raw: string };
+    const now = new Date('2026-09-30T00:00:00Z');
+    const status = Object.fromEntries(parseJsonStatCatalog(raw, { now }).map((e) => [e.tableId.slice('eurostat:'.length), e.status]));
+    expect(status).toEqual({
+      prc_hicp_manr: 'possibly_frozen', // monthly, ends 2025-12: 9 months > 4
+      prc_hicp_minr: 'current',
+      une_rt_q: 'current',
+      namq_10_gdp: 'current',
+      tipsbd30: 'current',
+      demo_r_mweek3: null, // weekly: no limit for that grain
+      prc_colc_nat: null, // semester
+      ert_bil_eur_d: null, // daily
+      env_wat_ltaa: null, // blank data end
+    });
+    // Without a clock nothing is judged (every pre-step-3 caller).
+    expect(parseJsonStatCatalog(raw).every((e) => e.status === null)).toBe(true);
+    expect(eurostatCatalogStatus('2023', now)).toBe('possibly_frozen'); // annual, 33 months > 30
+    expect(eurostatCatalogStatus('2024', now)).toBe('current');
   });
 });
 

@@ -132,9 +132,9 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     chatSelectable: true,
   },
   // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2): second source, registered
-  // but still E1-inert for everything Constraint 0 blocks (chatSelectable,
-  // currentCatalogStatuses) — see those two field-level comments before
-  // changing either. The THIRD E1 limitation, Amendment B1's "every cell
+  // but still inert in live chat (chatSelectable) — see that field-level
+  // comment before changing it. currentCatalogStatuses was the other E1 gate;
+  // #357 step 3 filled it (its own comment below). The THIRD E1 limitation, Amendment B1's "every cell
   // provisional, unconditionally", was lifted by #251 in session 109: per-cell
   // statuses now reach isProvisionalStatus for real.
   [EUROSTAT_SOURCE_KEY]: {
@@ -198,17 +198,21 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
       c: 'door Eurostat niet gepubliceerd (vertrouwelijk)',
       z: 'niet van toepassing volgens Eurostat',
     },
-    // TODO(WP30c/E1 Constraint 0): Eurostat's Catalogue API "current"
-    // lifecycle status is genuinely unknown without a live catalog call,
-    // which this session cannot make. Left EMPTY rather than guessed.
-    // Verified this degrades gracefully, not silently wrong: in
-    // src/catalog/current-status.ts, buildIsCurrentPredicate's generated
-    // SQL is `coalesce(status, '') = any($n::text[])` against this exact
-    // array — an empty array makes `= any(...)` false for every row, same
-    // as the `else false` fallback the same file uses for an unregistered
-    // source key. Every Eurostat catalog row is "not current" until the
-    // owner's first live catalog capture fills this in.
-    currentCatalogStatuses: [],
+    // #357 step 3 (ADR 048 addendum "Finding"): Eurostat's catalogue file
+    // carries no lifecycle field (#250(b)), so the status is OUR judgement,
+    // written by parseJsonStatCatalog when given a clock: 'current' when the
+    // row's `data end` is within its grain's limits (src/ingestion/
+    // data-end-lag.ts, the same limits the freshness report and warm job
+    // use), 'possibly_frozen' past them, null when it cannot be judged
+    // (blank, weekly, daily, semester). Only 'current' counts — a frozen or
+    // unjudged dataset is never offered as current (the finder's quota,
+    // candidateWalk, the #108 flip check). Spelled as a literal (pure leaf);
+    // pinned equal to EUROSTAT_CATALOG_CURRENT in src/eurostat-adapter/
+    // jsonstat.ts by tests/sources/registry.test.ts. Was `[]` (every
+    // Eurostat row "not current") until 2026-10-01; no Eurostat catalogue
+    // row reaches the finder unless EUROSTAT_FINDER_ENABLED=1
+    // (src/catalog/recall.ts).
+    currentCatalogStatuses: ['current'],
     // D3(b)/(c) (this brief's integration fix): NEVER true in E1 — this is
     // the sole gate keeping "Eurostat data" out of the live chat chip row
     // (see the field's own doc comment above). Flips only in E2's

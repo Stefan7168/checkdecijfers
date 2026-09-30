@@ -119,6 +119,9 @@ export interface StatisticsApiSourceOptions {
    * The layout is the whole dataset's (every code that occurs, licensed geo only); a `slice` argument does not
    * narrow it. Absent (the default, and every production caller today): the download path, unchanged. */
   structureLayout?: { decimals: ((tableId: string, unitCode: string) => number | undefined) | 'observed' };
+  /** #357 step 3: the clock `fetchCatalog` judges each row's `data end` against (current / possibly frozen,
+   * `parseJsonStatCatalog`'s `now`). Absent: the real time. */
+  now?: () => Date;
 }
 
 /** What the decimals read at registration saw (#357 (a)): per unit the most decimals any observed value
@@ -355,6 +358,7 @@ export class StatisticsApiSource implements CbsSource {
   private readonly structureCache = new Map<string, Promise<EurostatStructure>>();
   /** `decimals: 'observed'` only: one layout (so one decimals read) per dataset; a failure is not kept. */
   private readonly observedLayoutCache = new Map<string, Promise<EurostatLayout>>();
+  private readonly now: () => Date;
 
   constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
@@ -363,6 +367,7 @@ export class StatisticsApiSource implements CbsSource {
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
     this.stopAt = options.stopAt;
     this.structureLayout = options.structureLayout;
+    this.now = options.now ?? (() => new Date());
   }
 
   private budgetEnded(url: string): Error {
@@ -657,6 +662,7 @@ export class StatisticsApiSource implements CbsSource {
 
   async fetchCatalog(): Promise<CbsCatalogEntry[]> {
     const raw = await this.fetchText(CATALOGUE_URL);
-    return parseJsonStatCatalog(raw);
+    // #357 step 3: each row's status is judged from its own `data end` at fetch time (current / possibly frozen).
+    return parseJsonStatCatalog(raw, { now: this.now() });
   }
 }
