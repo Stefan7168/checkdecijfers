@@ -67,6 +67,16 @@
 //    the per-table transaction committed simply finds a never-onboarded topic
 //    — the normal flow.
 //
+// TARGETED MODE (owner decision 2026-09-30: drop two named unpinned tables now,
+// not after the TTL). `tables` names exact ids; the SAME fragment builder then
+// swaps ONLY the staleness clause for an id filter — `pinned = false` and the
+// no-active-job guard are the very same string constants, so a named table can
+// be evicted despite being recently queried, but never if it is pinned or has
+// an in-flight onboarding job. Preview and apply still share the one fragment.
+// A named id that is not evictable is REFUSED (reported with the reason, never
+// deleted); the other named ids still proceed. Without `tables` nothing below
+// changes: the untargeted fragment is byte-identical to the pre-targeted one.
+//
 // Idempotent: an evicted table no longer matches the fragment (its row is
 // gone), so a second run against the same state finds nothing new.
 import type { Db } from '../db/types.ts';
@@ -93,14 +103,41 @@ export function evictionCutoff(now: Date): Date {
  * apply's inside-transaction re-check are built from THIS fragment (the
  * retention.ts AUDIT_SCOPE discipline), so the scope can only ever change in
  * one place and preview/apply cannot disagree about membership. */
-const EVICTABLE_WHERE = `
-  cbs_tables.pinned = false
-  and coalesce(cbs_tables.last_queried_at, cbs_tables.created_at) < $1
-  and not exists (
+const PINNED_GUARD = `cbs_tables.pinned = false`;
+const STALE_GUARD = `coalesce(cbs_tables.last_queried_at, cbs_tables.created_at) < $1`;
+const NO_ACTIVE_JOB_GUARD = `not exists (
     select 1 from pending_table_requests p
      where (p.table_id = cbs_tables.id or p.resolved_table_id = cbs_tables.id)
        and p.status in ('pending', 'running')
-  )` as const;
+  )`;
+
+const EVICTABLE_WHERE = `
+  ${PINNED_GUARD}
+  and ${STALE_GUARD}
+  and ${NO_ACTIVE_JOB_GUARD}` as const;
+
+/** Targeted variant: identical guards, the staleness clause replaced by an
+ * exact-id filter (`$1` is the id array). Every OTHER guard is the shared
+ * constant above, so a targeted run can never be looser than the TTL sweep
+ * on anything except "has it been queried recently". */
+const TARGETED_WHERE = `
+  ${PINNED_GUARD}
+  and cbs_tables.id = any($1::text[])
+  and ${NO_ACTIVE_JOB_GUARD}` as const;
+
+/** The fragment + its `$1` value for one run: the cutoff ISO string in the
+ * TTL sweep, the named id array in targeted mode. Both the listing and the
+ * apply's in-transaction re-check take their scope from here. */
+interface Scope {
+  where: string;
+  leadParam: string | string[];
+}
+
+function scopeFor(cutoffIso: string, tables?: readonly string[]): Scope {
+  return tables === undefined
+    ? { where: EVICTABLE_WHERE, leadParam: cutoffIso }
+    : { where: TARGETED_WHERE, leadParam: [...tables] };
+}
 
 /** One evictable table plus the artifact counts the operator is deciding
  * about. On a dry run these are what WOULD be deleted; on an apply they are
@@ -126,6 +163,18 @@ export interface TableEvictionSummary {
    * deleted concurrently). Reported, never an error — a table saved by a
    * last-second query is the guard working. */
   skipped?: string[];
+  /** Targeted runs only: the exact ids the operator named. */
+  targeted?: string[];
+  /** Targeted runs only: named ids that were REFUSED (not registered, pinned,
+   * or an active onboarding job) — reported loudly, never deleted. */
+  refused?: RefusedTable[];
+}
+
+export type RefusalReason = 'not-registered' | 'pinned' | 'active-onboarding-job' | 'changed-concurrently';
+
+export interface RefusedTable {
+  id: string;
+  reason: RefusalReason;
 }
 
 interface CandidateRow {
@@ -174,14 +223,14 @@ async function countTableArtifacts(
   };
 }
 
-async function listCandidates(db: Db, cutoffIso: string): Promise<CandidateRow[]> {
+async function listCandidates(db: Db, scope: Scope): Promise<CandidateRow[]> {
   const { rows } = await db.query(
     `select cbs_tables.id, cbs_tables.title,
             coalesce(cbs_tables.last_queried_at, cbs_tables.created_at) as last_activity_at
        from cbs_tables
-      where ${EVICTABLE_WHERE}
+      where ${scope.where}
       order by cbs_tables.id`,
-    [cutoffIso],
+    [scope.leadParam],
   );
   return rows.map((r) => ({
     id: String(r.id),
@@ -195,8 +244,9 @@ async function listCandidates(db: Db, cutoffIso: string): Promise<CandidateRow[]
 export async function listEvictableTables(
   db: Db,
   cutoff: Date,
+  tables?: readonly string[],
 ): Promise<EvictableTableReport[]> {
-  const candidates = await listCandidates(db, cutoff.toISOString());
+  const candidates = await listCandidates(db, scopeFor(cutoff.toISOString(), tables));
   const reports: EvictableTableReport[] = [];
   for (const candidate of candidates) {
     reports.push({ ...candidate, ...(await countTableArtifacts(db, candidate.id)) });
@@ -227,9 +277,10 @@ export class TableEvictionPartialError extends Error {
 export async function evictStaleTables(
   db: Db,
   cutoff: Date,
+  tables?: readonly string[],
 ): Promise<{ evicted: EvictableTableReport[]; skipped: string[] }> {
-  const cutoffIso = cutoff.toISOString();
-  const candidates = await listCandidates(db, cutoffIso);
+  const scope = scopeFor(cutoff.toISOString(), tables);
+  const candidates = await listCandidates(db, scope);
   const evicted: EvictableTableReport[] = [];
   const skipped: string[] = [];
 
@@ -269,9 +320,9 @@ export async function evictStaleTables(
           `select cbs_tables.id, cbs_tables.title,
                   coalesce(cbs_tables.last_queried_at, cbs_tables.created_at) as last_activity_at
              from cbs_tables
-            where cbs_tables.id = $2 and ${EVICTABLE_WHERE}
+            where cbs_tables.id = $2 and ${scope.where}
               for update`,
-          [cutoffIso, candidate.id],
+          [scope.leadParam, candidate.id],
         );
         const row = rows[0];
         if (!row) return null;
@@ -336,6 +387,11 @@ export interface TableEvictionOptions {
   now: Date;
   /** false = report only, write nothing. The CLI defaults to this. */
   apply: boolean;
+  /** Targeted mode: evict exactly these ids, ignoring the staleness cutoff but
+   * keeping every other guard (pinned, active job). Omit for the TTL sweep. An
+   * empty array is an error, never "no filter" — a mistyped empty list must not
+   * widen into a full sweep. */
+  tables?: readonly string[];
 }
 
 /** Runs the eviction sweep (or its preview) and returns what happened.
@@ -346,24 +402,64 @@ export async function runTableEviction(
   options: TableEvictionOptions,
 ): Promise<TableEvictionSummary> {
   const { db, now, apply } = options;
+  let named: string[] | undefined;
+  if (options.tables !== undefined) {
+    named = [...new Set(options.tables)];
+    if (named.length === 0 || named.some((t) => t.trim() === '')) {
+      throw new Error('targeted eviction needs at least one non-empty table id');
+    }
+  }
   await assertLifecycleColumns(db);
   const cutoff = evictionCutoff(now);
 
   if (!apply) {
+    const tables = await listEvictableTables(db, cutoff, named);
     return {
       mode: 'dry-run',
       cutoff: cutoff.toISOString(),
-      tables: await listEvictableTables(db, cutoff),
+      tables,
+      ...(named ? await targetedExtras(db, named, tables.map((t) => t.id)) : {}),
     };
   }
 
-  const { evicted, skipped } = await evictStaleTables(db, cutoff);
+  const { evicted, skipped } = await evictStaleTables(db, cutoff, named);
   return {
     mode: 'applied',
     cutoff: cutoff.toISOString(),
     tables: evicted,
     ...(skipped.length > 0 ? { skipped } : {}),
+    ...(named ? await targetedExtras(db, named, [...evicted.map((t) => t.id), ...skipped]) : {}),
   };
+}
+
+/** Targeted-run report fields: which ids were named, and why each named id that
+ * was not handled (evicted / would be evicted / skipped-by-race) was refused.
+ * A read-only diagnostic — it never decides membership (the fragment does);
+ * it only explains, in operator language, why a named id is not in the set. */
+async function targetedExtras(
+  db: Db,
+  named: string[],
+  handled: string[],
+): Promise<{ targeted: string[]; refused?: RefusedTable[] }> {
+  const handledSet = new Set(handled);
+  const unhandled = named.filter((id) => !handledSet.has(id));
+  if (unhandled.length === 0) return { targeted: named };
+  const { rows } = await db.query(
+    `select cbs_tables.id, cbs_tables.pinned,
+            (${NO_ACTIVE_JOB_GUARD}) as no_active_job
+       from cbs_tables
+      where cbs_tables.id = any($1::text[])`,
+    [unhandled],
+  );
+  const byId = new Map(rows.map((r) => [String(r.id), r]));
+  const refused = unhandled.map((id): RefusedTable => {
+    const row = byId.get(id);
+    if (!row) return { id, reason: 'not-registered' };
+    if (row.pinned === true) return { id, reason: 'pinned' };
+    if (row.no_active_job === false) return { id, reason: 'active-onboarding-job' };
+    return { id, reason: 'changed-concurrently' };
+  });
+  return { targeted: named, refused };
 }
 
 function tableLine(t: EvictableTableReport): string {
@@ -378,8 +474,17 @@ function tableLine(t: EvictableTableReport): string {
  * can never describe the same run differently (the describeRetentionPurge
  * shape). */
 export function describeTableEviction(s: TableEvictionSummary): string {
-  const head =
-    s.mode === 'dry-run'
+  const head = s.targeted
+    ? s.mode === 'dry-run'
+      ? `DRY RUN — TARGETED eviction of ${s.targeted.length} named table(s) (${s.targeted.join(', ')}); ` +
+        `the ${ON_DEMAND_TTL_DAYS}-day staleness cutoff is ignored, every other guard applies: ` +
+        `${s.tables.length} table(s) WOULD be evicted.`
+      : `Applied — TARGETED eviction of ${s.targeted.length} named table(s) (${s.targeted.join(', ')}); ` +
+        `the ${ON_DEMAND_TTL_DAYS}-day staleness cutoff was ignored, every other guard applied: ` +
+        `evicted ${s.tables.length} table(s). Pinned seed tables are exempt; ` +
+        `audit_answers, credit_transactions and pending_table_requests were not touched. ` +
+        `An evicted topic re-onboards through the normal on-demand flow on next demand.`
+    : s.mode === 'dry-run'
       ? `DRY RUN — eviction cutoff ${s.cutoff} (${ON_DEMAND_TTL_DAYS} days unqueried): ` +
         `${s.tables.length} on-demand table(s) WOULD be evicted.`
       : `Applied — eviction cutoff ${s.cutoff} (${ON_DEMAND_TTL_DAYS} days unqueried): ` +
@@ -392,5 +497,19 @@ export function describeTableEviction(s: TableEvictionSummary): string {
       ? `\n  note: ${s.skipped.length} candidate(s) were queried/changed concurrently and were NOT evicted: ` +
         s.skipped.join(', ')
       : '';
-  return [head, lines].filter(Boolean).join('\n') + skipped;
+  const refused =
+    s.refused && s.refused.length > 0
+      ? '\n' +
+        s.refused
+          .map((r) => `  REFUSED ${r.id} — ${REFUSAL_TEXT[r.reason]}; it was NOT evicted and nothing of it was touched.`)
+          .join('\n')
+      : '';
+  return [head, lines].filter(Boolean).join('\n') + skipped + refused;
 }
+
+const REFUSAL_TEXT: Record<RefusalReason, string> = {
+  'not-registered': 'no such table is registered',
+  pinned: 'it is PINNED (a curated seed table, exempt from eviction)',
+  'active-onboarding-job': 'an onboarding job for it is still pending or running',
+  'changed-concurrently': 'it stopped matching the eviction rules while the run was in progress',
+};

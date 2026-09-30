@@ -880,6 +880,16 @@ tables:evict` (dry-run, no `--apply`) to confirm it reports the pinned seed set 
 else as `never queried` (expected — `last_queried_at` starts NULL for every existing row until the query
 executor's next write).
 
+**Targeted eviction — `tables:evict -- --table <id>` (SUPERVISED, owner present; added 2026-09-30).** To drop
+specific on-demand tables NOW instead of waiting out the 30-day TTL (owner decision 2026-09-30: `83694NED` and
+`85615NED`): `npm run tables:evict -- --table 83694NED --table 85615NED` (repeat `--table` per id; exact id,
+casing matters). Dry run by default — read the listing, then re-run with `--apply`. The named ids are evicted
+regardless of when they were last queried, but **every other guard stays**: a pinned (seed) table, an id that is
+not registered, or a table with a pending/running onboarding job is **REFUSED** — printed loudly, never touched,
+exit code 1 — while the other named ids still proceed. Same FK-safe per-table transaction as the sweep;
+`audit_answers`, `credit_transactions` and `pending_table_requests` are never written. Without `--table` the
+command is exactly the 30-day sweep as before. A `--table` with no id is an error, never a silent full sweep.
+
 ## Supervised live step — migration 021 applied (2026-07-24, session 55 continued, owner present)
 
 **✅ DONE.** `npm run db:migrate` applied `021_observation_last_seen.sql` (adds

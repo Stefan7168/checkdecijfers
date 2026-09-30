@@ -42,6 +42,7 @@ import { alreadyIngested, runOnboardingJob, type OnboardingJobDeps } from '../..
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import {
   ON_DEMAND_TTL_DAYS,
+  describeTableEviction,
   evictionCutoff,
   listEvictableTables,
   runTableEviction,
@@ -50,6 +51,7 @@ import { MIGRATIONS_DIR, applyMigrations } from '../../src/db/migrate.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb, wrapPGlite } from '../helpers/pglite-db.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { parseTableArgs } from '../../scripts/table-eviction.ts';
 
 const FIXTURES = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -467,4 +469,217 @@ describe('table eviction — end-to-end over a delivered on-demand table', () =>
       await close();
     }
   }, 30_000);
+});
+
+// ---------------------------------------------------------------------------
+// Targeted mode (owner decision 2026-09-30): evict exactly the named tables,
+// ignoring the staleness cutoff, keeping every other guard.
+// ---------------------------------------------------------------------------
+
+async function createActiveJobFor(db: Db, tableId: string): Promise<void> {
+  await applyPricingDefaults(db);
+  const userId = randomUUID();
+  await db.query('update signup_grant_config set credits = 150');
+  await db.query('select public.grant_signup_credits($1)', [userId]);
+  const debit = await reserveOnboardingDebit(db, userId, randomUUID(), 100);
+  if (debit.kind !== 'debited') throw new Error(`setup: ${debit.kind}`);
+  await createPendingRequest(db, {
+    userId,
+    requestId: randomUUID(),
+    questionText: 'vraag',
+    topicTerm: 'onderwerp',
+    tableId,
+    finderConfidence: 0.9,
+    candidateIds: [],
+    debitTransactionId: debit.entry.id,
+  });
+}
+
+describe('table eviction — targeted mode (--table)', () => {
+  it('evicts a named unpinned table despite being queried yesterday, and leaves an unnamed stale table alone', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertOnboardedTable(db, 'NAMED001', { lastQueriedAt: daysAgo(1) }); // fresh
+      await insertOnboardedTable(db, 'STALE001', { lastQueriedAt: daysAgo(ON_DEMAND_TTL_DAYS + 30) }); // stale, NOT named
+      await insertOnboardedTable(db, 'FRESH001', { lastQueriedAt: daysAgo(1) }); // fresh, NOT named
+
+      const summary = await runTableEviction({
+        db,
+        now: new Date(),
+        apply: true,
+        tables: ['NAMED001'],
+      });
+
+      expect(summary.tables.map((t) => t.id)).toEqual(['NAMED001']);
+      expect(summary.targeted).toEqual(['NAMED001']);
+      expect(summary.refused).toBeUndefined();
+      expect(await artifactCounts(db, 'NAMED001')).toEqual(GONE);
+      // The stale table is exactly what the TTL sweep would take — but this run
+      // was targeted, so it is untouched.
+      expect(await artifactCounts(db, 'STALE001')).toEqual(FULL);
+      expect(await artifactCounts(db, 'FRESH001')).toEqual(FULL);
+    } finally {
+      await close();
+    }
+  });
+
+  it('refuses a named PINNED table loudly, leaves it untouched, and still evicts the other named table', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertOnboardedTable(db, 'PINNED01', { pinned: true, lastQueriedAt: daysAgo(ON_DEMAND_TTL_DAYS + 30) });
+      await insertOnboardedTable(db, 'NAMED002', { lastQueriedAt: daysAgo(1) });
+
+      const summary = await runTableEviction({
+        db,
+        now: new Date(),
+        apply: true,
+        tables: ['PINNED01', 'NAMED002'],
+      });
+
+      expect(summary.tables.map((t) => t.id)).toEqual(['NAMED002']);
+      expect(summary.refused).toEqual([{ id: 'PINNED01', reason: 'pinned' }]);
+      expect(await artifactCounts(db, 'PINNED01')).toEqual(FULL);
+      expect(await artifactCounts(db, 'NAMED002')).toEqual(GONE);
+      expect(describeTableEviction(summary)).toMatch(/REFUSED PINNED01 .*PINNED/);
+    } finally {
+      await close();
+    }
+  });
+
+  it('refuses an unregistered id and a table with an ACTIVE onboarding job', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertOnboardedTable(db, 'BUSY0002', { lastQueriedAt: daysAgo(1) });
+      await insertOnboardedTable(db, 'NAMED003', { lastQueriedAt: daysAgo(1) });
+      await createActiveJobFor(db, 'BUSY0002');
+
+      const summary = await runTableEviction({
+        db,
+        now: new Date(),
+        apply: true,
+        tables: ['BUSY0002', 'NOSUCH99', 'NAMED003'],
+      });
+
+      expect(summary.tables.map((t) => t.id)).toEqual(['NAMED003']);
+      expect(summary.refused).toEqual([
+        { id: 'BUSY0002', reason: 'active-onboarding-job' },
+        { id: 'NOSUCH99', reason: 'not-registered' },
+      ]);
+      expect(await artifactCounts(db, 'BUSY0002')).toEqual(FULL);
+    } finally {
+      await close();
+    }
+  });
+
+  it('dry run lists exactly the apply set plus the refusals, and writes nothing', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertOnboardedTable(db, 'NAMED004', { lastQueriedAt: daysAgo(1) });
+      await insertOnboardedTable(db, 'PINNED02', { pinned: true });
+      await insertOnboardedTable(db, 'OTHER001', { lastQueriedAt: daysAgo(ON_DEMAND_TTL_DAYS + 30) });
+
+      const now = new Date();
+      const tables = ['NAMED004', 'PINNED02', 'NOSUCH98'];
+      const preview = await runTableEviction({ db, now, apply: false, tables });
+
+      expect(preview.mode).toBe('dry-run');
+      expect(preview.tables.map((t) => t.id)).toEqual(['NAMED004']);
+      expect(preview.refused).toEqual([
+        { id: 'PINNED02', reason: 'pinned' },
+        { id: 'NOSUCH98', reason: 'not-registered' },
+      ]);
+      for (const id of ['NAMED004', 'PINNED02', 'OTHER001']) {
+        expect(await artifactCounts(db, id)).toEqual(FULL);
+      }
+
+      // ⟨F2⟩: the apply evicts exactly what the preview listed.
+      const applied = await runTableEviction({ db, now, apply: true, tables });
+      expect(applied.tables).toEqual(preview.tables);
+      expect(applied.refused).toEqual(preview.refused);
+    } finally {
+      await close();
+    }
+  });
+
+  it('an empty table list is an error, never a silent full sweep', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertOnboardedTable(db, 'STALE002', { lastQueriedAt: daysAgo(ON_DEMAND_TTL_DAYS + 30) });
+      await expect(
+        runTableEviction({ db, now: new Date(), apply: true, tables: [] }),
+      ).rejects.toThrow(/at least one/);
+      expect(await artifactCounts(db, 'STALE002')).toEqual(FULL);
+    } finally {
+      await close();
+    }
+  });
+
+  it('a targeted apply over a REAL delivered table (queried just now) leaves audit/ledger/pending untouched; R8 still reconstructs', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 150');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const debit = await reserveOnboardingDebit(db, userId, randomUUID(), 100);
+      if (debit.kind !== 'debited') throw new Error(`setup: ${debit.kind}`);
+      const pending = await createPendingRequest(db, {
+        userId,
+        requestId: randomUUID(),
+        questionText: 'hoeveel woningen waren er in 2024',
+        topicTerm: 'woningvoorraad',
+        tableId: TABLE,
+        finderConfidence: 0.9,
+        candidateIds: [],
+        debitTransactionId: debit.entry.id,
+      });
+      const jobSummary = await runOnboardingJob({
+        db,
+        source: fixtureSource(),
+        intentClient: intentStub(2024),
+        answerClient: throwingAnswerClient(),
+        notify: async () => {},
+        referenceDate: '2026-07-06',
+      });
+      expect(jobSummary.processed).toMatchObject({ outcome: 'delivered' });
+      const auditId = (await getPendingRequest(db, pending.id))!.deliveryAuditAnswerId!;
+
+      const auditBefore = (await db.query('select * from audit_answers order by id')).rows;
+      const ledgerBefore = (await db.query('select * from credit_transactions order by id')).rows;
+      const pendingBefore = (await db.query('select * from pending_table_requests order by id')).rows;
+      expect(auditBefore.length).toBeGreaterThan(0);
+
+      // NOW, not 40 days later: the table was queried seconds ago, so only the
+      // targeted mode can evict it.
+      const untargeted = await runTableEviction({ db, now: new Date(), apply: false });
+      expect(untargeted.tables).toEqual([]);
+      const summary = await runTableEviction({ db, now: new Date(), apply: true, tables: [TABLE] });
+      expect(summary.tables.map((t) => t.id)).toEqual([TABLE]);
+      expect(await artifactCounts(db, TABLE)).toEqual(GONE);
+
+      expect((await db.query('select * from audit_answers order by id')).rows).toEqual(auditBefore);
+      expect((await db.query('select * from credit_transactions order by id')).rows).toEqual(ledgerBefore);
+      expect((await db.query('select * from pending_table_requests order by id')).rows).toEqual(pendingBefore);
+      expect(reconstructionReport((await loadAuditRecord(db, auditId))!).ok).toBe(true);
+    } finally {
+      await close();
+    }
+  }, 30_000);
+});
+
+describe('tables:evict CLI — --table argument parsing', () => {
+  it('collects repeated --table flags, in both spellings; absent flag = undefined (the TTL sweep)', () => {
+    expect(parseTableArgs(['--apply'])).toBeUndefined();
+    expect(parseTableArgs([])).toBeUndefined();
+    expect(parseTableArgs(['--table', '83694NED', '--table=85615NED', '--apply'])).toEqual([
+      '83694NED',
+      '85615NED',
+    ]);
+  });
+
+  it('a --table without a usable value throws instead of falling back to a full sweep', () => {
+    expect(() => parseTableArgs(['--table'])).toThrow(/needs a table id/);
+    expect(() => parseTableArgs(['--table', '--apply'])).toThrow(/needs a table id/);
+    expect(() => parseTableArgs(['--table='])).toThrow(/needs a table id/);
+  });
 });
