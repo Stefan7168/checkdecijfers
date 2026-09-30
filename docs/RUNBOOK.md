@@ -1149,8 +1149,15 @@ down to the small clarification price).
    `ingest_mode`, `cbs_tables.ingest_mode` defaults to `'full'` on all 21 rows; prod still answered 200. `db:migrate` is
    idempotent — running it again reports "up to date".
 2. **Recording + calibration run of the table parser** — only after 2026-10-01 (the monthly $50 Anthropic spend limit starts over), see
-   "Table-parser recording run" below. Now 39 cases, prompt version 3. Nothing about the lane is trustworthy before this.
-3. **Step 6: the table-lane benchmark** (its own work package: 0 fabricated numbers, refusals correct) on the recorded parser.
+   "Table-parser recording run" below. Now 39 cases + the 23 table-lane benchmark requests, prompt version 3. Nothing
+   about the lane is trustworthy before this.
+3. **Step 6: the table-lane benchmark** (harness built 2026-09-30, ADR 062 "As built — step 6 (harness)") on the recorded
+   parser, zero spend: `npm run tablelane:bench:run` then `npm run tablelane:bench:score` — must print `GATE VERDICT: PASS`
+   (answer tasks ≥ 12 of 14, refuse + ask 9 of 9, invented numbers 0). Known blocker to fix first: the "miljard" unit
+   finding ([#339](open-questions.md) item 14). After a passing score set `gate.enforcedInCi` to true in
+   `benchmark/tablelane-tasks.json` so CI holds the gate from then on. `npm run tablelane:bench:run -- --canned` is the
+   harness self-check (no model output involved); `npm run tablelane:bench:capture -- --verify-key` re-reads every key
+   value from CBS (read-only, network).
 4. **Only then** set `TABLE_LANE_ENABLED=1` (row in the secrets register above) and redeploy. `ONBOARDING_ENABLED=1` and
    `CRON_SECRET` must still be set (they are).
 5. Smoke test as the owner in the workspace chat (a question about a table we do not hold); watch `vercel logs` right
@@ -2789,10 +2796,12 @@ Only `select` statements; any DDL or write stays an owner-supervised, migration-
 
 The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") has never called the AI. Its first
 recording turns the 39 labelled questions (`benchmark/tableparse-labelled-set.json`, now including the follow-up cases;
-prompt version 3 since breadth step 5) into replayable fixtures and a calibration report. Measured cost estimate: ~114k
-input tokens on the cheap tier (dry run, a few cents). Steps, owner present:
+prompt version 3 since breadth step 5) into replayable fixtures and a calibration report, and in the same run records the
+23 table-lane benchmark requests (ADR 062 step 6; labelled `bench:L1`…`bench:L23`, not scored by the calibration).
+Measured cost estimate: ~189k input tokens on the cheap tier (dry run 2026-09-30: 114,136 + 74,991; about $0.19 per
+record run). Steps, owner present:
 
-1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 39 cases and prints the per-case prompt sizes.
+1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 39 cases + 23 benchmark requests and prints the prompt sizes.
 2. `TABLEPARSE_RECORD_OK=1 npm run tableparse:record` — the live run (needs `ANTHROPIC_API_KEY` in `.env`). Without the
    variable the script refuses on purpose. Writes `tests/fixtures/llm/tableparse/*.json` and
    `benchmark/tableparse-calibration-report.json`.
@@ -2800,6 +2809,8 @@ input tokens on the cheap tier (dry run, a few cents). Steps, owner present:
 4. Read the report: accuracy per case, confidence of right vs wrong picks (calibrate `DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold`,
    #338), refusals by error class. Watch items from #339 (Caribisch Nederland kind; yearly adjusted question; pre-filter
    flooding; places left out of `regions`).
-5. Commit fixtures + report, add a CI replay test, record the measured numbers in STATUS / ADR 062 / #338.
+5. Commit fixtures + report, add a CI replay test, record the measured numbers in STATUS / ADR 062 / #338. The table-lane
+   benchmark's replay test (`tests/benchmark/tablelane-benchmark.test.ts`) switches on by itself once the fixture folder
+   exists; a missing benchmark fixture fails it.
 
 Any later prompt or schema byte change orphans every fixture → re-run steps 2–5.

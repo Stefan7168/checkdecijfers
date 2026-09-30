@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "source": "ADR 062 step 6 — the table-lane benchmark. Frozen questions over CBS tables that are NOT in the curated showcase set (src/ingestion/registry-seed.ts), so the curated lane cannot answer them and the table lane must. The table is given per task (it stands in for the finder's pick, which the job receives); the finder has its own calibration (tablefinder:eval). Every question is held out: none is in benchmark/tableparse-labelled-set.json, so the acceptance threshold is never tuned on these. Task text is frozen; changing it means re-recording (tableparse:record).",
+  "frozen": true,
+  "referenceDate": "2026-10-01",
+  "gate": {
+    "answerableMin": 12,
+    "answerableMinReason": "12 of the 14 answer tasks (85.7%) — exactly the curated benchmark's floor (12 of 14, docs/03). ADR 062's revisit trigger is the table lane scoring below the curated lane's quality floor, so the lane must meet the same share. The 9 refuse/ask tasks must ALL pass (an ask task passes only when the button question is right AND the answer after the click matches the key — the curated clarify-task rule), and invented numbers must be 0, exactly like the curated gate.",
+    "enforcedInCi": false
+  },
+  "tasks": [
+    {
+      "id": "L1",
+      "type": "answer",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgassen stootte Nederland in 2023 uit?",
+      "covers": "national-only table + 'Nederland' absorbed (Ruling R4); two breakdowns default to CBS's own totals",
+      "canned": {
+        "measureCode": "D003040",
+        "period": { "kind": "year", "year": 2023 },
+        "regions": [{ "name": "Nederland", "kind": "land" }]
+      }
+    },
+    {
+      "id": "L2",
+      "type": "answer",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas stootte de basismetaalindustrie in 2022 uit?",
+      "covers": "a member of a long (52) member list that the deterministic pre-filter keeps",
+      "canned": {
+        "measureCode": "D003040",
+        "breakdowns": { "Klimaatsectoren": "328100" },
+        "period": { "kind": "year", "year": 2022 }
+      }
+    },
+    {
+      "id": "L3",
+      "type": "answer",
+      "table": "85669NED",
+      "question": "Hoe ontwikkelde de CO2-uitstoot van het wegverkeer zich van 2019 tot en met 2023?",
+      "covers": "year range (series) with two named breakdown members",
+      "canned": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "A044109", "Klimaatsectoren": "A025424" },
+        "period": { "kind": "year_range", "fromYear": 2019, "toYear": 2023 },
+        "derivation": "series"
+      }
+    },
+    {
+      "id": "L4",
+      "type": "answer",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er in 2022 bij mensen van 80 jaar of ouder?",
+      "covers": "GeoDimension table without a named place (Nederland stated as the default); age named, other breakdowns to their totals",
+      "canned": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Leeftijd": "21700" },
+        "period": { "kind": "year", "year": 2022 }
+      }
+    },
+    {
+      "id": "L5",
+      "type": "answer",
+      "table": "85245NED",
+      "question": "Hoeveel bestelauto's werden er in 2024 gesloopt?",
+      "covers": "one breakdown member named, latest definitive year",
+      "canned": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "A018935" },
+        "period": { "kind": "year", "year": 2024 }
+      }
+    },
+    {
+      "id": "L6",
+      "type": "answer",
+      "table": "85245NED",
+      "question": "Hoeveel gesloopte personenauto's reden op benzine in 2023?",
+      "covers": "a measure chosen through its CBS measure group (Brandstofsoort: Benzine) plus a breakdown member",
+      "canned": {
+        "measureCode": "A019276",
+        "breakdowns": { "VoertuigType": "A018943" },
+        "period": { "kind": "year", "year": 2023 }
+      }
+    },
+    {
+      "id": "L7",
+      "type": "answer",
+      "table": "82883NED",
+      "question": "Hoeveel grondwater gebruikte de landbouw in 2020?",
+      "covers": "one of 15 measures + a sector from a 52-member list the pre-filter shortens",
+      "canned": {
+        "measureCode": "M006369_2",
+        "breakdowns": { "Watergebruikers": "301000" },
+        "period": { "kind": "year", "year": 2020 }
+      }
+    },
+    {
+      "id": "L8",
+      "type": "answer",
+      "table": "82883NED",
+      "question": "Hoeveel oppervlaktewater gebruikte de chemische industrie in 2023?",
+      "covers": "provisional (Voorlopig) cell — the answer must carry the provisional flag; a sector from a long list where many members share the word 'industrie'",
+      "canned": {
+        "measureCode": "M006372_2",
+        "breakdowns": { "Watergebruikers": "320700" },
+        "period": { "kind": "year", "year": 2023 }
+      }
+    },
+    {
+      "id": "L9",
+      "type": "answer",
+      "table": "82291NED",
+      "question": "Welk percentage van de inwoners van Bonaire had in 2021 suikerziekte?",
+      "covers": "a place bound to a region-coded breakdown member on a table without a region dimension; Marges defaults to Waarde",
+      "canned": {
+        "measureCode": "M005476_2",
+        "breakdowns": { "CaribischNederland": "GM9001" },
+        "period": { "kind": "year", "year": 2021 },
+        "regions": [{ "name": "Bonaire", "kind": "onbekend" }]
+      }
+    },
+    {
+      "id": "L10",
+      "type": "answer",
+      "table": "85004NED",
+      "question": "Hoeveel megawatt aan zonnestroom stond er in 2023 opgesteld in de provincie Utrecht?",
+      "covers": "province picked among province/energy-region look-alike members by its kind",
+      "canned": {
+        "measureCode": "M002199",
+        "breakdowns": { "BronEnTechniek": "E006590", "RegioS": "PV26" },
+        "period": { "kind": "year", "year": 2023 },
+        "regions": [{ "name": "Utrecht", "kind": "provincie" }]
+      }
+    },
+    {
+      "id": "L11",
+      "type": "answer",
+      "table": "37478hvv",
+      "question": "Hoeveel passagiers reisden er in juli 2025 via luchthaven Schiphol?",
+      "covers": "held-out table (never in calibration), 102 measures in nested groups, monthly period, an airport (not a region) as a breakdown member",
+      "canned": {
+        "measureCode": "D001620_3",
+        "breakdowns": { "Luchthavens": "A043590" },
+        "period": { "kind": "month", "year": 2025, "month": 7 }
+      }
+    },
+    {
+      "id": "L12",
+      "type": "answer",
+      "table": "37478hvv",
+      "question": "Hoeveel ton goederen werd er in 2024 in totaal via de Nederlandse luchthavens vervoerd?",
+      "covers": "held-out table, yearly period in a mixed JJ/KW/MM table, total over all airports",
+      "canned": {
+        "measureCode": "D003076_3",
+        "period": { "kind": "year", "year": 2024 }
+      }
+    },
+    {
+      "id": "L13",
+      "type": "answer",
+      "table": "80567ned",
+      "question": "Wat was de vacaturegraad in de horeca in het tweede kwartaal van 2025?",
+      "covers": "held-out quarterly-only table, quarter period, provisional cell",
+      "canned": {
+        "measureCode": "M002041",
+        "breakdowns": { "SBI2008": "389100" },
+        "period": { "kind": "quarter", "year": 2025, "quarter": 2 }
+      }
+    },
+    {
+      "id": "L14",
+      "type": "answer",
+      "table": "85245NED",
+      "previousQuestion": "Hoeveel bestelauto's werden er in 2024 gesloopt?",
+      "question": "En in 2020?",
+      "covers": "follow-up in the same conversation (prompt v3 'Vorige vraag' line): topic and member carried over, only the year changes",
+      "canned": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "A018935" },
+        "period": { "kind": "year", "year": 2020 }
+      }
+    },
+    {
+      "id": "L15",
+      "type": "ask",
+      "table": "84521NED",
+      "question": "Hoeveel ziekenhuisopnamen waren er in 2022 in de gemeente Utrecht?",
+      "covers": "two total-like age members → one button question (never a guessed total); municipality on a GeoDimension; the reply round answers",
+      "expectDimension": "Leeftijd",
+      "reply": { "code": "10000" },
+      "canned": {
+        "measureCode": "M006162_1",
+        "period": { "kind": "year", "year": 2022 },
+        "regions": [{ "name": "Utrecht", "kind": "gemeente" }]
+      }
+    },
+    {
+      "id": "L16",
+      "type": "ask",
+      "table": "85004NED",
+      "question": "Hoeveel megawatt windenergie op land stond er in 2023 opgesteld in Groningen?",
+      "covers": "ambiguous place (Groningen province / two energy regions) → a button question, never a pick; the reply round answers",
+      "expectDimension": "RegioS",
+      "reply": { "code": "PV20" },
+      "canned": {
+        "measureCode": "M002199",
+        "breakdowns": { "BronEnTechniek": "E006637", "RegioS": "anders" },
+        "period": { "kind": "year", "year": 2023 },
+        "regions": [{ "name": "Groningen", "kind": "onbekend" }]
+      }
+    },
+    {
+      "id": "L17",
+      "type": "refuse",
+      "table": "85245NED",
+      "question": "Wat was de gemiddelde leeftijd van de personenauto's die in 2023 gesloopt werden?",
+      "covers": "no matching measure (the table counts vehicles, it has no ages)",
+      "expectReasons": ["table_lane_no_measure"],
+      "canned": {
+        "measureCode": "geen",
+        "breakdowns": { "VoertuigType": "A018943" },
+        "period": { "kind": "year", "year": 2023 }
+      }
+    },
+    {
+      "id": "L18",
+      "type": "refuse",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgassen gaat Nederland in 2030 uitstoten?",
+      "covers": "forecast — CBS publishes realisations only; the year is not in the table (or no measure fits a forecast)",
+      "expectReasons": ["table_lane_period_missing", "table_lane_no_measure"],
+      "canned": {
+        "measureCode": "D003040",
+        "period": { "kind": "year", "year": 2030 },
+        "regions": [{ "name": "Nederland", "kind": "land" }]
+      }
+    },
+    {
+      "id": "L19",
+      "type": "refuse",
+      "table": "82883NED",
+      "question": "Waarom gebruikten particuliere huishoudens in 2022 minder leidingwater dan in 2021?",
+      "covers": "causal — the table holds amounts, not causes; the curated front door refuses 'waarom' before the lane, this checks the lane's own defence (see ADR 062 step 6 note)",
+      "expectReasons": ["table_lane_no_measure", "table_lane_unsure", "table_lane_period_unsupported"],
+      "canned": {
+        "measureCode": "geen",
+        "breakdowns": { "Watergebruikers": "1050010" },
+        "period": { "kind": "change_over_year", "year": 2022 }
+      }
+    },
+    {
+      "id": "L20",
+      "type": "refuse",
+      "table": "85245NED",
+      "question": "Hoeveel personenauto's werden er in 2024 in Utrecht gesloopt?",
+      "covers": "a place the table does not have (national table, no regions)",
+      "expectReasons": ["region_unavailable"],
+      "canned": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "A018943" },
+        "period": { "kind": "year", "year": 2024 },
+        "regions": [{ "name": "Utrecht", "kind": "onbekend" }]
+      }
+    },
+    {
+      "id": "L21",
+      "type": "refuse",
+      "table": "80567ned",
+      "question": "Wat was de vacaturegraad in de bouw over heel 2024?",
+      "covers": "a period precision the table does not publish (years on a quarters-only table) — strict, never adapted",
+      "expectReasons": ["table_lane_period_grain"],
+      "canned": {
+        "measureCode": "M002041",
+        "breakdowns": { "SBI2008": "350000" },
+        "period": { "kind": "year", "year": 2024 }
+      }
+    },
+    {
+      "id": "L22",
+      "type": "refuse",
+      "table": "82291NED",
+      "question": "Welk percentage van de inwoners van Saba had in 2019 een hoge bloeddruk?",
+      "covers": "a period the table does not list (surveys 2013, 2017/2018, 2021 only)",
+      "expectReasons": ["table_lane_period_missing"],
+      "canned": {
+        "measureCode": "D005402",
+        "breakdowns": { "CaribischNederland": "GM9003" },
+        "period": { "kind": "year", "year": 2019 },
+        "regions": [{ "name": "Saba", "kind": "onbekend" }]
+      }
+    },
+    {
+      "id": "L23",
+      "type": "refuse",
+      "table": "82883NED",
+      "question": "Hoeveel leidingwater gebruikten particuliere huishoudens in 2022?",
+      "covers": "the table lists the year, but CBS publishes no value in this cell (households: only drinking water from 2022 on) — the stored slice holds a missing cell and the answer path must refuse, never fill it",
+      "expectReasons": ["not_published"],
+      "canned": {
+        "measureCode": "M005248_2",
+        "breakdowns": { "Watergebruikers": "1050010" },
+        "period": { "kind": "year", "year": 2022 }
+      }
+    }
+  ]
+}

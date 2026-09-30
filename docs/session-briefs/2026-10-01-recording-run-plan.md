@@ -27,13 +27,16 @@ verification block + `/code-review` LOW + green CI before every push. Zero live 
   estimates below are floors, budget them ×1.5.
 - **Table parser: 114,136 input tokens for 39 cases, measured by the dry run on 2026-09-29** (`npm run
   tableparse:eval -- --dry-run`, session 145) — largest prompt 16,797 chars (~4.8K tokens).
+- **Plus the table-lane benchmark (ADR 062 step 6, added 2026-09-30): 23 requests, 74,991 input tokens** (same dry
+  run, measured 2026-09-30; largest 25,257 chars, ~7.2K tokens — table `37478hvv`, 102 measures). One record run is
+  now 62 calls / ~189,127 tokens; the 39 labelled cases' bytes and count are unchanged.
 
 | Recording | Calls | Tokens (floor) | Cost (floor) | Budget ×1.5 |
 |---|---|---|---|---|
-| A. Table parser: 1 record + 1 replay (free) + 1 second record as stability | 39 + 39 | ~230K | ~$0.25 | $0.40 |
+| A. Table parser + table-lane benchmark requests: 1 record + 1 replay (free) + 1 second record as stability | 62 + 62 | ~380K | ~$0.39 | $0.58 |
 | B. Regional Part 2: intent 66 cases × (1 probe + 1 record + 3 stability) + clarify 7 + follow-up 24 legs + 1 onboarding-delivery call | ~360 | ~2.4M | ~$2.45 | $3.70 |
 | C. Eurostat step 0: ~10 country questions × 2 (probe + record) | ~20 | ~130K | ~$0.15 | $0.25 |
-| **Total** | | **~2.8M** | **~$2.85** | **~$4.35** |
+| **Total** (B and C on hold since 2026-09-30 — A alone is ~$0.58 budgeted) | | **~2.9M** | **~$3.00** | **~$4.55** |
 
 Well inside the $50 roof; leaves room for one full extra iteration of B (the expensive one) if a prompt fix is
 needed. **If the roof is hit anyway** the API answers `400 … specified API usage limits` — every live question on
@@ -55,7 +58,7 @@ Each step ends with a push and green CI before the next starts — a failed step
 
 ```
 git status                       # clean, on main, fully pushed
-npm run tableparse:eval -- --dry-run     # 39 cases, ~114K tokens (as measured 2026-09-29)
+npm run tableparse:eval -- --dry-run     # 39 cases ~114K + 23 benchmark requests ~75K = ~189K tokens (2026-09-30)
 grep -c ANTHROPIC_API_KEY .env          # 1 — the MAIN key (the trial key is a separate, capped workspace)
 ```
 
@@ -77,25 +80,33 @@ green. The throwaway branch was deleted; the real branch is untouched.
 Precondition check: #339 items 1–4 are closed (step 4b, session 139); items 5+ in that row are watch items, not
 blockers — re-read the row before starting, an open "changes prompt bytes" item means "do it first or re-record".
 
-1. `npm run tableparse:eval -- --dry-run` — 39 cases, zero spend (sanity).
-2. `TABLEPARSE_RECORD_OK=1 npm run tableparse:record` — the live run (~114K tokens). Writes
+1. `npm run tableparse:eval -- --dry-run` — 39 cases + 23 `bench:` requests (62 calls, ~189K tokens), zero spend (sanity).
+2. `TABLEPARSE_RECORD_OK=1 npm run tableparse:record` — the live run (~189K tokens: the 39 labelled cases, then the 23
+   table-lane benchmark requests, recorded but not scored here; the last lines say `table-lane benchmark fixtures: 23/23
+   recorded`). Writes
    `tests/fixtures/llm/tableparse/*.json` + `benchmark/tableparse-calibration-report.json`.
 3. `npm run tableparse:eval -- --replay` — free; MUST reproduce the recorded scores byte-for-byte.
 4. Stability (the script has `--dry-run` / `--replay` / `--record` only, no repeat flag — verified 2026-09-29):
-   keep a copy of the first report, run `--record` a second time (~$0.12; it rewrites the fixtures), diff the two
+   keep a copy of the first report, run `--record` a second time (~$0.19; it rewrites the fixtures), diff the two
    reports. **Pass:** zero flips on the accepted picks. Keep the second run's fixtures.
 5. Read the report. **Pass gate:** every "answer" case picks the labelled measure/breakdown; every "refuse" and
    "ambiguous" case refuses (no fabricated pick); right-pick confidences sit clearly above wrong-pick confidences
    → set `DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold` (#338) at a value with 0 wrong accepts on this set, the
    same procedure as `DEFAULT_MEASURE_FIT_CONFIG`'s 2026-07-10 calibration. **Fail:** a wrong pick accepted
-   → fix the labelled set or the prompt (a prompt fix = re-run from step 2, ~$0.12), never loosen the label.
-6. Add a CI replay test (the intent-eval precedent: replays the fixtures hermetically, fails on a missing one).
+   → fix the labelled set or the prompt (a prompt fix = re-run from step 2, ~$0.19), never loosen the label.
+6. Add a CI replay test for the calibration set (the intent-eval precedent: replays the fixtures hermetically, fails on a
+   missing one). The table-lane benchmark's CI replay test already exists (`tests/benchmark/tablelane-benchmark.test.ts`)
+   and switches itself on the moment `tests/fixtures/llm/tableparse/` exists — run it locally before pushing.
 7. Commit fixtures + report + threshold: `feat(table-parse): recorded fixtures + calibration (39 cases, prompt v3)`.
    Verification block, `/code-review` LOW, push, CI green. Record the measured numbers in STATUS, ADR 062 "As
    built — recording", #338.
 
-Then step 6 of breadth (the table-lane benchmark) is unblocked — its own work package, hermetic on these
-fixtures, no further spend; the `TABLE_LANE_ENABLED` flip comes only after it (RUNBOOK "Table lane").
+Then step 6 of breadth (the table-lane benchmark) runs on these fixtures — **its harness is built (ADR 062 "As built —
+step 6 (harness)")**, no further spend: `npm run tablelane:bench:run` (replay) then `npm run tablelane:bench:score`.
+Gate: answer tasks ≥ 12 of 14, refuse + ask 9 of 9, invented numbers 0. **Known blocker found by its canned run:** the
+"miljard" unit finding ([#339](../open-questions.md) item 14) fails L1–L3 until fixed — with it open, even perfect parses
+score 11 of 14. The `TABLE_LANE_ENABLED` flip comes only after a passing score (then set `gate.enforcedInCi` to true in
+`benchmark/tablelane-tasks.json`; RUNBOOK "Table lane").
 
 **Right after the flip (owner decision 2026-09-30, session 152, #358 item 12):** evict the last hand-refreshed CBS table `37789ksz` — `npm run tables:evict -- --table 37789ksz` (dry run), then `--apply` with the owner. A welfare question then goes through the table lane like any other CBS table. After that no CBS table needs a hand sync; the whole-table path can be deleted once the Eurostat datasets are on the one route (#358 item 4) and `70072ned` is loaded as slices.
 
@@ -157,7 +168,8 @@ filtered (country-only) slice (`npm run eurostat:siblings` dry run prints the re
    rerank, insights, onboarding-fit) for a later, separately budgeted full re-record: the model is never asked to
    write the brand into an answer, so a reader never sees the old name.
 2. **Order A → B → C** as above (or skip C if the session runs long — it is independent and cheap).
-3. **GO for ~$4.35 of spend** (the ×1.5 budget), plus up to one extra B iteration (~$2) if a prompt fix is needed.
+3. **GO for ~$4.55 of spend** (the ×1.5 budget; part A alone ~$0.58 since B and C are on hold), plus up to one extra B
+   iteration (~$2) if a prompt fix is needed.
 
 ## What can go wrong (and the answer)
 

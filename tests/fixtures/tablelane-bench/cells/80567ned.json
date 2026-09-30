@@ -1,0 +1,38 @@
+{
+ "tableId": "80567ned",
+ "capturedAt": "2026-09-30T18:48:24.643Z",
+ "cbsModified": "2026-07-30T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/80567ned/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "M002041"
+    ],
+    "dimensionIn": {
+     "SBI2008": [
+      "389100"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2025KW02"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M002041",
+     "coordinates": {
+      "SBI2008": "389100",
+      "Perioden": "2025KW02"
+     },
+     "value": 55,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,4818 @@
+{
+ "fetchedAt": "2026-09-30T18:43:00.971Z",
+ "schema": {
+  "tableId": "37478hvv",
+  "title": "Luchtvaart; maandcijfers Nederlandse luchthavens van nationaal belang",
+  "dimensions": [
+   {
+    "name": "Luchthavens",
+    "kind": "Dimension",
+    "title": "Luchthavens"
+   },
+   {
+    "name": "Perioden",
+    "kind": "TimeDimension",
+    "title": "Perioden"
+   }
+  ],
+  "measures": [
+   {
+    "code": "D003055",
+    "title": "Overlandbewegingen",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Het aantal starts en landingen bij overlandvluchten; dit zijn vluchten\r\nwaarbij de opstijging en de daarop volgende landing niet op hetzelfde\r\nluchtvaartterrein plaatsvinden.",
+    "dataType": "Double",
+    "groupPath": [
+     "Vliegtuigbewegingen"
+    ]
+   },
+   {
+    "code": "D003056",
+    "title": "Terreinbewegingen",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Het aantal starts en landingen bij terreinvluchten; dit zijn vluchten\r\nwaarbij de opstijging en de daarop volgende landing op hetzelfde\r\nluchtvaartterrein plaatsvinden.",
+    "dataType": "Double",
+    "groupPath": [
+     "Vliegtuigbewegingen"
+    ]
+   },
+   {
+    "code": "D003058_3",
+    "title": "Totaal alle vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Alle vluchten"
+    ]
+   },
+   {
+    "code": "D003059_1",
+    "title": "Geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Alle vluchten"
+    ]
+   },
+   {
+    "code": "D003060_1",
+    "title": "Ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Alle vluchten"
+    ]
+   },
+   {
+    "code": "D003061_2",
+    "title": "Totaal aangekomen vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Aangekomen vluchten"
+    ]
+   },
+   {
+    "code": "D003059_2",
+    "title": "Geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Aangekomen vluchten"
+    ]
+   },
+   {
+    "code": "D003060_2",
+    "title": "Ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Aangekomen vluchten"
+    ]
+   },
+   {
+    "code": "D003062_2",
+    "title": "Totaal vertrokken vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Vertrokken vluchten"
+    ]
+   },
+   {
+    "code": "D003059_3",
+    "title": "Geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Vertrokken vluchten"
+    ]
+   },
+   {
+    "code": "D003060_3",
+    "title": "Ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Vluchten",
+     "Vertrokken vluchten"
+    ]
+   },
+   {
+    "code": "D001620_3",
+    "title": "Totaal aantal passagiers",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Totale passagiersvervoer"
+    ]
+   },
+   {
+    "code": "D003064_1",
+    "title": "Passagiers op geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Totale passagiersvervoer"
+    ]
+   },
+   {
+    "code": "D003065_1",
+    "title": "Passagiers op ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Totale passagiersvervoer"
+    ]
+   },
+   {
+    "code": "D003063_2",
+    "title": "Totaal aangekomen passagiers",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Aangekomen passagiers"
+    ]
+   },
+   {
+    "code": "D003064_2",
+    "title": "Passagiers op geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Aangekomen passagiers"
+    ]
+   },
+   {
+    "code": "D003065_2",
+    "title": "Passagiers op ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Aangekomen passagiers"
+    ]
+   },
+   {
+    "code": "D003066_2",
+    "title": "Totaal vertrokken passagiers",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Vertrokken passagiers"
+    ]
+   },
+   {
+    "code": "D003064_3",
+    "title": "Passagiers op geregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Vertrokken passagiers"
+    ]
+   },
+   {
+    "code": "D003065_3",
+    "title": "Passagiers op ongeregelde vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Vertrokken passagiers"
+    ]
+   },
+   {
+    "code": "M003067_2",
+    "title": "Alle passagiers naar herkomst/bestemming",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers"
+    ]
+   },
+   {
+    "code": "L008525_1",
+    "title": "Europa totaal",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "L008526_1",
+    "title": "EU-landen",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "Vervoerde passagiers op vluchten naar luchthavens met herkomst of bestemming in de Europese Unie (EU).\r\n\r\nVanaf 2021 hebben de cijfers betrekking op de EU (2020).\r\nDe cijfers over het Verenigd Koninkrijk, dat per 1 februari 2020 de EU heeft verlaten, zijn opgenomen bij \"overig Europa\".\r\n\r\nDe samenstelling van de EU per 1 februari 2020:\r\nBelgië, Bulgarije, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Kroatië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Roemenië, Slowakije, Slovenië, Spanje, Tsjechië en Zweden.\r\n\r\nDe cijfers vanaf 2005 tot en met 2020 hebben betrekking op de EU-25\r\nDe samenstelling van de Europese Unie per 1 mei 2004: België, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Slowakije, Slovenië, Spanje, Tsjechië, Verenigd Koninkrijk en Zweden.\r\nPer 1 januari 2007 behoren Bulgarije en Roemenië en per 1 juli 2013 Kroatië  ook tot de Unie, De cijfers van deze drie landen zijn voorlopig echter nog ingedeeld bij \"overig Europa\".\r\n\r\nDe cijfers tot en met 2004 hebben betrekking op de EU-15\r\nDe samenstelling van de Europese Unie per 1 januari 1995: België,\r\nDuitsland, Denemarken, Finland, Frankrijk, Griekenland, Ierland, Italië, Luxemburg, Nederland, Oostenrijk, Portugal, Spanje, \r\nVerenigd Koninkrijk en Zweden.",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "L009509_1",
+    "title": "Overig Europa",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "M003069_2",
+    "title": "Totaal op intercontinentale vluchten",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "L008519_2",
+    "title": "Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009506_1",
+    "title": "Noord-Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009523_1",
+    "title": "West-Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "M003071_1",
+    "title": "Centraal-Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009522_1",
+    "title": "Oost-Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008787_1",
+    "title": "Zuid-Afrika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008520_2",
+    "title": "Amerika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008521_1",
+    "title": "Noord-Amerika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008522_1",
+    "title": "Midden-Amerika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008523_1",
+    "title": "Zuid-Amerika",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008524_2",
+    "title": "Azië",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "D003073_1",
+    "title": "West-Azië",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L009532_1",
+    "title": "Zuidoost-Azië",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "M003075_1",
+    "title": "Noordoost-Azië",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L008531_1",
+    "title": "Oceanië",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "M003082_1",
+    "title": "Overig/onbekend intercontinentaal",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "L999997_1",
+    "title": "Onbekend",
+    "unit": "aantal",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Passagiersvervoer",
+     "Herkomst / bestemming passagiers"
+    ]
+   },
+   {
+    "code": "D003076_3",
+    "title": "Totaal goederenvervoer",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Totale goederenvervoer"
+    ]
+   },
+   {
+    "code": "M003077_1",
+    "title": "Goederenvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Totale goederenvervoer"
+    ]
+   },
+   {
+    "code": "D003078_1",
+    "title": "Goederenvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Totale goederenvervoer"
+    ]
+   },
+   {
+    "code": "M003079_2",
+    "title": "Totaal geloste goederen",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geloste goederen"
+    ]
+   },
+   {
+    "code": "M003077_2",
+    "title": "Goederenvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geloste goederen"
+    ]
+   },
+   {
+    "code": "D003078_2",
+    "title": "Goederenvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geloste goederen"
+    ]
+   },
+   {
+    "code": "M003080_2",
+    "title": "Totaal geladen goederen",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geladen goederen"
+    ]
+   },
+   {
+    "code": "M003077_3",
+    "title": "Goederenvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geladen goederen"
+    ]
+   },
+   {
+    "code": "D003078_3",
+    "title": "Goederenvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Geladen goederen"
+    ]
+   },
+   {
+    "code": "M003081_2",
+    "title": "Alle goederen naar herkomst/bestemming",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen"
+    ]
+   },
+   {
+    "code": "L008525_2",
+    "title": "Europa totaal",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "L008526_2",
+    "title": "EU-landen",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "Vervoerde goederen op vluchten naar luchthavens met herkomst of\r\nbestemming in de Europese Unie (EU).\r\n\r\nVanaf 2021 hebben de cijfers betrekking op de EU (2020).\r\nDe cijfers over het Verenigd Koninkrijk, dat per 1 februari 2020 de EU heeft verlaten, zijn opgenomen bij \"overig Europa\".\r\n\r\nDe samenstelling van de EU per 1 februari 2020:\r\nBelgië, Bulgarije, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Kroatië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Roemenië, Slowakije, Slovenië, Spanje, Tsjechië en Zweden.\r\n\r\nDe cijfers vanaf 2005 tot en met 2020 hebben betrekking op de EU-25\r\nDe samenstelling van de Europese Unie per 1 mei 2004: België, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Slowakije, Slovenië, Spanje, Tsjechië, Verenigd Koninkrijk en Zweden.\r\nPer 1 januari 2007 behoren Bulgarije en Roemenië en per 1 juli 2013 Kroatië  ook tot de Unie, De cijfers van deze drie landen zijn voorlopig echter nog ingedeeld bij \"overig Europa\".\r\n\r\nDe cijfers tot en met 2004 hebben betrekking op de EU-15\r\nDe samenstelling van de Europese Unie per 1 januari 1995: België,\r\nDuitsland, Denemarken, Finland, Frankrijk, Griekenland, Ierland, Italië, Luxemburg, Nederland, Oostenrijk, Portugal, Spanje, \r\nVerenigd Koninkrijk en Zweden.",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "L009509_2",
+    "title": "Overig Europa",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Europese bestemmingen"
+    ]
+   },
+   {
+    "code": "M003069_4",
+    "title": "Totaal op intercontinentale vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "L008519_4",
+    "title": "Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009506_2",
+    "title": "Noord-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009523_2",
+    "title": "West-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "M003071_2",
+    "title": "Centraal-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009522_2",
+    "title": "Oost-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008787_2",
+    "title": "Zuid-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008520_4",
+    "title": "Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008521_2",
+    "title": "Noord-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008522_2",
+    "title": "Midden-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008523_2",
+    "title": "Zuid-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008524_4",
+    "title": "Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "D003073_2",
+    "title": "West-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L009532_2",
+    "title": "Zuidoost-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "M003075_2",
+    "title": "Noordoost-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L008531_2",
+    "title": "Oceanië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "M003082_2",
+    "title": "Overig/onbekend intercontinentaal",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "L999997_2",
+    "title": "Onbekend",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Goederenvervoer",
+     "Herkomst / bestemming goederen"
+    ]
+   },
+   {
+    "code": "D003083_3",
+    "title": "Totale postvervoer",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Totale postvervoer"
+    ]
+   },
+   {
+    "code": "D003084_1",
+    "title": "Postvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Totale postvervoer"
+    ]
+   },
+   {
+    "code": "D003085_1",
+    "title": "Postvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Totale postvervoer"
+    ]
+   },
+   {
+    "code": "M003086_2",
+    "title": "Totaal geloste post",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geloste post"
+    ]
+   },
+   {
+    "code": "D003084_2",
+    "title": "Postvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geloste post"
+    ]
+   },
+   {
+    "code": "D003085_2",
+    "title": "Postvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geloste post"
+    ]
+   },
+   {
+    "code": "M003087_2",
+    "title": "Totaal geladen post",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geladen post"
+    ]
+   },
+   {
+    "code": "D003084_3",
+    "title": "Postvervoer op geregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geladen post"
+    ]
+   },
+   {
+    "code": "D003085_3",
+    "title": "Postvervoer op ongeregelde vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Geladen post"
+    ]
+   },
+   {
+    "code": "M003088_2",
+    "title": "Totaal herkomst/bestemming post",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post"
+    ]
+   },
+   {
+    "code": "L008525_4",
+    "title": "Europa totaal postvervoer",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Europa"
+    ]
+   },
+   {
+    "code": "L008526_3",
+    "title": "EU-landen",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "Vervoerde hoeveelheid post op vluchten naar luchthavens met herkomst of bestemming in de Europese Unie (EU).\r\n\r\nVanaf 2021 hebben de cijfers betrekking op de EU (2020).\r\nDe cijfers over het Verenigd Koninkrijk, dat per 1 februari 2020 de EU heeft verlaten, zijn opgenomen bij \"overig Europa\".\r\n\r\nDe samenstelling van de EU per 1 februari 2020:\r\nBelgië, Bulgarije, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Kroatië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Roemenië, Slowakije, Slovenië, Spanje, Tsjechië en Zweden.\r\n\r\nDe cijfers vanaf 2005 tot en met 2020 hebben betrekking op de EU-25\r\nDe samenstelling van de Europese Unie per 1 mei 2004: België, Duitsland, Cyprus, Denemarken, Estland, Finland, Frankrijk, Griekenland, Hongarije, Ierland, Italië, Letland, Litouwen, Luxemburg, Malta, Nederland, Oostenrijk, Polen, Portugal, Slowakije, Slovenië, Spanje, Tsjechië, Verenigd Koninkrijk en Zweden.\r\nPer 1 januari 2007 behoren Bulgarije en Roemenië en per 1 juli 2013 Kroatië  ook tot de Unie, De cijfers van deze drie landen zijn voorlopig echter nog ingedeeld bij \"overig Europa\".\r\n\r\nDe cijfers tot en met 2004 hebben betrekking op de EU-15\r\nDe samenstelling van de Europese Unie per 1 januari 1995: België,\r\nDuitsland, Denemarken, Finland, Frankrijk, Griekenland, Ierland, Italië, Luxemburg, Nederland, Oostenrijk, Portugal, Spanje, \r\nVerenigd Koninkrijk en Zweden.",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Europa"
+    ]
+   },
+   {
+    "code": "L009509_3",
+    "title": "Overig Europa",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Europa"
+    ]
+   },
+   {
+    "code": "M003069_6",
+    "title": "Totaal post, intercontinentale vluchten",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal"
+    ]
+   },
+   {
+    "code": "L008519_6",
+    "title": "Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009506_3",
+    "title": "Noord-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009523_3",
+    "title": "West-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "M003071_3",
+    "title": "Centraal-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L009522_3",
+    "title": "Oost-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008787_3",
+    "title": "Zuid-Afrika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Afrika"
+    ]
+   },
+   {
+    "code": "L008520_6",
+    "title": "Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008521_3",
+    "title": "Noord-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008522_3",
+    "title": "Midden-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008523_3",
+    "title": "Zuid-Amerika",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Amerika"
+    ]
+   },
+   {
+    "code": "L008524_6",
+    "title": "Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "D003073_3",
+    "title": "West-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L009532_3",
+    "title": "Zuidoost-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "M003075_3",
+    "title": "Noordoost-Azië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal",
+     "Azië"
+    ]
+   },
+   {
+    "code": "L008531_3",
+    "title": "Oceanië",
+    "unit": "ton",
+    "decimals": 0,
+    "description": "",
+    "dataType": "Double",
+    "groupPath": [
+     "Handelsverkeer",
+     "Postvervoer",
+     "Herkomst / bestemming post",
+     "Intercontinentaal"
+    ]
+   }
+  ],
+  "modified": "2026-09-30T00:00:00+02:00"
+ },
+ "codeLists": {
+  "Luchthavens": [
+   {
+    "code": "A045844",
+    "title": "Totaal luchthavens van nationaal belang",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1,
+    "description": "Dit zijn: Amsterdam Airport Schiphol, Rotterdam The Hague Airport, Eindhoven Airport, Maastricht Aachen Airport, Groningen Airport Eelde."
+   },
+   {
+    "code": "A043590",
+    "title": "Amsterdam Airport Schiphol",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "A043596",
+    "title": "Rotterdam The Hague Airport",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "A043591",
+    "title": "Eindhoven Airport",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "A043595",
+    "title": "Maastricht Aachen Airport",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "A043593",
+    "title": "Groningen Airport Eelde",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6
+   }
+  ],
+  "Perioden": [
+   {
+    "code": "1997JJ00",
+    "title": "1997",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 1
+   },
+   {
+    "code": "1998JJ00",
+    "title": "1998",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 2
+   },
+   {
+    "code": "1999MM01",
+    "title": "1999 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 3
+   },
+   {
+    "code": "1999MM02",
+    "title": "1999 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 4
+   },
+   {
+    "code": "1999MM03",
+    "title": "1999 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 5
+   },
+   {
+    "code": "1999KW01",
+    "title": "1999 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 6
+   },
+   {
+    "code": "1999MM04",
+    "title": "1999 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 7
+   },
+   {
+    "code": "1999MM05",
+    "title": "1999 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 8
+   },
+   {
+    "code": "1999MM06",
+    "title": "1999 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 9
+   },
+   {
+    "code": "1999KW02",
+    "title": "1999 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 10
+   },
+   {
+    "code": "1999MM07",
+    "title": "1999 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 11
+   },
+   {
+    "code": "1999MM08",
+    "title": "1999 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 12
+   },
+   {
+    "code": "1999MM09",
+    "title": "1999 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 13
+   },
+   {
+    "code": "1999KW03",
+    "title": "1999 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 14
+   },
+   {
+    "code": "1999MM10",
+    "title": "1999 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 15
+   },
+   {
+    "code": "1999MM11",
+    "title": "1999 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 16
+   },
+   {
+    "code": "1999MM12",
+    "title": "1999 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 17
+   },
+   {
+    "code": "1999KW04",
+    "title": "1999 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 18
+   },
+   {
+    "code": "1999JJ00",
+    "title": "1999",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 19
+   },
+   {
+    "code": "2000MM01",
+    "title": "2000 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 20
+   },
+   {
+    "code": "2000MM02",
+    "title": "2000 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 21
+   },
+   {
+    "code": "2000MM03",
+    "title": "2000 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 22
+   },
+   {
+    "code": "2000KW01",
+    "title": "2000 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 23
+   },
+   {
+    "code": "2000MM04",
+    "title": "2000 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 24
+   },
+   {
+    "code": "2000MM05",
+    "title": "2000 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 25
+   },
+   {
+    "code": "2000MM06",
+    "title": "2000 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 26
+   },
+   {
+    "code": "2000KW02",
+    "title": "2000 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 27
+   },
+   {
+    "code": "2000MM07",
+    "title": "2000 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 28
+   },
+   {
+    "code": "2000MM08",
+    "title": "2000 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 29
+   },
+   {
+    "code": "2000MM09",
+    "title": "2000 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 30
+   },
+   {
+    "code": "2000KW03",
+    "title": "2000 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 31
+   },
+   {
+    "code": "2000MM10",
+    "title": "2000 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 32
+   },
+   {
+    "code": "2000MM11",
+    "title": "2000 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 33
+   },
+   {
+    "code": "2000MM12",
+    "title": "2000 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 34
+   },
+   {
+    "code": "2000KW04",
+    "title": "2000 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 35
+   },
+   {
+    "code": "2000JJ00",
+    "title": "2000",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 36
+   },
+   {
+    "code": "2001MM01",
+    "title": "2001 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 37
+   },
+   {
+    "code": "2001MM02",
+    "title": "2001 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 38
+   },
+   {
+    "code": "2001MM03",
+    "title": "2001 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 39
+   },
+   {
+    "code": "2001KW01",
+    "title": "2001 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 40
+   },
+   {
+    "code": "2001MM04",
+    "title": "2001 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 41
+   },
+   {
+    "code": "2001MM05",
+    "title": "2001 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 42
+   },
+   {
+    "code": "2001MM06",
+    "title": "2001 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 43
+   },
+   {
+    "code": "2001KW02",
+    "title": "2001 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 44
+   },
+   {
+    "code": "2001MM07",
+    "title": "2001 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 45
+   },
+   {
+    "code": "2001MM08",
+    "title": "2001 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 46
+   },
+   {
+    "code": "2001MM09",
+    "title": "2001 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 47
+   },
+   {
+    "code": "2001KW03",
+    "title": "2001 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 48
+   },
+   {
+    "code": "2001MM10",
+    "title": "2001 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 49
+   },
+   {
+    "code": "2001MM11",
+    "title": "2001 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 50
+   },
+   {
+    "code": "2001MM12",
+    "title": "2001 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 51
+   },
+   {
+    "code": "2001KW04",
+    "title": "2001 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 52
+   },
+   {
+    "code": "2001JJ00",
+    "title": "2001",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 53
+   },
+   {
+    "code": "2002MM01",
+    "title": "2002 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 54
+   },
+   {
+    "code": "2002MM02",
+    "title": "2002 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 55
+   },
+   {
+    "code": "2002MM03",
+    "title": "2002 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 56
+   },
+   {
+    "code": "2002KW01",
+    "title": "2002 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 57
+   },
+   {
+    "code": "2002MM04",
+    "title": "2002 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 58
+   },
+   {
+    "code": "2002MM05",
+    "title": "2002 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 59
+   },
+   {
+    "code": "2002MM06",
+    "title": "2002 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 60
+   },
+   {
+    "code": "2002KW02",
+    "title": "2002 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 61
+   },
+   {
+    "code": "2002MM07",
+    "title": "2002 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 62
+   },
+   {
+    "code": "2002MM08",
+    "title": "2002 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 63
+   },
+   {
+    "code": "2002MM09",
+    "title": "2002 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 64
+   },
+   {
+    "code": "2002KW03",
+    "title": "2002 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 65
+   },
+   {
+    "code": "2002MM10",
+    "title": "2002 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 66
+   },
+   {
+    "code": "2002MM11",
+    "title": "2002 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 67
+   },
+   {
+    "code": "2002MM12",
+    "title": "2002 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 68
+   },
+   {
+    "code": "2002KW04",
+    "title": "2002 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 69
+   },
+   {
+    "code": "2002JJ00",
+    "title": "2002",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 70
+   },
+   {
+    "code": "2003MM01",
+    "title": "2003 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 71
+   },
+   {
+    "code": "2003MM02",
+    "title": "2003 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 72
+   },
+   {
+    "code": "2003MM03",
+    "title": "2003 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 73
+   },
+   {
+    "code": "2003KW01",
+    "title": "2003 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 74
+   },
+   {
+    "code": "2003MM04",
+    "title": "2003 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 75
+   },
+   {
+    "code": "2003MM05",
+    "title": "2003 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 76
+   },
+   {
+    "code": "2003MM06",
+    "title": "2003 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 77
+   },
+   {
+    "code": "2003KW02",
+    "title": "2003 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 78
+   },
+   {
+    "code": "2003MM07",
+    "title": "2003 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 79
+   },
+   {
+    "code": "2003MM08",
+    "title": "2003 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 80
+   },
+   {
+    "code": "2003MM09",
+    "title": "2003 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 81
+   },
+   {
+    "code": "2003KW03",
+    "title": "2003 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 82
+   },
+   {
+    "code": "2003MM10",
+    "title": "2003 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 83
+   },
+   {
+    "code": "2003MM11",
+    "title": "2003 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 84
+   },
+   {
+    "code": "2003MM12",
+    "title": "2003 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 85
+   },
+   {
+    "code": "2003KW04",
+    "title": "2003 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 86
+   },
+   {
+    "code": "2003JJ00",
+    "title": "2003",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 87
+   },
+   {
+    "code": "2004MM01",
+    "title": "2004 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 88
+   },
+   {
+    "code": "2004MM02",
+    "title": "2004 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 89
+   },
+   {
+    "code": "2004MM03",
+    "title": "2004 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 90
+   },
+   {
+    "code": "2004KW01",
+    "title": "2004 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 91
+   },
+   {
+    "code": "2004MM04",
+    "title": "2004 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 92
+   },
+   {
+    "code": "2004MM05",
+    "title": "2004 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 93
+   },
+   {
+    "code": "2004MM06",
+    "title": "2004 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 94
+   },
+   {
+    "code": "2004KW02",
+    "title": "2004 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 95
+   },
+   {
+    "code": "2004MM07",
+    "title": "2004 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 96
+   },
+   {
+    "code": "2004MM08",
+    "title": "2004 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 97
+   },
+   {
+    "code": "2004MM09",
+    "title": "2004 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 98
+   },
+   {
+    "code": "2004KW03",
+    "title": "2004 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 99
+   },
+   {
+    "code": "2004MM10",
+    "title": "2004 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 100
+   },
+   {
+    "code": "2004MM11",
+    "title": "2004 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 101
+   },
+   {
+    "code": "2004MM12",
+    "title": "2004 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 102
+   },
+   {
+    "code": "2004KW04",
+    "title": "2004 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 103
+   },
+   {
+    "code": "2004JJ00",
+    "title": "2004",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 104
+   },
+   {
+    "code": "2005MM01",
+    "title": "2005 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 105
+   },
+   {
+    "code": "2005MM02",
+    "title": "2005 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 106
+   },
+   {
+    "code": "2005MM03",
+    "title": "2005 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 107
+   },
+   {
+    "code": "2005KW01",
+    "title": "2005 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 108
+   },
+   {
+    "code": "2005MM04",
+    "title": "2005 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 109
+   },
+   {
+    "code": "2005MM05",
+    "title": "2005 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 110
+   },
+   {
+    "code": "2005MM06",
+    "title": "2005 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 111
+   },
+   {
+    "code": "2005KW02",
+    "title": "2005 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 112
+   },
+   {
+    "code": "2005MM07",
+    "title": "2005 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 113
+   },
+   {
+    "code": "2005MM08",
+    "title": "2005 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 114
+   },
+   {
+    "code": "2005MM09",
+    "title": "2005 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 115
+   },
+   {
+    "code": "2005KW03",
+    "title": "2005 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 116
+   },
+   {
+    "code": "2005MM10",
+    "title": "2005 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 117
+   },
+   {
+    "code": "2005MM11",
+    "title": "2005 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 118
+   },
+   {
+    "code": "2005MM12",
+    "title": "2005 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 119
+   },
+   {
+    "code": "2005KW04",
+    "title": "2005 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 120
+   },
+   {
+    "code": "2005JJ00",
+    "title": "2005",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 121
+   },
+   {
+    "code": "2006MM01",
+    "title": "2006 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 122
+   },
+   {
+    "code": "2006MM02",
+    "title": "2006 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 123
+   },
+   {
+    "code": "2006MM03",
+    "title": "2006 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 124
+   },
+   {
+    "code": "2006KW01",
+    "title": "2006 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 125
+   },
+   {
+    "code": "2006MM04",
+    "title": "2006 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 126
+   },
+   {
+    "code": "2006MM05",
+    "title": "2006 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 127
+   },
+   {
+    "code": "2006MM06",
+    "title": "2006 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 128
+   },
+   {
+    "code": "2006KW02",
+    "title": "2006 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 129
+   },
+   {
+    "code": "2006MM07",
+    "title": "2006 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 130
+   },
+   {
+    "code": "2006MM08",
+    "title": "2006 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 131
+   },
+   {
+    "code": "2006MM09",
+    "title": "2006 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 132
+   },
+   {
+    "code": "2006KW03",
+    "title": "2006 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 133
+   },
+   {
+    "code": "2006MM10",
+    "title": "2006 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 134
+   },
+   {
+    "code": "2006MM11",
+    "title": "2006 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 135
+   },
+   {
+    "code": "2006MM12",
+    "title": "2006 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 136
+   },
+   {
+    "code": "2006KW04",
+    "title": "2006 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 137
+   },
+   {
+    "code": "2006JJ00",
+    "title": "2006",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 138
+   },
+   {
+    "code": "2007MM01",
+    "title": "2007 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 139
+   },
+   {
+    "code": "2007MM02",
+    "title": "2007 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 140
+   },
+   {
+    "code": "2007MM03",
+    "title": "2007 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 141
+   },
+   {
+    "code": "2007KW01",
+    "title": "2007 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 142
+   },
+   {
+    "code": "2007MM04",
+    "title": "2007 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 143
+   },
+   {
+    "code": "2007MM05",
+    "title": "2007 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 144
+   },
+   {
+    "code": "2007MM06",
+    "title": "2007 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 145
+   },
+   {
+    "code": "2007KW02",
+    "title": "2007 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 146
+   },
+   {
+    "code": "2007MM07",
+    "title": "2007 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 147
+   },
+   {
+    "code": "2007MM08",
+    "title": "2007 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 148
+   },
+   {
+    "code": "2007MM09",
+    "title": "2007 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 149
+   },
+   {
+    "code": "2007KW03",
+    "title": "2007 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 150
+   },
+   {
+    "code": "2007MM10",
+    "title": "2007 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 151
+   },
+   {
+    "code": "2007MM11",
+    "title": "2007 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 152
+   },
+   {
+    "code": "2007MM12",
+    "title": "2007 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 153
+   },
+   {
+    "code": "2007KW04",
+    "title": "2007 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 154
+   },
+   {
+    "code": "2007JJ00",
+    "title": "2007",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 155
+   },
+   {
+    "code": "2008MM01",
+    "title": "2008 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 156
+   },
+   {
+    "code": "2008MM02",
+    "title": "2008 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 157
+   },
+   {
+    "code": "2008MM03",
+    "title": "2008 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 158
+   },
+   {
+    "code": "2008KW01",
+    "title": "2008 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 159
+   },
+   {
+    "code": "2008MM04",
+    "title": "2008 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 160
+   },
+   {
+    "code": "2008MM05",
+    "title": "2008 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 161
+   },
+   {
+    "code": "2008MM06",
+    "title": "2008 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 162
+   },
+   {
+    "code": "2008KW02",
+    "title": "2008 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 163
+   },
+   {
+    "code": "2008MM07",
+    "title": "2008 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 164
+   },
+   {
+    "code": "2008MM08",
+    "title": "2008 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 165
+   },
+   {
+    "code": "2008MM09",
+    "title": "2008 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 166
+   },
+   {
+    "code": "2008KW03",
+    "title": "2008 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 167
+   },
+   {
+    "code": "2008MM10",
+    "title": "2008 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 168
+   },
+   {
+    "code": "2008MM11",
+    "title": "2008 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 169
+   },
+   {
+    "code": "2008MM12",
+    "title": "2008 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 170
+   },
+   {
+    "code": "2008KW04",
+    "title": "2008 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 171
+   },
+   {
+    "code": "2008JJ00",
+    "title": "2008",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 172
+   },
+   {
+    "code": "2009MM01",
+    "title": "2009 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 173
+   },
+   {
+    "code": "2009MM02",
+    "title": "2009 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 174
+   },
+   {
+    "code": "2009MM03",
+    "title": "2009 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 175
+   },
+   {
+    "code": "2009KW01",
+    "title": "2009 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 176
+   },
+   {
+    "code": "2009MM04",
+    "title": "2009 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 177
+   },
+   {
+    "code": "2009MM05",
+    "title": "2009 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 178
+   },
+   {
+    "code": "2009MM06",
+    "title": "2009 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 179
+   },
+   {
+    "code": "2009KW02",
+    "title": "2009 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 180
+   },
+   {
+    "code": "2009MM07",
+    "title": "2009 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 181
+   },
+   {
+    "code": "2009MM08",
+    "title": "2009 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 182
+   },
+   {
+    "code": "2009MM09",
+    "title": "2009 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 183
+   },
+   {
+    "code": "2009KW03",
+    "title": "2009 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 184
+   },
+   {
+    "code": "2009MM10",
+    "title": "2009 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 185
+   },
+   {
+    "code": "2009MM11",
+    "title": "2009 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 186
+   },
+   {
+    "code": "2009MM12",
+    "title": "2009 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 187
+   },
+   {
+    "code": "2009KW04",
+    "title": "2009 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 188
+   },
+   {
+    "code": "2009JJ00",
+    "title": "2009",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 189
+   },
+   {
+    "code": "2010MM01",
+    "title": "2010 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 190
+   },
+   {
+    "code": "2010MM02",
+    "title": "2010 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 191
+   },
+   {
+    "code": "2010MM03",
+    "title": "2010 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 192
+   },
+   {
+    "code": "2010KW01",
+    "title": "2010 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 193
+   },
+   {
+    "code": "2010MM04",
+    "title": "2010 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 194
+   },
+   {
+    "code": "2010MM05",
+    "title": "2010 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 195
+   },
+   {
+    "code": "2010MM06",
+    "title": "2010 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 196
+   },
+   {
+    "code": "2010KW02",
+    "title": "2010 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 197
+   },
+   {
+    "code": "2010MM07",
+    "title": "2010 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 198
+   },
+   {
+    "code": "2010MM08",
+    "title": "2010 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 199
+   },
+   {
+    "code": "2010MM09",
+    "title": "2010 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 200
+   },
+   {
+    "code": "2010KW03",
+    "title": "2010 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 201
+   },
+   {
+    "code": "2010MM10",
+    "title": "2010 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 202
+   },
+   {
+    "code": "2010MM11",
+    "title": "2010 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 203
+   },
+   {
+    "code": "2010MM12",
+    "title": "2010 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 204
+   },
+   {
+    "code": "2010KW04",
+    "title": "2010 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 205
+   },
+   {
+    "code": "2010JJ00",
+    "title": "2010",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 206
+   },
+   {
+    "code": "2011MM01",
+    "title": "2011 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 207
+   },
+   {
+    "code": "2011MM02",
+    "title": "2011 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 208
+   },
+   {
+    "code": "2011MM03",
+    "title": "2011 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 209
+   },
+   {
+    "code": "2011KW01",
+    "title": "2011 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 210
+   },
+   {
+    "code": "2011MM04",
+    "title": "2011 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 211
+   },
+   {
+    "code": "2011MM05",
+    "title": "2011 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 212
+   },
+   {
+    "code": "2011MM06",
+    "title": "2011 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 213
+   },
+   {
+    "code": "2011KW02",
+    "title": "2011 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 214
+   },
+   {
+    "code": "2011MM07",
+    "title": "2011 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 215
+   },
+   {
+    "code": "2011MM08",
+    "title": "2011 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 216
+   },
+   {
+    "code": "2011MM09",
+    "title": "2011 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 217
+   },
+   {
+    "code": "2011KW03",
+    "title": "2011 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 218
+   },
+   {
+    "code": "2011MM10",
+    "title": "2011 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 219
+   },
+   {
+    "code": "2011MM11",
+    "title": "2011 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 220
+   },
+   {
+    "code": "2011MM12",
+    "title": "2011 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 221
+   },
+   {
+    "code": "2011KW04",
+    "title": "2011 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 222
+   },
+   {
+    "code": "2011JJ00",
+    "title": "2011",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 223
+   },
+   {
+    "code": "2012MM01",
+    "title": "2012 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 224
+   },
+   {
+    "code": "2012MM02",
+    "title": "2012 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 225
+   },
+   {
+    "code": "2012MM03",
+    "title": "2012 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 226
+   },
+   {
+    "code": "2012KW01",
+    "title": "2012 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 227
+   },
+   {
+    "code": "2012MM04",
+    "title": "2012 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 228
+   },
+   {
+    "code": "2012MM05",
+    "title": "2012 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 229
+   },
+   {
+    "code": "2012MM06",
+    "title": "2012 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 230
+   },
+   {
+    "code": "2012KW02",
+    "title": "2012 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 231
+   },
+   {
+    "code": "2012MM07",
+    "title": "2012 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 232
+   },
+   {
+    "code": "2012MM08",
+    "title": "2012 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 233
+   },
+   {
+    "code": "2012MM09",
+    "title": "2012 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 234
+   },
+   {
+    "code": "2012KW03",
+    "title": "2012 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 235
+   },
+   {
+    "code": "2012MM10",
+    "title": "2012 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 236
+   },
+   {
+    "code": "2012MM11",
+    "title": "2012 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 237
+   },
+   {
+    "code": "2012MM12",
+    "title": "2012 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 238
+   },
+   {
+    "code": "2012KW04",
+    "title": "2012 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 239
+   },
+   {
+    "code": "2012JJ00",
+    "title": "2012",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 240
+   },
+   {
+    "code": "2013MM01",
+    "title": "2013 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 241
+   },
+   {
+    "code": "2013MM02",
+    "title": "2013 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 242
+   },
+   {
+    "code": "2013MM03",
+    "title": "2013 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 243
+   },
+   {
+    "code": "2013KW01",
+    "title": "2013 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 244
+   },
+   {
+    "code": "2013MM04",
+    "title": "2013 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 245
+   },
+   {
+    "code": "2013MM05",
+    "title": "2013 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 246
+   },
+   {
+    "code": "2013MM06",
+    "title": "2013 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 247
+   },
+   {
+    "code": "2013KW02",
+    "title": "2013 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 248
+   },
+   {
+    "code": "2013MM07",
+    "title": "2013 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 249
+   },
+   {
+    "code": "2013MM08",
+    "title": "2013 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 250
+   },
+   {
+    "code": "2013MM09",
+    "title": "2013 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 251
+   },
+   {
+    "code": "2013KW03",
+    "title": "2013 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 252
+   },
+   {
+    "code": "2013MM10",
+    "title": "2013 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 253
+   },
+   {
+    "code": "2013MM11",
+    "title": "2013 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 254
+   },
+   {
+    "code": "2013MM12",
+    "title": "2013 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 255
+   },
+   {
+    "code": "2013KW04",
+    "title": "2013 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 256
+   },
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 257
+   },
+   {
+    "code": "2014MM01",
+    "title": "2014 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 258
+   },
+   {
+    "code": "2014MM02",
+    "title": "2014 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 259
+   },
+   {
+    "code": "2014MM03",
+    "title": "2014 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 260
+   },
+   {
+    "code": "2014KW01",
+    "title": "2014 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 261
+   },
+   {
+    "code": "2014MM04",
+    "title": "2014 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 262
+   },
+   {
+    "code": "2014MM05",
+    "title": "2014 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 263
+   },
+   {
+    "code": "2014MM06",
+    "title": "2014 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 264
+   },
+   {
+    "code": "2014KW02",
+    "title": "2014 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 265
+   },
+   {
+    "code": "2014MM07",
+    "title": "2014 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 266
+   },
+   {
+    "code": "2014MM08",
+    "title": "2014 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 267
+   },
+   {
+    "code": "2014MM09",
+    "title": "2014 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 268
+   },
+   {
+    "code": "2014KW03",
+    "title": "2014 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 269
+   },
+   {
+    "code": "2014MM10",
+    "title": "2014 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 270
+   },
+   {
+    "code": "2014MM11",
+    "title": "2014 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 271
+   },
+   {
+    "code": "2014MM12",
+    "title": "2014 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 272
+   },
+   {
+    "code": "2014KW04",
+    "title": "2014 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 273
+   },
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 274
+   },
+   {
+    "code": "2015MM01",
+    "title": "2015 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 275
+   },
+   {
+    "code": "2015MM02",
+    "title": "2015 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 276
+   },
+   {
+    "code": "2015MM03",
+    "title": "2015 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 277
+   },
+   {
+    "code": "2015KW01",
+    "title": "2015 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 278
+   },
+   {
+    "code": "2015MM04",
+    "title": "2015 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 279
+   },
+   {
+    "code": "2015MM05",
+    "title": "2015 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 280
+   },
+   {
+    "code": "2015MM06",
+    "title": "2015 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 281
+   },
+   {
+    "code": "2015KW02",
+    "title": "2015 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 282
+   },
+   {
+    "code": "2015MM07",
+    "title": "2015 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 283
+   },
+   {
+    "code": "2015MM08",
+    "title": "2015 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 284
+   },
+   {
+    "code": "2015MM09",
+    "title": "2015 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 285
+   },
+   {
+    "code": "2015KW03",
+    "title": "2015 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 286
+   },
+   {
+    "code": "2015MM10",
+    "title": "2015 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 287
+   },
+   {
+    "code": "2015MM11",
+    "title": "2015 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 288
+   },
+   {
+    "code": "2015MM12",
+    "title": "2015 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 289
+   },
+   {
+    "code": "2015KW04",
+    "title": "2015 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 290
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 291
+   },
+   {
+    "code": "2016MM01",
+    "title": "2016 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 292
+   },
+   {
+    "code": "2016MM02",
+    "title": "2016 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 293
+   },
+   {
+    "code": "2016MM03",
+    "title": "2016 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 294
+   },
+   {
+    "code": "2016KW01",
+    "title": "2016 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 295
+   },
+   {
+    "code": "2016MM04",
+    "title": "2016 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 296
+   },
+   {
+    "code": "2016MM05",
+    "title": "2016 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 297
+   },
+   {
+    "code": "2016MM06",
+    "title": "2016 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 298
+   },
+   {
+    "code": "2016KW02",
+    "title": "2016 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 299
+   },
+   {
+    "code": "2016MM07",
+    "title": "2016 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 300
+   },
+   {
+    "code": "2016MM08",
+    "title": "2016 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 301
+   },
+   {
+    "code": "2016MM09",
+    "title": "2016 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 302
+   },
+   {
+    "code": "2016KW03",
+    "title": "2016 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 303
+   },
+   {
+    "code": "2016MM10",
+    "title": "2016 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 304
+   },
+   {
+    "code": "2016MM11",
+    "title": "2016 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 305
+   },
+   {
+    "code": "2016MM12",
+    "title": "2016 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 306
+   },
+   {
+    "code": "2016KW04",
+    "title": "2016 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 307
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 308
+   },
+   {
+    "code": "2017MM01",
+    "title": "2017 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 309
+   },
+   {
+    "code": "2017MM02",
+    "title": "2017 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 310
+   },
+   {
+    "code": "2017MM03",
+    "title": "2017 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 311
+   },
+   {
+    "code": "2017KW01",
+    "title": "2017 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 312
+   },
+   {
+    "code": "2017MM04",
+    "title": "2017 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 313
+   },
+   {
+    "code": "2017MM05",
+    "title": "2017 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 314
+   },
+   {
+    "code": "2017MM06",
+    "title": "2017 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 315
+   },
+   {
+    "code": "2017KW02",
+    "title": "2017 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 316
+   },
+   {
+    "code": "2017MM07",
+    "title": "2017 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 317
+   },
+   {
+    "code": "2017MM08",
+    "title": "2017 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 318
+   },
+   {
+    "code": "2017MM09",
+    "title": "2017 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 319
+   },
+   {
+    "code": "2017KW03",
+    "title": "2017 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 320
+   },
+   {
+    "code": "2017MM10",
+    "title": "2017 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 321
+   },
+   {
+    "code": "2017MM11",
+    "title": "2017 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 322
+   },
+   {
+    "code": "2017MM12",
+    "title": "2017 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 323
+   },
+   {
+    "code": "2017KW04",
+    "title": "2017 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 324
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 325
+   },
+   {
+    "code": "2018MM01",
+    "title": "2018 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 326
+   },
+   {
+    "code": "2018MM02",
+    "title": "2018 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 327
+   },
+   {
+    "code": "2018MM03",
+    "title": "2018 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 328
+   },
+   {
+    "code": "2018KW01",
+    "title": "2018 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 329
+   },
+   {
+    "code": "2018MM04",
+    "title": "2018 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 330
+   },
+   {
+    "code": "2018MM05",
+    "title": "2018 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 331
+   },
+   {
+    "code": "2018MM06",
+    "title": "2018 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 332
+   },
+   {
+    "code": "2018KW02",
+    "title": "2018 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 333
+   },
+   {
+    "code": "2018MM07",
+    "title": "2018 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 334
+   },
+   {
+    "code": "2018MM08",
+    "title": "2018 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 335
+   },
+   {
+    "code": "2018MM09",
+    "title": "2018 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 336
+   },
+   {
+    "code": "2018KW03",
+    "title": "2018 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 337
+   },
+   {
+    "code": "2018MM10",
+    "title": "2018 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 338
+   },
+   {
+    "code": "2018MM11",
+    "title": "2018 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 339
+   },
+   {
+    "code": "2018MM12",
+    "title": "2018 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 340
+   },
+   {
+    "code": "2018KW04",
+    "title": "2018 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 341
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 342
+   },
+   {
+    "code": "2019MM01",
+    "title": "2019 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 343
+   },
+   {
+    "code": "2019MM02",
+    "title": "2019 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 344
+   },
+   {
+    "code": "2019MM03",
+    "title": "2019 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 345
+   },
+   {
+    "code": "2019KW01",
+    "title": "2019 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 346
+   },
+   {
+    "code": "2019MM04",
+    "title": "2019 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 347
+   },
+   {
+    "code": "2019MM05",
+    "title": "2019 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 348
+   },
+   {
+    "code": "2019MM06",
+    "title": "2019 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 349
+   },
+   {
+    "code": "2019KW02",
+    "title": "2019 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 350
+   },
+   {
+    "code": "2019MM07",
+    "title": "2019 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 351
+   },
+   {
+    "code": "2019MM08",
+    "title": "2019 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 352
+   },
+   {
+    "code": "2019MM09",
+    "title": "2019 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 353
+   },
+   {
+    "code": "2019KW03",
+    "title": "2019 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 354
+   },
+   {
+    "code": "2019MM10",
+    "title": "2019 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 355
+   },
+   {
+    "code": "2019MM11",
+    "title": "2019 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 356
+   },
+   {
+    "code": "2019MM12",
+    "title": "2019 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 357
+   },
+   {
+    "code": "2019KW04",
+    "title": "2019 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 358
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 359
+   },
+   {
+    "code": "2020MM01",
+    "title": "2020 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 360
+   },
+   {
+    "code": "2020MM02",
+    "title": "2020 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 361
+   },
+   {
+    "code": "2020MM03",
+    "title": "2020 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 362
+   },
+   {
+    "code": "2020KW01",
+    "title": "2020 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 363
+   },
+   {
+    "code": "2020MM04",
+    "title": "2020 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 364
+   },
+   {
+    "code": "2020MM05",
+    "title": "2020 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 365
+   },
+   {
+    "code": "2020MM06",
+    "title": "2020 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 366
+   },
+   {
+    "code": "2020KW02",
+    "title": "2020 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 367
+   },
+   {
+    "code": "2020MM07",
+    "title": "2020 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 368
+   },
+   {
+    "code": "2020MM08",
+    "title": "2020 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 369
+   },
+   {
+    "code": "2020MM09",
+    "title": "2020 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 370
+   },
+   {
+    "code": "2020KW03",
+    "title": "2020 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 371
+   },
+   {
+    "code": "2020MM10",
+    "title": "2020 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 372
+   },
+   {
+    "code": "2020MM11",
+    "title": "2020 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 373
+   },
+   {
+    "code": "2020MM12",
+    "title": "2020 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 374
+   },
+   {
+    "code": "2020KW04",
+    "title": "2020 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 375
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 376
+   },
+   {
+    "code": "2021MM01",
+    "title": "2021 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 377
+   },
+   {
+    "code": "2021MM02",
+    "title": "2021 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 378
+   },
+   {
+    "code": "2021MM03",
+    "title": "2021 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 379
+   },
+   {
+    "code": "2021KW01",
+    "title": "2021 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 380
+   },
+   {
+    "code": "2021MM04",
+    "title": "2021 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 381
+   },
+   {
+    "code": "2021MM05",
+    "title": "2021 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 382
+   },
+   {
+    "code": "2021MM06",
+    "title": "2021 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 383
+   },
+   {
+    "code": "2021KW02",
+    "title": "2021 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 384
+   },
+   {
+    "code": "2021MM07",
+    "title": "2021 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 385
+   },
+   {
+    "code": "2021MM08",
+    "title": "2021 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 386
+   },
+   {
+    "code": "2021MM09",
+    "title": "2021 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 387
+   },
+   {
+    "code": "2021KW03",
+    "title": "2021 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 388
+   },
+   {
+    "code": "2021MM10",
+    "title": "2021 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 389
+   },
+   {
+    "code": "2021MM11",
+    "title": "2021 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 390
+   },
+   {
+    "code": "2021MM12",
+    "title": "2021 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 391
+   },
+   {
+    "code": "2021KW04",
+    "title": "2021 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 392
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 393
+   },
+   {
+    "code": "2022MM01",
+    "title": "2022 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 394
+   },
+   {
+    "code": "2022MM02",
+    "title": "2022 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 395
+   },
+   {
+    "code": "2022MM03",
+    "title": "2022 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 396
+   },
+   {
+    "code": "2022KW01",
+    "title": "2022 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 397
+   },
+   {
+    "code": "2022MM04",
+    "title": "2022 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 398
+   },
+   {
+    "code": "2022MM05",
+    "title": "2022 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 399
+   },
+   {
+    "code": "2022MM06",
+    "title": "2022 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 400
+   },
+   {
+    "code": "2022KW02",
+    "title": "2022 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 401
+   },
+   {
+    "code": "2022MM07",
+    "title": "2022 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 402
+   },
+   {
+    "code": "2022MM08",
+    "title": "2022 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 403
+   },
+   {
+    "code": "2022MM09",
+    "title": "2022 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 404
+   },
+   {
+    "code": "2022KW03",
+    "title": "2022 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 405
+   },
+   {
+    "code": "2022MM10",
+    "title": "2022 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 406
+   },
+   {
+    "code": "2022MM11",
+    "title": "2022 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 407
+   },
+   {
+    "code": "2022MM12",
+    "title": "2022 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 408
+   },
+   {
+    "code": "2022KW04",
+    "title": "2022 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 409
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 410
+   },
+   {
+    "code": "2023MM01",
+    "title": "2023 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 411
+   },
+   {
+    "code": "2023MM02",
+    "title": "2023 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 412
+   },
+   {
+    "code": "2023MM03",
+    "title": "2023 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 413
+   },
+   {
+    "code": "2023KW01",
+    "title": "2023 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 414
+   },
+   {
+    "code": "2023MM04",
+    "title": "2023 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 415
+   },
+   {
+    "code": "2023MM05",
+    "title": "2023 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 416
+   },
+   {
+    "code": "2023MM06",
+    "title": "2023 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 417
+   },
+   {
+    "code": "2023KW02",
+    "title": "2023 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 418
+   },
+   {
+    "code": "2023MM07",
+    "title": "2023 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 419
+   },
+   {
+    "code": "2023MM08",
+    "title": "2023 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 420
+   },
+   {
+    "code": "2023MM09",
+    "title": "2023 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 421
+   },
+   {
+    "code": "2023KW03",
+    "title": "2023 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 422
+   },
+   {
+    "code": "2023MM10",
+    "title": "2023 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 423
+   },
+   {
+    "code": "2023MM11",
+    "title": "2023 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 424
+   },
+   {
+    "code": "2023MM12",
+    "title": "2023 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 425
+   },
+   {
+    "code": "2023KW04",
+    "title": "2023 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 426
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 427
+   },
+   {
+    "code": "2024MM01",
+    "title": "2024 januari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 428
+   },
+   {
+    "code": "2024MM02",
+    "title": "2024 februari",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 429
+   },
+   {
+    "code": "2024MM03",
+    "title": "2024 maart",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 430
+   },
+   {
+    "code": "2024KW01",
+    "title": "2024 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 431
+   },
+   {
+    "code": "2024MM04",
+    "title": "2024 april",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 432
+   },
+   {
+    "code": "2024MM05",
+    "title": "2024 mei",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 433
+   },
+   {
+    "code": "2024MM06",
+    "title": "2024 juni",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 434
+   },
+   {
+    "code": "2024KW02",
+    "title": "2024 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 435
+   },
+   {
+    "code": "2024MM07",
+    "title": "2024 juli",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 436
+   },
+   {
+    "code": "2024MM08",
+    "title": "2024 augustus",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 437
+   },
+   {
+    "code": "2024MM09",
+    "title": "2024 september",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 438
+   },
+   {
+    "code": "2024KW03",
+    "title": "2024 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 439
+   },
+   {
+    "code": "2024MM10",
+    "title": "2024 oktober",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 440
+   },
+   {
+    "code": "2024MM11",
+    "title": "2024 november",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 441
+   },
+   {
+    "code": "2024MM12",
+    "title": "2024 december",
+    "dimensionGroup": "1",
+    "status": "Definitief",
+    "index": 442
+   },
+   {
+    "code": "2024KW04",
+    "title": "2024 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Definitief",
+    "index": 443
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": "0",
+    "status": "Definitief",
+    "index": 444
+   },
+   {
+    "code": "2025MM01",
+    "title": "2025 januari",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 445,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM02",
+    "title": "2025 februari",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 446,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM03",
+    "title": "2025 maart",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 447,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025KW01",
+    "title": "2025 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 448,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM04",
+    "title": "2025 april",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 449,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM05",
+    "title": "2025 mei",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 450,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM06",
+    "title": "2025 juni",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 451,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025KW02",
+    "title": "2025 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 452,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM07",
+    "title": "2025 juli",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 453,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM08",
+    "title": "2025 augustus",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 454,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM09",
+    "title": "2025 september",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 455,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025KW03",
+    "title": "2025 3e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 456,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM10",
+    "title": "2025 oktober",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 457,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM11",
+    "title": "2025 november",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 458,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025MM12",
+    "title": "2025 december",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 459,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025KW04",
+    "title": "2025 4e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 460,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2025JJ00",
+    "title": "2025",
+    "dimensionGroup": "0",
+    "status": "Voorlopig",
+    "index": 461,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM01",
+    "title": "2026 januari",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 462,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM02",
+    "title": "2026 februari",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 463,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM03",
+    "title": "2026 maart",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 464,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026KW01",
+    "title": "2026 1e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 465,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM04",
+    "title": "2026 april",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 466,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM05",
+    "title": "2026 mei",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 467,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM06",
+    "title": "2026 juni",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 468,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026KW02",
+    "title": "2026 2e kwartaal",
+    "dimensionGroup": "2",
+    "status": "Voorlopig",
+    "index": 469,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM07",
+    "title": "2026 juli",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 470,
+    "description": "Voorlopige cijfers"
+   },
+   {
+    "code": "2026MM08",
+    "title": "2026 augustus",
+    "dimensionGroup": "1",
+    "status": "Voorlopig",
+    "index": 471,
+    "description": "Voorlopige cijfers"
+   }
+  ]
+ }
+}

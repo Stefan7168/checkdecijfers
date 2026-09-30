@@ -1,0 +1,76 @@
+{
+ "tableId": "85004NED",
+ "capturedAt": "2026-09-30T18:48:20.872Z",
+ "cbsModified": "2026-06-19T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85004NED/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "M002199"
+    ],
+    "dimensionIn": {
+     "BronEnTechniek": [
+      "E006590"
+     ],
+     "RegioS": [
+      "PV26"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M002199",
+     "coordinates": {
+      "BronEnTechniek": "E006590",
+      "RegioS": "PV26",
+      "Perioden": "2023JJ00"
+     },
+     "value": 1309,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "M002199"
+    ],
+    "dimensionIn": {
+     "BronEnTechniek": [
+      "E006637"
+     ],
+     "RegioS": [
+      "PV20"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M002199",
+     "coordinates": {
+      "BronEnTechniek": "E006637",
+      "RegioS": "PV20",
+      "Perioden": "2023JJ00"
+     },
+     "value": 868,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}

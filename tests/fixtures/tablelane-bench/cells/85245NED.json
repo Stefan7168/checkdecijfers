@@ -1,0 +1,98 @@
+{
+ "tableId": "85245NED",
+ "capturedAt": "2026-09-30T18:48:18.045Z",
+ "cbsModified": "2026-02-13T00:00:00+01:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85245NED/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "A047215"
+    ],
+    "dimensionIn": {
+     "VoertuigType": [
+      "A018935"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2024JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "A047215",
+     "coordinates": {
+      "VoertuigType": "A018935",
+      "Perioden": "2024JJ00"
+     },
+     "value": 9517,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "A019276"
+    ],
+    "dimensionIn": {
+     "VoertuigType": [
+      "A018943"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "A019276",
+     "coordinates": {
+      "VoertuigType": "A018943",
+      "Perioden": "2023JJ00"
+     },
+     "value": 116639,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "A047215"
+    ],
+    "dimensionIn": {
+     "VoertuigType": [
+      "A018935"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2020JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "A047215",
+     "coordinates": {
+      "VoertuigType": "A018935",
+      "Perioden": "2020JJ00"
+     },
+     "value": 11864,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}
