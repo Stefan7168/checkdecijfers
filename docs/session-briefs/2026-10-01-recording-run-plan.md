@@ -97,6 +97,8 @@ blockers — re-read the row before starting, an open "changes prompt bytes" ite
 Then step 6 of breadth (the table-lane benchmark) is unblocked — its own work package, hermetic on these
 fixtures, no further spend; the `TABLE_LANE_ENABLED` flip comes only after it (RUNBOOK "Table lane").
 
+**Right after the flip (owner decision 2026-09-30, session 152, #358 item 12):** evict the last hand-refreshed CBS table `37789ksz` — `npm run tables:evict -- --table 37789ksz` (dry run), then `--apply` with the owner. A welfare question then goes through the table lane like any other CBS table. After that no CBS table needs a hand sync; the whole-table path can be deleted once the Eurostat datasets are on the one route (#358 item 4) and `70072ned` is loaded as slices.
+
 ## B. Regional Part 2 recording + merge + prod load (plan Task 5, [#335](../open-questions.md), ADR 061)
 
 Branch `regional-stats-part2` (6 commits ahead of `main` on 2026-09-29; 66 intent cases vs 56 on `main` — the 10 new
