@@ -765,3 +765,181 @@ describe('ODataV4Source.fetchTableSchema — MeasureGroups (breadth step 4b, Tas
     }
   }, 15_000);
 });
+
+describe('ODataV4Source — time limit, retries and readable errors (#357)', () => {
+  const dimensionsBody = { value: [{ Identifier: 'Perioden', Title: 'Perioden', Kind: 'TimeDimension' }] };
+  const pageBody = {
+    value: [{ Id: 0, Measure: 'M1', ValueAttribute: 'None', Value: 7, StringValue: null, Perioden: '2020JJ00' }],
+  };
+  const never = () => new Promise<never>(() => {});
+  const fast = { retryBackoffMs: 1 };
+  const okJson = (body: unknown) => ({ ok: true, status: 200, statusText: 'OK', json: async () => body });
+
+  it('uses the injected fetchFn, not the global fetch', async () => {
+    const globalFetch = vi.fn(async () => {
+      throw new Error('global fetch must not be called');
+    });
+    vi.stubGlobal('fetch', globalFetch);
+    try {
+      const fetchFn = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => '42' }));
+      const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch });
+      expect(await source.fetchObservationCount('T')).toBe(42);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(globalFetch).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a hung metadata call fails after 3 timed-out attempts, naming the URL and the timeout', async () => {
+    const fetchFn = vi.fn(never);
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    const err = await source.fetchCodeList('T', 'Perioden').catch((e: Error) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toMatch(/failed after 3 attempts/);
+    expect((err as Error).message).toContain('https://datasets.cbs.nl/odata/v1/CBS/T/PeriodenCodes');
+    expect((err as Error).message).toMatch(/timed out after 0\.02 seconds/);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('a timeout counts as ONE attempt: the retry that follows can still succeed', async () => {
+    let calls = 0;
+    const fetchFn = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) return never();
+      return okJson({ value: [{ Identifier: 'A', Title: 'Alpha', Description: null }] });
+    });
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    const codes = await source.fetchCodeList('T', 'Perioden');
+    expect(codes).toHaveLength(1);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('a server that sends headers and then stalls the body is cut off too', async () => {
+    const fetchFn = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: never }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(/timed out after 0\.02 seconds/);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('the optional (MeasureGroups) fetch times out into the best-effort path, schema still resolves', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/Properties')) return okJson({ Title: 'Test tabel' });
+      if (url.endsWith('/Dimensions')) return okJson(dimensionsBody);
+      if (url.endsWith('/MeasureCodes')) return okJson({ value: [{ Identifier: 'M1', Title: 'x', Unit: 'x 1000', Decimals: 0 }] });
+      return never(); // MeasureGroups hangs
+    });
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    const schema = await source.fetchTableSchema('T');
+    expect(schema.measureGroupsUnavailable).toBe(true);
+    expect(fetchFn.mock.calls.filter(([u]) => String(u).endsWith('/MeasureGroups'))).toHaveLength(3);
+  });
+
+  it('a hung $count call fails after 3 timed-out attempts and names the URL', async () => {
+    const fetchFn = vi.fn(never);
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    const err = await source.fetchObservationCount('T').catch((e: Error) => e);
+    expect((err as Error).message).toContain('https://datasets.cbs.nl/odata/v1/CBS/T/Observations/$count');
+    expect((err as Error).message).toMatch(/timed out after 0\.02 seconds/);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('an Observations page has its own (longer) limit than metadata calls', async () => {
+    // The page takes 60 ms: over the 20 ms metadata limit, inside the 2 s page limit.
+    const fetchFn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+      return okJson(pageBody);
+    });
+    const source = new ODataV4Source({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      metadataTimeoutMs: 20,
+      observationsTimeoutMs: 2000,
+      ...fast,
+    });
+    const pages: unknown[][] = [];
+    for await (const page of source.fetchObservations('T', undefined, ['Perioden'])) pages.push(page as unknown[]);
+    expect(pages).toHaveLength(1);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('a hung Observations page fails on the observations limit, naming the URL', async () => {
+    const fetchFn = vi.fn(never);
+    const source = new ODataV4Source({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      metadataTimeoutMs: 5000,
+      observationsTimeoutMs: 20,
+      ...fast,
+    });
+    const run = async () => {
+      for await (const page of source.fetchObservations('T', undefined, ['Perioden'])) void page;
+    };
+    await expect(run()).rejects.toThrow(/T\/Observations.*timed out after 0\.02 seconds/);
+  });
+
+  it('a non-OK answer carries a short summary of the body (OData error.message)', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      text: async () => JSON.stringify({ error: { code: '400', message: 'Unknown property Foo in filter' } }),
+    }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, ...fast });
+    await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(
+      /CBS OData request failed: 400 Bad Request for https:\/\/\S+: Unknown property Foo in filter/,
+    );
+  });
+
+  it('a non-OK $count answer carries the summary too (HTML stripped)', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+      text: async () => '<html><body><h1>Down for   maintenance</h1></body></html>',
+    }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, ...fast });
+    await expect(source.fetchObservationCount('T')).rejects.toThrow(
+      /CBS OData \$count request failed: 503 Service Unavailable for https:\/\/\S+: Down for maintenance/,
+    );
+  });
+
+  it("if the error body cannot be read, the message is exactly today's (status + statusText + URL)", async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      text: async () => {
+        throw new Error('stream broke');
+      },
+    }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, ...fast });
+    const url = 'https://datasets.cbs.nl/odata/v1/CBS/T/PeriodenCodes';
+    await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(
+      `CBS OData request failed after 3 attempts for ${url}: CBS OData request failed: 500 Internal Server Error for ${url}`,
+    );
+  });
+
+  it('a stalled error body does not hang: the attempt times out', async () => {
+    const fetchFn = vi.fn(async () => ({ ok: false, status: 500, statusText: 'Oops', text: never }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, metadataTimeoutMs: 20, ...fast });
+    await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(/timed out after 0\.02 seconds/);
+  });
+});
+
+describe('sliceToFilter — single quotes in values are escaped (#357)', () => {
+  it('doubles a single quote in every kind of value, never in dimension names', async () => {
+    const { sliceToFilter } = await import('../../src/cbs-adapter/fixture-source.ts');
+    expect(sliceToFilter({ dimensionEquals: { Geslacht: "a'b" } })).toBe("Geslacht eq 'a''b'");
+    expect(sliceToFilter({ dimensionPrefixes: { RegioS: ["O'"] } })).toBe("startswith(RegioS,'O''')");
+    expect(sliceToFilter({ periodFloor: "20'15" })).toBe("Perioden ge '20''15'");
+    expect(sliceToFilter({ measures: ["M'1", 'M2'] })).toBe("(Measure eq 'M''1' or Measure eq 'M2')");
+    expect(sliceToFilter({ dimensionIn: { RegioS: ["x'", 'y'] } })).toBe("(RegioS eq 'x''' or RegioS eq 'y')");
+    expect(sliceToFilter({ periodIn: { dimension: 'Perioden', codes: ["p'1"] } })).toBe("Perioden eq 'p''1'");
+  });
+
+  it('a value that would close the literal and inject a clause stays inside the literal', async () => {
+    const { sliceToFilter } = await import('../../src/cbs-adapter/fixture-source.ts');
+    expect(sliceToFilter({ dimensionEquals: { Geslacht: "x' or 1 eq 1 or Geslacht eq 'y" } })).toBe(
+      "Geslacht eq 'x'' or 1 eq 1 or Geslacht eq ''y'",
+    );
+  });
+});

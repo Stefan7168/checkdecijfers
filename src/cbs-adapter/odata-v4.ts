@@ -21,10 +21,18 @@ import {
   parseObservationsPage,
   type CbsMeasureGroup,
 } from './parse-v4.ts';
+import { fetchAndRead, summarizeErrorBody } from '../sources/fetch-with-timeout.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
 const FETCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_MS = 1500;
+// Time limit per attempt (#357). Metadata calls are small; an Observations page
+// of a big table is legitimately slow, so it gets far longer.
+const METADATA_TIMEOUT_MS = 30_000;
+const OBSERVATIONS_TIMEOUT_MS = 300_000;
+
+/** OData string literals escape a single quote by doubling it. */
+const q = (value: string): string => value.replace(/'/g, "''");
 
 // Fields pulled for the catalog mirror. Explicit $select keeps the payload lean
 // (drops Distributions/VersionNotes/ObservationCount we don't use) and pins the
@@ -56,28 +64,28 @@ export function sliceToFilter(slice?: CbsSlice): string | null {
   if (!slice) return null;
   const parts: string[] = [];
   for (const [dim, code] of Object.entries(slice.dimensionEquals ?? {})) {
-    parts.push(`${dim} eq '${code}'`);
+    parts.push(`${dim} eq '${q(code)}'`);
   }
   for (const [dim, prefixes] of Object.entries(slice.dimensionPrefixes ?? {})) {
-    const ors = prefixes.map((p) => `startswith(${dim},'${p}')`).join(' or ');
+    const ors = prefixes.map((p) => `startswith(${dim},'${q(p)}')`).join(' or ');
     parts.push(prefixes.length > 1 ? `(${ors})` : ors);
   }
-  if (slice.periodFloor) parts.push(`Perioden ge '${slice.periodFloor}'`);
+  if (slice.periodFloor) parts.push(`Perioden ge '${q(slice.periodFloor)}'`);
   const measures = slice.measures ?? [];
   if (measures.length > 0) {
-    const ors = measures.map((m) => `Measure eq '${m}'`).join(' or ');
+    const ors = measures.map((m) => `Measure eq '${q(m)}'`).join(' or ');
     parts.push(measures.length > 1 ? `(${ors})` : ors);
   }
   const dimensionIn = slice.dimensionIn ?? {};
   for (const dim of Object.keys(dimensionIn).sort()) {
     const codes = dimensionIn[dim] ?? [];
     if (codes.length === 0) continue;
-    const ors = codes.map((c) => `${dim} eq '${c}'`).join(' or ');
+    const ors = codes.map((c) => `${dim} eq '${q(c)}'`).join(' or ');
     parts.push(codes.length > 1 ? `(${ors})` : ors);
   }
   if (slice.periodIn && slice.periodIn.codes.length > 0) {
     const { dimension, codes } = slice.periodIn;
-    const ors = codes.map((c) => `${dimension} eq '${c}'`).join(' or ');
+    const ors = codes.map((c) => `${dimension} eq '${q(c)}'`).join(' or ');
     parts.push(codes.length > 1 ? `(${ors})` : ors);
   }
   return parts.length ? parts.join(' and ') : null;
@@ -100,28 +108,45 @@ function parseMeasureGroupsBestEffort(raw: unknown): CbsMeasureGroup[] | null {
   }
 }
 
+export interface ODataV4SourceOptions {
+  /** Injected in tests; defaults to the global `fetch` (looked up per call). */
+  fetchFn?: typeof fetch;
+  /** Per-attempt limit for every call except Observations pages. */
+  metadataTimeoutMs?: number;
+  /** Per-attempt limit for one Observations page. */
+  observationsTimeoutMs?: number;
+  /** Base of the linear retry backoff (attempt n waits n x this). */
+  retryBackoffMs?: number;
+}
+
+/** One failed response as a message: status line, plus a short summary of the
+ * body when it can be read. Never throws — an unreadable body gives the plain
+ * status line. (A stalled body is cut off by the caller's deadline.) */
+async function failureMessage(label: string, res: Response, url: string): Promise<string> {
+  const base = `${label} failed: ${res.status} ${res.statusText} for ${url}`;
+  try {
+    const summary = summarizeErrorBody(await res.text());
+    return summary ? `${base}: ${summary}` : base;
+  } catch {
+    return base;
+  }
+}
+
 export class ODataV4Source implements CbsSource {
-  private async fetchJson(url: string): Promise<unknown> {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
-      try {
-        const res = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (res.ok) return await res.json();
-        lastError = new Error(
-          `CBS OData request failed: ${res.status} ${res.statusText} for ${url}`,
-        );
-      } catch (err) {
-        lastError = err;
-      }
-      if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
-      }
-    }
-    throw new Error(
-      `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
-        lastError instanceof Error ? lastError.message : String(lastError)
-      }`,
-    );
+  private readonly fetchFn: typeof fetch | undefined;
+  private readonly metadataTimeoutMs: number;
+  private readonly observationsTimeoutMs: number;
+  private readonly retryBackoffMs: number;
+
+  constructor(options: ODataV4SourceOptions = {}) {
+    this.fetchFn = options.fetchFn;
+    this.metadataTimeoutMs = options.metadataTimeoutMs ?? METADATA_TIMEOUT_MS;
+    this.observationsTimeoutMs = options.observationsTimeoutMs ?? OBSERVATIONS_TIMEOUT_MS;
+    this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
+  }
+
+  private async fetchJson(url: string, timeoutMs: number = this.metadataTimeoutMs): Promise<unknown> {
+    return this.fetchJsonWithRetries(url, timeoutMs);
   }
 
   /**
@@ -133,20 +158,34 @@ export class ODataV4Source implements CbsSource {
    * best-effort).
    */
   private async fetchJsonOptional(url: string): Promise<unknown> {
+    return this.fetchJsonWithRetries(url, this.metadataTimeoutMs, { value: [] });
+  }
+
+  /** The shared retry loop. Each attempt is one time-limited request whose
+   * limit also covers reading the body; a timeout is just a failed attempt. */
+  private async fetchJsonWithRetries(url: string, timeoutMs: number, onNotFound?: unknown): Promise<unknown> {
+    type Outcome = { body: unknown } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
       try {
-        const res = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (res.ok) return await res.json();
-        if (res.status === 404) return { value: [] };
-        lastError = new Error(
-          `CBS OData request failed: ${res.status} ${res.statusText} for ${url}`,
+        const outcome = await fetchAndRead<Outcome>(
+          url,
+          { headers: { Accept: 'application/json' } },
+          timeoutMs,
+          async (res) => {
+            if (res.ok) return { body: await res.json() };
+            if (onNotFound !== undefined && res.status === 404) return { body: onNotFound };
+            return { failure: await failureMessage('CBS OData request', res, url) };
+          },
+          this.fetchFn,
         );
+        if ('body' in outcome) return outcome.body;
+        lastError = new Error(outcome.failure);
       } catch (err) {
         lastError = err;
       }
       if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
       }
     }
     throw new Error(
@@ -226,27 +265,35 @@ export class ODataV4Source implements CbsSource {
    */
   async fetchObservationCount(tableId: string): Promise<number | null> {
     const url = `${BASE}/${tableId}/Observations/$count`;
+    type Outcome = { count: number | null } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
       try {
-        const res = await fetch(url, { headers: { Accept: 'text/plain' } });
-        if (res.ok) {
-          const body = (await res.text()).trim();
-          const n = Number(body);
-          // A non-integer body ($count unsupported → HTML/JSON, or an empty
-          // body) → treat as "count unavailable", never a fabricated size.
-          return Number.isInteger(n) && n >= 0 ? n : null;
-        }
-        // 404 / not-supported: count unavailable, fall back to the estimate.
-        if (res.status === 404) return null;
-        lastError = new Error(
-          `CBS OData $count request failed: ${res.status} ${res.statusText} for ${url}`,
+        const outcome = await fetchAndRead<Outcome>(
+          url,
+          { headers: { Accept: 'text/plain' } },
+          this.metadataTimeoutMs,
+          async (res) => {
+            if (res.ok) {
+              const body = (await res.text()).trim();
+              const n = Number(body);
+              // A non-integer body ($count unsupported → HTML/JSON, or an empty
+              // body) → treat as "count unavailable", never a fabricated size.
+              return { count: Number.isInteger(n) && n >= 0 ? n : null };
+            }
+            // 404 / not-supported: count unavailable, fall back to the estimate.
+            if (res.status === 404) return { count: null };
+            return { failure: await failureMessage('CBS OData $count request', res, url) };
+          },
+          this.fetchFn,
         );
+        if ('count' in outcome) return outcome.count;
+        lastError = new Error(outcome.failure);
       } catch (err) {
         lastError = err;
       }
       if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
       }
     }
     throw new Error(
@@ -275,7 +322,7 @@ export class ODataV4Source implements CbsSource {
     let url: string | null = `${BASE}/${tableId}/Observations${query ? `?${query}` : ''}`;
 
     while (url) {
-      const raw = await this.fetchJson(url);
+      const raw = await this.fetchJson(url, this.observationsTimeoutMs);
       const { rows, nextLink } = parseObservationsPage(raw, dimNames);
       yield rows;
       url = nextLink;
