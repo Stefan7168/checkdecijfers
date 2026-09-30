@@ -6,7 +6,7 @@ import type { Db } from '../db/types.ts';
 import { eurostatDoiFor, verifyEurostatDoi } from '../eurostat-adapter/doi.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { allowListedMeasures, missingAllowListedCodes } from './measure-allow-list.ts';
-import { parsePeriodNotes } from './period-note-status.ts';
+import { parsePeriodNotes, type PeriodNoteStatusConfig } from './period-note-status.ts';
 import { parsePeriodCode } from './periods.ts';
 import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
 import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
@@ -680,6 +680,100 @@ export async function upsertStagedObservations(
   return { rowsInserted, rowsUpdated };
 }
 
+/** The reviewed period-note status map (ADR 061) of a seed table, or undefined
+ * for every table whose periods carry CBS's machine status. Read from the seed
+ * by table id — the one place the map lives — by every path that stores or
+ * compares this table's cells. */
+export function periodNoteStatusConfig(tableId: string): PeriodNoteStatusConfig | undefined {
+  return SEED_TABLES.find((t) => t.id === tableId)?.periodNoteStatus;
+}
+
+export type PeriodNoteStatusStep = { ok: true } | { ok: false; summary: string };
+
+/**
+ * ADR 061: gives every row of a table whose periods carry no machine status
+ * its per-cell status from CBS's PROSE period notes (`parsePeriodNotes`,
+ * src/ingestion/period-note-status.ts), fail-closed. A table without a
+ * `periodNoteStatus` seed config is left untouched (`{ ok: true }`, no row
+ * gets `status`).
+ *
+ * One copy, three callers (ADR 065, #358 item 3): the whole-table sync
+ * (syncTable), the slice store (fetchSlice) and the read-only parity report —
+ * so a slice-stored cell gets exactly the status the whole-table sync gives it,
+ * and an unrecognised note refuses the same way on every path. The caller
+ * passes CBS's CURRENT Perioden code list (with each period's `description`,
+ * the note itself) and the measures it serves (with their descriptions, for
+ * the topic-note refusal); a `{ ok: false }` summary is recorded by the caller
+ * as a `period_parsing` failure. Mutates `rows` only on success.
+ */
+export function applyPeriodNoteStatus(
+  tableId: string,
+  registrySlice: CbsSlice | null | undefined,
+  servedMeasures: CbsMeasure[],
+  periodCodes: CbsCode[],
+  periodDimName: string,
+  rows: CbsObservationRow[],
+): PeriodNoteStatusStep {
+  const periodNoteConfig = periodNoteStatusConfig(tableId);
+  if (!periodNoteConfig) return { ok: true };
+
+  // Final-review fix (ADR 061): the periodNoteStatus map above was reviewed
+  // against the SEED's OWN measure allow-list (Phase0Table.slice.measures) —
+  // not against whatever slice this table happens to be registered with
+  // right now. A re-registration with a wider or merely different slice
+  // could silently store an unreviewed figure as Definitief. Refuse before
+  // ANY row gets a status unless the registered slice serves EXACTLY the
+  // seed's set (principle (c): never guess).
+  const seedEntry = SEED_TABLES.find((t) => t.id === tableId);
+  const seedMeasures = new Set(seedEntry?.slice?.measures ?? []);
+  const registryMeasures = new Set(registrySlice?.measures ?? []);
+  const slicesMatch =
+    seedMeasures.size === registryMeasures.size && [...seedMeasures].every((m) => registryMeasures.has(m));
+  if (!slicesMatch) {
+    const missingFromRegistration = [...seedMeasures].filter((m) => !registryMeasures.has(m)).slice(0, 10);
+    const extraInRegistration = [...registryMeasures].filter((m) => !seedMeasures.has(m)).slice(0, 10);
+    const differences = [
+      missingFromRegistration.length > 0
+        ? `missing from the registered slice: ${missingFromRegistration.join(', ')}`
+        : null,
+      extraInRegistration.length > 0 ? `extra in the registered slice: ${extraInRegistration.join(', ')}` : null,
+    ].filter((s): s is string => s !== null);
+    return {
+      ok: false,
+      summary:
+        `This table's period-note status map was reviewed for the seed's measure allow-list ` +
+        `(${seedMeasures.size} codes), but the registered slice serves a different set ` +
+        `(${differences.join('; ')}). Refusing, because an unreviewed figure could be stored as final. ` +
+        `Re-register the table with the seed's slice.`,
+    };
+  }
+
+  // CBS's own caveat, which this reader deliberately does NOT parse: a
+  // TOPIC note (a served measure's own Description) can also mark a
+  // measure provisional, separately from the PERIOD note above. Refusing
+  // rather than risking a Definitief mislabel (principle (c)).
+  const topicNoted = servedMeasures.find((m) => m.description.toLowerCase().includes('voorlopig'));
+  if (topicNoted) {
+    return {
+      ok: false,
+      summary:
+        `Measure "${topicNoted.code}"'s CBS description mentions "voorlopig" — a TOPIC note can also mark a ` +
+        `measure provisional, and this reader only reads PERIOD notes; refusing rather than mislabeling it Definitief.`,
+    };
+  }
+
+  const notes = parsePeriodNotes(
+    periodCodes,
+    periodNoteConfig,
+    servedMeasures.map((m) => m.code),
+  );
+  if (!notes.ok) return { ok: false, summary: notes.summary };
+  for (const obsRow of rows) {
+    obsRow.status = notes.statusOf(obsRow.coordinates[periodDimName] ?? '', obsRow.measure);
+  }
+  return { ok: true };
+}
+
 export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) => {
   const registryResult = await db.query('select * from cbs_tables where id = $1', [tableId]);
   if (registryResult.rows.length === 0) {
@@ -897,105 +991,34 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   // a machine `Status` field (70072ned is the first, Task 3) gets its
   // per-cell status derived here — BEFORE stage 3 (checkPeriodParsing) reads
   // it via the #251 hook (`CbsObservationRow.status`). Tables without this
-  // config are untouched: byte-identical, no row gets `status`.
-  const periodNoteConfig = SEED_TABLES.find((t) => t.id === tableId)?.periodNoteStatus;
-  if (periodNoteConfig) {
-    // Final-review fix (ADR 061): the periodNoteStatus map above was reviewed
-    // against the SEED's OWN measure allow-list (Phase0Table.slice.measures) —
-    // not against whatever slice this table happens to be registered with
-    // right now. A re-registration with a wider or merely different slice
-    // could silently store an unreviewed figure as Definitief. Refuse before
-    // ANY row gets a status unless the registered slice serves EXACTLY the
-    // seed's set (principle (c): never guess).
-    const seedEntry = SEED_TABLES.find((t) => t.id === tableId);
-    const seedMeasures = new Set(seedEntry?.slice?.measures ?? []);
-    const registryMeasures = new Set(registry.slice?.measures ?? []);
-    const slicesMatch =
-      seedMeasures.size === registryMeasures.size && [...seedMeasures].every((m) => registryMeasures.has(m));
-    if (!slicesMatch) {
-      const missingFromRegistration = [...seedMeasures].filter((m) => !registryMeasures.has(m)).slice(0, 10);
-      const extraInRegistration = [...registryMeasures].filter((m) => !seedMeasures.has(m)).slice(0, 10);
-      const differences = [
-        missingFromRegistration.length > 0
-          ? `missing from the registered slice: ${missingFromRegistration.join(', ')}`
-          : null,
-        extraInRegistration.length > 0 ? `extra in the registered slice: ${extraInRegistration.join(', ')}` : null,
-      ].filter((s): s is string => s !== null);
-      const summary =
-        `This table's period-note status map was reviewed for the seed's measure allow-list ` +
-        `(${seedMeasures.size} codes), but the registered slice serves a different set ` +
-        `(${differences.join('; ')}). Refusing, because an unreviewed figure could be stored as final. ` +
-        `Re-register the table with the seed's slice.`;
-      await failBatch(db, batchId, tableId, 'period_parsing', summary, observationRows.length, fingerprint, true);
-      return {
-        tableId,
-        batchId,
-        outcome: 'failed',
-        failureStage: 'period_parsing',
-        failureSummary: summary,
-        rowCount: observationRows.length,
-        rowsInserted: 0,
-        rowsUpdated: 0,
-        rowsUnchanged: 0,
-        rowsMissing: 0,
-        corrections: [],
-        rebaselined,
-      };
-    }
-
-    const periodDimName = periodDim?.name ?? 'Perioden';
-
-    // CBS's own caveat, which this reader deliberately does NOT parse: a
-    // TOPIC note (a served measure's own Description) can also mark a
-    // measure provisional, separately from the PERIOD note above. Refusing
-    // rather than risking a Definitief mislabel (principle (c)).
-    const topicNoted = servedMeasures.find((m) => m.description.toLowerCase().includes('voorlopig'));
-    if (topicNoted) {
-      const summary =
-        `Measure "${topicNoted.code}"'s CBS description mentions "voorlopig" — a TOPIC note can also mark a ` +
-        `measure provisional, and this reader only reads PERIOD notes; refusing rather than mislabeling it Definitief.`;
-      await failBatch(db, batchId, tableId, 'period_parsing', summary, observationRows.length, fingerprint, true);
-      return {
-        tableId,
-        batchId,
-        outcome: 'failed',
-        failureStage: 'period_parsing',
-        failureSummary: summary,
-        rowCount: observationRows.length,
-        rowsInserted: 0,
-        rowsUpdated: 0,
-        rowsUnchanged: 0,
-        rowsMissing: 0,
-        corrections: [],
-        rebaselined,
-      };
-    }
-
-    const notes = parsePeriodNotes(
-      codeLists[periodDimName] ?? [],
-      periodNoteConfig,
-      servedMeasures.map((m) => m.code),
-    );
-    if (!notes.ok) {
-      await failBatch(db, batchId, tableId, 'period_parsing', notes.summary, observationRows.length, fingerprint, true);
-      return {
-        tableId,
-        batchId,
-        outcome: 'failed',
-        failureStage: 'period_parsing',
-        failureSummary: notes.summary,
-        rowCount: observationRows.length,
-        rowsInserted: 0,
-        rowsUpdated: 0,
-        rowsUnchanged: 0,
-        rowsMissing: 0,
-        corrections: [],
-        rebaselined,
-      };
-    }
-    for (const obsRow of observationRows) {
-      obsRow.status = notes.statusOf(obsRow.coordinates[periodDimName] ?? '', obsRow.measure);
-    }
+  // config are untouched: byte-identical, no row gets `status`. The derivation
+  // itself is `applyPeriodNoteStatus` above, shared with the slice store
+  // (fetchSlice) and the parity report so the three can never read the notes
+  // differently (ADR 065, #358 item 3).
+  const periodNotes = applyPeriodNoteStatus(
+    tableId,
+    registry.slice,
+    servedMeasures,
+    codeLists[periodDim?.name ?? 'Perioden'] ?? [],
+    periodDim?.name ?? 'Perioden',
+    observationRows,
+  );
+  if (!periodNotes.ok) {
+    await failBatch(db, batchId, tableId, 'period_parsing', periodNotes.summary, observationRows.length, fingerprint, true);
+    return {
+      tableId,
+      batchId,
+      outcome: 'failed',
+      failureStage: 'period_parsing',
+      failureSummary: periodNotes.summary,
+      rowCount: observationRows.length,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsMissing: 0,
+      corrections: [],
+      rebaselined,
+    };
   }
 
   const stage3 = checkPeriodParsing(

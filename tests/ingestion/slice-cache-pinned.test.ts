@@ -72,11 +72,10 @@ function parsed(value: unknown): unknown {
   return typeof value === 'string' ? JSON.parse(value) : value;
 }
 
-// 70072ned publishes no machine period status (ADR 061's period-note reader
-// owns it) — schema-only registration refuses it by design, out of scope here.
-const PARITY_TABLES = SEED_TABLES.filter(
-  (t) => t.id !== '70072ned' && existsSync(`${FIXTURES_DIR}/${t.id}/properties.json`),
-);
+// Every seed table with fixtures — 70072ned included since #358 item 3: its
+// periods carry no machine status, but a PINNED registration of a seed table with
+// a reviewed period-note map is accepted (the slice store reads the notes).
+const PARITY_TABLES = SEED_TABLES.filter((t) => existsSync(`${FIXTURES_DIR}/${t.id}/properties.json`));
 
 describe('parity with the whole-table path (registry columns)', () => {
   it('has seed tables to compare', () => {

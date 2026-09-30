@@ -273,14 +273,6 @@ describe('preconditions: refused, nothing written, CBS never asked', () => {
     await expectRefused('99999NED', /seed entry/);
   });
 
-  it('the period-note table (70072ned)', async () => {
-    await db.query(
-      `insert into cbs_tables (id, title, expected_dimensions, units, pinned)
-       values ('70072ned', 'x', '[]'::jsonb, '{}'::jsonb, true)`,
-    );
-    await expectRefused('70072ned', /period notes/);
-  });
-
   it('a declared scope that cannot be planned', async () => {
     await wholeTable(POP, new FixtureSource(docsFor(POP)));
     await db.query(`update cbs_tables set slice = '{"dimensionEquals":{"Nope":"X"}}'::jsonb where id = $1`, [POP]);
@@ -476,6 +468,29 @@ describe('the conversion', () => {
       expect(batchesAfter).toBeGreaterThan(batchesBefore);
     },
   );
+
+  it('the period-note table (70072ned, ADR 061): the dry run no longer refuses, and the conversion keeps every cell and status (#358 item 3)', async () => {
+    const REGIONAL = '70072ned';
+    const source = new FixtureSource(docsFor(REGIONAL));
+    await wholeTable(REGIONAL, source);
+    const cellsBefore = await storedCells(REGIONAL);
+    expect(new Set(cellsBefore.map((c) => c.status))).toEqual(new Set(['Definitief', 'Voorlopig', 'NaderVoorlopig']));
+
+    const before = await wholeState();
+    const dry = await convertTableToSlices(db, source, REGIONAL, { deadline: FAR(), apply: false });
+    expect(dry.reason ?? null).toBeNull();
+    expect(dry.outcome).toBe('dry_run');
+    expect(dry.parity?.complete).toBe(true);
+    expect(dry.parity?.diffCounts).toEqual({ value_differs: 0, status_differs: 0, missing_in_store: 0, missing_at_source: 0 });
+    expect(dry.parity?.identical).toBe(cellsBefore.length);
+    expect(await wholeState()).toEqual(before);
+
+    const result = await convertTableToSlices(db, source, REGIONAL, { deadline: FAR(), apply: true });
+    expect(result.reason ?? null).toBeNull();
+    expect(result.outcome).toBe('converted');
+    expect(await storedCells(REGIONAL)).toEqual(cellsBefore);
+    expect(await registry(REGIONAL)).toMatchObject({ ingest_mode: 'slice_cache', pinned: true, status: 'active' });
+  });
 
   it('converted_incomplete when the budget ends during the warm run; `ingest warm` then finishes it', async () => {
     const source = new FixtureSource(docsFor(POP));

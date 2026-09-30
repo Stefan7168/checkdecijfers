@@ -1,7 +1,8 @@
 // Slice-cache registration (breadth step 2, spec
 // 2026-09-28-breadth-any-cbs-table-design.md D4; migration 037,
-// docs/decisions/061 for the period-note prose-reader boundary this module
-// deliberately does NOT cross). registerSchemaOnly registers a CBS table's
+// docs/decisions/061 for the period-note prose reader, which this module uses
+// only for a pinned seed table with a reviewed map — ADR 065, #358 item 3 —
+// never for an on-demand table). registerSchemaOnly registers a CBS table's
 // LAYOUT ONLY — metadata, code lists, numeric-measure units, schema
 // fingerprint — with zero observation rows. fetchSlice (Task 4) then fetches
 // exactly the cells one question needs on top of that layout, validates them
@@ -23,6 +24,7 @@ import type { Db } from '../db/types.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { allowListedMeasures } from './measure-allow-list.ts';
 import {
+  applyPeriodNoteStatus,
   buildStagedRows,
   diffCorrections,
   failBatch,
@@ -31,6 +33,7 @@ import {
   labelRowsFromCodeLists,
   markUnseenCellsRetained,
   type MeasureCuration,
+  periodNoteStatusConfig,
   servedMeasuresForRegistration,
   stageRows,
   unitsFromMeasures,
@@ -94,7 +97,10 @@ function parseJsonbUnits(value: unknown): Record<string, unknown> {
  *   one carries `status: null`. ADR 061's period-note PROSE reader
  *   (src/ingestion/period-note-status.ts) is reviewed per table (a curated
  *   `Phase0Table.periodNoteStatus` config) — schema-only registration is
- *   generic and un-curated, so it never guesses a status from prose.
+ *   generic and un-curated, so it never guesses a status from prose. Except
+ *   (ADR 065, #358 item 3) a PINNED registration of a seed table that has such
+ *   a reviewed config: fetchSlice then reads its period notes exactly as
+ *   syncTable does (`applyPeriodNoteStatus`, src/ingestion/pipeline.ts).
  * - `no_numeric_measures`: every measure's CBS `DataType` is `'String'` —
  *   text measures (`code`, `naam`, `omschrijving`-shaped) are never
  *   registered as servable (breadth step 2 constraints).
@@ -256,7 +262,12 @@ export function planSchemaOnlyRegistration(
         `period to key a slice cache on, so this table cannot be registered this way.`,
     };
   }
-  if (periodCodes.every((c) => c.status === null)) {
+  // ADR 065 (#358 item 3): the one exception is a PINNED seed table with a
+  // reviewed period-note map (70072ned) — fetchSlice reads its notes through the
+  // same fail-closed reader the whole-table sync uses. An on-demand (unpinned)
+  // registration never does, whatever the table.
+  const periodNotesReviewed = pinnedOptions?.pinned === true && periodNoteStatusConfig(tableId) !== undefined;
+  if (periodCodes.every((c) => c.status === null) && !periodNotesReviewed) {
     return {
       ok: false,
       reason: 'no_machine_period_status',
@@ -675,7 +686,10 @@ export async function applySchemaRefresh(
  * 3. Validation, first failure wins, nothing written to `observations`:
  *    schema_fingerprint (quarantines), row_plausibility's duplicate /
  *    reason-less-null / string-value pieces, period_parsing (R11: every cell's
- *    status comes from its period, never guessed), dimension_mapping against
+ *    status comes from its period, never guessed — or, for a table with a
+ *    reviewed period-note map, from CBS's current period notes, read by the
+ *    whole-table sync's own fail-closed reader; an unreadable note
+ *    quarantines), dimension_mapping against
  *    the stored labels without accepting new codes (quarantines), and finally
  *    every row must lie inside the requested coordinates. (unit_consistency
  *    against the stored units — quarantines — and the refusal of a CBS
@@ -864,6 +878,13 @@ export async function fetchSlice(
   const sliceCbsModified = schema.modified;
 
   const observationRows: CbsObservationRow[] = [];
+  // ADR 061 / ADR 065 (#358 item 3): a table whose periods carry no machine
+  // status takes each cell's status from CBS's period notes — the prose in
+  // each period's description, which the stored labels do not keep. CBS's
+  // CURRENT period code list is read with the cells (reused when a refresh
+  // already fetched it), exactly as the whole-table sync reads it.
+  const periodNotesNeeded = periodNoteStatusConfig(tableId) !== undefined;
+  let notePeriodCodes: CbsCode[] | null = null;
   try {
     for await (const page of source.fetchObservations(
       tableId,
@@ -875,6 +896,9 @@ export async function fetchSlice(
       schema.dimensions.map((d) => d.name),
     )) {
       observationRows.push(...page);
+    }
+    if (periodNotesNeeded) {
+      notePeriodCodes = codeLists?.[timeDim.name] ?? (await source.fetchCodeList(tableId, timeDim.name));
     }
   } catch (err) {
     return fetchFailure(err);
@@ -892,6 +916,22 @@ export async function fetchSlice(
 
   const stage2 = checkSliceRowPlausibility(observationRows);
   if (!stage2.ok) return fail(stage2.stage, stage2.summary, false, rowCount, fingerprint);
+
+  // The period-note statuses, before period_parsing reads them — syncTable's
+  // own step and order. A note this reader does not recognise quarantines the
+  // table exactly as the whole-table sync does (principle (c)): cells stored
+  // earlier may now carry a status CBS has since changed in words we cannot read.
+  if (notePeriodCodes !== null) {
+    const notes = applyPeriodNoteStatus(
+      tableId,
+      registry.slice,
+      numericMeasures,
+      notePeriodCodes,
+      timeDim.name,
+      observationRows,
+    );
+    if (!notes.ok) return fail('period_parsing', notes.summary, true, rowCount, fingerprint);
+  }
 
   const stage3 = checkPeriodParsing(observationRows, timeDim.name, periodCodes);
   if (!stage3.ok) return fail(stage3.stage, stage3.summary, false, rowCount, fingerprint);

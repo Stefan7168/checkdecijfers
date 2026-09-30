@@ -109,3 +109,6 @@ take as-is:
   prod sync now would show "Regionale kerncijfers Nederland" on `/llms.txt` and the "what you can ask" box before any
   question about it can be answered. Prod pre-flight 2026-09-28: no `70072ned` row exists. Part 2 runs, in order, after
   the deploy with the canonical figures is live: `sync 70072ned` (auto-registers, pinned) → `registry:apply` → spot-check.
+- **2026-09-30 (#358 item 3, ADR 065):** the period-note reader is no longer whole-table only. The slice store, the warm
+  job and the parity report run the same step (`applyPeriodNoteStatus`, `src/ingestion/pipeline.ts`), with the same
+  map, refusals and quarantine, so this table can be slice-stored and converted like the others.
