@@ -182,11 +182,13 @@ export class ODataV4Source implements CbsSource {
     if ((capped && timedOut) || this.stopAt - Date.now() <= 0) throw this.budgetEnded(url);
   }
 
-  /** The wait before the next attempt, never longer than the budget has left. */
-  private async backoff(attempt: number): Promise<void> {
+  /** The wait before the next attempt. A wait that would reach the end of the budget is not started:
+   * the request stops as a budget cut right away (sleeping until the deadline only to give up wasted the
+   * time, and a timer that woke a millisecond early let one more attempt through). */
+  private async backoff(url: string, attempt: number): Promise<void> {
     const wait = this.retryBackoffMs * attempt;
-    const capped = this.stopAt === undefined ? wait : Math.max(0, Math.min(wait, this.stopAt - Date.now()));
-    await new Promise((resolve) => setTimeout(resolve, capped));
+    if (this.stopAt !== undefined && wait >= this.stopAt - Date.now()) throw this.budgetEnded(url);
+    await new Promise((resolve) => setTimeout(resolve, wait));
   }
 
   private async fetchJson(url: string, timeoutMs: number = this.metadataTimeoutMs): Promise<unknown> {
@@ -230,7 +232,7 @@ export class ODataV4Source implements CbsSource {
         lastError = err;
       }
       this.stopIfBudgetEnded(url, limit.capped, lastError);
-      if (attempt < FETCH_ATTEMPTS) await this.backoff(attempt);
+      if (attempt < FETCH_ATTEMPTS) await this.backoff(url, attempt);
     }
     throw new Error(
       `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${
@@ -338,7 +340,7 @@ export class ODataV4Source implements CbsSource {
         lastError = err;
       }
       this.stopIfBudgetEnded(url, limit.capped, lastError);
-      if (attempt < FETCH_ATTEMPTS) await this.backoff(attempt);
+      if (attempt < FETCH_ATTEMPTS) await this.backoff(url, attempt);
     }
     throw new Error(
       `CBS OData $count request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${
