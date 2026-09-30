@@ -496,6 +496,25 @@ describe('one schema check per table per run', () => {
   });
 });
 
+describe('one confirmation time per run', () => {
+  it('every slice fetched in one run carries the run’s check time, equal to the table’s last_sync_at', async () => {
+    // Otherwise an answer spanning two requests would read as "partly older" by the seconds
+    // between two fetches of the same run (the staleness wording compares the two dates).
+    const source = new FixtureSource(docsFor(POP));
+    await registerPinned(sliceDb, source, POP);
+    const result = await warmTable(sliceDb, source, POP, { deadline: FAR() });
+    expect(result.outcome).toBe('complete');
+    expect(result.fetched).toBeGreaterThan(1);
+
+    const times = await sliceDb.query('select distinct checked_at from slice_fetches where table_id = $1', [POP]);
+    expect(times.rows).toHaveLength(1);
+    const table = await sliceDb.query('select last_sync_at from cbs_tables where id = $1', [POP]);
+    expect(new Date(times.rows[0]!.checked_at as string).toISOString()).toBe(
+      new Date(table.rows[0]!.last_sync_at as string).toISOString(),
+    );
+  });
+});
+
 describe('the answer path on a warmed table', () => {
   it('answers a curated query with the same value as the whole-table database', async () => {
     const docs = docsFor(POP);

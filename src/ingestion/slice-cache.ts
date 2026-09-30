@@ -709,8 +709,12 @@ export async function fetchSlice(
    * this call never refreshes what ensureSlice already refreshed. No caller
    * outside ensureSlice needs this.
    * `maxCells` (ADR 065 step 2, the warm job): a larger cap for the job's own
-   * planned requests; absent ⇒ SLICE_MAX_CELLS, the per-question bound. */
-  opts?: { schema?: CbsTableSchema; maxCells?: number },
+   * planned requests; absent ⇒ SLICE_MAX_CELLS, the per-question bound.
+   * `checkedAt` (the warm job): the run's one CBS check time, stored as this
+   * slice's confirmation time so every slice of a run is confirmed AS OF the
+   * same moment. It is earlier than the fetch, so it never over-claims; absent
+   * ⇒ now(), as before. */
+  opts?: { schema?: CbsTableSchema; maxCells?: number; checkedAt?: string },
 ): Promise<SliceFetchResult> {
   // --- 1. Request validation (no network) -----------------------------------
   const registryResult = await db.query(
@@ -1023,16 +1027,16 @@ export async function fetchSlice(
       );
 
       await tx.query(
-        `insert into slice_fetches (table_id, filter_key, filter, cbs_modified, row_count, batch_id)
-         values ($1, $2, $3, $4, $5, $6)
+        `insert into slice_fetches (table_id, filter_key, filter, cbs_modified, row_count, batch_id, checked_at)
+         values ($1, $2, $3, $4, $5, $6, coalesce($7::timestamptz, now()))
          on conflict (table_id, filter_key) do update set
            filter = excluded.filter,
            cbs_modified = excluded.cbs_modified,
            row_count = excluded.row_count,
            batch_id = excluded.batch_id,
            fetched_at = now(),
-           checked_at = now()`,
-        [tableId, filterKey, filterKey, sliceCbsModified, staged.length, batchId],
+           checked_at = greatest(slice_fetches.checked_at, excluded.checked_at)`,
+        [tableId, filterKey, filterKey, sliceCbsModified, staged.length, batchId, opts?.checkedAt ?? null],
       );
       return null;
     })
@@ -1186,7 +1190,12 @@ export async function ensureSlice(
     }
   }
 
-  return fetchSlice(db, source, tableId, req, { schema, ...fetchOpts });
+  // With a precheck (the warm job) the stored slice is confirmed as of that one check.
+  return fetchSlice(db, source, tableId, req, {
+    schema,
+    ...fetchOpts,
+    ...(opts?.prechecked ? { checkedAt: checkTakenAt } : {}),
+  });
 }
 
 /** One CBS schema read for a slice-cache table, taken once and reused by
