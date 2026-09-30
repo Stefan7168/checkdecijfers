@@ -5,7 +5,7 @@
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { maybeAlertIngestionRunProblems, type IngestionRunProblem } from '../answer/audit/alerts.ts';
-import { sourceKeyForTableId } from '../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 import { SEED_TABLES } from './registry-seed.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Correction, SyncResult } from './types.ts';
@@ -16,10 +16,11 @@ import { warmPinnedTables, type WarmTableResult } from './warm-job.ts';
 interface Deps {
   db: Db;
   source: CbsSource;
-  /** Builds the source for a run that has a time budget: every request it makes is limited to the time
-   * left until `stopAt` (epoch ms), so --budget-seconds is a real upper bound. Absent (tests with a
-   * fixture source): `source` is used as is. */
-  sourceForBudget?: (stopAt: number) => CbsSource;
+  /** Builds the adapter for a table's source key (ADR 065, #358 item 4: CBS and Eurostat tables in one
+   * run). With `stopAt` (epoch ms) every request it makes is limited to the time left until then, so
+   * --budget-seconds is a real upper bound. Absent (tests with a fixture source): `source` is used for
+   * every table, as is. */
+  sourceFor?: (sourceKey: string, stopAt?: number) => CbsSource;
   /** Injected for tests (hermetic Resend stubbing, same pattern every sibling
    * admin alert test uses). Defaults to the real fetch in production. */
   fetchImpl?: typeof fetch;
@@ -78,6 +79,11 @@ function parseArgs(argv: string[]): ParsedArgs {
   };
 }
 
+/** The adapter for one source key: `sourceFor` when given (the CLI entry), otherwise `source`. */
+function sourceOf(deps: Deps, sourceKey: string, stopAt?: number): CbsSource {
+  return deps.sourceFor ? deps.sourceFor(sourceKey, stopAt) : deps.source;
+}
+
 function printWarmResult(r: WarmTableResult): void {
   const counts = `planned ${r.planned}, fetched ${r.fetched}, confirmed ${r.confirmed}, remaining ${r.remaining}`;
   if (r.outcome === 'skipped') {
@@ -99,9 +105,11 @@ async function runWarm(args: ParsedArgs, deps: Deps): Promise<number> {
     return 1;
   }
   const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_WARM_BUDGET_SECONDS) * 1000;
-  const results = await warmPinnedTables(deps.db, deps.sourceForBudget?.(deadline) ?? deps.source, {
+  const results = await warmPinnedTables(deps.db, sourceOf(deps, CBS_SOURCE_KEY, deadline), {
     deadline,
     ...(args.tableIds.length > 0 ? { tableIds: args.tableIds } : {}),
+    // Eurostat's pinned datasets ride the same job once converted (#358 item 4).
+    ...(deps.sourceFor ? { sources: { [EUROSTAT_SOURCE_KEY]: deps.sourceFor(EUROSTAT_SOURCE_KEY, deadline) } } : {}),
   });
   if (results.length === 0) console.log('No pinned slice-cache table to warm.');
   for (const r of results) printWarmResult(r);
@@ -129,7 +137,13 @@ async function runStorageCommand(
   }
   const tableId = args.tableIds[0]!;
   const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_STORAGE_BUDGET_SECONDS) * 1000;
-  const source = deps.sourceForBudget?.(deadline) ?? deps.source;
+  let source: CbsSource;
+  try {
+    source = sourceOf(deps, sourceKeyForTableId(tableId), deadline);
+  } catch (err) {
+    console.error(`${command}: ${err instanceof Error ? err.message : String(err)}`);
+    return 1;
+  }
 
   if (command === 'convert-to-full') {
     const result = await convertTableToFull(deps.db, tableId, { apply: args.yes });
@@ -178,7 +192,7 @@ function printResult(action: 'Registered' | 'Synced', tableId: string, result: S
 }
 
 export async function runCli(argv: string[], deps: Deps): Promise<number> {
-  const { db, source } = deps;
+  const { db } = deps;
   const args = parseArgs(argv);
 
   if (args.command === null) {
@@ -205,7 +219,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
     const start = Date.now();
     try {
       // #110(c): seed tables register PINNED — the permanent, eviction-exempt set.
-      const registered = await registerTables(db, source, SEED_TABLES, { pinned: true });
+      const registered = await registerTables(db, sourceOf(deps, CBS_SOURCE_KEY), SEED_TABLES, { pinned: true });
       const duration = ((Date.now() - start) / 1000).toFixed(1);
       if (registered.length === 0) {
         console.log(`All ${SEED_TABLES.length} seed table(s) were already registered. Nothing to do.`);
@@ -223,7 +237,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   const seedTables = args.all ? SEED_TABLES : SEED_TABLES.filter((t) => args.tableIds.includes(t.id));
 
   try {
-    const registered = await registerTables(db, source, seedTables, { pinned: true });
+    const registered = await registerTables(db, sourceOf(deps, CBS_SOURCE_KEY), seedTables, { pinned: true });
     if (registered.length > 0) {
       console.log(`Auto-registered ${registered.length} table(s) before syncing: ${registered.join(', ')}.`);
     }
@@ -275,7 +289,8 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   for (const tableId of targetIds) {
     const start = Date.now();
     try {
-      const result = await syncTable(db, source, tableId, {
+      // Each table through its own source's adapter (a Eurostat dataset's whole-table sync included).
+      const result = await syncTable(db, sourceOf(deps, sourceKeyForTableId(tableId)), tableId, {
         acceptNewCodes: args.acceptNewCodes,
         rebaseline: args.rebaseline,
       });
@@ -321,15 +336,21 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   const { applyMigrations } = await import('../db/migrate.ts');
   const { adapterFor } = await import('../sources/adapters.ts');
   const { ODataV4Source } = await import('../cbs-adapter/odata-v4.ts');
-  const { CBS_SOURCE_KEY } = await import('../sources/registry.ts');
+  const { StatisticsApiSource } = await import('../eurostat-adapter/statistics-api.ts');
   const { db, pool } = connectFromEnv();
   try {
     await applyMigrations(db);
     const code = await runCli(process.argv.slice(2), {
       db,
       source: adapterFor(CBS_SOURCE_KEY),
-      // warm / convert / rebaseline: every CBS request is limited to what is left of --budget-seconds.
-      sourceForBudget: (stopAt) => new ODataV4Source({ stopAt }),
+      // Per table by its source; warm / convert / rebaseline: every request is limited to what is left of
+      // --budget-seconds.
+      sourceFor: (key, stopAt) =>
+        key === CBS_SOURCE_KEY
+          ? new ODataV4Source({ stopAt })
+          : key === EUROSTAT_SOURCE_KEY
+            ? new StatisticsApiSource(fetch, { stopAt })
+            : adapterFor(key),
     });
     process.exit(code);
   } finally {

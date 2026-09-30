@@ -95,7 +95,7 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
 - **Nothing in production storage has changed.** Every table is still whole-table; the daily kick finds no slice table
   and does nothing. Converting is step 9, owner present, one table at a time, each behind its own read-only proof.
 - **Still whole-table by necessity:** `70072ned` (no machine period status; not in production) and the four Eurostat
-  datasets. *(Superseded for `70072ned` by the as-built note below.)*
+  datasets. *(Superseded for `70072ned` and for the Eurostat datasets by the as-built notes below.)*
 
 ## As built (2026-09-30, #358 item 3) — period-note status in slice storage
 
@@ -116,6 +116,23 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
 - **Assumption:** CBS moves the table's `Modified` date when it rewrites a period note, as it does for any other change.
   A cached slice is re-confirmed without re-reading the notes while `Modified` stands still — the same assumption every
   slice-stored table already makes about machine statuses.
+
+## As built (2026-09-30, #358 item 4) — the four Eurostat datasets can ride the same route
+
+- **What changed:** the Eurostat adapter now sends the slice store's own request (measures, listed members, listed
+  periods) instead of refusing it, and every schema read of a slice table passes the table's registered scope (as the
+  whole-table sync always did; CBS ignores it). The planner knows Eurostat's `time` floor and its unit-in-the-measure;
+  the warm job, the command line (each table through its own source's adapter, under the run budget), the parity report
+  and the daily `/api/warm-job` route serve Eurostat tables; the conversion carries a Eurostat dataset's own stored
+  scope and cadence (no seed entry exists). No schema change, no prompt change.
+- **New fail-closed check:** a Eurostat dataset whose newest period is older than its grain allows (the freshness
+  report's limits, now shared in `src/ingestion/data-end-lag.ts`) is quarantined by the warm job before any slice is
+  re-confirmed (ADR 048's 2026-09-30 addendum: Eurostat retires datasets without notice).
+- **Proven hermetically** on the real captured responses (`tests/ingestion/eurostat-slices.test.ts`): slice-mode build
+  equals the whole-table build for all four datasets (cells, statuses, registry, labels); parity identical; dry run and
+  conversion keep every cell and the DOI; the way back works; frozen data and a changed unit quarantine.
+- **Not done:** converting production's four datasets (owner present, RUNBOOK "Slice storage for the pinned tables").
+  Design: [spec section 7](../superpowers/specs/2026-09-30-one-route-warm-slices-design.md).
 
 ## As built (2026-09-30, #358 item 2, first half) — slice storage is the default test build
 

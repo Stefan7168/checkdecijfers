@@ -531,3 +531,31 @@ describe('parseJsonStatCatalog — the real "table of contents" TSV shape (verif
     expect(() => parseJsonStatCatalog('not a catalog at all')).toThrow();
   });
 });
+
+// ADR 065 (#358 item 4): a slice-store request's lists, applied client-side on the real captured response.
+describe('parseJsonStatDataset — slice-store request lists (measures, dimensionIn, periodIn)', () => {
+  const raw = JSON.parse(
+    readFileSync(new URL('../fixtures/eurostat-siblings/une_rt_q.json', import.meta.url), 'utf8'),
+  ) as unknown;
+
+  it('keeps exactly the listed measures, members and periods', () => {
+    const parsed = parseJsonStatDataset(raw, 'eurostat:une_rt_q', {
+      measures: ['une_rt_q|PC_ACT'],
+      dimensionIn: { geo: ['NL', 'DE'] },
+      periodIn: { dimension: 'time', codes: ['2026KW02', '2025KW04'] },
+    });
+    expect(parsed.rows).toHaveLength(4);
+    expect(new Set(parsed.rows.map((r) => `${r.coordinates.geo} ${r.coordinates.time}`))).toEqual(
+      new Set(['NL 2026KW02', 'NL 2025KW04', 'DE 2026KW02', 'DE 2025KW04']),
+    );
+  });
+
+  it('refuses a listed member or measure unit the response does not have (never a result with holes)', () => {
+    expect(() => parseJsonStatDataset(raw, 'eurostat:une_rt_q', { dimensionIn: { sex: ['F'] } })).toThrow(
+      /listed sex code\(s\) F/,
+    );
+    expect(() => parseJsonStatDataset(raw, 'eurostat:une_rt_q', { measures: ['une_rt_q|THS_PER'] })).toThrow(
+      /listed unit code\(s\) THS_PER/,
+    );
+  });
+});
