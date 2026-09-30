@@ -292,6 +292,22 @@ describe('ruling 17b: C9 — number, scale, fraction, multiple and percent words
       .toMatch(/C9/);
   });
 
+  it("#339 item 14: a unit that itself carries a scale word ('miljard kg CO2-equivalent') translates to 'billion' — and only there", () => {
+    // The Dutch template renders "146,1 (× miljard kg CO2-equivalent)"; C9 is a
+    // counterpart check (English quantity word ⇒ Dutch counterpart), so the
+    // unit's own 'miljard' is what licenses the English 'billion'. Unlike the
+    // Dutch R3 ban, nothing here rejects the unit.
+    const { masked, entries } = maskOne('Emissie broeikasgassen was in 2023 146,1 (× miljard kg CO2-equivalent).');
+    expect(masked).toContain('(× miljard kg CO');
+    const [p, n, co2] = masked.match(/⟦[NP][a-z]+⟧/g)!;
+    const english = `Greenhouse gas emissions were ${n} (× billion kg CO${co2}-equivalent) in ${p}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [], maskTable: entries })).toEqual([]);
+    // A Dutch body without the scale word gives 'billion' no counterpart.
+    const plain = maskOne('Het aantal was 1.234 in 2023.');
+    const pn = plain.masked.match(/⟦N[a-z]+⟧/)![0];
+    expect(checkTranslation({ maskedDutch: items(plain.masked), english: items(`The number was ${pn} billion.`), glossary: [] }).join()).toMatch(/C9.*billion/);
+  });
+
   it('ordinals inside period placeholders are unaffected (masked), and a plain ordinal word is not a number word', () => {
     const { masked } = maskOne('In 2023 was het aantal 1.234.');
     const [n, p] = [masked.match(/⟦N[a-z]+⟧/)![0], masked.match(/⟦P[a-z]+⟧/)![0]];

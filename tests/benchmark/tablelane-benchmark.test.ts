@@ -49,14 +49,11 @@ const key = loadTableLaneKey();
  * harness bugs — real defects in the product path, pinned so the canned run
  * stays green while they are open and fails the moment one is fixed (then
  * remove the entry). Each: task ids + a pattern every problem must match.
- *   - 'miljard': 85669NED's unit is "miljard kg CO2-equivalent"; the answer
- *     template writes the unit into the body and the R3 word-form check
- *     (wordFormProblems) flags "miljard" as a number word — the template is
- *     served with a failing verdict + an admin alert, and R8 reconstruction
- *     reports it. Must be fixed before the TABLE_LANE_ENABLED flip. */
-const KNOWN_CANNED_FINDINGS: { taskIds: string[]; pattern: RegExp; what: string }[] = [
-  { taskIds: ['L1', 'L2', 'L3'], pattern: /R3: (kwantiteitswoord|telwoord) 'miljard'/, what: "unit 'miljard …' trips the R3 word-form check" },
-];
+ * Empty since #339 item 14 was fixed: L1–L3 (85669NED, unit "miljard kg
+ * CO2-equivalent") tripped the R3 word-form check on the unit's own
+ * 'miljard'; the checker now exempts an exact, digit-anchored rendering of
+ * the result's registered unit (validate.ts blankRegisteredUnitRenderings). */
+const KNOWN_CANNED_FINDINGS: { taskIds: string[]; pattern: RegExp; what: string }[] = [];
 
 describe('table-lane benchmark — frozen definition', () => {
   it('is well-formed (ids, types, key entries, gate, curated-table exclusion)', () => {
