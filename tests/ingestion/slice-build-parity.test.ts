@@ -104,6 +104,19 @@ describe('the slice-mode build holds what the whole-table build holds', () => {
     expect(await dimensionLabels(sliceDb, id)).toEqual(await dimensionLabels(fullDb, id));
   });
 
+  it('70072ned (statuses from CBS period notes, ADR 061) is slice-stored with the same mixed statuses (#358 item 3)', async () => {
+    const statuses = async (db: Db) =>
+      (
+        await db.query(
+          `select status, count(*)::int as n from observations where table_id = '70072ned' group by status order by status`,
+        )
+      ).rows;
+    const slice = await statuses(sliceDb);
+    // Not trivially all-final: the notes mark some figures provisional.
+    expect(slice.map((r) => r.status)).toEqual(['Definitief', 'NaderVoorlopig', 'Voorlopig']);
+    expect(slice).toEqual(await statuses(fullDb));
+  });
+
   it('identical canonical measures', async () => {
     const full = await canonicalMeasures(fullDb);
     expect(full.length).toBeGreaterThan(0);

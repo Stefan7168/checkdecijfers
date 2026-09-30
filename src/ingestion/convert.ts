@@ -377,12 +377,10 @@ export async function convertTableToSlices(
   if (!seed) {
     return refused(`Table "${tableId}" has no seed entry in registry-seed.ts; its curation cannot be carried over.`);
   }
-  if (seed.periodNoteStatus) {
-    return refused(
-      `Table "${tableId}" takes its period status from CBS's period notes (ADR 061); slice storage does not ` +
-        `support that yet, so it stays in whole-table storage.`,
-    );
-  }
+  // A table whose period status comes from CBS's period notes (ADR 061, 70072ned)
+  // converts like any other since #358 item 3: the parity proof below and the
+  // warm run read its notes with the whole-table sync's own fail-closed reader,
+  // so its statuses are proven equal before anything is written.
   let plan: WarmPlan;
   let geoDim: string | null;
   try {

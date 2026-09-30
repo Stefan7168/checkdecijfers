@@ -7,9 +7,9 @@
 // no registry change. The row conversion is the ingestion pipeline's own `buildStagedRows` (the
 // function fetchSlice stores from), so region, period, dims, status and value attribute are
 // never re-interpreted here; only its database write half (stageRows onward) is left out.
-import type { CbsObservationRow, CbsSource } from '../cbs-adapter/types.ts';
+import type { CbsCode, CbsObservationRow, CbsSlice, CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
-import { buildStagedRows, type StagedRow } from './pipeline.ts';
+import { applyPeriodNoteStatus, buildStagedRows, periodNoteStatusConfig, type StagedRow } from './pipeline.ts';
 import type { RegistryUnits } from './validate.ts';
 import type { SliceRequest } from './slice-cache.ts';
 import { loadWarmScope, planWarmSlices } from './warm-plan.ts';
@@ -133,8 +133,9 @@ export async function compareTableWithSource(
     const otherDims = scope.dimensions.map((d) => d.name).filter((n) => n !== timeDim && n !== geoDim);
 
     // What fetchSlice reads from the registry and the stored labels before it converts rows.
-    const unitsRow = await db.query('select units from cbs_tables where id = $1', [tableId]);
+    const unitsRow = await db.query('select units, slice from cbs_tables where id = $1', [tableId]);
     const units = parseJsonb<RegistryUnits>(unitsRow.rows[0]?.units, {});
+    const registrySlice = parseJsonb<CbsSlice | null>(unitsRow.rows[0]?.slice, null);
     const periodLabels = await db.query('select code, status from dimension_labels where table_id = $1 and dimension = $2', [
       tableId,
       timeDim,
@@ -145,6 +146,15 @@ export async function compareTableWithSource(
     }
     const schema = await source.fetchTableSchema(tableId);
     const dimensionNames = schema.dimensions.map((d) => d.name);
+    // ADR 061 / ADR 065 (#358 item 3): a table whose periods carry no machine
+    // status gets each fetched cell's status from CBS's current period notes —
+    // the reader fetchSlice and the whole-table sync share — so statuses are
+    // compared for it too. Read once per report.
+    let notePeriodCodes: CbsCode[] | null = null;
+    const servedMeasures = schema.measures.filter((m) => m.dataType !== 'String' && Object.hasOwn(units, m.code));
+    if (periodNoteStatusConfig(tableId) !== undefined) {
+      notePeriodCodes = await source.fetchCodeList(tableId, timeDim);
+    }
 
     for (const [index, req] of plan.requests.entries()) {
       if (now() >= opts.deadline) {
@@ -166,6 +176,10 @@ export async function compareTableWithSource(
         const outside = rows.filter((r) => isOutside(r, req, timeDim));
         if (outside.length > 0) {
           throw new Error(`${outside.length} fetched row(s) fall outside the requested slice — the server-side filter did not hold`);
+        }
+        if (notePeriodCodes !== null) {
+          const notes = applyPeriodNoteStatus(tableId, registrySlice, servedMeasures, notePeriodCodes, timeDim, rows);
+          if (!notes.ok) throw new Error(`CBS's period notes cannot be read (period_parsing): ${notes.summary}`);
         }
         staged = buildStagedRows(rows, schema.dimensions, units, periodStatusByCode, tableId);
       } catch (err) {

@@ -81,16 +81,15 @@ export function fixtureMode(): FixtureMode {
 
 /**
  * Seed tables the slice-mode build keeps on the whole-table path, with the
- * reason. The slice store refuses a table whose periods carry no machine status
- * (`registerSchemaOnly` → `no_machine_period_status`); 70072ned's statuses come
- * from its reviewed period notes, which only syncTable reads (ADR 061; out of
- * scope for the one route per ADR 065 D3). So the slice-mode database is MIXED:
- * every other seed table slice-stored, this one whole-table.
+ * reason, used only when the slice store refuses them with
+ * `no_machine_period_status`. EMPTY since #358 item 3 (2026-09-30): 70072ned,
+ * whose statuses come from its reviewed period notes (ADR 061), was the one
+ * entry — the slice store now reads those notes with the whole-table sync's own
+ * reader, so every seed table is slice-stored in this build. Kept (empty) so a
+ * future table that genuinely cannot be slice-stored is added here with its
+ * reason, never skipped silently.
  */
-export const SLICE_BUILD_FULL_FALLBACK: Readonly<Record<string, string>> = {
-  '70072ned':
-    'no machine period status (statuses come from reviewed period notes, which only the whole-table sync reads)',
-};
+export const SLICE_BUILD_FULL_FALLBACK: Readonly<Record<string, string>> = {};
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 const CACHE_DIR = fileURLToPath(new URL('../../node_modules/.cache/cdc-fixture-db', import.meta.url));
 

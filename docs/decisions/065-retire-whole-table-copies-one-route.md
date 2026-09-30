@@ -95,7 +95,27 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
 - **Nothing in production storage has changed.** Every table is still whole-table; the daily kick finds no slice table
   and does nothing. Converting is step 9, owner present, one table at a time, each behind its own read-only proof.
 - **Still whole-table by necessity:** `70072ned` (no machine period status; not in production) and the four Eurostat
-  datasets.
+  datasets. *(Superseded for `70072ned` by the as-built note below.)*
+
+## As built (2026-09-30, #358 item 3) — period-note status in slice storage
+
+- **What changed:** `70072ned`'s cells get their provisional/final status from CBS's prose period notes (ADR 061). That
+  reader ran only in the whole-table sync; it is now one shared step, `applyPeriodNoteStatus`
+  (`src/ingestion/pipeline.ts`), called by the whole-table sync, by `fetchSlice` (so the warm job) and by the parity
+  report. Same seed map, same parser, same refusals (unreviewed heading, a "voorlopig" topic note, a registered scope
+  other than the one the map was reviewed for), same `period_parsing` stage and wording, and in both storages the table
+  is quarantined. `fetchSlice` reads CBS's current period code list with the cells (the stored labels do not keep the
+  note text), so one extra CBS request per slice request, for this table only. No schema change.
+- A pinned registration of a seed table with a reviewed note map is accepted (`no_machine_period_status` still refuses
+  every on-demand table); `convert-to-slices` no longer refuses `70072ned`.
+- **Proven hermetically:** the slice-mode test build now slice-stores every seed table, `70072ned` included, with the
+  same cells, statuses (Definitief, Voorlopig and NaderVoorlopig), registry row and labels as the whole-table build
+  (`tests/ingestion/slice-build-parity.test.ts`); an unrecognised note fails in slice mode with the whole-table
+  failure's exact stage and summary and quarantines (`tests/ingestion/slice-period-notes.test.ts`); a dry run and a
+  conversion of `70072ned` keep every cell and status (`tests/ingestion/convert.test.ts`).
+- **Assumption:** CBS moves the table's `Modified` date when it rewrites a period note, as it does for any other change.
+  A cached slice is re-confirmed without re-reading the notes while `Modified` stands still — the same assumption every
+  slice-stored table already makes about machine statuses.
 
 ## Alternatives considered
 

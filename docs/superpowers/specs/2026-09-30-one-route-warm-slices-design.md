@@ -56,7 +56,7 @@ existing answer, chart and benchmark result unchanged.
 - **D3 — Slice registration learns the pinned case.** `registerSchemaOnly` takes options: pinned, refresh cadence, the
   warm scope, and the measure curation (so units and fingerprint are computed exactly as the whole-table path computes
   them). Period status from reviewed notes (`70072ned`) is out of scope here — that table is not in production and its
-  load is on hold (ADR 065).
+  load is on hold (ADR 065). *(Built afterwards, #358 item 3: see ADR 065's as-built note.)*
 - **D4 — One warm job.** `warmPinnedTables(db, source, deadline)`: one slim catalogue call tells which pinned tables CBS
   changed (`ObservationsModified` against the stored CBS date); for those, and for any planned slice that was never
   fetched, it runs `ensureSlice` per planned request until done or until its time budget ends, then continues on the next
@@ -132,8 +132,8 @@ Steps 2, 3 and 4 touch different files and can be built in parallel; 5 needs all
   150 codes across all axes. With the job's real caps (25,000 cells, 6,000 characters, 150 codes) the 20 pinned tables
   need **108 requests** in total, 32 of them for `86141NED` (`npm run ingest:warm-plan -- --max-cells 25000`).
 - **Not done:** step 9 (converting production, owner present; then the deletions of D10). The test default stays
-  whole-table until production is converted, because production still runs that path. `70072ned` needs period-note
-  status in the slice store before the whole-table sync can be deleted.
+  whole-table until production is converted, because production still runs that path. `70072ned`'s period-note
+  status in the slice store is built (#358 item 3, ADR 065 as-built note).
 
 ## 5. Invariants at stake
 

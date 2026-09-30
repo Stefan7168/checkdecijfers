@@ -1307,7 +1307,11 @@ running when the budget ends is cut; it shows as `partial` with that request cou
   refuses, naming the code, if a pinned definition points at a code CBS no longer has: fix the definition in
   `src/registry/defaults.ts` first.
 
-**Not supported yet:** `70072ned` (its periods carry no machine status) stays whole-table; Eurostat datasets.
+**Not supported yet:** Eurostat datasets. (`70072ned`, whose periods carry no machine status, is supported since #358
+item 3: the warm job and the parity proof read its statuses from CBS's period notes with the same reviewed, fail-closed
+reader the whole-table sync uses. An unrecognised note quarantines the table in either storage — add the heading to its
+`periodNoteStatus` map in `src/ingestion/registry-seed.ts` after review, then `rebaseline-slices`. It is not in
+production yet, so there is nothing to convert until it is loaded.)
 
 ### New-CBS-data alert (#355, built session 149, 2026-09-29/30)
 
