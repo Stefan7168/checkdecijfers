@@ -1,6 +1,6 @@
 // Ingestion CLI (docs/05-data-rules.md: "Loud includes the operator" — Phase
 // 0's ingestion CLI fails with a non-zero exit and a plain-language summary
-// the owner can read). Commands: register, sync.
+// the owner can read). Commands: register, sync, warm.
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { maybeAlertIngestionRunProblems, type IngestionRunProblem } from '../answer/audit/alerts.ts';
@@ -8,6 +8,7 @@ import { sourceKeyForTableId } from '../sources/registry.ts';
 import { SEED_TABLES } from './registry-seed.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Correction, SyncResult } from './types.ts';
+import { warmPinnedTables, type WarmTableResult } from './warm-job.ts';
 
 interface Deps {
   db: Db;
@@ -18,12 +19,17 @@ interface Deps {
 }
 
 interface ParsedArgs {
-  command: 'register' | 'sync' | null;
+  command: 'register' | 'sync' | 'warm' | null;
   tableIds: string[];
   all: boolean;
   acceptNewCodes: boolean;
   rebaseline: boolean;
+  /** warm only: the run's time budget; null when the value given was not a positive number. */
+  budgetSeconds: number | null;
 }
+
+/** warm's default time budget (seconds). */
+const DEFAULT_WARM_BUDGET_SECONDS = 240;
 
 function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
@@ -31,21 +37,57 @@ function parseArgs(argv: string[]): ParsedArgs {
   let all = false;
   let acceptNewCodes = false;
   let rebaseline = false;
+  let budgetSeconds: number | null = DEFAULT_WARM_BUDGET_SECONDS;
 
-  for (const arg of rest) {
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i]!;
     if (arg === '--all') all = true;
     else if (arg === '--accept-new-codes') acceptNewCodes = true;
     else if (arg === '--rebaseline') rebaseline = true;
-    else if (!arg.startsWith('--')) tableIds.push(arg);
+    else if (arg === '--budget-seconds') {
+      const value = Number(rest[++i]);
+      budgetSeconds = Number.isFinite(value) && value > 0 ? value : null;
+    } else if (!arg.startsWith('--')) tableIds.push(arg);
   }
 
   return {
-    command: command === 'register' || command === 'sync' ? command : null,
+    command: command === 'register' || command === 'sync' || command === 'warm' ? command : null,
     tableIds,
     all: all || tableIds.length === 0,
     acceptNewCodes,
     rebaseline,
+    budgetSeconds,
   };
+}
+
+function printWarmResult(r: WarmTableResult): void {
+  const counts = `planned ${r.planned}, fetched ${r.fetched}, confirmed ${r.confirmed}, remaining ${r.remaining}`;
+  if (r.outcome === 'skipped') {
+    console.log(`[${r.tableId}] skipped — ${r.skippedReason ?? 'no reason recorded'}`);
+  } else if (r.outcome === 'failed') {
+    const f = r.failure;
+    console.log(
+      `[${r.tableId}] FAILED (${f?.stage ?? 'unknown'}${f?.quarantined ? ', table quarantined' : ''}) — ${counts}` +
+        `\n  ${f?.summary ?? '(no summary recorded)'}`,
+    );
+  } else {
+    console.log(`[${r.tableId}] ${r.outcome} — ${counts}`);
+  }
+}
+
+async function runWarm(args: ParsedArgs, deps: Deps): Promise<number> {
+  if (args.budgetSeconds === null) {
+    console.error('warm: --budget-seconds needs a positive number of seconds.');
+    return 1;
+  }
+  const deadline = Date.now() + args.budgetSeconds * 1000;
+  const results = await warmPinnedTables(deps.db, deps.source, {
+    deadline,
+    ...(args.tableIds.length > 0 ? { tableIds: args.tableIds } : {}),
+  });
+  if (results.length === 0) console.log('No pinned slice-cache table to warm.');
+  for (const r of results) printWarmResult(r);
+  return results.some((r) => r.outcome === 'failed') ? 1 : 0;
 }
 
 function formatCorrections(corrections: Correction[]): string[] {
@@ -83,8 +125,13 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
 
   if (args.command === null) {
     console.error('Usage: ingest <register|sync> [tableIds...] [--all] [--accept-new-codes] [--rebaseline]');
+    console.error('       ingest warm [tableIds...] [--budget-seconds N]');
     return 1;
   }
+
+  // ADR 065 step 2: fills pinned slice-cache tables' declared scopes. Never
+  // registers or converts a table.
+  if (args.command === 'warm') return runWarm(args, deps);
 
   if (args.command === 'register') {
     const start = Date.now();
@@ -200,7 +247,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   return allSucceeded ? 0 : 1;
 }
 
-// CLI entry: node --env-file=.env src/ingestion/cli.ts <register|sync> ...
+// CLI entry: node --env-file=.env src/ingestion/cli.ts <register|sync|warm> ...
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   const { connectFromEnv } = await import('../db/client.ts');
   const { applyMigrations } = await import('../db/migrate.ts');

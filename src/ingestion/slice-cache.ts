@@ -355,6 +355,8 @@ class SliceAbortError extends Error {
   }
 }
 
+type SliceFetchFailure = Extract<SliceFetchResult, { ok: false }>;
+
 function refuse(summary: string): SliceFetchResult {
   return { ok: false, stage: 'request', summary };
 }
@@ -593,8 +595,10 @@ export async function fetchSlice(
    * properties request — and, since the registry it reads below is already
    * current, checkSliceSchema naturally finds nothing left to refresh, so
    * this call never refreshes what ensureSlice already refreshed. No caller
-   * outside ensureSlice needs this. */
-  opts?: { schema?: CbsTableSchema },
+   * outside ensureSlice needs this.
+   * `maxCells` (ADR 065 step 2, the warm job): a larger cap for the job's own
+   * planned requests; absent ⇒ SLICE_MAX_CELLS, the per-question bound. */
+  opts?: { schema?: CbsTableSchema; maxCells?: number },
 ): Promise<SliceFetchResult> {
   // --- 1. Request validation (no network) -----------------------------------
   const registryResult = await db.query(
@@ -694,9 +698,10 @@ export async function fetchSlice(
 
   let cellCount = request.measures.length * request.periods.length;
   for (const dim of nonTimeDims) cellCount *= request.members[dim]!.length;
-  if (cellCount > SLICE_MAX_CELLS) {
+  const maxCells = opts?.maxCells ?? SLICE_MAX_CELLS;
+  if (cellCount > maxCells) {
     return refuse(
-      `The slice asks for ${cellCount} cells; at most ${SLICE_MAX_CELLS} can be fetched per question.`,
+      `The slice asks for ${cellCount} cells; at most ${maxCells} can be fetched per question.`,
     );
   }
 
@@ -982,73 +987,26 @@ export async function ensureSlice(
   source: CbsSource,
   tableId: string,
   req: SliceRequest,
+  /** ADR 065 step 2 (the warm job), both optional — absent ⇒ exactly the
+   * behaviour above. `maxCells` is handed to fetchSlice. `prechecked` is the
+   * run's one CBS schema read (`precheckSliceSchema`): this call then makes
+   * no properties request of its own, but still runs every check below
+   * against a FRESH registry read — the same fingerprint/unit/older-Modified
+   * checks, refresh-if-behind under the version fence, the staleness rule,
+   * the conditional confirmation, fetchSlice's own fence and lock — and a
+   * cache hit is confirmed as of the precheck's time, never later. */
+  opts?: { maxCells?: number; prechecked?: PrecheckedSchema },
 ): Promise<SliceFetchResult & { cached?: boolean }> {
   const filterKey = sliceFilterKey(req);
+  const fetchOpts = opts?.maxCells === undefined ? undefined : { maxCells: opts.maxCells };
 
-  const registryRow = (
-    await db.query(
-      `select ingest_mode, status, needs_review_reason, units, expected_dimensions,
-              schema_fingerprint, schema_cbs_modified, slice, version
-         from cbs_tables where id = $1`,
-      [tableId],
-    )
-  ).rows[0];
+  const step = await checkAndApplySliceSchema(db, source, tableId, opts?.prechecked);
   // Not a registered, active slice-cache table: no schema check applies here
   // — fetchSlice's own request validation gives the right refusal, with no
   // wasted network call for a request that would refuse anyway.
-  if (!registryRow || registryRow.ingest_mode !== 'slice_cache' || registryRow.status !== 'active') {
-    return fetchSlice(db, source, tableId, req);
-  }
-  const registry = parseSliceRegistry(registryRow);
-
-  // Fix round 1 of Task 5b: the moment CBS's Modified was asked for — what a
-  // cache hit below confirms the slice AS OF (never the later now() of the
-  // bump itself, which would over-claim by the length of this call).
-  const checkTakenAt = new Date().toISOString();
-  // ensureSlice's own failures (no fetchSlice batch exists yet) get their own
-  // failed batch row, same bookkeeping as fetchSlice's.
-  const failOwn = async (
-    stage: FailureStage,
-    summary: string,
-    quarantine: boolean,
-    fingerprint: string | null,
-  ): Promise<SliceFetchResult> => {
-    const batchInsert = await db.query(
-      `insert into ingestion_batches (table_id, outcome) values ($1, 'running') returning id`,
-      [tableId],
-    );
-    const batchId = Number(batchInsert.rows[0]!.id);
-    await failBatch(db, batchId, tableId, stage, summary, null, fingerprint, quarantine);
-    return { ok: false, stage, summary };
-  };
-  const check = await checkSliceSchema(source, tableId, registry);
-  if (!check.ok) return failOwn(check.stage, check.summary, check.quarantine, check.fingerprint);
-
-  const codeLists = check.codeLists;
-  if (check.refresh && codeLists) {
-    await db.withTransaction(async (tx) => {
-      // Same key and bound as fetchSlice's own write lock (and syncTable's
-      // rebaseline lock): EXCLUSIVE against a concurrent fetchSlice/eviction/
-      // rebaseline, and against resolveIntent's SHARED read of this table.
-      await tx.query("set local lock_timeout = '180s'");
-      await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
-      const fresh = (
-        await tx.query('select ingest_mode, status, version from cbs_tables where id = $1 for update', [tableId])
-      ).rows[0];
-      const moved =
-        !fresh ||
-        fresh.ingest_mode !== 'slice_cache' ||
-        fresh.status !== 'active' ||
-        Number(fresh.version) !== registry.version;
-      // A concurrent change (another refresh, a quarantine, an eviction) won
-      // the race: skip applying here rather than fighting it. fetchSlice
-      // below re-reads the registry itself and reacts to whatever is
-      // actually there now — no data is lost or duplicated either way, this
-      // call simply did not get to apply the refresh it found.
-      if (moved) return;
-      await applySchemaRefresh(tx, tableId, check.schema, check.numericMeasures, codeLists);
-    });
-  }
+  if (step.kind === 'inactive') return fetchSlice(db, source, tableId, req, fetchOpts);
+  if (step.kind === 'failed') return step.result;
+  const { schema, checkTakenAt } = step;
 
   const sliceRow = (
     await db.query(
@@ -1068,16 +1026,16 @@ export async function ensureSlice(
     // newer version); otherwise a cache hit needs CBS's Modified, fetched
     // just above, to be no newer than what this row already recorded.
     const stale = rowModifiedTime !== null && schemaModifiedTime !== null && rowModifiedTime < schemaModifiedTime;
-    const cbsModifiedTime = toTime(check.schema.modified);
+    const cbsModifiedTime = toTime(schema.modified);
     // Final-review fix 4, per slice: CBS's Modified OLDER than the version
     // this slice was already stored under (a lagging mirror) must never read
     // as "unchanged" and re-confirm it — refused like the registry-level case
     // checkSliceSchema already refuses: stage 'fetch', no quarantine, nothing
     // written beyond the failed batch.
     if (cbsModifiedTime !== null && rowModifiedTime !== null && cbsModifiedTime < rowModifiedTime) {
-      return failOwn(
+      return step.failOwn(
         'fetch',
-        `CBS reported table "${tableId}" as last modified ${String(check.schema.modified)}, OLDER than the ` +
+        `CBS reported table "${tableId}" as last modified ${String(schema.modified)}, OLDER than the ` +
           `${new Date(rowModifiedTime).toISOString()} this slice was stored under — a lagging or rolled-back ` +
           `CBS response. Nothing is fetched, stored or re-confirmed until CBS reports a current date again.`,
         false,
@@ -1116,5 +1074,137 @@ export async function ensureSlice(
     }
   }
 
-  return fetchSlice(db, source, tableId, req, { schema: check.schema });
+  return fetchSlice(db, source, tableId, req, { schema, ...fetchOpts });
+}
+
+/** One CBS schema read for a slice-cache table, taken once and reused by
+ * several `ensureSlice` calls (the warm job): the schema and the moment it was
+ * asked for. Only `precheckSliceSchema` makes one. */
+export interface PrecheckedSchema {
+  schema: CbsTableSchema;
+  /** ISO time the properties request was made — what a cache hit confirms AS OF. */
+  checkedAt: string;
+}
+
+export type PrecheckResult =
+  | { ok: true; prechecked: PrecheckedSchema }
+  | { ok: false; stage: FailureStage | 'request'; summary: string };
+
+/**
+ * ADR 065 step 2 (the warm job): `ensureSlice`'s own first step, alone — read
+ * CBS's schema once, run the fingerprint/unit/older-Modified checks against the
+ * registry (a failure records a failed batch and, where the rules say so,
+ * quarantines — exactly as ensureSlice does), and apply a refresh when CBS's
+ * Modified moved, under the per-table lock and version fence. Hand the result
+ * to `ensureSlice(…, { prechecked })` for every request of the run.
+ *
+ * Same lock rule as ensureSlice: never call this while holding resolveIntent's
+ * SHARED per-table lock.
+ */
+export async function precheckSliceSchema(db: Db, source: CbsSource, tableId: string): Promise<PrecheckResult> {
+  const step = await checkAndApplySliceSchema(db, source, tableId, undefined);
+  if (step.kind === 'inactive') {
+    return {
+      ok: false,
+      stage: 'request',
+      summary: `Table "${tableId}" is not a registered, active slice-cache table; its schema is not checked.`,
+    };
+  }
+  if (step.kind === 'failed') {
+    return { ok: false, stage: step.result.stage, summary: step.result.summary };
+  }
+  return { ok: true, prechecked: { schema: step.schema, checkedAt: step.checkTakenAt } };
+}
+
+type SchemaStep =
+  | { kind: 'inactive' }
+  | { kind: 'failed'; result: SliceFetchFailure }
+  | {
+      kind: 'ok';
+      schema: CbsTableSchema;
+      checkTakenAt: string;
+      failOwn: (
+        stage: FailureStage,
+        summary: string,
+        quarantine: boolean,
+        fingerprint: string | null,
+      ) => Promise<SliceFetchFailure>;
+    };
+
+/** ensureSlice's registry read + schema check + refresh-if-newer, shared with
+ * precheckSliceSchema so both run the one copy. `prechecked` replaces only the
+ * properties request and the check time; every check still runs against the
+ * registry as it is NOW. */
+async function checkAndApplySliceSchema(
+  db: Db,
+  source: CbsSource,
+  tableId: string,
+  prechecked: PrecheckedSchema | undefined,
+): Promise<SchemaStep> {
+  const registryRow = (
+    await db.query(
+      `select ingest_mode, status, needs_review_reason, units, expected_dimensions,
+              schema_fingerprint, schema_cbs_modified, slice, version
+         from cbs_tables where id = $1`,
+      [tableId],
+    )
+  ).rows[0];
+  if (!registryRow || registryRow.ingest_mode !== 'slice_cache' || registryRow.status !== 'active') {
+    return { kind: 'inactive' };
+  }
+  const registry = parseSliceRegistry(registryRow);
+
+  // Fix round 1 of Task 5b: the moment CBS's Modified was asked for — what a
+  // cache hit below confirms the slice AS OF (never the later now() of the
+  // bump itself, which would over-claim by the length of this call). With a
+  // precheck, the moment THAT read was made.
+  const checkTakenAt = prechecked?.checkedAt ?? new Date().toISOString();
+  // ensureSlice's own failures (no fetchSlice batch exists yet) get their own
+  // failed batch row, same bookkeeping as fetchSlice's.
+  const failOwn = async (
+    stage: FailureStage,
+    summary: string,
+    quarantine: boolean,
+    fingerprint: string | null,
+  ): Promise<SliceFetchFailure> => {
+    const batchInsert = await db.query(
+      `insert into ingestion_batches (table_id, outcome) values ($1, 'running') returning id`,
+      [tableId],
+    );
+    const batchId = Number(batchInsert.rows[0]!.id);
+    await failBatch(db, batchId, tableId, stage, summary, null, fingerprint, quarantine);
+    return { ok: false, stage, summary };
+  };
+  const check = await checkSliceSchema(source, tableId, registry, prechecked?.schema);
+  if (!check.ok) {
+    return { kind: 'failed', result: await failOwn(check.stage, check.summary, check.quarantine, check.fingerprint) };
+  }
+
+  const codeLists = check.codeLists;
+  if (check.refresh && codeLists) {
+    await db.withTransaction(async (tx) => {
+      // Same key and bound as fetchSlice's own write lock (and syncTable's
+      // rebaseline lock): EXCLUSIVE against a concurrent fetchSlice/eviction/
+      // rebaseline, and against resolveIntent's SHARED read of this table.
+      await tx.query("set local lock_timeout = '180s'");
+      await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
+      const fresh = (
+        await tx.query('select ingest_mode, status, version from cbs_tables where id = $1 for update', [tableId])
+      ).rows[0];
+      const moved =
+        !fresh ||
+        fresh.ingest_mode !== 'slice_cache' ||
+        fresh.status !== 'active' ||
+        Number(fresh.version) !== registry.version;
+      // A concurrent change (another refresh, a quarantine, an eviction) won
+      // the race: skip applying here rather than fighting it. fetchSlice
+      // below re-reads the registry itself and reacts to whatever is
+      // actually there now — no data is lost or duplicated either way, this
+      // call simply did not get to apply the refresh it found.
+      if (moved) return;
+      await applySchemaRefresh(tx, tableId, check.schema, check.numericMeasures, codeLists);
+    });
+  }
+
+  return { kind: 'ok', schema: check.schema, checkTakenAt, failOwn };
 }
