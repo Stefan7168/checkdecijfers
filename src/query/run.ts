@@ -397,7 +397,10 @@ async function diagnoseMissing(
     }
   }
 
-  if (sliceDiagnosis) {
+  // A PINNED slice table keeps its whole declared scope stored (the warm job, ADR 065), exactly as
+  // a whole-table sync does — so it takes the whole-table diagnosis below (a published period with
+  // no cell is the loud `no_data` gap), never the on-demand wording.
+  if (sliceDiagnosis && !q.table.pinned) {
     // Reached only when insideAnyFetchedSlice was true above (the outside
     // case already returned) — CBS genuinely returned no cell for this
     // coordinate, inside a slice we DID fetch. Reuses the EXISTING
