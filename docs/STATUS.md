@@ -17,15 +17,19 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
-**▶ SESSION 151 (2026-09-30, owner present) — DIRECTION CHANGE: THE WHOLE-TABLE COPIES ARE RETIRED (ADR
-  [065](decisions/065-retire-whole-table-copies-one-route.md), [#356](open-questions.md)):** the owner asked whether the architecture and
-  our own copy of CBS are worth it. Measured (blind test of a general assistant, a survey of CBS connectors, our usage): brief
-  [session-briefs/2026-09-30-architecture-and-value-research.md](session-briefs/2026-09-30-architecture-and-value-research.md). Owner decision:
-  one route for every table (fetch what a question needs, check, store), pinned definitions kept, the hand-refreshed copies deleted —
-  **but only after that route passes the 20-task benchmark; nothing is deleted yet.** Consequence for the 1 October plan: part A fits;
-  **parts B and C load or build on whole tables — owner decision: run part A ONLY, B and C are on hold.**
-  No further whole tables are loaded. The 2 tables behind this morning (`37789ksz`, `85770NED`) were refreshed (batches 62, 63).
-  Connector code study + reuse list: [#357](open-questions.md).
+**▶ SESSION 151 (2026-09-30, owner present) — THE WHOLE-TABLE COPIES ARE BEING RETIRED; EVERYTHING BUILT EXCEPT THE PRODUCTION CONVERSION
+  (ADR [065](decisions/065-retire-whole-table-copies-one-route.md), [#356](open-questions.md)–[#358](open-questions.md)):**
+  the owner asked whether the architecture and our own copy of CBS are worth it. Research (blind test of a general assistant, five open
+  CBS/Eurostat connectors read in source, our usage): [value research](session-briefs/2026-09-30-architecture-and-value-research.md),
+  [connector study](session-briefs/2026-09-30-cbs-connectors-code-study.md). Owner decisions: retire the hand-refreshed copies, keep the
+  pinned definitions; run ONLY part A of the 1 October plan (B and C are on hold). **Built, verified and pushed:** time limits on every
+  CBS/Eurostat call, a Eurostat freshness check that spots a frozen dataset, and the one-route machinery
+  ([design](superpowers/specs/2026-09-30-one-route-warm-slices-design.md)): planner, pinned slice registration, warm job, parity report,
+  supervised conversion + way back + re-baseline, a job route the daily run kicks, a failure e-mail. **Gate passed hermetically:** on
+  slice storage the 20-task benchmark scores 14/14, 6/6, 0 invented numbers, identical in answers, charts and refusals to whole-table
+  storage. **Read-only dry runs against production: all 17 pinned CBS tables are cell-for-cell identical to CBS and ready to convert.**
+  **Production storage is unchanged** — converting is RUNBOOK "Slice storage for the pinned tables", owner present, one table at a time.
+  Found + fixed by dogfooding: the login proxy redirected the two kicked job routes (`/api/warm-job`, `/api/table-lane-job`) to /login.
 
 **▶ SESSION 150 (2026-09-30, owner present) — EUROSTAT SIBLING TABLES LOADED (DARK), TWO DEFECTS FIXED ([#313](open-questions.md)):** owner asked
   for Eurostat data work; E2a step 5 ran for real: unemployment (2,112 rows), inflation (4,760), GDP growth (2,244) are registered, pinned and
