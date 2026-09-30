@@ -64,7 +64,7 @@ export async function alertSemanticCheckSkip(
  * when the RESEND_API_KEY/ADMIN_ALERT_EMAIL pair is unconfigured (the
  * caller's console.error line is the floor); throws on a failed send so each
  * caller's catch logs its own context label. */
-async function sendAdminAlertEmail(
+export async function sendAdminAlertEmail(
   subject: string,
   text: string,
   fetchImpl: typeof fetch,

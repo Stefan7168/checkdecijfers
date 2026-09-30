@@ -36,6 +36,7 @@ import { findStaleSyncs, loadStaleSyncCandidateRows } from '../../../backend/ing
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
 import { tableLaneJobDeps } from '../../../lib/table-lane-job-deps.ts';
+import { kickWarmJob } from '../../../lib/warm-job.ts';
 import { referenceDate, semanticCheckOptions } from '../../../lib/turn-options.ts';
 import { runHealthChecks } from '../health/checks.ts';
 
@@ -71,6 +72,12 @@ export async function GET(request: Request): Promise<Response> {
   if (auth !== `Bearer ${cronSecret}`) {
     return new Response('unauthorized', { status: 401 });
   }
+
+  // ADR 065 step 8: start the warm job (/api/warm-job) — it refreshes the pinned slice tables' stored cells and
+  // is its own invocation with its own 300s budget. Started HERE, before the steps below, and settled only at the
+  // end: the kick is fail-soft and dispatch-only (web/lib/cron-kick.ts, it cannot throw and stops waiting after
+  // ~10s), so it runs beside the steps and can neither delay nor fail them. Never awaited for the job's work.
+  const warmKick = kickWarmJob();
 
   try {
     const db = getDb();
@@ -200,6 +207,14 @@ export async function GET(request: Request): Promise<Response> {
       await maybeAlertNewCbsData({ behind });
     } catch (newCbsDataError) {
       console.warn('onboarding-cron: new-CBS-data check failed (job result unaffected):', newCbsDataError);
+    }
+
+    // The warm-job kick started above has long since been dispatched; this only makes sure its outcome is logged
+    // before the function returns. Its own guard keeps it from ever affecting the response.
+    try {
+      await warmKick;
+    } catch (warmKickError) {
+      console.warn('onboarding-cron: warm-job kick failed (job result unaffected):', warmKickError);
     }
 
     return Response.json(summary, { status: 200 });
