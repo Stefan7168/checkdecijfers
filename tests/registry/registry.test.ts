@@ -169,9 +169,12 @@ describe('E2a step 5: Eurostat sibling measures never regress the CBS apply', ()
     version: '2.0',
     class: 'dataset',
     label: 'Unemployment by sex and age - quarterly data',
-    id: ['s_adj', 'age', 'sex', 'unit', 'geo', 'time'],
-    size: [1, 1, 1, 1, 1, 1],
+    // `freq` included as in every real response (tests/fixtures/eurostat-siblings/une_rt_q.json):
+    // the adapter refuses a response that lacks a dimension the registration pins (#357).
+    id: ['freq', 's_adj', 'age', 'sex', 'unit', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1, 1],
     dimension: {
+      freq: { category: { index: { Q: 0 }, label: { Q: 'Quarterly' } } },
       s_adj: { category: { index: { SA: 0 }, label: { SA: 'Seasonally adjusted data' } } },
       age: { category: { index: { 'Y15-74': 0 }, label: { 'Y15-74': 'From 15 to 74 years' } } },
       sex: { category: { index: { T: 0 }, label: { T: 'Total' } } },

@@ -44,8 +44,8 @@ wording change in [CLAUDE.md](../../CLAUDE.md) is made only on the owner's expli
 
 ## The gate before anything is deleted
 
-The one route answers the 20 benchmark questions at the current gate (at least 12 of 14 answerable, 6 of 6 refusals, zero
-invented numbers), measured, with the whole-table copies out of the path. Until then the copies are the only working
+The 20 benchmark questions are answered at the current gate (at least 12 of 14 answerable, 6 of 6 refusals, zero
+invented numbers) from slice-stored data, measured, with the whole-table sync out of the path (the design's step 6). Until then the copies are the only working
 path and the benchmark's frozen key is pinned to them.
 
 **Known gaps between today's any-table lane and that gate** (from ADR 062's as-built notes, not re-measured):
@@ -61,8 +61,11 @@ path and the benchmark's frozen key is pinned to them.
 ## Order of work (each step measured before the next)
 
 1. Run part A of the 1 October recording plan (the any-table parser) and its benchmark (ADR 062 step 6).
-2. Design how the pinned definitions ride on the slice store, and how a first-time question is served fast enough. This
-   is a design round with the owner, then a plan — not started.
+2. Design how the pinned definitions ride on the slice store. **Written 2026-09-30 on the owner's delegation:**
+   [superpowers/specs/2026-09-30-one-route-warm-slices-design.md](../superpowers/specs/2026-09-30-one-route-warm-slices-design.md)
+   — the pinned tables keep their declared scope, a background job fills and refreshes it in bounded, validated slice
+   requests, the test suites switch to slice storage first, production converts one table at a time. First-time
+   questions about other tables stay the table lane (ADR 062).
 3. Build it dark; run the 20-task benchmark through it.
 4. Switch over; then delete, in this order: the hand-refresh procedure and its report/alert; the whole-table sync path;
    the 100-credit table request (already superseded by ADR 062); the stored cells that no shown chart or answer uses.
