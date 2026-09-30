@@ -61,6 +61,40 @@ export const EUROSTAT_DEFINITIVE_STATUS = 'Published';
  * `nullReasonLabels` key, so R11 can state the true reason. */
 export const EUROSTAT_NOT_AVAILABLE = ':';
 
+/** The status string every confidential cell is stored under (and its `valueAttribute`): the registered
+ * Eurostat flag `c`, whose `nullReasonLabels` entry states the reason ("door Eurostat niet gepubliceerd
+ * (vertrouwelijk)") exactly as CBS's `Confidential` does for a secret cell — value null, reason kept. */
+export const EUROSTAT_CONFIDENTIAL = 'c';
+
+/** Confidentiality codes (`CONF_STATUS`) that mean "Eurostat does not disseminate this value". */
+const WITHHELD_CONF_CODES: ReadonlySet<string> = new Set(['C', 'N', 'P']);
+/** The one confidentiality code that means nothing is withheld. */
+const FREE_CONF_CODE = 'F';
+
+/**
+ * #357 (study step 0, defect 3): Eurostat's JSON-stat `status` folds the confidentiality code behind a `|`:
+ * `"p"` is provisional, `"|C"` a confidential cell with no observation flag, `"b|C"` both. Splits it into the
+ * observation flag (`flag`, null when empty) and whether the value is withheld (`confidential`). The raw
+ * `"|C"` string is never stored: a caller turns `confidential` into the `c` flag and a null value.
+ *
+ * Only the codes above are understood. Any other confidentiality code refuses loudly (principle (c)): a
+ * cell we cannot classify is neither published nor guessed.
+ */
+export function splitEurostatStatus(raw: string | null, tableId: string): { flag: string | null; confidential: boolean } {
+  if (raw === null) return { flag: null, confidential: false };
+  const bar = raw.indexOf('|');
+  if (bar < 0) return { flag: raw === '' ? null : raw, confidential: raw === EUROSTAT_CONFIDENTIAL };
+  const flag = raw.slice(0, bar).trim();
+  const conf = raw.slice(bar + 1).trim().toUpperCase();
+  if (conf !== '' && !WITHHELD_CONF_CODES.has(conf) && conf !== FREE_CONF_CODE) {
+    throw new Error(
+      `Eurostat dataset '${tableId}': status '${raw}' carries a confidentiality code '${conf}' this adapter ` +
+        `does not know — refusing rather than guessing whether the value may be shown.`,
+    );
+  }
+  return { flag: flag === '' ? null : flag, confidential: WITHHELD_CONF_CODES.has(conf) || flag === EUROSTAT_CONFIDENTIAL };
+}
+
 /**
  * D6 licence exceptions ("licence exceptions enforced structurally at slice
  * time... pending the legal check in Assumption 2"): a STAND-IN EU/EFTA geo
@@ -514,8 +548,13 @@ export function parseJsonStatDataset(
     if (geoCode !== undefined && !matchesGeoRestriction(geoCode)) continue;
     if (!matchesSlice(sliceCoordinates, slice, nativeCode)) continue;
 
-    const value = valueAt(ds.value, offset);
-    const flag = statusByOffset.get(offset) ?? null;
+    // #357: the status may fold a confidentiality code in behind '|' ("|C"); split it. A confidential cell has NO
+    // value and is stored as the registered `c` flag (value null, reason kept), the way a CBS secret cell is
+    // (value null, valueAttribute 'Confidential') — never as the raw "|C" string, and never with a number
+    // Eurostat withholds (should a response carry one, it is dropped, not published).
+    const split = splitEurostatStatus(statusByOffset.get(offset) ?? null, tableId);
+    const value = split.confidential ? null : valueAt(ds.value, offset);
+    const flag = split.confidential ? EUROSTAT_CONFIDENTIAL : split.flag;
     // A real live-data finding (session 107): Eurostat's sparse `value`
     // representation routinely omits a cell from BOTH `value` and `status`
     // (no observation reported at all for that coordinate combination — a

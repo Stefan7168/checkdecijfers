@@ -23,6 +23,7 @@ import type {
 } from '../cbs-adapter/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
 import { BUDGET_ENDED_PHRASE, fetchAndRead, shortUrl } from '../sources/fetch-with-timeout.ts';
+import { classifyFailedResponse, classifyOkBody, EurostatPermanentError, isRetryableStatus } from './errors.ts';
 import {
   EU_EFTA_STAND_IN_GEO_CODES,
   parseJsonStatCatalog,
@@ -40,13 +41,35 @@ const CATALOGUE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/catalogue
 
 const FETCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_MS = 1500;
-// Time limit per attempt (#357). One dataset response can hold up to SYNC_CELL_THRESHOLD cells and
-// the catalogue file is several MB, so the limit is generous; its job is to end a hung connection.
-const REQUEST_TIMEOUT_MS = 300_000;
+
+/**
+ * Time limits (#357, study step 0 defect 1). Two kinds of call, each with a limit PER ATTEMPT and one TOTAL
+ * deadline per call that covers every attempt and retry wait (the old single 300 s x 3 attempts let one hung
+ * call use ~15 minutes, far past the table-lane job's 240 s budget, ADR 062).
+ *
+ * - `data`: a server-filtered slice request (one `CbsSlice`: the store route's <= 2,000-cell slices and the
+ *   registered sibling slices). Responses are small JSON documents; the connector study runs the same calls
+ *   on a 30 s limit. 30 s per attempt, 60 s per call: two full attempts fit, a third only follows a fast
+ *   failure. One call can then never take more than a quarter of the 240 s job budget, and ADR 062's rule of
+ *   claiming no new row with under 120 s left always leaves room for one whole call.
+ * - `bulk`: the catalogue "table of contents" file (several MB) and a whole-dataset read with no slice (the
+ *   legacy whole-table path, up to SYNC_CELL_THRESHOLD cells). Legitimately slower, so 120 s per attempt
+ *   (the study's limit for structure/bulk calls), 240 s per call (two attempts).
+ *
+ * The run budget (`stopAt`) still wins over both: a call never outlives it, and a call cut by it fails with
+ * BUDGET_ENDED_PHRASE (not a source failure), while one that used up its own total fails as an ordinary error.
+ */
+export type EurostatCallKind = 'data' | 'bulk';
+export const CALL_LIMITS: Readonly<Record<EurostatCallKind, { attemptMs: number; totalMs: number }>> = {
+  data: { attemptMs: 30_000, totalMs: 60_000 },
+  bulk: { attemptMs: 120_000, totalMs: 240_000 },
+};
 
 export interface StatisticsApiSourceOptions {
-  /** Per-attempt limit for every request (body read included). */
+  /** Per-attempt limit for every request (body read included); replaces both kinds' defaults (CALL_LIMITS). */
   timeoutMs?: number;
+  /** Total limit for one call, every attempt and retry wait included; replaces both kinds' defaults. */
+  totalMs?: number;
   /** Base of the linear retry backoff (attempt n waits n x this). */
   retryBackoffMs?: number;
   /** Epoch ms: the end of the run's time budget (the command line's --budget-seconds), the same contract as
@@ -275,13 +298,15 @@ export class StatisticsApiSource implements CbsSource {
    * fetchCodeList + fetchObservationCount + fetchObservations on one table. */
   private readonly cache = new Map<string, Promise<ParsedEurostatDataset>>();
 
-  private readonly timeoutMs: number;
+  private readonly timeoutMs: number | undefined;
+  private readonly totalMs: number | undefined;
   private readonly retryBackoffMs: number;
   private readonly stopAt: number | undefined;
 
   constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
-    this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+    this.timeoutMs = options.timeoutMs;
+    this.totalMs = options.totalMs;
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
     this.stopAt = options.stopAt;
   }
@@ -290,51 +315,93 @@ export class StatisticsApiSource implements CbsSource {
     return new Error(`Eurostat request stopped: ${BUDGET_ENDED_PHRASE} for ${shortUrl(url)}`);
   }
 
-  private async fetchWith<T>(url: string, headers: Record<string, string>, read: (res: Response) => Promise<T>): Promise<T> {
-    type Outcome = { body: T } | { failure: string };
+  /**
+   * One call = up to FETCH_ATTEMPTS attempts under ONE total deadline (the smaller of the call's own total and
+   * the run budget). Each attempt is limited to the smallest of its own limit, the time left of the call's total
+   * and the time left of the budget. Only transient failures are retried; a permanent one (errors.ts) is thrown
+   * at once.
+   */
+  private async fetchWith<T>(
+    url: string,
+    headers: Record<string, string>,
+    kind: EurostatCallKind,
+    read: (res: Response) => Promise<T>,
+  ): Promise<T> {
+    type Outcome = { body: T } | { failure: string } | { permanent: EurostatPermanentError };
+    const attemptMs = this.timeoutMs ?? CALL_LIMITS[kind].attemptMs;
+    const totalMs = this.totalMs ?? CALL_LIMITS[kind].totalMs;
+    const callDeadline = Date.now() + totalMs;
     let lastError: unknown;
+    let attemptsMade = 0;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
-      // The attempt's limit: its own, or what is left of the run's budget when that is less.
-      const left = this.stopAt === undefined ? Number.POSITIVE_INFINITY : this.stopAt - Date.now();
-      if (left <= 0) throw this.budgetEnded(url);
-      const capped = left < this.timeoutMs;
+      const budgetLeft = this.stopAt === undefined ? Number.POSITIVE_INFINITY : this.stopAt - Date.now();
+      if (budgetLeft <= 0) throw this.budgetEnded(url);
+      const callLeft = callDeadline - Date.now();
+      if (callLeft <= 0) break;
+      const ownLimit = Math.min(attemptMs, callLeft);
+      // Cut short by the run budget (rather than by the call's own limits): a timeout then means "budget ended".
+      const budgetCapped = budgetLeft < ownLimit;
+      const limit = budgetCapped ? budgetLeft : ownLimit;
+      attemptsMade = attempt;
       try {
         // One time limit per attempt, covering the body read too; a timeout is a failed attempt.
         const outcome = await fetchAndRead<Outcome>(
           url,
           { headers },
-          capped ? left : this.timeoutMs,
-          async (res) =>
-            res.ok
-              ? { body: await read(res) }
-              : { failure: `Eurostat request failed: ${res.status} ${res.statusText} for ${url}` },
+          limit,
+          async (res) => {
+            if (res.ok) return { body: await read(res) };
+            // A retryable status (408, 429, 5xx) is repeated without reading its body; any other non-2xx is
+            // permanent, and its body only words the summary.
+            if (isRetryableStatus(res.status)) {
+              return { failure: `Eurostat request failed: ${res.status} ${res.statusText} for ${shortUrl(url)}` };
+            }
+            let text = '';
+            try {
+              text = await res.text();
+            } catch {
+              // an unreadable error body leaves the summary to the status alone
+            }
+            return { permanent: classifyFailedResponse(res.status, text, url)! };
+          },
           this.fetchFn,
         );
         if ('body' in outcome) return outcome.body;
+        if ('permanent' in outcome) throw outcome.permanent;
         lastError = new Error(outcome.failure);
       } catch (err) {
+        // A permanent failure (from the status or from an error body inside a 200) is never retried.
+        if (err instanceof EurostatPermanentError) throw err;
         lastError = err;
       }
       if (this.stopAt !== undefined) {
         const timedOut = lastError instanceof Error && /timed out after/.test(lastError.message);
-        if ((capped && timedOut) || this.stopAt - Date.now() <= 0) throw this.budgetEnded(url);
+        if ((budgetCapped && timedOut) || this.stopAt - Date.now() <= 0) throw this.budgetEnded(url);
       }
       if (attempt < FETCH_ATTEMPTS) {
         const wait = this.retryBackoffMs * attempt;
-        // A wait that would reach the end of the budget is not started (ODataV4Source's rule).
+        // A wait that would reach the end of the budget is not started (ODataV4Source's rule); neither is one
+        // that would use up the rest of the call's own total.
         if (this.stopAt !== undefined && wait >= this.stopAt - Date.now()) throw this.budgetEnded(url);
+        if (wait >= callDeadline - Date.now()) break;
         await new Promise((resolve) => setTimeout(resolve, wait));
       }
     }
+    const why = lastError instanceof Error ? lastError.message : String(lastError);
     throw new Error(
-      `Eurostat request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
-        lastError instanceof Error ? lastError.message : String(lastError)
-      }`,
+      `Eurostat request failed after ${attemptsMade} attempt${attemptsMade === 1 ? '' : 's'} ` +
+        `(limit for one call: ${totalMs / 1000} s) for ${shortUrl(url)}: ${why}`,
     );
   }
 
-  private fetchJson(url: string): Promise<unknown> {
-    return this.fetchWith(url, { Accept: 'application/json' }, (res) => res.json());
+  private fetchJson(url: string, kind: EurostatCallKind): Promise<unknown> {
+    return this.fetchWith(url, { Accept: 'application/json' }, kind, async (res) => {
+      const body: unknown = await res.json();
+      // Eurostat can answer an HTTP 200 whose body is an error (413 warning, "no results"): permanent, not data.
+      const refused = classifyOkBody(body, url);
+      if (refused) throw refused;
+      return body;
+    });
   }
 
   /** The Catalogue "table of contents" endpoint returns tab-separated TEXT,
@@ -342,7 +409,7 @@ export class StatisticsApiSource implements CbsSource {
    * one endpoint gets a 406, not a JSON body. No `Accept` header at all,
    * matching what a live capture confirmed the server accepts. */
   private fetchText(url: string): Promise<string> {
-    return this.fetchWith(url, {}, (res) => res.text());
+    return this.fetchWith(url, {}, 'bulk', (res) => res.text());
   }
 
   private loadDataset(tableId: string, slice?: CbsSlice): Promise<ParsedEurostatDataset> {
@@ -383,7 +450,8 @@ export class StatisticsApiSource implements CbsSource {
     // STILL applies the full slice client-side afterwards (defence in depth —
     // the server filter narrows, the client filter still decides; unchanged).
     const url = buildRequestUrl(nativeCode, slice);
-    const raw = await this.fetchJson(url);
+    // A slice-bounded request is a `data` call; with no slice it is the whole dataset (`bulk`).
+    const raw = await this.fetchJson(url, slice ? 'data' : 'bulk');
     return parseJsonStatDataset(raw, tableId, slice);
   }
 
