@@ -158,6 +158,7 @@ export type RefusalReason =
   | 'region_unknown'
   | 'region_unavailable'
   | 'table_lane_too_large'
+  | 'table_lane_single_period'
   | 'cbs_unreachable'
   | 'table_lane_failed'
   /** Loud internal problems (data gap, failed derivation, inconsistency,

@@ -321,3 +321,74 @@ describe('fail-closed replacement rows of a lane turn reconstruct (fix round 1, 
     expect(reconstructionReport(record).problems).toEqual([]);
   });
 });
+
+// 2026-10-01 (#340, #342 (b)): the newly answered shapes reconstruct from the
+// stored row alone, like every other lane answer.
+describe('table-lane rows reconstruct (R8) — region class and period shapes', () => {
+  async function recordFor(question: string, spec: Parameters<typeof parseOutput>[2]): Promise<AuditRecord> {
+    const client = new StubParseClient(parseOutput(table, question, spec));
+    const plan = await planTableLane({ question, previousQuestion: null, table, choices: [], referenceDate: REF, client });
+    if (plan.kind === 'refuse') {
+      const audited = await respondTableLane(db, { row: laneRow({ question }), plan, fetch: null, referenceDate: REF, respondOptions: OPTIONS });
+      return (await loadAuditRecord(db, audited.auditId!))!;
+    }
+    if (plan.kind !== 'fetch') throw new Error(`expected fetch or refuse, got ${plan.kind}`);
+    const source = await laneSource();
+    const reg = await registerSchemaOnly(db, source, LANE_TABLE);
+    if (!reg.ok) throw new Error(reg.summary);
+    const fetched = await ensureSlice(db, source, LANE_TABLE, plan.slice);
+    if (!fetched.ok) throw new Error(fetched.summary);
+    const audited = await respondTableLane(db, {
+      row: laneRow({ question }),
+      plan,
+      fetch: { ok: true, filterKey: fetched.filterKey, fromCache: false },
+      referenceDate: REF,
+      respondOptions: OPTIONS,
+    });
+    if (audited.response.kind !== 'answer') throw new Error(`expected an answer, got ${audited.response.kind}`);
+    return (await loadAuditRecord(db, audited.auditId!))!;
+  }
+
+  it('a "welke provincie had de hoogste …" answer (regionSet + max) reconstructs cleanly', async () => {
+    const record = await recordFor('Welke provincie had in 2024 de hoogste gemiddelde verkoopprijs?', {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+      derivation: 'max',
+    });
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+
+  it('tamper: a class answer whose stored cells drop one province fails', async () => {
+    const record = await recordFor('Gemiddelde verkoopprijs per provincie in 2024?', {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+    });
+    const tampered = clone(record);
+    const answer = tampered.response as AnswerResponse;
+    answer.result.cells = answer.result.cells.slice(1);
+    expect(problemsOf(tampered).length).toBeGreaterThan(0);
+  });
+
+  it('a now-versus-5-years-ago difference answer reconstructs cleanly', async () => {
+    const record = await recordFor('Met hoeveel is de gemiddelde verkoopprijs in Amsterdam veranderd vergeleken met 5 jaar geleden?', {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'now_vs_ago', unit: 'year', amount: 5 },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+      derivation: 'difference',
+    });
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+
+  it('a table_lane_single_period refusal reconstructs cleanly', async () => {
+    const record = await recordFor('Hoeveel is de gemiddelde verkoopprijs in Amsterdam vorig jaar gestegen?', {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'relative', unit: 'year', offset: -1 },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+      derivation: 'difference',
+    });
+    expect((record.response as RefusalResponse).reason).toBe('table_lane_single_period');
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+});

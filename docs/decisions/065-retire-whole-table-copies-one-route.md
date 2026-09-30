@@ -55,7 +55,9 @@ path and the benchmark's frozen key is pinned to them.
   one request today (6.5 s median). Pages that must load instantly (homepage, gallery, the SEO page, embeds) need their
   cells stored ahead of the visit.
 - It refuses several question shapes the current path answers: a class of regions ("per province"), change over a year,
-  now-versus-then, date ranges, relative periods.
+  now-versus-then, date ranges, relative periods. **Update 2026-10-01:** built (dark, hermetic tests, no parser byte
+  change) for a class of regions (one period at a time), now-versus-N-ago, explicit date ranges and relative periods; change
+  during a year stays refused (needs the measure's stock-versus-flow reading) — ADR 062 "step 5 follow-up".
 - Slice-stored tables have no staleness warning and no recovery path after a quarantine.
 
 ## Order of work (each step measured before the next)

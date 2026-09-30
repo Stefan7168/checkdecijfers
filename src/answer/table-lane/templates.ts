@@ -20,7 +20,8 @@ export interface TableLaneTemplateContext {
   tableId: string;
   /** CBS's own table title; null/blank ⇒ the table id names the table. */
   tableTitle: string | null;
-  /** table_lane_period_missing only: the table's latest period code. */
+  /** table_lane_period_missing: the table's latest period code;
+   * table_lane_single_period: the one period the question resolved to. */
   latestPeriodCode?: string;
   /** Owner-readable diagnostic (never rendered): the plan's detail. */
   detail: string;
@@ -76,10 +77,25 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
       };
     }
     case 'table_lane_region_class':
+      // Since 2026-10-01 (#340) a class IS answered — for one period, over
+      // the table's own CBS region grouping; this text covers what is left.
       return {
-        nl: `Voor een hele groep regio's tegelijk (zoals alle provincies of gemeenten) kan ik uit CBS-tabel ${t} nog geen antwoord geven. Noem de plaats of regio die je bedoelt.`,
-        en: `I can't yet answer for a whole group of regions at once (such as all provinces or municipalities) from CBS table ${t}. Name the place or region you mean.`,
+        nl: `Deze vraag over een hele groep regio's (zoals alle provincies of gemeenten) kan ik niet uit CBS-tabel ${t} beantwoorden. Dat lukt alleen voor één periode tegelijk, en alleen als de tabel die groep zelf indeelt. Noem één jaar, kwartaal of maand, of de plaats die je bedoelt.`,
+        en: `I can't answer this question about a whole group of regions (such as all provinces or municipalities) from CBS table ${t}. That only works for one period at a time, and only when the table groups those regions itself. Name one year, quarter or month, or the place you mean.`,
       };
+    case 'table_lane_single_period': {
+      const only = ctx.latestPeriodCode;
+      return {
+        nl:
+          `Voor een verloop of een verandering zijn minstens twee perioden nodig, maar CBS-tabel ${t} heeft voor deze vraag maar één periode` +
+          (only !== undefined ? ` (${periodCodeToNl(only)})` : '') +
+          '. Vraag naar die ene periode, of noem een langere periode.',
+        en:
+          `A trend or a change needs at least two periods, but CBS table ${t} has only one period for this question` +
+          (only !== undefined ? ` (${periodCodeToEn(only)})` : '') +
+          '. Ask about that one period, or name a longer period.',
+      };
+    }
     case 'region_unknown':
       return {
         nl: `De plaats of regio die je noemt, staat niet in CBS-tabel ${t}. Controleer de naam of noem een andere plaats.`,

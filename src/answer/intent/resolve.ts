@@ -17,6 +17,20 @@ import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../
 import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
 import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
 import { activeEurostatSiblings } from '../../sources/eurostat-siblings.ts';
+import {
+  dateRangeCode,
+  dateRangeGrain,
+  dateRangeToMonths,
+  isSaneYear,
+  isSinglePeriodSelection,
+  monthIdxMonth,
+  monthIdxYear,
+  normalizeDerivation as normalizeSharedDerivation,
+  nowVsAgoGrain,
+  nowVsAgoPastCode,
+  relativePeriodCode,
+  stepPeriodCode,
+} from './period-rules.ts';
 import type {
   PeriodSpec,
   RankedCandidate,
@@ -359,113 +373,11 @@ async function resolveRegionScope(
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
-function isSaneYear(year: number): boolean {
-  return Number.isInteger(year) && year >= 1900 && year <= 2100;
-}
-
-// ---------------------------------------------------------------------------
-// Explicit date ranges (#77, ADR 023)
-// ---------------------------------------------------------------------------
-
-const isLeapYear = (year: number): boolean =>
-  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-
-/** Days in a calendar month (proleptic Gregorian) — the only calendar
- * knowledge the pipeline needs, and it lives HERE, not in the LLM: the model
- * copies dates verbatim, code judges them (ADR 023). */
-export function daysInMonth(year: number, month: number): number {
-  const lengths = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return lengths[month - 1]!;
-}
-
-type DateRangeSpec = Extract<PeriodSpec, { kind: 'date_range' }>;
-
-export type DateRangeMonths =
-  /** Whole-month boundaries: inclusive month indexes (year*12 + month-1). */
-  | { kind: 'months'; fromIdx: number; toIdx: number }
-  /** Real dates, but a boundary cuts a month — CBS data is monthly at
-   * finest, so this exits to an honest period clarification, never a
-   * silently widened window. */
-  | { kind: 'misaligned' }
-  | { kind: 'invalid'; message: string };
-
-/** Normalizes a raw date_range to whole months, deterministically:
- * validates the calendar fields (leap years included), applies the
- * exclusive-end rule for bare "tot" (minus one day; a month-only exclusive
- * end drops the named month), and checks that both boundaries land exactly
- * on month edges. Pure arithmetic — shared by derivation normalization and
- * period resolution so the two can never disagree. */
-export function dateRangeToMonths(spec: DateRangeSpec): DateRangeMonths {
-  for (const [label, b] of [['from', spec.from], ['to', spec.to]] as const) {
-    if (!isSaneYear(b.year)) return { kind: 'invalid', message: `${label} year ${b.year} is not a plausible year` };
-    if (!Number.isInteger(b.month) || b.month < 1 || b.month > 12) {
-      return { kind: 'invalid', message: `${label} month ${b.month} is not a valid month` };
-    }
-    if (b.day !== null && (!Number.isInteger(b.day) || b.day < 1 || b.day > daysInMonth(b.year, b.month))) {
-      return { kind: 'invalid', message: `${label} day ${b.day} does not exist in ${b.month}/${b.year}` };
-    }
-  }
-
-  const fromAligned = spec.from.day === null || spec.from.day === 1;
-
-  // Inclusive end month index + whether the end lands on a month edge.
-  let toIdx: number;
-  let toAligned: boolean;
-  if (spec.toInclusive) {
-    toIdx = spec.to.year * 12 + (spec.to.month - 1);
-    toAligned = spec.to.day === null || spec.to.day === daysInMonth(spec.to.year, spec.to.month);
-  } else if (spec.to.day === null) {
-    // "van maart tot juni 2021": the strict reading — juni itself excluded.
-    // The answer states its covered periods (R4), so the reading is visible,
-    // never a hidden guess.
-    toIdx = spec.to.year * 12 + (spec.to.month - 1) - 1;
-    toAligned = true;
-  } else if (spec.to.day === 1) {
-    // "tot 1 januari 2023" = through december 2022.
-    toIdx = spec.to.year * 12 + (spec.to.month - 1) - 1;
-    toAligned = true;
-  } else {
-    // "tot 20 maart" = through 19 maart. An exclusive day end can only land
-    // on a month edge via day 1 (handled above): day ≤ daysInMonth, so
-    // day − 1 always falls strictly inside the month.
-    toIdx = spec.to.year * 12 + (spec.to.month - 1);
-    toAligned = false;
-  }
-
-  if (!fromAligned || !toAligned) return { kind: 'misaligned' };
-
-  const fromIdx = spec.from.year * 12 + (spec.from.month - 1);
-  if (fromIdx > toIdx) {
-    return { kind: 'invalid', message: 'the date range is empty or runs backwards' };
-  }
-  return { kind: 'months', fromIdx, toIdx };
-}
-
-const monthIdxYear = (idx: number): number => Math.floor(idx / 12);
-const monthIdxMonth = (idx: number): number => (idx % 12) + 1;
-
-/** Steps a CBS period code by `steps` positions at its own grain (negative =
- * back): 2026KW01 −20 → 2021KW01, 2026MM06 −60 → 2021MM06. Null when the code
- * does not parse — callers fail loudly, never step a code they can't read. */
-export function stepPeriodCode(code: string, steps: number): string | null {
-  // Fail-loud covers BOTH arguments: a fractional/NaN step would otherwise
-  // produce a plausible-looking garbage code ('2026KW2.5') — exactly the kind
-  // of silently-wrong value principle (c) exists to prevent (review finding,
-  // 2026-07-04; unreachable from current call sites, but this is exported).
-  if (!Number.isInteger(steps)) return null;
-  const match = /^(\d{4})(JJ|KW|MM)(\d{2})$/.exec(code);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const grain = match[2] as 'JJ' | 'KW' | 'MM';
-  if (grain === 'JJ') return `${year + steps}JJ00`;
-  const perYear = grain === 'KW' ? 4 : 12;
-  const index = Number(match[3]);
-  if (index < 1 || index > perYear) return null;
-  const absolute = year * perYear + (index - 1) + steps;
-  const steppedYear = Math.floor(absolute / perYear);
-  const steppedIndex = ((absolute % perYear) + perYear) % perYear + 1;
-  return `${steppedYear}${grain}${pad2(steppedIndex)}`;
-}
+// The pure period arithmetic (date ranges, stepping, now-versus-then,
+// relative periods) and the derivation rules live in ./period-rules.ts since
+// 2026-10-01, shared with the table lane so the two lanes can never drift.
+// Re-exported here so every existing importer of this module is unchanged.
+export { daysInMonth, dateRangeToMonths, stepPeriodCode, type DateRangeMonths } from './period-rules.ts';
 
 /** Grains published AT THE CANONICAL COORDINATE (mergedDims) — never the bare
  * measure: unemployment's yearly cells exist only un-corrected, so JJ is not
@@ -679,14 +591,7 @@ async function resolvePeriod(
       if (!Number.isInteger(spec.amount) || spec.amount < 1 || spec.amount > 120) {
         return periodFailure('period_invalid', `a comparison ${spec.amount} ${spec.unit}s back is not supported (1..120)`);
       }
-      const expressible: Record<typeof spec.unit, ('JJ' | 'KW' | 'MM')[]> = {
-        month: ['MM'],
-        quarter: ['MM', 'KW'],
-        year: ['MM', 'KW', 'JJ'],
-      };
-      const grain = (['MM', 'KW', 'JJ'] as const).find(
-        (g) => expressible[spec.unit].includes(g) && grains.has(g),
-      );
+      const grain = nowVsAgoGrain(spec.unit, (g) => grains.has(g));
       if (!grain) {
         return periodFailure(
           'grain_unavailable',
@@ -696,19 +601,14 @@ async function resolvePeriod(
       }
       const latest = await latestPeriod(db, canonical, grain);
       if (!latest) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
-      const steps: Record<'JJ' | 'KW' | 'MM', Partial<Record<typeof spec.unit, number>>> = {
-        MM: { month: 1, quarter: 3, year: 12 },
-        KW: { quarter: 1, year: 4 },
-        JJ: { year: 1 },
-      };
-      const stepsPerUnit = steps[grain][spec.unit];
-      if (!stepsPerUnit) {
-        // Unreachable by construction (grain ∈ expressible[unit]) — fail
-        // loudly rather than step by NaN if the two tables ever drift.
+      const pastCode = nowVsAgoPastCode(latest, grain, spec);
+      if (!pastCode.ok && pastCode.failure === 'unit') {
+        // Unreachable by construction (nowVsAgoGrain only returns a grain that
+        // expresses the unit) — fail loudly rather than step by NaN.
         return periodFailure('period_invalid', `grain ${grain} cannot express unit "${spec.unit}"`);
       }
-      const past = stepPeriodCode(latest, -(spec.amount * stepsPerUnit));
-      if (!past) return periodFailure('period_invalid', `freshest period code "${latest}" cannot be stepped — data needs review`);
+      if (!pastCode.ok) return periodFailure('period_invalid', `freshest period code "${latest}" cannot be stepped — data needs review`);
+      const past = pastCode.code;
       return { ok: true, period: { kind: 'codes', codes: [past, latest] }, impliedRecency: true };
     }
     case 'change_over_year': {
@@ -738,26 +638,17 @@ async function resolvePeriod(
         );
       }
       const { fromIdx, toIdx } = months;
-      const fromMonth = monthIdxMonth(fromIdx);
-      const toMonth = monthIdxMonth(toIdx);
       if (fromIdx === toIdx) {
         // A single whole month — expressible only at MM grain.
         const gate = requireGrain('MM');
         if (gate) return gate;
         return {
           ok: true,
-          period: { kind: 'codes', codes: [`${monthIdxYear(fromIdx)}MM${pad2(fromMonth)}`] },
+          period: { kind: 'codes', codes: [`${monthIdxYear(fromIdx)}MM${pad2(monthIdxMonth(fromIdx))}`] },
           impliedRecency: false,
         };
       }
-      const expressesExactly: Record<'JJ' | 'KW' | 'MM', boolean> = {
-        MM: true,
-        KW: [1, 4, 7, 10].includes(fromMonth) && [3, 6, 9, 12].includes(toMonth),
-        JJ: fromMonth === 1 && toMonth === 12,
-      };
-      const grain = (['MM', 'KW', 'JJ'] as const).find(
-        (g) => grains.has(g) && expressesExactly[g],
-      );
+      const grain = dateRangeGrain(months, (g) => grains.has(g));
       if (!grain) {
         return periodFailure(
           'grain_unavailable',
@@ -765,16 +656,9 @@ async function resolvePeriod(
           [...grains].sort().map((g) => GRAIN_LABEL[g] ?? g),
         );
       }
-      const code = (idx: number): string => {
-        const year = monthIdxYear(idx);
-        const month = monthIdxMonth(idx);
-        if (grain === 'JJ') return `${year}JJ00`;
-        if (grain === 'KW') return `${year}KW${pad2(Math.ceil(month / 3))}`;
-        return `${year}MM${pad2(month)}`;
-      };
       return {
         ok: true,
-        period: { kind: 'range', from: code(fromIdx), to: code(toIdx) },
+        period: { kind: 'range', from: dateRangeCode(fromIdx, grain), to: dateRangeCode(toIdx, grain) },
         impliedRecency: false,
       };
     }
@@ -782,26 +666,10 @@ async function resolvePeriod(
       if (!Number.isInteger(spec.offset) || spec.offset > 0 || spec.offset < -120) {
         return periodFailure('period_invalid', `relative offset ${spec.offset} is not supported (0..-120)`);
       }
-      if (spec.unit === 'month') {
-        const gate = requireGrain('MM');
-        if (gate) return gate;
-        const index = reference.year * 12 + (reference.month - 1) + spec.offset;
-        const year = Math.floor(index / 12);
-        const month = (index % 12) + 1;
-        return { ok: true, period: { kind: 'codes', codes: [`${year}MM${pad2(month)}`] }, impliedRecency: true };
-      }
-      if (spec.unit === 'quarter') {
-        const gate = requireGrain('KW');
-        if (gate) return gate;
-        const currentQuarter = Math.floor((reference.month - 1) / 3);
-        const index = reference.year * 4 + currentQuarter + spec.offset;
-        const year = Math.floor(index / 4);
-        const quarter = (index % 4) + 1;
-        return { ok: true, period: { kind: 'codes', codes: [`${year}KW${pad2(quarter)}`] }, impliedRecency: true };
-      }
-      const gate = requireGrain('JJ');
+      const relative = relativePeriodCode(spec, reference);
+      const gate = requireGrain(relative.grain);
       if (gate) return gate;
-      return { ok: true, period: { kind: 'codes', codes: [`${reference.year + spec.offset}JJ00`] }, impliedRecency: true };
+      return { ok: true, period: { kind: 'codes', codes: [relative.code] }, impliedRecency: true };
     }
     case 'latest': {
       // Present tense resolves to the freshest PUBLISHED period at the finest
@@ -919,40 +787,9 @@ async function defaultTrendWindow(
 // Candidate assembly
 // ---------------------------------------------------------------------------
 
+/** The shared derivation rule (./period-rules.ts), over one candidate. */
 function normalizeDerivation(candidate: RawCandidate): RawCandidate['derivation'] {
-  // The period spec is the stronger signal than the LLM's derivation hint.
-  if (candidate.period.kind === 'change_over_year') return 'difference';
-  // Open-ended and last-n windows are series by construction, same as an
-  // explicit year range — even under a 'difference' hint ("met hoeveel
-  // gestegen sinds 2015"): the pre-registered direction derivation carries
-  // the honest net change, while a difference over >2 cells could never
-  // execute. Exceptions: last_n with n = 1 is a single period, not a window
-  // (its hint stands); now_vs_ago keeps its hint too — none and difference
-  // are both meaningful over exactly two periods.
-  if (
-    candidate.period.kind === 'year_range' ||
-    candidate.period.kind === 'since' ||
-    (candidate.period.kind === 'last_n' && candidate.period.n !== 1)
-  ) {
-    return 'series';
-  }
-  // An explicit date range spanning several whole months is a series by the
-  // same reasoning; a single-month or not-yet-normalizable one keeps its hint
-  // (resolution handles the invalid/misaligned exits). Shares the resolver's
-  // own normalization so the two can never disagree (ADR 023).
-  if (candidate.period.kind === 'date_range') {
-    const months = dateRangeToMonths(candidate.period);
-    if (months.kind === 'months' && months.fromIdx < months.toIdx) return 'series';
-  }
-  return candidate.derivation;
-}
-
-/** Structurally single-period selections: one explicit code, or a range whose
- * ends coincide. A from<to range can still turn out sparse — completeness
- * stays the query layer's job; this only names shapes that can NEVER be
- * multi-period. */
-function isSinglePeriodSelection(period: IntentPeriod): boolean {
-  return period.kind === 'codes' ? period.codes.length < 2 : period.from === period.to;
+  return normalizeSharedDerivation(candidate.period, candidate.derivation);
 }
 
 /** Clarification option for the degenerate open-range shape: "{jaar} tot en

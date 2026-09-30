@@ -224,10 +224,10 @@ describe('planTableLane — refusals, in order', () => {
     expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_period_grain' });
   });
 
-  it('6. a region class → table_lane_region_class', async () => {
-    const { plan: p } = await plan(population, 'Inwoners per provincie in 2024?', {
+  it('6. a region class over several periods → table_lane_region_class (one period at a time), before any fetch', async () => {
+    const { plan: p } = await plan(population, 'Inwoners per provincie van 2020 tot en met 2024?', {
       measureCode: 'M000352',
-      period: { kind: 'year', year: 2024 },
+      period: { kind: 'year_range', fromYear: 2020, toYear: 2024 },
       regionScope: 'all_provincies',
     });
     expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_region_class' });
@@ -661,5 +661,271 @@ describe('selectionNote', () => {
   it('null when nothing is fixed', () => {
     expect(selectionNote({ named: [], defaults: [] }, 'nl')).toBeNull();
     expect(selectionNote({ named: [], defaults: [] }, 'en')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2026-10-01 (#340): region classes — the curated rules over the table's own
+// CBS dimension groups; the intent carries `regionSet`, the slice the roster.
+// ---------------------------------------------------------------------------
+
+const PROVINCES = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26', 'PV27', 'PV28', 'PV29', 'PV30', 'PV31'];
+
+function groupCodes(table: TableLaneTable, dim: string, group: string): string[] {
+  return table.codeLists[dim]!.filter((c) => c.dimensionGroup === group).map((c) => c.code);
+}
+
+describe('planTableLane — region classes', () => {
+  it('"per provincie" → fetch: the 12 CBS provinces as the slice, regionSet on the intent, no named regions', async () => {
+    const { plan: p } = await plan(population, 'Hoeveel inwoners had elke provincie op 1 januari 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.slice.members.RegioS).toEqual(PROVINCES);
+    expect(p.slice.periods).toEqual(['2024JJ00']);
+    expect(p.intent.regionSet).toEqual({ kind: 'all_provincies' });
+    expect(p.intent).not.toHaveProperty('regions');
+    expect(p.intent.derivation).toBe('none');
+    // The class is not a fixed coordinate: the selection names none for RegioS.
+    expect([...p.selection.named, ...p.selection.defaults].some((s) => s.dimension === 'RegioS')).toBe(false);
+  });
+
+  it('"welke provincie had de meeste …" → max over the class (the query layer ranks it)', async () => {
+    const { plan: p } = await plan(population, 'Welke provincie had op 1 januari 2024 de meeste inwoners?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+      derivation: 'max',
+    });
+    expect(p).toMatchObject({ kind: 'fetch', intent: { regionSet: { kind: 'all_provincies' }, derivation: 'max' } });
+  });
+
+  it('"per landsdeel" → the 4 LD codes', async () => {
+    const { plan: p } = await plan(population, 'Inwoners per landsdeel in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_landsdelen',
+    });
+    expect(p).toMatchObject({ kind: 'fetch', slice: { members: { RegioS: ['LD01', 'LD02', 'LD03', 'LD04'] } } });
+  });
+
+  it('"de gemeenten in Utrecht" → the province resolves as a provincie (PV26), the roster is CBS group GMPV26', async () => {
+    const { plan: p } = await plan(population, 'Welke gemeente in Utrecht had in 2024 de meeste inwoners?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regions: [{ name: 'Utrecht', kind: 'onbekend' }],
+      regionScope: 'gemeenten_in_provincie',
+      derivation: 'max',
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.intent.regionSet).toEqual({ kind: 'gemeenten_in_provincie', parent: 'PV26' });
+    expect(p.intent).not.toHaveProperty('regions');
+    expect(p.slice.members.RegioS).toEqual(groupCodes(population, 'RegioS', 'GMPV26'));
+    expect(p.slice.members.RegioS).toHaveLength(54);
+  });
+
+  it('"alle gemeenten" → the union of every province\'s gemeente group, never the GM prefix (GM0997 "OVERIG" excluded)', async () => {
+    const { plan: p } = await plan(population, 'Inwoners van alle gemeenten in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_gemeenten',
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    const expected = PROVINCES.flatMap((pv) => groupCodes(population, 'RegioS', `GM${pv}`));
+    expect(new Set(p.slice.members.RegioS)).toEqual(new Set(expected));
+    expect(p.slice.members.RegioS).toHaveLength(834);
+    expect(p.slice.members.RegioS).not.toContain('GM0997');
+  });
+
+  it('"de gemeenten in Nederland" (only Nederland named) → every gemeente', async () => {
+    const { plan: p } = await plan(population, 'Inwoners van de gemeenten in Nederland in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regions: [{ name: 'Nederland', kind: 'land' }],
+      regionScope: 'gemeenten_in_provincie',
+    });
+    expect(p).toMatchObject({ kind: 'fetch', intent: { regionSet: { kind: 'all_gemeenten' } } });
+  });
+
+  it('gemeenten_in_provincie naming no province, or two → region_unknown (never a guessed province)', async () => {
+    const none = await plan(population, 'Welke gemeente in de provincie had de meeste inwoners in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'gemeenten_in_provincie',
+    });
+    expect(none.plan).toMatchObject({ kind: 'refuse', reason: 'region_unknown' });
+    const two = await plan(population, 'Gemeenten in Utrecht en Zeeland in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regions: [
+        { name: 'Utrecht', kind: 'provincie' },
+        { name: 'Zeeland', kind: 'provincie' },
+      ],
+      regionScope: 'gemeenten_in_provincie',
+    });
+    expect(two.plan).toMatchObject({ kind: 'refuse', reason: 'region_unknown' });
+  });
+
+  it('gemeenten_in_provincie with an unknown province → region_unknown', async () => {
+    const { plan: p } = await plan(population, 'Gemeenten in Atlantis in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regions: [{ name: 'Atlantis', kind: 'onbekend' }],
+      regionScope: 'gemeenten_in_provincie',
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'region_unknown' });
+  });
+
+  it('a class next to a NAMED place → the named place wins (the curated rule): regions, no regionSet', async () => {
+    const { plan: p } = await plan(population, 'Inwoners per provincie, en Amsterdam, in 2024?', {
+      measureCode: 'M000352',
+      period: { kind: 'year', year: 2024 },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+      regionScope: 'all_provincies',
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.intent.regions).toEqual(['GM0363']);
+    expect(p.intent).not.toHaveProperty('regionSet');
+  });
+
+  it('a class on a table whose regions are a plain (geo-like) dimension → table_lane_region_class', async () => {
+    const table = synthetic({
+      dims: [
+        {
+          name: 'Regio',
+          kind: 'Dimension',
+          title: 'Regio',
+          codes: PROVINCES.map((c) => ({ ...code(c, `${c} (PV)`), dimensionGroup: 'PV' })),
+        },
+      ],
+      periods: [code('2024JJ00', '2024')],
+    });
+    const { plan: p } = await plan(table, 'Aantal per provincie in 2024?', {
+      measureCode: 'M1',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_region_class' });
+  });
+
+  it('a GeoDimension without CBS province groups → table_lane_region_class (never a prefix scan)', async () => {
+    const table = synthetic({
+      dims: [
+        {
+          name: 'RegioS',
+          kind: 'GeoDimension',
+          title: 'Regio',
+          codes: [code('NL01', 'Nederland'), ...PROVINCES.map((c) => code(c, `${c} (PV)`))], // dimensionGroup null
+        },
+      ],
+      periods: [code('2024JJ00', '2024')],
+    });
+    const { plan: p } = await plan(table, 'Aantal per provincie in 2024?', {
+      measureCode: 'M1',
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_region_class' });
+    if (p.kind === 'refuse') expect(p.detail).toMatch(/dimension group "PV" is empty/);
+  });
+
+  it('a class on a national-only table → region_unavailable (the parser\'s own rule, unchanged)', async () => {
+    const { plan: p } = await plan(emissions, 'Uitstoot per provincie in 2020?', {
+      measureCode: 'D003040',
+      period: { kind: 'year', year: 2020 },
+      regionScope: 'all_provincies',
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'region_unavailable' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2026-10-01 (#342 (b)): now-versus-then, date ranges, relative periods and
+// the curated derivation rules.
+// ---------------------------------------------------------------------------
+
+describe('planTableLane — period shapes and derivations', () => {
+  it('"nu vergeleken met 5 jaar geleden" → two codes, the model\'s difference kept', async () => {
+    const { plan: p } = await plan(emissions, 'Met hoeveel is de uitstoot veranderd ten opzichte van 5 jaar geleden?', {
+      measureCode: 'D003040',
+      period: { kind: 'now_vs_ago', unit: 'year', amount: 5 },
+      derivation: 'difference',
+    });
+    expect(p).toMatchObject({
+      kind: 'fetch',
+      slice: { periods: ['2020JJ00', '2025JJ00'] },
+      intent: { period: { kind: 'codes', codes: ['2020JJ00', '2025JJ00'] }, derivation: 'difference' },
+    });
+  });
+
+  it('"vorig jaar" → the calendar year before the reference date, when the table lists it', async () => {
+    const { plan: p } = await plan(population, 'Hoeveel inwoners had Nederland vorig jaar?', {
+      measureCode: 'M000352',
+      period: { kind: 'relative', unit: 'year', offset: -1 },
+      regions: [{ name: 'Nederland', kind: 'land' }],
+    });
+    expect(p).toMatchObject({ kind: 'fetch', intent: { period: { kind: 'codes', codes: ['2025JJ00'] } } });
+  });
+
+  it('an explicit date range over whole years on a yearly table → those years, forced to a series', async () => {
+    const { plan: p } = await plan(emissions, 'Uitstoot van 1 januari 2018 tot en met 31 december 2020?', {
+      measureCode: 'D003040',
+      period: {
+        kind: 'date_range',
+        from: { year: 2018, month: 1, day: 1 },
+        to: { year: 2020, month: 12, day: 31 },
+        toInclusive: true,
+      },
+    });
+    expect(p).toMatchObject({
+      kind: 'fetch',
+      intent: { period: { kind: 'range', from: '2018JJ00', to: '2020JJ00' }, derivation: 'series' },
+    });
+  });
+
+  it('a date range that collapses to ONE year keeps the model\'s own hint (the curated collapse rule)', async () => {
+    const { plan: p } = await plan(emissions, 'Uitstoot van 1 januari tot en met 31 december 2020?', {
+      measureCode: 'D003040',
+      period: {
+        kind: 'date_range',
+        from: { year: 2020, month: 1, day: 1 },
+        to: { year: 2020, month: 12, day: 31 },
+        toInclusive: true,
+      },
+      derivation: 'none',
+    });
+    expect(p).toMatchObject({ kind: 'fetch', intent: { period: { kind: 'codes', codes: ['2020JJ00'] }, derivation: 'none' } });
+  });
+
+  it('a year range with a "difference" hint becomes a series (a difference over >2 cells cannot execute)', async () => {
+    const { plan: p } = await plan(emissions, 'Met hoeveel steeg de uitstoot van 2015 tot en met 2020?', {
+      measureCode: 'D003040',
+      period: { kind: 'year_range', fromYear: 2015, toYear: 2020 },
+      derivation: 'difference',
+    });
+    expect(p).toMatchObject({ kind: 'fetch', intent: { derivation: 'series' } });
+  });
+
+  it('a series over ONE period → table_lane_single_period, before any fetch', async () => {
+    const { plan: p } = await plan(emissions, 'Hoe ontwikkelde de uitstoot zich sinds 2025?', {
+      measureCode: 'D003040',
+      period: { kind: 'since', year: 2025, quarter: null, month: null },
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_single_period', latestPeriodCode: '2025JJ00' });
+  });
+
+  it('a difference over ONE period ("vorig jaar gestegen") → table_lane_single_period', async () => {
+    const { plan: p } = await plan(emissions, 'Hoeveel is de uitstoot vorig jaar gestegen?', {
+      measureCode: 'D003040',
+      period: { kind: 'relative', unit: 'year', offset: -1 },
+      derivation: 'difference',
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_single_period' });
   });
 });

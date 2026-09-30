@@ -8,7 +8,7 @@ import type { CbsSource } from '../../src/cbs-adapter/types.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import { buildTableParseSchema } from '../../src/answer/table-parse/input.ts';
 import { TABLE_PARSE_SCHEMA_VERSION } from '../../src/answer/table-parse/parse.ts';
-import type { PeriodSpec, RegionTerm } from '../../src/answer/intent/types.ts';
+import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../../src/answer/intent/types.ts';
 import type { TableLaneTable } from '../../src/answer/table-lane/types.ts';
 import type { TableLaneRow } from '../../src/ingestion/table-lane-store.ts';
 
@@ -58,7 +58,15 @@ export class ThrowingAnswerClient implements LlmClient {
 export function parseOutput(
   table: TableLaneTable,
   question: string,
-  spec: { measureCode: string; period: PeriodSpec; regions?: RegionTerm[]; confidence?: number; breakdowns?: Record<string, string> },
+  spec: {
+    measureCode: string;
+    period: PeriodSpec;
+    regions?: RegionTerm[];
+    confidence?: number;
+    breakdowns?: Record<string, string>;
+    regionScope?: RegionScopeKind | null;
+    derivation?: 'none' | 'difference' | 'max' | 'series';
+  },
 ): string {
   const offered = buildTableParseSchema(table.schema, table.codeLists, question);
   return JSON.stringify({
@@ -67,8 +75,8 @@ export function parseOutput(
     breakdowns: offered.breakdowns.map((b) => ({ dimension: b.name, choice: spec.breakdowns?.[b.name] ?? 'niet_genoemd' })),
     period: spec.period,
     regions: spec.regions ?? [],
-    regionScope: null,
-    derivation: 'none',
+    regionScope: spec.regionScope ?? null,
+    derivation: spec.derivation ?? 'none',
     confidence: spec.confidence ?? 0.95,
     reading: 'test',
   });

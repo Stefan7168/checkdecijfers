@@ -53,6 +53,7 @@ import type { LlmClient, LlmRequest, LlmUsage } from '../llm/client.ts';
 import { requestHash } from '../llm/client.ts';
 import { oneOfToAnyOf } from '../llm/json-schema.ts';
 import { periodSpecSchema, regionScopeSchema, regionTermSchema } from '../intent/schema.ts';
+import { dateRangeGrain, dateRangeToMonths } from '../intent/period-rules.ts';
 import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
 import { REGION_MEMBER_CODE, memberPlaceKey, placeKindAllowsCode, readerPlaceKey, readerPlaceKinds } from './places.ts';
@@ -233,8 +234,10 @@ export function tableParseJsonSchema(): Record<string, unknown> {
 
 /** Grain mapping ruling (controller): a period spec whose grain the table
  * does not publish sets `periodGrainUnavailable`. `latest`/`none` never
- * require a grain — they carry no explicit period precision to check. */
-function requiredGrain(period: PeriodSpec): PeriodGrain | null {
+ * require a grain — they carry no explicit period precision to check.
+ * `date_range` is not a single grain (2026-10-01, #342 (b)): see
+ * dateRangeGrainUnavailable. */
+function requiredGrain(period: Exclude<PeriodSpec, { kind: 'date_range' }>): PeriodGrain | null {
   switch (period.kind) {
     case 'year':
     case 'year_range':
@@ -243,7 +246,6 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
     case 'quarter':
       return 'KW';
     case 'month':
-    case 'date_range':
       return 'MM';
     case 'since':
       if (period.month !== null) return 'MM';
@@ -257,6 +259,27 @@ function requiredGrain(period: PeriodSpec): PeriodGrain | null {
     case 'none':
       return null;
   }
+}
+
+function grainUnavailable(grain: PeriodGrain | null, published: PeriodGrain[]): boolean {
+  return grain !== null && !published.includes(grain);
+}
+
+/** An explicit date range (the curated rule, ADR 023 — shared through
+ * src/answer/intent/period-rules.ts) is expressible at every grain whose
+ * periods line up with both whole-month boundaries: "1 januari tot en met 31
+ * december 2022" is exactly the year 2022, so a yearly-only table serves it
+ * without any adaptation. The flag is set only when NO published grain
+ * expresses the boundaries. A range that is not whole months (invalid, or
+ * cutting into a month) is not flagged here — the table lane's period
+ * resolver refuses it with its own reason. */
+function dateRangeGrainUnavailable(
+  period: Extract<PeriodSpec, { kind: 'date_range' }>,
+  published: PeriodGrain[],
+): boolean {
+  const months = dateRangeToMonths(period);
+  if (months.kind !== 'months') return false;
+  return dateRangeGrain(months, (g) => published.includes(g)) === null;
 }
 
 /** The unit exactly as the prompt displays it (serializeTableParseInput's own
@@ -414,8 +437,10 @@ export function validateTableParseOutput(
   }
 
   // --- period grain availability: a signal, never a throw -------------------
-  const grain = requiredGrain(data.period);
-  const periodGrainUnavailable = grain !== null && !input.periodGrains.includes(grain);
+  const periodGrainUnavailable =
+    data.period.kind === 'date_range'
+      ? dateRangeGrainUnavailable(data.period, input.periodGrains)
+      : grainUnavailable(requiredGrain(data.period), input.periodGrains);
 
   const validated: TableParseResult = {
     measureCode,

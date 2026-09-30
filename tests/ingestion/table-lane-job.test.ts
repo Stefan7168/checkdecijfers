@@ -923,3 +923,158 @@ describe('runTableLaneJob — failures, retries and give-up', () => {
     expect(await getBalance(rawDb, userId)).toBe(80);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 2026-10-01 (#340, #342 (b)): the shapes the curated lane answered and the
+// table lane used to refuse — end to end through the REAL query layer, over
+// the stored slice (83625NED, FixtureSource cells), no LLM beyond the stub
+// parse. Every number in these answers comes out of runQuery; the assertions
+// check which cells and which registered derivation produced it.
+// ---------------------------------------------------------------------------
+
+describe('runTableLaneJob — region classes and period shapes answered end to end', () => {
+  interface AnswerEnvelope {
+    kind: string;
+    result: {
+      cells: { regionCode: string | null; periodCode: string; value: number | null }[];
+      derivations: { kind: string }[];
+      regionSet?: { scope: unknown; rosterSize: number; complete: boolean };
+      intent: { regionSet?: unknown; regions?: string[]; derivation: string };
+    };
+  }
+
+  async function answerFor(
+    question: string,
+    spec: Parameters<typeof parseOutput>[2],
+  ): Promise<{ audit: AuditRow; answer: AnswerEnvelope; source: SpySource }> {
+    const userId = await seedUser();
+    await queue(userId, { question });
+    const source = await makeSource();
+    const summary = await runTableLaneJob(deps(source, new ScriptedParseClient([parseOutput(lane, question, spec)])));
+    const rows = await audits(userId);
+    expect(rows).toHaveLength(1);
+    expect(summary.processed).toBe(1);
+    return { audit: rows[0]!, answer: rows[0]!.response as unknown as AnswerEnvelope, source };
+  }
+
+  const PROVINCES = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26', 'PV27', 'PV28', 'PV29', 'PV30', 'PV31'];
+
+  it('"per provincie" → an answer over the 12 CBS provinces, the class recorded as regionSet coverage', async () => {
+    const q = 'Wat was de gemiddelde verkoopprijs van een koopwoning per provincie in 2024?';
+    const { audit, answer, source } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_provincies',
+    });
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.intent.regionSet).toEqual({ kind: 'all_provincies' });
+    expect(answer.result.intent.regions).toBeUndefined();
+    expect(answer.result.cells.map((c) => c.regionCode).sort()).toEqual(PROVINCES);
+    expect(answer.result.cells.every((c) => c.periodCode === '2024JJ00')).toBe(true);
+    expect(answer.result.regionSet).toMatchObject({ scope: { kind: 'all_provincies' }, rosterSize: 12, complete: true });
+    // exactly the 12 provinces were fetched from CBS — the slice IS the roster
+    expect(source.observedSlices).toHaveLength(1);
+    expect([...source.observedSlices[0]!.dimensionIn!['RegioS']!].sort()).toEqual(PROVINCES);
+  });
+
+  it('"welke gemeente in Utrecht had de hoogste …" → the gemeenten of PV26 only, ranked by the registered max derivation', async () => {
+    const q = 'Welke gemeente in Utrecht had in 2024 de hoogste gemiddelde verkoopprijs van een koopwoning?';
+    const { audit, answer } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regions: [{ name: 'Utrecht', kind: 'onbekend' }],
+      regionScope: 'gemeenten_in_provincie',
+      derivation: 'max',
+    });
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.intent.regionSet).toEqual({ kind: 'gemeenten_in_provincie', parent: 'PV26' });
+    const utrechtGemeenten = lane.codeLists['RegioS']!.filter((c) => c.dimensionGroup === 'GMPV26').map((c) => c.code);
+    // The roster is CBS's group GMPV26 (42 codes, abolished gemeenten included);
+    // every served cell is one of them, and every roster member is accounted
+    // for — served, or recorded by the query layer as not applicable/withheld.
+    const coverage = answer.result.regionSet as unknown as {
+      rosterSize: number;
+      notApplicable: string[];
+      withheld: string[];
+      missing: string[];
+    };
+    expect(coverage.rosterSize).toBe(utrechtGemeenten.length);
+    const served = answer.result.cells.map((c) => c.regionCode!);
+    expect(served.every((code) => utrechtGemeenten.includes(code))).toBe(true);
+    expect(new Set([...served, ...coverage.notApplicable, ...coverage.withheld, ...coverage.missing])).toEqual(
+      new Set(utrechtGemeenten),
+    );
+    expect(answer.result.derivations.map((d) => d.kind)).toContain('max');
+  });
+
+  it('"nu vergeleken met 5 jaar geleden" for Amsterdam → 2020 and 2025, the change from the registered difference derivation', async () => {
+    const q = 'Met hoeveel is de gemiddelde verkoopprijs in Amsterdam veranderd vergeleken met 5 jaar geleden?';
+    const { audit, answer } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'now_vs_ago', unit: 'year', amount: 5 },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+      derivation: 'difference',
+    });
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.cells.map((c) => c.periodCode)).toEqual(['2020JJ00', '2025JJ00']);
+    expect(answer.result.derivations.map((d) => d.kind)).toContain('difference');
+  });
+
+  it('an explicit date range over whole years → a series over exactly those years', async () => {
+    const q = 'Wat was de gemiddelde verkoopprijs in Amsterdam van 1 januari 2020 tot en met 31 december 2022?';
+    const { audit, answer } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: {
+        kind: 'date_range',
+        from: { year: 2020, month: 1, day: 1 },
+        to: { year: 2022, month: 12, day: 31 },
+        toInclusive: true,
+      },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+    });
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.intent.derivation).toBe('series');
+    expect(answer.result.cells.map((c) => c.periodCode)).toEqual(['2020JJ00', '2021JJ00', '2022JJ00']);
+    expect(answer.result.derivations.map((d) => d.kind)).toContain('direction');
+  });
+
+  it('"vorig jaar" (reference 2026-09-29) → 2025', async () => {
+    const q = 'Wat was vorig jaar de gemiddelde verkoopprijs van een koopwoning in Amsterdam?';
+    const { audit, answer } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'relative', unit: 'year', offset: -1 },
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+    });
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.cells.map((c) => `${c.regionCode}:${c.periodCode}`)).toEqual(['GM0363:2025JJ00']);
+  });
+
+  it('"alle gemeenten" → the roster is fetched in pieces of at most 150 codes, and the query layer answers over all of it', async () => {
+    const q = 'Welke gemeente had in 2024 de hoogste gemiddelde verkoopprijs van een koopwoning?';
+    const { audit, answer, source } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regionScope: 'all_gemeenten',
+      derivation: 'max',
+    });
+    const roster = lane.codeLists['RegioS']!.filter((c) => /^GMPV\d\d$/.test(c.dimensionGroup ?? '')).map((c) => c.code);
+    const fetched = source.observedSlices.flatMap((s) => s!.dimensionIn!['RegioS']!);
+    expect(new Set(fetched)).toEqual(new Set(roster));
+    expect(source.observedSlices.length).toBeGreaterThan(1);
+    expect(audit.kind).toBe('answer');
+    expect(answer.result.regionSet).toMatchObject({ scope: { kind: 'all_gemeenten' }, rosterSize: roster.length });
+    expect(answer.result.derivations.map((d) => d.kind)).toContain('max');
+  });
+
+  it('a class over several years is refused before any CBS cell fetch (table_lane_region_class), net 0', async () => {
+    const q = 'Hoe ontwikkelde de gemiddelde verkoopprijs zich per provincie van 2020 tot en met 2024?';
+    const { audit, source } = await answerFor(q, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year_range', fromYear: 2020, toYear: 2024 },
+      regionScope: 'all_provincies',
+    });
+    expect(audit.kind).toBe('refusal');
+    expect(audit.refusalReason).toBe('table_lane_region_class');
+    expect(source.observedSlices).toHaveLength(0);
+  });
+});
