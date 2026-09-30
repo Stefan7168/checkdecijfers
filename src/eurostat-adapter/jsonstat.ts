@@ -61,6 +61,40 @@ export const EUROSTAT_DEFINITIVE_STATUS = 'Published';
  * `nullReasonLabels` key, so R11 can state the true reason. */
 export const EUROSTAT_NOT_AVAILABLE = ':';
 
+/** The status string every confidential cell is stored under (and its `valueAttribute`): the registered
+ * Eurostat flag `c`, whose `nullReasonLabels` entry states the reason ("door Eurostat niet gepubliceerd
+ * (vertrouwelijk)") exactly as CBS's `Confidential` does for a secret cell — value null, reason kept. */
+export const EUROSTAT_CONFIDENTIAL = 'c';
+
+/** Confidentiality codes (`CONF_STATUS`) that mean "Eurostat does not disseminate this value". */
+const WITHHELD_CONF_CODES: ReadonlySet<string> = new Set(['C', 'N', 'P']);
+/** The one confidentiality code that means nothing is withheld. */
+const FREE_CONF_CODE = 'F';
+
+/**
+ * #357 (study step 0, defect 3): Eurostat's JSON-stat `status` folds the confidentiality code behind a `|`:
+ * `"p"` is provisional, `"|C"` a confidential cell with no observation flag, `"b|C"` both. Splits it into the
+ * observation flag (`flag`, null when empty) and whether the value is withheld (`confidential`). The raw
+ * `"|C"` string is never stored: a caller turns `confidential` into the `c` flag and a null value.
+ *
+ * Only the codes above are understood. Any other confidentiality code refuses loudly (principle (c)): a
+ * cell we cannot classify is neither published nor guessed.
+ */
+export function splitEurostatStatus(raw: string | null, tableId: string): { flag: string | null; confidential: boolean } {
+  if (raw === null) return { flag: null, confidential: false };
+  const bar = raw.indexOf('|');
+  if (bar < 0) return { flag: raw === '' ? null : raw, confidential: raw === EUROSTAT_CONFIDENTIAL };
+  const flag = raw.slice(0, bar).trim();
+  const conf = raw.slice(bar + 1).trim().toUpperCase();
+  if (conf !== '' && !WITHHELD_CONF_CODES.has(conf) && conf !== FREE_CONF_CODE) {
+    throw new Error(
+      `Eurostat dataset '${tableId}': status '${raw}' carries a confidentiality code '${conf}' this adapter ` +
+        `does not know — refusing rather than guessing whether the value may be shown.`,
+    );
+  }
+  return { flag: flag === '' ? null : flag, confidential: WITHHELD_CONF_CODES.has(conf) || flag === EUROSTAT_CONFIDENTIAL };
+}
+
 /**
  * D6 licence exceptions ("licence exceptions enforced structurally at slice
  * time... pending the legal check in Assumption 2"): a STAND-IN EU/EFTA geo
@@ -73,14 +107,25 @@ export const EUROSTAT_NOT_AVAILABLE = ':';
  * Never widen this without checking Assumption 2 first; narrowing it is
  * always safe (principle c — under-inclusive means "excluded", never wrong).
  */
-export const EU_EFTA_STAND_IN_GEO_CODES: ReadonlySet<string> = new Set([
+export const EU_EFTA_LICENSED_COUNTRY_CODES: ReadonlySet<string> = new Set([
   // EU-27
   'BE', 'BG', 'CZ', 'DK', 'DE', 'EE', 'IE', 'EL', 'ES', 'FR', 'HR', 'IT', 'CY',
   'LV', 'LT', 'LU', 'HU', 'MT', 'NL', 'AT', 'PL', 'PT', 'RO', 'SI', 'SK', 'FI', 'SE',
   // EFTA
   'IS', 'LI', 'NO', 'CH',
-  // Common Eurostat aggregates over the above (never a single country)
-  'EU27_2020', 'EA', 'EA19', 'EA20', 'EFTA',
+]);
+
+/** Common Eurostat aggregates over the countries above (never a single country). */
+export const EU_EFTA_LICENSED_AGGREGATE_CODES: ReadonlySet<string> = new Set(['EU27_2020', 'EA', 'EA19', 'EA20', 'EFTA']);
+
+/** The stand-in licence scope: both halves above. Since the SDMX structure reader (#357 step 1,
+ * `sdmx-structure.ts`) the two halves are also kept apart, because whether a code IS a country or an
+ * aggregate is read from Eurostat's own `LEVEL` annotation on the GEO code list, not from these lists; the
+ * lists only say which countries and aggregates are licensed. A listed code whose level disagrees is excluded
+ * there. The scope itself is unchanged. */
+export const EU_EFTA_STAND_IN_GEO_CODES: ReadonlySet<string> = new Set([
+  ...EU_EFTA_LICENSED_COUNTRY_CODES,
+  ...EU_EFTA_LICENSED_AGGREGATE_CODES,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -266,8 +311,17 @@ function matchesGeoRestriction(geoCode: string): boolean {
  * caller may pin `dimensionEquals: { unit: 'GWH' }` per D6's "unit pinned in
  * the slice" onboarding practice) even though 'unit' never appears on the
  * stored CbsObservationRow.coordinates (it is absorbed into `measure`). */
-function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice | undefined): boolean {
+function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice | undefined, nativeCode: string): boolean {
   if (!slice) return true;
+  // ADR 065 (#358 item 4): a slice-store request's lists. An empty list restricts nothing (the CBS rule).
+  if (slice.measures && slice.measures.length > 0 && !slice.measures.includes(`${nativeCode}|${sliceCoordinates['unit']}`)) {
+    return false;
+  }
+  for (const [dim, codes] of Object.entries(slice.dimensionIn ?? {})) {
+    if (codes.length > 0 && !codes.includes(sliceCoordinates[dim] ?? '')) return false;
+  }
+  const periodCodes = slice.periodIn?.codes ?? [];
+  if (periodCodes.length > 0 && !periodCodes.includes(sliceCoordinates['time'] ?? '')) return false;
   if (slice.dimensionEquals) {
     for (const [dim, code] of Object.entries(slice.dimensionEquals)) {
       if (sliceCoordinates[dim] !== code) return false;
@@ -455,6 +509,24 @@ export function parseJsonStatDataset(
     }
   }
 
+  // The same for a slice-store request's lists (ADR 065, #358 item 4): every listed member and every
+  // listed measure's unit must be in the response, or the request is refused rather than stored with holes.
+  const mustHave: [string, string[]][] = Object.entries(slice?.dimensionIn ?? {});
+  if (slice?.measures && slice.measures.length > 0) {
+    mustHave.push(['unit', slice.measures.map((m) => (m.startsWith(`${nativeCode}|`) ? m.slice(nativeCode.length + 1) : m))]);
+  }
+  for (const [dim, codes] of mustHave) {
+    const known = dimCodes[dim];
+    const absent = codes.filter((code) => known === undefined || !known.includes(code));
+    if (absent.length > 0) {
+      throw new Error(
+        `Eurostat dataset '${tableId}': the request listed ${dim} code(s) ${absent.slice(0, 5).join(', ')} but the ` +
+          `response has ${known === undefined ? `no such dimension (it has: ${ds.id.join(', ')})` : 'no such code'} — ` +
+          'refusing a result with holes Eurostat did not explain.',
+      );
+    }
+  }
+
   const statusByOffset = normalizeStatus(ds.status, total);
   const coordinateDimNames = ds.id.filter((name) => name !== 'unit');
 
@@ -485,10 +557,15 @@ export function parseJsonStatDataset(
 
     const geoCode = coordinates['geo'];
     if (geoCode !== undefined && !matchesGeoRestriction(geoCode)) continue;
-    if (!matchesSlice(sliceCoordinates, slice)) continue;
+    if (!matchesSlice(sliceCoordinates, slice, nativeCode)) continue;
 
-    const value = valueAt(ds.value, offset);
-    const flag = statusByOffset.get(offset) ?? null;
+    // #357: the status may fold a confidentiality code in behind '|' ("|C"); split it. A confidential cell has NO
+    // value and is stored as the registered `c` flag (value null, reason kept), the way a CBS secret cell is
+    // (value null, valueAttribute 'Confidential') — never as the raw "|C" string, and never with a number
+    // Eurostat withholds (should a response carry one, it is dropped, not published).
+    const split = splitEurostatStatus(statusByOffset.get(offset) ?? null, tableId);
+    const value = split.confidential ? null : valueAt(ds.value, offset);
+    const flag = split.confidential ? EUROSTAT_CONFIDENTIAL : split.flag;
     // A real live-data finding (session 107): Eurostat's sparse `value`
     // representation routinely omits a cell from BOTH `value` and `status`
     // (no observation reported at all for that coordinate combination — a

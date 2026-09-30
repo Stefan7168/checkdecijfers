@@ -19,9 +19,9 @@
 //      registry curation and canonical measures equal theirs.
 // Without `apply` (the CLI's --yes) it stops after step 3 plus a read-only look
 // at the stored cells: a dry run that writes nothing.
-import type { CbsCode, CbsSource, CbsTableSchema } from '../cbs-adapter/types.ts';
+import type { CbsCode, CbsSlice, CbsSource, CbsTableSchema } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 import { compareTableWithSource, type ParityReport } from './parity.ts';
 import { fetchAllCodeLists } from './pipeline.ts';
 import { SEED_TABLES } from './registry-seed.ts';
@@ -258,6 +258,28 @@ function measureTextChanges(stored: Record<string, unknown>, reg: SliceRegistrat
 }
 
 /** Why the slice registration of this table would differ from what is stored — empty when it would not. */
+/** The curation a conversion carries over, or why there is none. A CBS table: its reviewed seed entry
+ * (registry-seed.ts). A Eurostat dataset (ADR 065, #358 item 4): its own stored registration — the scope
+ * and cadence it was reviewed and registered with (src/sources/eurostat-siblings.ts, or tipsbd30's
+ * one-off registration); no seed entry exists for them and the adapter has no measure curation. */
+function conversionCuration(
+  tableId: string,
+  row: Record<string, unknown>,
+): { pinned: true; updateCadence?: string; slice: CbsSlice | null; excludeMeasures?: string[] } | string {
+  const key = sourceKeyForTableId(tableId);
+  if (key === EUROSTAT_SOURCE_KEY) {
+    return {
+      pinned: true,
+      ...(row.update_cadence != null ? { updateCadence: String(row.update_cadence) } : {}),
+      slice: parseJsonb<CbsSlice | null>(row.slice, null),
+    };
+  }
+  if (key !== CBS_SOURCE_KEY) return `Table "${tableId}" is from source "${key}", which slice storage does not support.`;
+  const seed = SEED_TABLES.find((t) => t.id === tableId);
+  if (!seed) return `Table "${tableId}" has no seed entry in registry-seed.ts; its curation cannot be carried over.`;
+  return { pinned: true, updateCadence: seed.updateCadence, slice: seed.slice ?? null, excludeMeasures: seed.excludeMeasures };
+}
+
 async function registrationDifferences(
   db: Db,
   stored: Record<string, unknown>,
@@ -384,11 +406,8 @@ export async function convertTableToSlices(
   if (row.pinned !== true) {
     return refused(`Table "${tableId}" is not pinned; only the pinned (curated) tables are converted this way.`);
   }
-  if (sourceKeyForTableId(tableId) !== CBS_SOURCE_KEY) return refused(`Table "${tableId}" is not a CBS table.`);
-  const seed = SEED_TABLES.find((t) => t.id === tableId);
-  if (!seed) {
-    return refused(`Table "${tableId}" has no seed entry in registry-seed.ts; its curation cannot be carried over.`);
-  }
+  const curation = conversionCuration(tableId, row);
+  if (typeof curation === 'string') return refused(curation);
   // A table whose period status comes from CBS's period notes (ADR 061, 70072ned)
   // converts like any other since #358 item 3: the parity proof below and the
   // warm run read its notes with the whole-table sync's own fail-closed reader,
@@ -442,8 +461,9 @@ export async function convertTableToSlices(
   let schema: CbsTableSchema;
   let codeLists: Record<string, CbsCode[]>;
   try {
-    schema = await source.fetchTableSchema(tableId);
-    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+    // The scope narrows a Eurostat dataset's one request (CBS's adapters ignore it).
+    schema = await source.fetchTableSchema(tableId, curation.slice ?? undefined);
+    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions, curation.slice ?? undefined);
   } catch (err) {
     return refused(
       `Fetching the table's schema from CBS failed: ${err instanceof Error ? err.message : String(err)}. Nothing was written.`,
@@ -452,12 +472,7 @@ export async function convertTableToSlices(
   }
   let registration: SliceRegistration;
   try {
-    const planned = planSchemaOnlyRegistration(tableId, schema, codeLists, {
-      pinned: true,
-      updateCadence: seed.updateCadence,
-      slice: seed.slice ?? null,
-      excludeMeasures: seed.excludeMeasures,
-    });
+    const planned = planSchemaOnlyRegistration(tableId, schema, codeLists, curation);
     if (!planned.ok) return refused(`${planned.reason}: ${planned.summary}`, { parity, plannedRequests });
     registration = planned.registration;
   } catch (err) {
@@ -745,8 +760,13 @@ export async function convertTableToFull(
   if (!row) return refused(`Table "${tableId}" is not registered.`);
   if (row.ingest_mode !== 'slice_cache') return refused(`Table "${tableId}" is not in slice storage.`);
   if (row.pinned !== true) return refused(`Table "${tableId}" is not pinned; an on-demand slice table has no whole-table form.`);
-  if (sourceKeyForTableId(tableId) !== CBS_SOURCE_KEY) return refused(`Table "${tableId}" is not a CBS table.`);
-  if (!SEED_TABLES.some((t) => t.id === tableId)) return refused(`Table "${tableId}" has no seed entry in registry-seed.ts.`);
+  const key = sourceKeyForTableId(tableId);
+  if (key !== CBS_SOURCE_KEY && key !== EUROSTAT_SOURCE_KEY) {
+    return refused(`Table "${tableId}" is from source "${key}", which has no whole-table form here.`);
+  }
+  if (key === CBS_SOURCE_KEY && !SEED_TABLES.some((t) => t.id === tableId)) {
+    return refused(`Table "${tableId}" has no seed entry in registry-seed.ts.`);
+  }
   if (row.status !== 'active') {
     return refused(
       `Table "${tableId}" is quarantined (needs_review): ${String(row.needs_review_reason ?? 'reason not recorded')}. ` +

@@ -26,6 +26,7 @@
 //          node scripts/capture-eurostat-fixtures.ts --siblings   (the three E2a sibling slices)
 //          (network required; not CI; no args = every code below)
 //          node scripts/capture-eurostat-fixtures.ts --catalog
+//          node scripts/capture-eurostat-fixtures.ts --structure  (SDMX structure messages of the four registered datasets)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -123,6 +124,27 @@ if (process.argv.includes('--siblings')) {
     console.log(`${reg.tableId}: captured -> tests/fixtures/eurostat-siblings/${code}.json`);
   }
   console.log('Sibling capture complete.');
+  process.exit(0);
+}
+
+// `--structure` (#357 study step 1, 2026-09-30): captures the two SDMX structure messages (dataflow with its
+// partial code lists, and the content constraint — no observations) for the four registered datasets into
+// tests/fixtures/eurostat-structure/<code>.{dataflow,constraint}.xml, verbatim, from the URLs the adapter
+// itself builds (`structureUrls`). Sequential, one request at a time.
+if (process.argv.includes('--structure')) {
+  const { structureUrls } = await import('../src/eurostat-adapter/statistics-api.ts');
+  const dir = join(OUT, '..', 'eurostat-structure');
+  mkdirSync(dir, { recursive: true });
+  const index: Record<string, unknown> = { synthetic: false, capturedAt: new Date().toISOString(), datasets: {} };
+  for (const code of ['tipsbd30', 'une_rt_q', 'prc_hicp_minr', 'namq_10_gdp']) {
+    const urls = structureUrls(code);
+    writeFileSync(join(dir, `${code}.dataflow.xml`), await fetchText(urls.dataflow));
+    writeFileSync(join(dir, `${code}.constraint.xml`), await fetchText(urls.constraint));
+    (index.datasets as Record<string, unknown>)[code] = urls;
+    console.log(`${code}: captured -> tests/fixtures/eurostat-structure/${code}.{dataflow,constraint}.xml`);
+  }
+  writeFileSync(join(dir, 'index.json'), JSON.stringify(index, null, 1) + '\n');
+  console.log('Structure capture complete.');
   process.exit(0);
 }
 

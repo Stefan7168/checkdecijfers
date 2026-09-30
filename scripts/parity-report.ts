@@ -10,7 +10,7 @@
 import { connectFromEnv } from '../src/db/client.ts';
 import { compareTableWithSource, type ParityCellDiff, type ParityReport } from '../src/ingestion/parity.ts';
 import { adapterFor } from '../src/sources/adapters.ts';
-import { CBS_SOURCE_KEY } from '../src/sources/registry.ts';
+import { sourceKeyForTableId } from '../src/sources/registry.ts';
 
 const DEFAULT_BUDGET_SECONDS = 600;
 const args = process.argv.slice(2);
@@ -58,12 +58,12 @@ const { db, pool } = connectFromEnv();
 let allIdentical = true;
 
 try {
-  const source = adapterFor(CBS_SOURCE_KEY);
   // One budget for the whole run: a table that starts late gets what is left.
   const deadline = Date.now() + budgetSeconds * 1000;
   const reports: ParityReport[] = [];
   for (const tableId of tableIds) {
-    const report = await compareTableWithSource(db, source, tableId, { deadline, maxCells });
+    // Each table through its own source's adapter (a Eurostat dataset too, #358 item 4).
+    const report = await compareTableWithSource(db, adapterFor(sourceKeyForTableId(tableId)), tableId, { deadline, maxCells });
     reports.push(report);
     if (verdict(report) !== 'IDENTICAL') allIdentical = false;
     if (asJson) continue;

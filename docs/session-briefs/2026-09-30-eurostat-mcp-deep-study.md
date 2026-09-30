@@ -274,11 +274,13 @@ is already built.
 | # | Step | Measure of done | Size | AI calls | Schema |
 |---|---|---|---|---|---|
 | 0 | Fix defects 1–4 (time limit + deadline, non-retryable classes, `"|C"` split, composite-flag display) | Unit tests on recorded replies; flag wording signed by owner | ~150 lines + tests | 0 | none |
-| 1 | Structure reader: dataflow + constraint → schema + code lists + geo levels + update date, no observations | For the 4 registered datasets: dimensions and code lists are a superset of today's; `registerSchemaOnly` accepts a Eurostat id; a read-only crawl of a sample of the catalogue reports the share of datasets whose structure reads cleanly and fits (time grain A/Q/M, a `unit` dimension) | ~350–450 lines + tests | 0 | none |
+| 1 ✅ | Structure reader: dataflow + constraint → schema + code lists + geo levels + update date, no observations | For the 4 registered datasets: dimensions and code lists are a superset of today's; `registerSchemaOnly` accepts a Eurostat id; a read-only crawl of a sample of the catalogue reports the share of datasets whose structure reads cleanly and fits (time grain A/Q/M, a `unit` dimension). **Measured 2026-10-01 (branch `eurostat-structure-reader`):** superset holds for all 4 (same dimensions, titles, labels; more codes); `registerSchemaOnly` registers `eurostat:tipsbd30` from structure alone (hermetic); crawl of 30 random datasets: **30/30 read cleanly, 28/30 fit** (1 without `unit`, 1 with no licensed geo) | ~920 lines (strict XML reader 258, structure reader 601, adapter ~60) + 49 tests | 0 | none |
 | 2 | Slices: `dimensionIn`/`periodIn`, cell estimate before sending, all-values-returned refusal, empty-reply diagnosis | Convert the 4 Eurostat datasets to slice storage with `ingest:parity` = IDENTICAL (#358 item 4); the whole-table path then has no Eurostat users | ~250 lines + tests | 0 | none expected (`slice_fetches` is source-neutral) |
 | 3 | Finding: breadcrumbs into `summary`, Eurostat rows visible to the finder behind a flag | On a labelled set of ~30 Dutch/English questions, the right dataset is in the shortlist at a rate we write down. If the Dutch text configuration hurts English titles, **measure** before proposing a per-source configuration (that would be a migration) | ~100 lines + labelled set | 0 (rerank only at eval, fixtures) | none |
 | 4 | Table-parse input for Eurostat: unit = measure, `freq` tied to the requested grain, a total rule for Eurostat codes (**Assumption A4**: `TOTAL`, `T` and similar), countries via the E2a word list; the model still picks only from offered lists | Dry run (zero spend), then an owner-supervised recording run on the cheap tier (by analogy with CBS: ~100k input tokens) | ~300 lines + labelled cases | recording run only | none |
 | 5 | Wire to the table lane dark; ≥ 5 Eurostat benchmark tasks incl. ≥ 2 refusals; the D3(d) public-claim sweep in the same change | Benchmark gate unchanged (14/14 + 6/6 + 0 invented) plus the new tasks | wiring + tasks | benchmark runs | none |
+
+**Step 1 as built (2026-10-01), what the measurement changed:** (a) **decimals are in no structure message** (the primary measure is a bare `Double`), and they set how a figure is rounded on screen, so a structure-only registration still needs each unit's decimals from observed data; the reader refuses (`decimals_unknown`) rather than guess. Step 2 must supply them, e.g. from a small read plus a slice-time check that refuses a value with more decimals than registered. (b) The structure mode is opt-in and not used by production: switching the four live datasets to it would change their fingerprints (all units, not the scoped one) and would need a re-baseline. (c) The euro area's 2026 aggregate `EA21` and code `OTH` levels exist; `EA21` is outside the reviewed licensed aggregates, so it is excluded until reviewed. (d) 3 of 30 sampled datasets have no `geo` dimension (their geography sits in `rep_mar`, `airp_pr`…); the licence rule, today as before, only restricts a dimension named `geo`. (e) One sampled dataset mixes A, Q and M in one table.
 
 Steps 0–2 need no AI and no schema change. Live Eurostat GETs are free and read-only; the owner confirmed in session 107
 that "no spend" meant money. Production conversions stay owner-supervised, one dataset at a time, as in session 152.
@@ -286,14 +288,22 @@ that "no spend" meant money. Production conversions stay owner-supervised, one d
 ### 5.5 Assumptions (to mirror into open-questions #357 when this is scheduled)
 
 - **A1:** on the main Eurostat server the content constraint's `TIME_PERIOD` list matches the published periods. On
-  Comext it does not, per his measurement. Check against `OBS_PERIOD_OVERALL_LATEST` before trusting it.
+  Comext it does not, per his measurement. Check against `OBS_PERIOD_OVERALL_LATEST` before trusting it. **Measured
+  step 1: held on all 4 registered datasets and all 28 fitting sampled ones; the reader checks it every read and refuses
+  on a mismatch (`time_span_mismatch`).**
 - **A2:** `DISSEMINATION_TIMESTAMP_PLANNED` is the next scheduled release and is reliable enough to skip re-checks. Seen
   in his captures only; its meaning is unverified.
 - **A3:** Eurostat may serve the same structure messages as SDMX-JSON, which would spare an XML reader. Unverified. His
-  design doc mentions `format=json` only for the dataflow *list*.
+  design doc mentions `format=json` only for the dataflow *list*. **Measured step 1: false.** SDMX-JSON gets 406 (2.1
+  and 3.0); `format=JSON` returns JSON-stat only with `references=none` (annotations, no dimensions or codes). A small
+  strict XML reader was written (`src/eurostat-adapter/xml.ts`), no new dependency.
 - **A4:** Eurostat total members use a small set of codes (`TOTAL`, `T`, …). Measure on the structure crawl in step 1;
-  never guess a default.
+  never guess a default. **Measured step 1 (30 datasets, 75 classification dimensions): partly.** 42 have `TOTAL` or `T`,
+  at least 5 more use other codes (`TOT_FTE`, `C-O`, `TOT_IN`, `IND_TOTAL`, `0`), and about 28 have no total member at
+  all (age bands, for example). A total must be read per dataset from its labels, never assumed. Datasets hold 13–839
+  non-time codes (median 63).
 - **A5:** the share of Eurostat datasets without a `unit` dimension (our measure synthesis needs one) is small. Measure in
-  step 1; a dataset without one is refused, never mapped by guesswork.
+  step 1; a dataset without one is refused, never mapped by guesswork. **Measured step 1: 1 of 30 sampled (3%),
+  `lfso_04wktpna11`; refused as `no_unit_dimension`.**
 - His test count (~670) is a line count of test declarations, not a run. His "8,933 datasets" figure is from his
   May 2026 design pass (`CITATION.cff`, `docs/design.md`) and drifts upstream.

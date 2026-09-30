@@ -127,10 +127,12 @@ export async function rebaselineSliceTable(
   let schema: CbsTableSchema;
   let codeLists: Record<string, CbsCode[]>;
   try {
-    schema = await source.fetchTableSchema(tableId);
+    // The stored scope narrows a Eurostat dataset's request (CBS's adapters ignore it).
+    const scope = parseJsonb<CbsSlice | null>(row.slice, null) ?? undefined;
+    schema = await source.fetchTableSchema(tableId, scope);
     const early = schemaOnlyPropertiesRefusal(tableId, schema);
     if (early) return refused(`${early.reason}: ${early.summary}`);
-    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions, scope);
   } catch (err) {
     return refused(`Fetching the table's schema from CBS failed: ${err instanceof Error ? err.message : String(err)}.`);
   }

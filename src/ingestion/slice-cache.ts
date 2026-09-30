@@ -155,7 +155,10 @@ export async function registerSchemaOnly(
   if (prefetched !== undefined && prefetched.schema.tableId !== tableId) {
     throw new Error(`registerSchemaOnly: prefetched schema is for "${prefetched.schema.tableId}", not "${tableId}"`);
   }
-  const schema = prefetched?.schema ?? (await source.fetchTableSchema(tableId));
+  // A Eurostat table's declared scope narrows its one JSON-stat request (CbsSource's `slice` note); CBS's
+  // adapters ignore it.
+  const scopeForFetch = pinnedOptions?.slice ?? undefined;
+  const schema = prefetched?.schema ?? (await source.fetchTableSchema(tableId, scopeForFetch));
 
   // Final-review fix 5: the refusals that need only the schema run BEFORE the
   // (per-dimension) code-list fetch.
@@ -165,7 +168,7 @@ export async function registerSchemaOnly(
   const given = prefetched?.codeLists;
   const codeLists =
     given === undefined
-      ? await fetchAllCodeLists(source, tableId, schema.dimensions)
+      ? await fetchAllCodeLists(source, tableId, schema.dimensions, scopeForFetch)
       : typeof given === 'function'
         ? await given()
         : given;
@@ -547,7 +550,10 @@ export async function checkSliceSchema(
     schema = knownSchema;
   } else {
     try {
-      schema = await source.fetchTableSchema(tableId);
+      // The registered scope, as the whole-table sync passes it (ADR 065, #358 item 4): a Eurostat
+      // dataset's schema (its measures' decimals included) comes from the one scoped request, and its
+      // full dataset may exceed the synchronous cap. CBS's adapters ignore it.
+      schema = await source.fetchTableSchema(tableId, registry.slice ?? undefined);
     } catch (err) {
       return fetchFailureResult(err);
     }
@@ -630,7 +636,7 @@ export async function checkSliceSchema(
   let codeLists: Record<string, CbsCode[]> | null = null;
   if (refresh) {
     try {
-      codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+      codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions, registry.slice ?? undefined);
     } catch (err) {
       return fetchFailureResult(err);
     }

@@ -257,12 +257,12 @@ describe('preconditions: refused, nothing written, CBS never asked', () => {
     await expectRefused(POP, /not pinned/);
   });
 
-  it('a table that is not a CBS table', async () => {
+  it('a Eurostat table whose stored layout cannot be planned (Eurostat itself converts since #358 item 4)', async () => {
     await db.query(
       `insert into cbs_tables (id, title, expected_dimensions, units, source, pinned)
        values ('eurostat:nama_10_gdp', 'x', '[]'::jsonb, '{}'::jsonb, 'eurostat', true)`,
     );
-    await expectRefused('eurostat:nama_10_gdp', /not a CBS table/);
+    await expectRefused('eurostat:nama_10_gdp', /cannot be planned/);
   });
 
   it('a table without a seed entry', async () => {

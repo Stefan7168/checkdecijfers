@@ -87,9 +87,17 @@ describe('warm-job route wiring (source pins)', () => {
     expect(source).not.toContain('new ODataV4Source()');
   });
 
+  it('builds its Eurostat source (#358 item 4) with the same hard stop and the short observations limit', () => {
+    const eurostat = source.slice(source.indexOf('new StatisticsApiSource('));
+    expect(eurostat).toContain('withHardStop(');
+    expect(eurostat).toContain('startedAt + WARM_HARD_STOP_MS');
+    expect(eurostat).toContain('timeoutMs: WARM_OBSERVATIONS_TIMEOUT_MS');
+    expect(source.indexOf('`Bearer ${cronSecret}`')).toBeLessThan(source.indexOf('new StatisticsApiSource('));
+  });
+
   it('reads the chain counter through the validating parser and runs warmPinnedTables through runWarmJob', () => {
     expect(source).toContain("parseChain(new URL(request.url).searchParams.get('chain'))");
-    expect(source).toContain('warmPinnedTables(db, source, { deadline })');
+    expect(source).toContain('warmPinnedTables(db, source, { deadline, sources: { eurostat } })');
     expect(source).toContain('runWarmJob(');
     expect(source).toContain('kickNext: (next) => kickWarmJob(next)');
     expect(source).toContain('alert: warmFailureAlert(db)');

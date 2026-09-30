@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "_synthetic_notice": "HAND-BUILT to the JSON-stat 2.0 shape the connector study recorded for a confidential slice (docs/session-briefs/2026-09-30-eurostat-mcp-deep-study.md section 1.4: confidential cells have no entry in `value` and a status that folds the confidentiality code in behind '|'). NOT captured from our own live Eurostat call (no live call in this work). Four monthly cells for one country and unit: a plain published value, a confidential cell ('|C'), a confidential cell that also carries an observation flag ('b|C'), and a provisional value ('p').",
+  "version": "2.0",
+  "class": "dataset",
+  "label": "Production in industry - monthly data",
+  "id": ["unit", "geo", "time"],
+  "size": [1, 1, 4],
+  "dimension": {
+    "unit": { "label": "Unit of measure", "category": { "index": { "I21": 0 }, "label": { "I21": "Index, 2021=100" } } },
+    "geo": { "label": "Geopolitical entity (reporting)", "category": { "index": { "IE": 0 }, "label": { "IE": "Ireland" } } },
+    "time": {
+      "label": "Time",
+      "category": {
+        "index": { "2024-01": 0, "2024-02": 1, "2024-03": 2, "2024-04": 3 },
+        "label": { "2024-01": "2024-01", "2024-02": "2024-02", "2024-03": "2024-03", "2024-04": "2024-04" }
+      }
+    }
+  },
+  "value": { "0": 100.1, "3": 101.3 },
+  "status": { "1": "|C", "2": "b|C", "3": "p" }
+}

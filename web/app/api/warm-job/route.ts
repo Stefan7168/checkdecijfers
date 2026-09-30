@@ -13,6 +13,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
+import { StatisticsApiSource } from '../../../backend/eurostat-adapter/statistics-api.ts';
 import { warmPinnedTables } from '../../../backend/ingestion/warm-job.ts';
 import { getDb } from '../../../lib/db.ts';
 import {
@@ -50,10 +51,15 @@ export async function GET(request: Request): Promise<Response> {
       observationsTimeoutMs: WARM_OBSERVATIONS_TIMEOUT_MS,
       fetchFn: withHardStop((input, init) => fetch(input, init), startedAt + WARM_HARD_STOP_MS),
     });
+    // A converted Eurostat dataset (#358 item 4) is refreshed by the same run, under the same limits.
+    const eurostat = new StatisticsApiSource(
+      withHardStop((input, init) => fetch(input, init), startedAt + WARM_HARD_STOP_MS),
+      { timeoutMs: WARM_OBSERVATIONS_TIMEOUT_MS },
+    );
     const outcome = await runWarmJob(
       {
         startedAt,
-        warm: ({ deadline }) => warmPinnedTables(db, source, { deadline }),
+        warm: ({ deadline }) => warmPinnedTables(db, source, { deadline, sources: { eurostat } }),
         kickNext: (next) => kickWarmJob(next),
         alert: warmFailureAlert(db),
       },
