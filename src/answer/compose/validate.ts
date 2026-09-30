@@ -1229,16 +1229,52 @@ function checkDirectionWords(
 // The blocking validator
 // ---------------------------------------------------------------------------
 
+/** #339 item 14 (table-lane benchmark L1–L3): a CBS unit can itself contain a
+ * scale word — 85669NED's "miljard kg CO2-equivalent". The template copies
+ * that unit verbatim after the value ("146,1 (× miljard kg CO2-equivalent)"),
+ * and 'miljard' there is part of the registered unit, not a number written in
+ * words. This blanks ONLY such renderings before the word-form scan, and only
+ * when all of these hold:
+ *   - the text is an EXACT occurrence of one of the result's own registered
+ *     unit strings (case-sensitive, whole words; whitespace may be a normal
+ *     or no-break space) — never a blanket 'miljard'/'miljoen' allow-list;
+ *   - that unit's own text contains a word the scan would reject (units like
+ *     'mln euro' or 'x 1 000' need no exemption and get none);
+ *   - it sits directly after a digit-written number, with at most the
+ *     template's own "(" and "× "/"x " between them. A bare unit ("een
+ *     miljard kg CO2-equivalent") keeps failing: 'een' is not a cardinal on
+ *     the list, so the digit anchor is what stops a spelled-out quantity
+ *     riding on the unit. That number is itself checked by the digit scan
+ *     (R3) and the unit-adjacency check (R10), like any other value.
+ * Everything else — "twee miljard", "miljard euro" where the unit is "mln
+ * euro", a different scale word in front of the unit — is still rejected. */
+function blankRegisteredUnitRenderings(body: string, registeredUnits: readonly string[]): string {
+  const units = [...new Set(registeredUnits.filter((u) => typeof u === 'string').map((u) => normalizeForScan(u).trim()))]
+    .filter((u) => u.length > 0 && (new RegExp(QUANTITY_WORD_FORMS.source, 'i').test(u) || new RegExp(CARDINAL_WORD_FORMS.source, 'iu').test(u)))
+    .sort((a, b) => b.length - a.length);
+  if (units.length === 0) return body;
+  const unitAlternatives = units.map((u) => u.split(/\s+/).map(escapeRegExp).join('[\\s\\u00a0]+')).join('|');
+  const rendering = new RegExp(
+    `((?<![\\p{L}\\p{N}])\\d(?:[\\d.,]*\\d)?[\\s\\u00a0]*(?:\\([\\s\\u00a0]*)?(?:[×x][\\s\\u00a0]+)?)(${unitAlternatives})(?![\\p{L}\\p{N}])`,
+    'gu',
+  );
+  return body.replace(rendering, (_m, lead: string, unit: string) => lead + ' '.repeat(unit.length));
+}
+
 /** The R3 word-form rejection, shared verbatim with the #162 slot pre-fill
  * validator (ADR-draft §1 rule iv: slots stop digits, not "zeventien
  * miljoen") — one implementation so the two paths reject identically.
- * `body` must already be normalizeForScan'd. */
-export function wordFormProblems(body: string): string[] {
+ * `body` must already be normalizeForScan'd. `registeredUnits` (the answer
+ * validator passes its result's cell + derivation units; the insight-phrase
+ * gate passes none, its units are filled in after validation) enables the
+ * narrow registered-unit exemption above — with none, nothing is exempt. */
+export function wordFormProblems(body: string, registeredUnits: readonly string[] = []): string[] {
   const problems: string[] = [];
-  for (const match of body.matchAll(QUANTITY_WORD_FORMS)) {
+  const scanned = blankRegisteredUnitRenderings(body, registeredUnits);
+  for (const match of scanned.matchAll(QUANTITY_WORD_FORMS)) {
     problems.push(`R3: kwantiteitswoord '${match[0]}' — hoeveelheden alleen in cijfers`);
   }
-  for (const match of body.matchAll(CARDINAL_WORD_FORMS)) {
+  for (const match of scanned.matchAll(CARDINAL_WORD_FORMS)) {
     problems.push(`R3: telwoord '${match[0]}' — hoeveelheden alleen in cijfers`);
   }
   return problems;
@@ -1251,8 +1287,11 @@ export function validateAnswerBody(rawBody: string, result: ValidatedResult): An
   const body = normalizeForScan(rawBody);
 
   // R3: quantity word-forms are rejected — digits only, and no registered
-  // derivation emits word forms.
-  problems.push(...wordFormProblems(body));
+  // derivation emits word forms. A scale word inside the result's OWN
+  // registered unit, rendered right after a digit value, is the unit, not a
+  // word-form number (#339 item 14; see blankRegisteredUnitRenderings).
+  const registeredUnits = [...result.cells.map((c) => c.unit), ...result.derivations.map((d) => d.unit)];
+  problems.push(...wordFormProblems(body, registeredUnits));
 
   // R3/R1: every numeric token must be backed.
   const tokens = scanBody(body, result);

@@ -6,9 +6,12 @@ import {
   findNumericTokens,
   formatValueNl,
   parseNlNumber,
+  renderTemplateBody,
   scanBody,
   validateAnswerBody,
 } from '../../src/answer/compose/index.ts';
+import { normalizeForScan } from '../../src/answer/compose/format.ts';
+import { wordFormProblems } from '../../src/answer/compose/validate.ts';
 import { deriveDirection } from '../../src/query/derivations.ts';
 import type { DerivationRecord } from '../../src/query/index.ts';
 import {
@@ -1190,5 +1193,85 @@ describe('#330: a year that ends a sentence still names its period (R9 single-ax
   it('still refuses a year that is only part of a decimal number', () => {
     const decimalOnly = validateAnswerBody('Het werkloosheidspercentage bedroeg 4,0% en de index 1,2025.', unemploymentSingle);
     expect(decimalOnly.problems.some((p) => p.includes("noemt de periode"))).toBe(true);
+  });
+});
+
+describe('#339 item 14: a scale word inside the cell\'s OWN registered unit is the unit, not a word-form number', () => {
+  // 85669NED (table-lane benchmark L1–L3): the unit is "miljard kg
+  // CO2-equivalent" and the template copies it verbatim after the value.
+  const EMISSION_UNIT = 'miljard kg CO2-equivalent';
+  const emission = (periodCode: string, periodLabel: string, value: number) =>
+    makeCell({
+      table: '85669NED', measure: 'D003040', measureTitle: 'Emissie broeikasgassen',
+      region: null, periodCode, periodLabel, value, unit: EMISSION_UNIT, decimals: 1,
+    });
+  const emissionSingle = makeResult({ shape: 'single', cells: [emission('2023JJ00', '2023', 146.1)] });
+  const emissionSeries = makeResult({
+    shape: 'series',
+    cells: [
+      emission('2019JJ00', '2019', 28),
+      emission('2020JJ00', '2020', 23.7),
+      emission('2021JJ00', '2021', 23.9),
+    ],
+  });
+  const wordFormHits = (problems: string[]) => problems.filter((p) => /kwantiteitswoord|telwoord/.test(p));
+
+  it('accepts the template answer (single and series) — the L1–L3 bodies', () => {
+    for (const result of [emissionSingle, emissionSeries]) {
+      const body = renderTemplateBody(result);
+      expect(body).toContain(`(× ${EMISSION_UNIT})`);
+      expect(validateAnswerBody(body, result).problems, body).toEqual([]);
+    }
+  });
+
+  it('accepts the unit written plainly after the value, with a normal or no-break space', () => {
+    for (const body of [
+      'Emissie broeikasgassen was in 2023 146,1 miljard kg CO2-equivalent.',
+      'Emissie broeikasgassen was in 2023 146,1 miljard kg CO2-equivalent.',
+      'Emissie broeikasgassen was in 2023 146,1 (miljard kg CO2-equivalent).',
+    ]) {
+      expect(wordFormHits(validateAnswerBody(body, emissionSingle).problems), body).toEqual([]);
+    }
+  });
+
+  it('still rejects a scale word that is not part of an exact, digit-anchored unit rendering', () => {
+    for (const body of [
+      // a spelled-out quantity riding on the unit ('een' is not on the
+      // cardinal list — the digit anchor is what catches it)
+      'Emissie broeikasgassen was in 2023 146,1 (× miljard kg CO2-equivalent), ruim een miljard kg CO2-equivalent meer.',
+      // a cardinal in front of the unit
+      'Emissie broeikasgassen was in 2023 146,1 (× miljard kg CO2-equivalent), bijna twee miljard kg CO2-equivalent meer.',
+      // a partial unit
+      'Emissie broeikasgassen was in 2023 146,1 miljard kg.',
+      // a different scale word before the rest of the unit
+      'Emissie broeikasgassen was in 2023 146,1 miljoen kg CO2-equivalent.',
+      // the scale word alone elsewhere
+      'Emissie broeikasgassen was in 2023 146,1 (× miljard kg CO2-equivalent), bijna een miljard.',
+      // a different case is not an exact occurrence
+      'Emissie broeikasgassen was in 2023 146,1 Miljard kg CO2-equivalent.',
+    ]) {
+      expect(wordFormHits(validateAnswerBody(body, emissionSingle).problems).length, body).toBeGreaterThan(0);
+    }
+  });
+
+  it('grants nothing to a unit without a scale word: "miljard" / "duizend" next to "mln kWh" / "1 000 euro" still fail', () => {
+    expect(wordFormHits(validateAnswerBody('De zonnestroomproductie was in 2024 21.822 miljard kWh (voorlopig cijfer).', solarSingle).problems).length).toBeGreaterThan(0);
+    expect(wordFormHits(validateAnswerBody('Het gemiddeld inkomen was in 2023 57,6 duizend euro.', incomeSingle).problems).length).toBeGreaterThan(0);
+    // a scale word from ANOTHER table's unit is no exemption for this result
+    expect(wordFormHits(validateAnswerBody('De zonnestroomproductie was in 2024 21.822 miljard kg CO2-equivalent (voorlopig cijfer).', solarSingle).problems).length).toBeGreaterThan(0);
+  });
+
+  it('wordFormProblems: exempt only with the registered unit passed, for any quantity word in that unit', () => {
+    const body = normalizeForScan('Het was 146,1 (× miljard kg CO2-equivalent).');
+    expect(wordFormProblems(body)).not.toEqual([]); // no units passed → nothing exempt (the insight-phrase gate)
+    expect(wordFormProblems(body, [EMISSION_UNIT])).toEqual([]);
+    expect(wordFormProblems(normalizeForScan('Het was 12,5 miljoen euro.'), ['miljoen euro'])).toEqual([]);
+    expect(wordFormProblems(normalizeForScan('Het was 12,5 miljard euro.'), ['miljoen euro'])).not.toEqual([]);
+    // regex-special characters in a unit are matched literally
+    expect(wordFormProblems(normalizeForScan('Het was 12,5 (miljoen euro / jaar (x)).'), ['miljoen euro / jaar (x)'])).toEqual([]);
+    expect(wordFormProblems(normalizeForScan('Het was 4,2 per honderd inwoners.'), ['per honderd inwoners'])).toEqual([]);
+    expect(wordFormProblems(normalizeForScan('Het was vier per honderd inwoners.'), ['per honderd inwoners'])).not.toEqual([]);
+    // a digit glued into a word is no anchor ('CO2 miljard kg CO2-equivalent')
+    expect(wordFormProblems(normalizeForScan('Het was CO2 miljard kg CO2-equivalent.'), [EMISSION_UNIT])).not.toEqual([]);
   });
 });
