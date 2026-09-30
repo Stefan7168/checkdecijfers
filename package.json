@@ -79,7 +79,8 @@
     "backfill:eurostat-doi": "node --env-file=.env scripts/backfill-eurostat-doi.ts",
     "eurostat:siblings": "node --env-file=.env scripts/register-eurostat-siblings.ts",
     "ingest:freshness": "node --env-file=.env scripts/freshness-report.ts",
-    "ingest:warm-plan": "node --env-file=.env scripts/warm-plan-report.ts"
+    "ingest:warm-plan": "node --env-file=.env scripts/warm-plan-report.ts",
+    "ingest:parity": "node --env-file=.env scripts/parity-report.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
