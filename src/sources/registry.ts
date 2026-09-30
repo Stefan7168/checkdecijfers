@@ -76,6 +76,12 @@ export interface SourceInfo {
    * source's own owner-signed E2/public sweep (D3(d)), in the same change
    * that makes it actually answerable. */
   chatSelectable: boolean;
+  /** #357 (a): the source states no number of decimals per measure, so the registered decimals are learned from
+   * observed values (Eurostat: the most a unit's values carried) — a lower bound. When true, a slice fetch
+   * refuses and quarantines on any value carrying MORE decimals than registered (`checkObservedDecimals`,
+   * src/ingestion/validate.ts) instead of storing a figure the registration never saw that precision for.
+   * Absent/false (CBS): the source states decimals itself and the unit check compares them as before. */
+  decimalsFromObservedValues?: boolean;
 }
 
 /** The one registered source. Phase-0/1 ids are bare CBS ids; future sources
@@ -208,6 +214,8 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     // (see the field's own doc comment above). Flips only in E2's
     // owner-signed sweep, in the same change that makes Eurostat answerable.
     chatSelectable: false,
+    // #357 (a): Eurostat's structure states no decimals; they are observed (see the field's doc comment).
+    decimalsFromObservedValues: true,
   },
 };
 

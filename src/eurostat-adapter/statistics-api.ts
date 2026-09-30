@@ -26,13 +26,18 @@ import { BUDGET_ENDED_PHRASE, fetchAndRead, shortUrl } from '../sources/fetch-wi
 import { classifyFailedResponse, classifyOkBody, EurostatPermanentError, isRetryableStatus } from './errors.ts';
 import {
   EU_EFTA_STAND_IN_GEO_CODES,
+  maxDecimals,
   parseJsonStatCatalog,
   parseJsonStatDataset,
   type ParsedEurostatDataset,
 } from './jsonstat.ts';
 import {
+  DECIMALS_PROBE_MAX_READS,
+  DECIMALS_PROBE_SETTLING_VALUES,
+  decimalsProbeSlice,
   eurostatLayoutFromStructure,
   EurostatLayoutRefusalError,
+  fitEurostatStructure,
   readEurostatStructure,
   type EurostatLayout,
   type EurostatStructure,
@@ -108,9 +113,19 @@ export interface StatisticsApiSourceOptions {
    * structure messages instead of downloading its observations — no SYNC_CELL_THRESHOLD, so any dataset that
    * fits can be registered. `decimals` supplies each unit's number of decimals, which no structure message
    * states; a unit it does not know refuses (`EurostatLayoutRefusalError`, reason `decimals_unknown`).
+   * #357 (a): `'observed'` learns them from ONE small read per dataset (`observeUnitDecimals`) — the mode for
+   * a REGISTRATION; afterwards (the slice-time schema check) the caller passes a function returning the
+   * registered decimals, and `fetchSlice` refuses any value carrying more (src/ingestion/validate.ts).
    * The layout is the whole dataset's (every code that occurs, licensed geo only); a `slice` argument does not
    * narrow it. Absent (the default, and every production caller today): the download path, unchanged. */
-  structureLayout?: { decimals: (tableId: string, unitCode: string) => number | undefined };
+  structureLayout?: { decimals: ((tableId: string, unitCode: string) => number | undefined) | 'observed' };
+}
+
+/** What the decimals read at registration saw (#357 (a)): per unit the most decimals any observed value
+ * carried (units with no value in any read are absent), and every read it made. */
+export interface ObservedDecimals {
+  decimals: Map<string, number>;
+  reads: { url: string; cells: number; periods: string[] }[];
 }
 
 /** D4: strips the '<key>:' prefix internally (never the caller's job) —
@@ -338,6 +353,8 @@ export class StatisticsApiSource implements CbsSource {
   private readonly structureLayout: StatisticsApiSourceOptions['structureLayout'];
   /** One structure read (two requests) per dataset; a failed read is not kept. */
   private readonly structureCache = new Map<string, Promise<EurostatStructure>>();
+  /** `decimals: 'observed'` only: one layout (so one decimals read) per dataset; a failure is not kept. */
+  private readonly observedLayoutCache = new Map<string, Promise<EurostatLayout>>();
 
   constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
@@ -523,11 +540,92 @@ export class StatisticsApiSource implements CbsSource {
     return cached;
   }
 
-  private async loadLayout(tableId: string): Promise<EurostatLayout> {
+  private loadLayout(tableId: string): Promise<EurostatLayout> {
     const decimals = this.structureLayout!.decimals;
-    const layout = eurostatLayoutFromStructure(tableId, await this.fetchStructure(tableId), (unit) => decimals(tableId, unit));
-    if (!layout.ok) throw new EurostatLayoutRefusalError(layout);
-    return layout;
+    if (decimals !== 'observed') {
+      return (async () => {
+        const layout = eurostatLayoutFromStructure(tableId, await this.fetchStructure(tableId), (unit) => decimals(tableId, unit));
+        if (!layout.ok) throw new EurostatLayoutRefusalError(layout);
+        return layout;
+      })();
+    }
+    const key = nativeIdFrom(tableId);
+    let cached = this.observedLayoutCache.get(key);
+    if (!cached) {
+      cached = (async () => {
+        const structure = await this.fetchStructure(tableId);
+        const observed = await this.observeUnitDecimals(tableId);
+        const layout = eurostatLayoutFromStructure(tableId, structure, (unit) => observed.decimals.get(unit));
+        if (!layout.ok) throw new EurostatLayoutRefusalError(layout);
+        return layout;
+      })();
+      this.observedLayoutCache.set(key, cached);
+      cached.catch(() => this.observedLayoutCache.delete(key));
+    }
+    return cached;
+  }
+
+  /**
+   * #357 (a): each unit's decimals, from a small read of real values — Eurostat's structure never states them.
+   * Read 1 asks for every unit at the LATEST period; a unit it did not settle (no value with decimals and fewer
+   * than DECIMALS_PROBE_SETTLING_VALUES whole numbers — a sparse latest period, confidential cells) is asked
+   * again over the latest two periods, then three (DECIMALS_PROBE_MAX_READS).
+   * Each read is bounded to DECIMALS_PROBE_MAX_CELLS cells (`decimalsProbeSlice`: licensed geography only, other
+   * dimensions cut to their first codes, largest first). A unit's decimals = the most any value it saw
+   * carries (`maxDecimals`, the download path's own rule). It goes through the SAME request path as a slice —
+   * `buildRequestUrl`, the `data` call limits, `parseJsonStatDataset` — keeping only the period filter
+   * client-side, so a code Eurostat leaves out of a sparse answer is not an error here (it is for a stored
+   * slice). A read Eurostat answers with "no results" counts as seeing nothing; any other failure is thrown.
+   *
+   * A lower bound by construction: a value published later with MORE decimals than seen here is refused at
+   * slice time and the table quarantined for review (src/ingestion/validate.ts `checkObservedDecimals`) — never
+   * rounded. A unit no read saw a value for stays absent, and the layout then refuses (`decimals_unknown`).
+   */
+  async observeUnitDecimals(tableId: string): Promise<ObservedDecimals> {
+    const structure = await this.fetchStructure(tableId);
+    const fit = fitEurostatStructure(tableId, structure);
+    if (!fit.ok) throw new EurostatLayoutRefusalError(fit);
+    const nativeCode = nativeIdFrom(tableId);
+    const seen = new Map<string, number[]>();
+    // Settled: a value with decimals was seen, or enough whole numbers that "0 decimals" is not just JSON
+    // dropping trailing zeros (2.0 arrives as 2) on a handful of values.
+    const settled = (unit: string) => {
+      const values = seen.get(unit) ?? [];
+      return values.length >= DECIMALS_PROBE_SETTLING_VALUES || maxDecimals(values) > 0;
+    };
+    const reads: ObservedDecimals['reads'] = [];
+    for (let read = 1; read <= DECIMALS_PROBE_MAX_READS; read++) {
+      const open = fit.unitCodes.filter((u) => !settled(u));
+      if (open.length === 0) break;
+      const probe = decimalsProbeSlice(tableId, structure, fit, open, read);
+      if (probe === null) break;
+      const url = buildRequestUrl(nativeCode, probe.slice);
+      reads.push({ url, cells: probe.cells, periods: probe.slice.periodIn!.codes });
+      let rows: CbsObservationRow[];
+      try {
+        const raw = await this.fetchJson(url, 'data');
+        rows = parseJsonStatDataset(raw, tableId, { periodIn: probe.slice.periodIn }).rows;
+      } catch (err) {
+        if (err instanceof EurostatPermanentError && err.kind === 'no_results') continue;
+        throw err;
+      }
+      // A later read covers the earlier one's periods again; only its units still open are counted, afresh.
+      for (const unit of open) seen.delete(unit);
+      for (const row of rows) {
+        if (row.value === null) continue;
+        const unit = row.measure.slice(nativeCode.length + 1);
+        if (!open.includes(unit)) continue;
+        const list = seen.get(unit) ?? [];
+        list.push(row.value);
+        seen.set(unit, list);
+      }
+    }
+    // Every unit with at least one observed value gets the most decimals any of them carried; a unit still
+    // unsettled after the last read keeps what it saw (a lower bound, like every other: the slice-time check
+    // refuses a value with more). A unit with no value at all stays absent — the layout refuses it.
+    const decimals = new Map<string, number>();
+    for (const [unit, values] of seen) if (values.length > 0) decimals.set(unit, maxDecimals(values));
+    return { decimals, reads };
   }
 
   async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {

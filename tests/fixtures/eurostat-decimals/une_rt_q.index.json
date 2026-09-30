@@ -1,0 +1,7 @@
+{
+ "synthetic": false,
+ "tableId": "eurostat:une_rt_q",
+ "capturedAt": "2026-09-30T17:39:06.400Z",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_q?format=JSON&lang=EN&geo=BE&geo=BG&geo=CZ&geo=DE&geo=DK&geo=EA20&geo=EE&geo=EL&geo=EU27_2020&geo=IE&sinceTimePeriod=2026-Q2&unit=PC_ACT&unit=PC_POP&unit=THS_PER",
+ "cells": 1890
+}

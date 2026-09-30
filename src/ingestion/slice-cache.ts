@@ -42,6 +42,7 @@ import {
 import type { FailureStage } from './types.ts';
 import {
   checkDimensionMapping,
+  checkObservedDecimals,
   checkPeriodParsing,
   checkSchemaFingerprint,
   checkSliceRowPlausibility,
@@ -49,7 +50,7 @@ import {
   type RegistryUnits,
   type StoredLabel,
 } from './validate.ts';
-import { sourceKeyForTableId } from '../sources/registry.ts';
+import { SOURCES, sourceKeyForTableId } from '../sources/registry.ts';
 
 export type SchemaOnlyResult =
   | { ok: true; tableId: string; numericMeasures: string[]; alreadyRegistered: boolean }
@@ -983,6 +984,14 @@ export async function fetchSlice(
       rowCount,
       fingerprint,
     );
+  }
+
+  // #357 (a): a source whose registered decimals were OBSERVED (Eurostat states none) — a value carrying more
+  // decimals than registered is a real change in how the unit is published: quarantine, store nothing, never
+  // round. (A CBS table's decimals are stated by CBS and compared in checkSliceSchema's unit check.)
+  if (SOURCES[sourceKeyForTableId(tableId)]?.decimalsFromObservedValues === true) {
+    const decimalsCheck = checkObservedDecimals(observationRows, registry.units);
+    if (!decimalsCheck.ok) return fail(decimalsCheck.stage, decimalsCheck.summary, true, rowCount, fingerprint);
   }
 
   // --- 4. Store: one transaction under the per-table lock -------------------
