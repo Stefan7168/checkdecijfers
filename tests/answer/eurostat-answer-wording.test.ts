@@ -28,6 +28,7 @@ import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/quer
 import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
 import { SOURCES } from '../../src/sources/registry.ts';
 import { baseRegionLabel, validateAnswerBody } from '../../src/answer/compose/validate.ts';
+import { prepareTranslation } from '../../src/answer/translate/translate.ts';
 import { dutchDisplayNameForGeo } from '../../src/sources/eurostat-geo-names.ts';
 
 /** D5c pattern: never actually invoked — templateOnly makes composeAnswer's
@@ -254,15 +255,16 @@ describe('national-comparison suggestion chips are CBS-only (E2a spec §4.5)', (
 // its own validator (served under #121 serve+alert, audit:verify red).
 describe('R11 validator accepts each source its own marking (fix wave I2)', () => {
   // One flag per region, one table: p (voorlopig), e (schatting), b
-  // (methodebreuk), and a COMBINED 'bp' — no registered marking, so the
-  // template renders the generic ' (voorlopig cijfer)' and R11 wants
-  // 'voorlopig', matching it.
+  // (methodebreuk), and a COMBINED 'bp'. Since #357 defect 4 (owner decision
+  // 2026-09-30, "Join the notes") a combined flag renders its letters' notes
+  // joined — ' (methodebreuk; voorlopig cijfer)' — and R11 wants exactly that
+  // (it used to fall back to the generic ' (voorlopig cijfer)').
   const FLAGS: Record<string, string> = { DE: 'p', BE: 'e', NL: 'b', EU27_2020: 'bp' };
   const EXPECTED_MARKING: Record<string, string> = {
     DE: ' (voorlopig cijfer)',
     BE: ' (schatting)',
     NL: ' (methodebreuk)',
-    EU27_2020: ' (voorlopig cijfer)',
+    EU27_2020: ' (methodebreuk; voorlopig cijfer)',
   };
 
   async function answerFor(db: Db, region: string) {
@@ -322,7 +324,10 @@ describe('R11 validator accepts each source its own marking (fix wave I2)', () =
       expect(unmarked.problems.some((p) => p.startsWith('R11') && p.includes("'voorlopig cijfer'"))).toBe(true);
 
       const combined = await answerFor(db, 'EU27_2020');
-      const unmarkedCombined = validateAnswerBody(combined.answer.body.replace(' (voorlopig cijfer)', ''), combined.result);
+      const unmarkedCombined = validateAnswerBody(
+        combined.answer.body.replace(' (methodebreuk; voorlopig cijfer)', ''),
+        combined.result,
+      );
       expect(unmarkedCombined.ok).toBe(false);
       expect(unmarkedCombined.problems.some((p) => p.startsWith('R11'))).toBe(true);
     } finally {
@@ -367,6 +372,95 @@ describe('Eurostat aggregate labels keep their composition in answer text (fix w
       if (response.kind !== 'answer') throw new Error(`expected an answer, got ${response.kind}`);
       expect(response.answer.body).toContain('de EU (27 landen)');
       expect(response.answer.validation).toEqual({ ok: true, problems: [] });
+    } finally {
+      await close();
+    }
+  });
+});
+
+// #357 defect 4 (owner decision 2026-09-30, "Join the notes"): Eurostat
+// combines flag letters ('bu' = break in series + low reliability, measured
+// live in une_rt_q). The note is built from the approved single-letter notes,
+// in letter order, '; '-joined inside one pair of brackets; any unknown letter
+// keeps the generic fallback. Template, validator and English caveat masking
+// all resolve through the one registry helper (provisionalNoteFor).
+describe("#357 defect 4: combined Eurostat flags join their letters' notes", () => {
+  const FLAGS: Record<string, string> = { DE: 'bu', BE: 'ep', NL: 'bdep', EU27_2020: 'bz' };
+  const EXPECTED: Record<string, { nl: string; en: string; marker: string }> = {
+    DE: {
+      nl: ' (methodebreuk; lage betrouwbaarheid)',
+      en: ' (break in series; low reliability)',
+      marker: 'methodebreuk; lage betrouwbaarheid',
+    },
+    BE: { nl: ' (schatting; voorlopig cijfer)', en: ' (estimate; provisional figure)', marker: 'schatting; voorlopig cijfer' },
+    NL: {
+      nl: ' (methodebreuk; afwijkende definitie; schatting; voorlopig cijfer)',
+      en: ' (break in series; different definition; estimate; provisional figure)',
+      marker: 'methodebreuk; afwijkende definitie; schatting; voorlopig cijfer',
+    },
+    // 'z' has no provisional note (it is a null-reason flag) → an unknown
+    // letter → today's generic fallback, and R11 wants 'voorlopig' as before.
+    EU27_2020: { nl: ' (voorlopig cijfer)', en: ' (provisional figure)', marker: 'voorlopig cijfer' },
+  };
+
+  async function answerFor(db: Db, region: string) {
+    const intent: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: { kind: 'canonical', key: EUROSTAT_TEST_CANONICAL_KEY },
+      regions: [region],
+      period: { kind: 'codes', codes: ['2020JJ00'] },
+      derivation: 'none',
+    };
+    const question = `[test] combined flag for ${region}`;
+    const response = await respondToIntent(db, question, buildParseOutcome(question, intent), {
+      answerClient: new NeverCallAnswerClient(),
+      referenceDate: '2026-09-23',
+      templateOnly: true,
+    });
+    if (response.kind !== 'answer') throw new Error(`expected an answer for ${region}, got ${response.kind}`);
+    return response;
+  }
+
+  it('renders the joined note, passes the validator, is rejected once the note is removed, and masks as one English caveat', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertEurostatTestTable(db, {
+        statusOverrides: Object.fromEntries(Object.entries(FLAGS).map(([region, flag]) => [`${region}|2020`, flag])),
+      });
+      for (const region of Object.keys(FLAGS)) {
+        const expected = EXPECTED[region]!;
+        const response = await answerFor(db, region);
+        expect(response.result.cells[0]!.status).toBe(FLAGS[region]);
+        expect(response.answer.body).toContain(expected.nl);
+        expect(response.answer.validation).toEqual({ ok: true, problems: [] });
+
+        const unmarked = validateAnswerBody(response.answer.body.replace(expected.nl, ''), response.result);
+        expect(unmarked.ok, region).toBe(false);
+        if (region === 'EU27_2020') {
+          // Unchanged generic-fallback message (the pre-#357 wording).
+          expect(unmarked.problems.some((p) => p.startsWith('R11') && p.includes("'voorlopig cijfer'")), region).toBe(true);
+        } else {
+          expect(unmarked.problems.some((p) => p.startsWith('R11') && p.includes(`'${expected.marker}'`)), region).toBe(true);
+        }
+
+        const prep = prepareTranslation(response);
+        expect(prep.caveats.find((c) => c.dutch === expected.nl)?.english, region).toBe(expected.en);
+        expect(prep.maskedDutch.body, region).not.toContain(expected.nl);
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("a partial note is not enough: only the first letter's note fails R11 for a combined flag", async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertEurostatTestTable(db, { statusOverrides: { 'DE|2020': 'bu' } });
+      const response = await answerFor(db, 'DE');
+      const partial = response.answer.body.replace(' (methodebreuk; lage betrouwbaarheid)', ' (methodebreuk)');
+      const report = validateAnswerBody(partial, response.result);
+      expect(report.ok).toBe(false);
+      expect(report.problems.some((p) => p.startsWith('R11') && p.includes("'methodebreuk; lage betrouwbaarheid'"))).toBe(true);
     } finally {
       await close();
     }

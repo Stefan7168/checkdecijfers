@@ -6,7 +6,7 @@
 // wrong. docs/02 reports the template-fallback count.
 import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/index.ts';
 import { formatValueNl, regionSetBodyNoun } from './format.ts';
-import { resolveSource, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
+import { provisionalNoteFor, resolveSource, sourceKeyForTableId } from '../../sources/registry.ts';
 import { baseRegionLabel } from './validate.ts';
 
 /** ValueAttribute → owner-approved Dutch reason (R11: a null cell states its
@@ -29,9 +29,10 @@ export function nullReasonText(valueAttribute: string, sourceKey?: string): stri
  * (E2a, spec §4.5's wiring point 3) rather than needing a second parameter. */
 export function provisionalSuffix(cell: ResultCell): string {
   if (!cell.provisional) return '';
-  // A2: the two-tier wording comes from the registry map; a provisional
-  // status outside the map keeps the generic suffix (pre-WP30a behavior).
-  return resolveSourceForTable(cell.tableId).provisionalDisplay[cell.status] ?? ' (voorlopig cijfer)';
+  // A2: the two-tier wording comes from the registry map (combined Eurostat
+  // flags join their letters' notes, #357 defect 4); a provisional status
+  // with no registered note keeps the generic suffix (pre-WP30a behavior).
+  return provisionalNoteFor(sourceKeyForTableId(cell.tableId), cell.status) ?? ' (voorlopig cijfer)';
 }
 
 /** Value + unit, R10-safe: '%' attaches, 'aantal' renders bare, factor units

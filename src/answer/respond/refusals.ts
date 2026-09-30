@@ -6,7 +6,7 @@
 // and QueryRefusal, neither of which carries a cell value, so a fabricated
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
-import { resolveSource, sourceKeyForTableId } from '../../sources/registry.ts';
+import { provisionalNoteFor, sourceKeyForTableId } from '../../sources/registry.ts';
 import {
   freshestForCanonical,
   REGION_SERIES_MAX_REGIONS,
@@ -138,7 +138,7 @@ function cardinalNl(n: number): string {
  * period the same way and must mark it the same way (adversarial-review
  * finding, 2026-07-03: that offer omitted the marker). */
 export function statusSuffixNl(status: string, sourceKey?: string): string {
-  return resolveSource(sourceKey).provisionalDisplay[status] ?? '';
+  return provisionalNoteFor(sourceKey, status) ?? '';
 }
 
 /** `sourceKey` threads through from a caller that has a table id in scope

@@ -15,7 +15,7 @@
 // argument.
 import type { ValidatedResult } from '../../query/index.ts';
 import { translateUnit } from '../../registry/english-names.ts';
-import { resolveSourceForTable } from '../../sources/registry.ts';
+import { provisionalNoteFor, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { LlmClient } from '../llm/client.ts';
 import type { AnswerResponse, ComposedResponse } from '../respond/types.ts';
 import { checkTranslation, type TranslationItems } from './check.ts';
@@ -48,7 +48,7 @@ import { ENGLISH_RENDERING_SCHEMA_VERSION, TRANSLATE_TIMEOUT_MS, type EnglishAtt
  */
 // #332: the single copy now lives in src/answer/respond/english.ts (pure, DB-free), shared with the
 // deterministic English refusal/clarification templates; re-exported here so every importer is unchanged.
-import { CAVEAT_TRANSLATIONS } from '../respond/english.ts';
+import { CAVEAT_TRANSLATIONS, statusSuffixEn } from '../respond/english.ts';
 export { CAVEAT_TRANSLATIONS };
 
 /** Thrown by `caveatsForResult` when a registry `provisionalDisplay` value has
@@ -75,11 +75,26 @@ function caveatsForResult(result: ValidatedResult): { dutch: string; english: st
     const source = resolveSourceForTable(cell.tableId);
     for (const value of Object.values(source.provisionalDisplay)) dutchValues.add(value);
   }
-  return [...dutchValues].map((dutch) => {
+  const caveats = [...dutchValues].map((dutch) => {
     const english = CAVEAT_TRANSLATIONS[dutch];
     if (english === undefined) throw new UnknownCaveatError(dutch);
     return { dutch, english };
   });
+  // #357 defect 4: a combined Eurostat flag ('bu') renders ONE joined note
+  // (' (methodebreuk; lage betrouwbaarheid)') that is none of the map values
+  // above, so the cells' own combined notes are added — English via the same
+  // letter-by-letter statusSuffixEn the refusal templates use. The masker
+  // matches longest first, so the joined note travels as one caveat. A
+  // result with no combined flag adds nothing: unchanged.
+  const seen = new Set(dutchValues);
+  for (const cell of result.cells) {
+    const sourceKey = sourceKeyForTableId(cell.tableId);
+    const dutch = provisionalNoteFor(sourceKey, cell.status);
+    if (dutch === undefined || seen.has(dutch)) continue;
+    seen.add(dutch);
+    caveats.push({ dutch, english: statusSuffixEn(cell.status, sourceKey) });
+  }
+  return caveats;
 }
 
 // Final-review fix wave (ruling 17c): \p{N}, the same class C2 and the

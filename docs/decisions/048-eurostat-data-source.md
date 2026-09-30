@@ -984,3 +984,16 @@ value, `valueAttribute` and status `c` (the registered reason "door Eurostat nie
 CBS `Confidential` cell keeps its reason), any number that arrives beside the marker is dropped, and an unknown
 confidentiality code fails the parse. The raw `"|C"` is never stored. Tests: `tests/eurostat-adapter/failure-classes.test.ts`,
 `confidential-status.test.ts`, fixtures `tests/fixtures/eurostat-errors/` (hand-built to the study's shapes).
+
+**Defect 4 — combined flags (owner-approved rule 2026-09-30, the owner's choice "Join the notes"; built 2026-10-01).**
+Eurostat combines flag letters in one code (`bu` = break in series + low reliability, measured live in `une_rt_q`; `ep`;
+`bdep`). Such a code now gets its note built from the already-approved single-letter notes, in the order its letters
+appear, joined with "; " inside one pair of brackets: `bu` → " (methodebreuk; lage betrouwbaarheid)", `ep` → " (schatting;
+voorlopig cijfer)"; English is built letter by letter the same way (" (break in series; low reliability)"). If ANY letter
+is unknown (e.g. `bz`, `b:` — `z` and `:` are null-reason flags with no provisional note), every site keeps its old
+fallback for an unknown marker (template " (voorlopig cijfer)", validator "voorlopig", refusal and English suffix: no
+note). One helper, `provisionalNoteFor` in `src/sources/registry.ts` (registry flag `combinesFlagLetters: true`, Eurostat
+only), feeds the Dutch template, the R11 validator, the refusal text and the English suffix, and the English translator's
+caveat masking adds a cell's joined note — so they can never disagree. Every single-letter and every CBS status renders
+byte-identically (pinned in `tests/sources/provisional-note.test.ts`); `nullReasonLabels` and the break check
+(`isEurostatBreakFlag`, which already saw a `b` inside a combined code — now test-pinned) are unchanged.
