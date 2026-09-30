@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "_synthetic_notice": "HAND-BUILT to the error shapes the connector study recorded (docs/session-briefs/2026-09-30-eurostat-mcp-deep-study.md section 1.5: a JSON `error` array with status/id/label; a `warning` with status 413 on an HTTP 200). NOT captured from our own live Eurostat call (no live call in this work) — the classifier leans on the HTTP status first, so a different real body only changes the wording. Each entry is { httpStatus, body }.",
+  "notFound404": { "httpStatus": 404, "body": { "error": [{ "status": 404, "id": 130, "label": "Dataset 'nope_x' does not exist" }] } },
+  "unknownCode400": { "httpStatus": 400, "body": { "error": [{ "status": 400, "id": 150, "label": "Dimension 'geo' has no code 'XX'" }] } },
+  "badPeriod400": { "httpStatus": 400, "body": { "error": [{ "status": 400, "id": 140, "label": "Invalid time period '2024-13'" }] } },
+  "other400": { "httpStatus": 400, "body": { "error": [{ "status": 400, "id": 0, "label": "Conflicting parameters" }] } },
+  "tooLarge413": { "httpStatus": 413, "body": { "error": [{ "status": 413, "label": "Too many observations requested" }] } },
+  "tooLargeWarning200": { "httpStatus": 200, "body": { "warning": { "status": 413, "label": "EXTRACTION_TOO_BIG: the request needs the asynchronous API" } } },
+  "noResults200": { "httpStatus": 200, "body": { "error": [{ "status": 200, "id": 100, "label": "No data found for the selection" }] } }
+}

@@ -967,3 +967,20 @@ cells and could never have been laid out by the old whole-dataset download. Tota
 dimensions, 42 use `TOTAL` or `T`, at least 5 use other codes (`TOT_FTE`, `C-O`, `TOT_IN`, `IND_TOTAL`, `0`), about 28 have
 none — a total must be read per dataset, never assumed. Also seen: 3/30 datasets have no `geo` dimension (geography in
 `rep_mar`, `airp_pr`, …), which the licence rule, as before, does not restrict; one dataset mixes A, Q and M.
+
+## Addendum — adapter step 0, defects 1–3 of the connector study (2026-09-30, #357)
+
+Three small fixes from `docs/session-briefs/2026-09-30-eurostat-mcp-deep-study.md` §5.1, no AI and no schema change:
+(1) **one total deadline per call** — a slice-bounded data call gets 30 s per attempt and 60 s in total (retries and waits
+included), the catalogue file and an unsliced whole-dataset read 120 s and 240 s; the run budget (`stopAt`) still wins and
+a call it cuts fails with the budget phrase, one that used up its own total fails as an ordinary source error (was: 300 s
+x 3 attempts, about 15 minutes per call); (2) **permanent failures are not retried** — 400, 404, 413 and every other 4xx
+except 408/429, plus an HTTP-200 body that is a 413 warning or a "no results" error, are thrown as a typed
+`EurostatPermanentError` (`src/eurostat-adapter/errors.ts`: `not_found`, `invalid_dimension`, `invalid_period`,
+`conflicting_params`, `too_large`, `no_results`, `rejected`) with a short specific summary; 5xx, 408, 429, timeouts and an
+HTML page instead of JSON stay retried; (3) **the `"|C"` split** — the confidentiality code folded into a cell's status is
+split off (`splitEurostatStatus`, `jsonstat.ts`): a confidential cell (`C`, `N`, `P`, or the flag `c`) is stored with no
+value, `valueAttribute` and status `c` (the registered reason "door Eurostat niet gepubliceerd (vertrouwelijk)", the way a
+CBS `Confidential` cell keeps its reason), any number that arrives beside the marker is dropped, and an unknown
+confidentiality code fails the parse. The raw `"|C"` is never stored. Tests: `tests/eurostat-adapter/failure-classes.test.ts`,
+`confidential-status.test.ts`, fixtures `tests/fixtures/eurostat-errors/` (hand-built to the study's shapes).
