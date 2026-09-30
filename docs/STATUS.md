@@ -17,6 +17,15 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
+  [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,
+  each proven cell-for-cell IDENTICAL to CBS before and after (0 differences; consumer prices 616,714 cells); refreshing them is now the
+  daily warm job's work, not a hand sync. A live read-only probe (real query path, no AI) served every curated measure. Fixed on the way:
+  a conversion after-check false alarm (`425937f0`) and a retry-wait edge caught by CI (`67e07782`). Built in parallel by agents and merged:
+  table-lane split at 150 codes (#358 11), `--budget-seconds` a hard bound (5), period-note status in slice storage so `70072ned` can
+  convert (3), slice storage as the default test build (2, first half). Still whole-table: 3 unpinned tables (#358 12 — recommendation:
+  pin `37789ksz`, drop `83694NED` + `85615NED`, owner decision), `70072ned` (not loaded), 4 Eurostat datasets (#358 4, agent building).
+
 **▶ SESSION 151 (2026-09-30, owner present) — THE WHOLE-TABLE COPIES ARE BEING RETIRED; EVERYTHING BUILT EXCEPT THE PRODUCTION CONVERSION
   (ADR [065](decisions/065-retire-whole-table-copies-one-route.md), [#356](open-questions.md)–[#358](open-questions.md)):**
   the owner asked whether the architecture and our own copy of CBS are worth it. Research (blind test of a general assistant, five open
@@ -28,7 +37,7 @@
   supervised conversion + way back + re-baseline, a job route the daily run kicks, a failure e-mail. **Gate passed hermetically:** on
   slice storage the 20-task benchmark scores 14/14, 6/6, 0 invented numbers, identical in answers, charts and refusals to whole-table
   storage. **Read-only dry runs against production: all 17 pinned CBS tables are cell-for-cell identical to CBS and ready to convert.**
-  **Production storage is unchanged** — converting is RUNBOOK "Slice storage for the pinned tables", owner present, one table at a time.
+  Production storage was unchanged at the end of session 151 — **converted in session 152** (block above).
   Found + fixed by dogfooding: the login proxy redirected the two kicked job routes (`/api/warm-job`, `/api/table-lane-job`) to /login.
 
 **▶ SESSION 150 (2026-09-30, owner present) — EUROSTAT SIBLING TABLES LOADED (DARK), TWO DEFECTS FIXED ([#313](open-questions.md)):** owner asked

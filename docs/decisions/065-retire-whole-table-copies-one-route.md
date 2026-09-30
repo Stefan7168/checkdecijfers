@@ -128,6 +128,21 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
   tested until it is deleted (the second half of item 2).
 - When production slice-stores `70072ned`, remove its `WHOLE_TABLE_IN_PRODUCTION` entry in the same change.
 
+## As built (session 152, 2026-09-30) — the production conversion (step 9)
+
+- **All 17 pinned CBS tables converted in production**, owner present, one at a time, least-shown first, the two homepage
+  tables last (`03759ned`, then `86141NED`). Each: a dry run or the conversion's own proof against CBS, the switch, the
+  warm run `complete`, the after-check, then `ingest:parity` = `IDENTICAL` and `ingest warm` = every request `confirmed`.
+  Zero value or status differences anywhere; `86141NED` carried 616,714 cells in 32 requests.
+- **One false alarm, fixed:** the after-check compared the measures' descriptive text, which the conversion itself refreshes
+  to CBS's current wording, so `83932NED` ended in `after_check_failed` with identical cells. The after-check now compares
+  unit and decimals only, the same rule as the pre-switch check (`425937f0`, regression test in `tests/ingestion/convert.test.ts`).
+- **Live read-only probe afterwards** (the real query path, `probe: true`, no AI): every curated measure of the converted
+  tables served its freshest period; the two regional ones served once a region was named.
+- **Still whole-table:** three unpinned WP16-onboarded tables (`37789ksz`, `83694NED`, `85615NED`, open-questions #358
+  item 12), `70072ned` when loaded, and the four Eurostat datasets (#358 item 4). The whole-table path is deleted only
+  after those.
+
 ## Alternatives considered
 
 - **Keep two lanes** (ADR 062 decision 1). Rejected by the owner: it keeps a hand-maintained set that covers 1.6% of CBS

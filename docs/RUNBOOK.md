@@ -1253,6 +1253,11 @@ alert" section above). Nothing of #23 remains open.
 
 ### Slice storage for the pinned tables (ADR 065, built session 151, 2026-09-30) — conversion is owner-supervised
 
+**State (2026-09-30, session 152):** all 17 pinned CBS tables are CONVERTED in production and refreshed by the warm job.
+Still whole-table: the three unpinned CBS tables `37789ksz`, `83694NED`, `85615NED` (open-questions #358 item 12), `70072ned`
+when it is loaded, and the four Eurostat datasets (#358 item 4). For a big table give the parity report bigger requests:
+`npm run ingest:parity -- 86141NED --max-cells 25000` (the default 2,000-cell requests run out of time on its 512 requests).
+
 **What this is.** The pinned tables are moving from "one hand-run sync per table" to slice storage: the same declared
 scope (`cbs_tables.slice`), filled and refreshed by a job in bounded, checked requests. Design:
 [superpowers/specs/2026-09-30-one-route-warm-slices-design.md](superpowers/specs/2026-09-30-one-route-warm-slices-design.md).
