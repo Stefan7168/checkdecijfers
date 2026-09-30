@@ -3,7 +3,8 @@
 **Trigger.** The owner asked, before any other work: is the current architecture the best way to answer from CBS data, are
 we over-engineering, is our own copy of the data needed, can people already get the same from Claude or ChatGPT with a
 graph, and what is the benefit of this web app. Row: [open-questions #356](../open-questions.md). This brief records
-**measured facts and a recommendation; no decision has been taken.**
+**measured facts and a recommendation.** One decision followed the same day (ADR
+[065](../decisions/065-retire-whole-table-copies-one-route.md): retire the whole-table copies); the rest is still open.
 
 ## 1. Blind test — what a general assistant with web access returns today
 
@@ -84,7 +85,8 @@ tasks; three are outside our loaded tables. Ground truth: `benchmark/answer-key.
 1. Keep the core. Do not rebuild.
 2. Treat the any-table lane as the priority inside the 1 October recording run (its part A) and aim at switching it on:
    breadth is the one place the general assistant beat us in this test.
-3. Load no further whole tables by hand; the 21 stay as the fast showcase set.
+3. Load no further whole tables by hand; ~~the 21 stay as the fast showcase set~~ **owner decision the same day: the
+   whole-table copies are retired, the pinned definitions are kept — ADR [065](../decisions/065-retire-whole-table-copies-one-route.md).**
 4. Record, do not build: offering our checked numbers and charts **inside** Claude and ChatGPT as a connector, since that
    is where people will ask. A roadmap candidate, behind the phase gate.
 5. Reword the public comparison with general chatbots from "they invent numbers" to speed, consistency and the

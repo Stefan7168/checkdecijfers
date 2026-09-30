@@ -17,6 +17,15 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 151 (2026-09-30, owner present) — DIRECTION CHANGE: THE WHOLE-TABLE COPIES ARE RETIRED (ADR
+  [065](decisions/065-retire-whole-table-copies-one-route.md), [#356](open-questions.md)):** the owner asked whether the architecture and
+  our own copy of CBS are worth it. Measured (blind test of a general assistant, a survey of CBS connectors, our usage): brief
+  [session-briefs/2026-09-30-architecture-and-value-research.md](session-briefs/2026-09-30-architecture-and-value-research.md). Owner decision:
+  one route for every table (fetch what a question needs, check, store), pinned definitions kept, the hand-refreshed copies deleted —
+  **but only after that route passes the 20-task benchmark; nothing is deleted yet.** Consequence for the 1 October plan: part A fits;
+  **parts B and C load or build on whole tables — do not run them until the owner answers ADR 065's "run A only" recommendation.**
+  No further whole tables are loaded. Freshness this morning: 2 of 20 behind (`37789ksz`, `85770NED`, both SAFE), not yet refreshed.
+
 **▶ SESSION 150 (2026-09-30, owner present) — EUROSTAT SIBLING TABLES LOADED (DARK), TWO DEFECTS FIXED ([#313](open-questions.md)):** owner asked
   for Eurostat data work; E2a step 5 ran for real: unemployment (2,112 rows), inflation (4,760), GDP growth (2,244) are registered, pinned and
   synced in production, nothing reader-visible. Found + fixed: monthly periods are `YYYY-MM`; inflation moved from the frozen `prc_hicp_manr` to

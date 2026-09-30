@@ -9,6 +9,10 @@ the workspace chat, DARK behind `TABLE_LANE_ENABLED`) built** — see the "As bu
 calibration run (after 2026-10-01) and step 6 (the table-lane benchmark, then the flag flip) are not done: the parser has
 still never called the AI.
 
+**Decision 1 superseded 2026-09-30 (session 151) by ADR [065](065-retire-whole-table-copies-one-route.md):** the curated
+whole-table set does not stay as a permanent fast lane; this slice cache becomes the only way data enters, with the pinned
+definitions kept on top. Nothing is deleted until ADR 065's gate passes.
+
 **Relates to:** ADR [003](003-cbs-access-layer.md) (bulk ingestion, principle b), ADRs [025](025-cbs-catalog-table-discovery.md)/
 [026](026-on-demand-fetch-job-architecture.md)/[027](027-finder-shape-fit-gate.md) (today's on-demand onboarding, which
 this supersedes as the default path once live), ADR [061](061-regional-statistics-70072ned.md) (measure allow-list,

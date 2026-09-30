@@ -1,6 +1,6 @@
 # ADR 003 — CBS access via bulk ingestion behind an adapter
 
-**Status:** accepted, 2026-07-02
+**Status:** accepted, 2026-07-02. **Narrowed 2026-09-30 by ADR [065](065-retire-whole-table-copies-one-route.md):** whole-table ingestion is being retired as the way data enters (direction accepted, nothing deleted yet); the adapter boundary, the fingerprint check and "readers only see stored, checked cells" stand.
 
 ## Context
 

@@ -1,5 +1,10 @@
 # The 1 October recording run — one supervised session, three recordings (written session 145, 2026-09-29)
 
+> **⚠ READ FIRST (2026-09-30, session 151, ADR [065](../decisions/065-retire-whole-table-copies-one-route.md)):** the owner decided to
+> retire the whole-table copies. Part A (the any-table parser) fits that decision. **Part B loads one more whole table
+> (`70072ned`) and part C builds on whole Eurostat datasets — do NOT run B or C until the owner has answered the
+> recommendation in ADR 065 ("run A only").** Everything below is unchanged and was written before that decision.
+
 **Why this exists.** Three queued work items each need the AI once, to turn labelled questions into replayable
 fixtures. All three waited for the monthly spend roof to start over (2026-10-01 00:00 UTC, $50 organisation
 limit — RUNBOOK "Bill-shock protection", resolved 2026-09-26). This is the plan for running them back to back in
