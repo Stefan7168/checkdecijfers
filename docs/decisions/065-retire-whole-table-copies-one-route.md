@@ -72,10 +72,11 @@ path and the benchmark's frozen key is pinned to them.
 
 - **The 1 October recording plan** ([session-briefs/2026-10-01-recording-run-plan.md](../session-briefs/2026-10-01-recording-run-plan.md)):
   part A fits this decision. Part B (regional statistics) loads one more whole table (`70072ned`) into production and
-  part C builds on the four whole Eurostat datasets. **Recommendation, awaiting the owner:** run A only; B and C wait for
-  step 2's design. Until the owner answers, the plan file carries a warning and nothing in B or C is run.
+  part C builds on the four whole Eurostat datasets. **Owner decision the same day ("apply everything you recommend"):
+  run A only; B and C wait for step 2's design.** The plan file carries the notice.
 - **No further whole tables are loaded**, CBS or Eurostat.
-- The two CBS tables that were behind on 2026-09-30 are still refreshed while the copies are live (readers see them).
+- The two CBS tables that were behind on 2026-09-30 were refreshed the same day on the owner's go (`37789ksz` batch 62,
+  `85770NED` batch 63, no quarantine); the copies stay refreshed while they are live, because readers see them.
 
 ## Alternatives considered
 

@@ -23,8 +23,9 @@
   [session-briefs/2026-09-30-architecture-and-value-research.md](session-briefs/2026-09-30-architecture-and-value-research.md). Owner decision:
   one route for every table (fetch what a question needs, check, store), pinned definitions kept, the hand-refreshed copies deleted —
   **but only after that route passes the 20-task benchmark; nothing is deleted yet.** Consequence for the 1 October plan: part A fits;
-  **parts B and C load or build on whole tables — do not run them until the owner answers ADR 065's "run A only" recommendation.**
-  No further whole tables are loaded. Freshness this morning: 2 of 20 behind (`37789ksz`, `85770NED`, both SAFE), not yet refreshed.
+  **parts B and C load or build on whole tables — owner decision: run part A ONLY, B and C are on hold.**
+  No further whole tables are loaded. The 2 tables behind this morning (`37789ksz`, `85770NED`) were refreshed (batches 62, 63).
+  Connector code study + reuse list: [#357](open-questions.md).
 
 **▶ SESSION 150 (2026-09-30, owner present) — EUROSTAT SIBLING TABLES LOADED (DARK), TWO DEFECTS FIXED ([#313](open-questions.md)):** owner asked
   for Eurostat data work; E2a step 5 ran for real: unemployment (2,112 rows), inflation (4,760), GDP growth (2,244) are registered, pinned and
