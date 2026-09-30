@@ -17,7 +17,7 @@
 // type`, so nothing runtime-couples back to query/db).
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import { translateMeasureTitle, translateRegion } from '../../registry/english-names.ts';
-import { resolveSource } from '../../sources/registry.ts';
+import { joinProvisionalNotes, provisionalNoteFor, provisionalNoteParts, resolveSource } from '../../sources/registry.ts';
 import type { ClarifyAxis } from '../intent/types.ts';
 import { ENGLISH_MEASURE_LABELS, ENGLISH_TOPIC_TERMS } from './english-measure-labels.ts';
 
@@ -86,13 +86,27 @@ export const CAVEAT_TRANSLATIONS: Readonly<Record<string, string>> = {
  * here is an internal coverage gap, not a value to guess at — it throws
  * (caught by the coverage test, never reachable in a green build). */
 export function statusSuffixEn(status: string, sourceKey?: string): string {
-  const dutch = resolveSource(sourceKey).provisionalDisplay[status] ?? '';
+  const dutch = provisionalNoteFor(sourceKey, status) ?? '';
   if (!dutch) return '';
-  const en = CAVEAT_TRANSLATIONS[dutch];
+  // #357 defect 4: a combined Eurostat flag ('bu') is translated letter by
+  // letter — each registered single-letter note through the table above —
+  // and joined exactly as the Dutch is (registry joinProvisionalNotes), so
+  // ' (methodebreuk; lage betrouwbaarheid)' → ' (break in series; low
+  // reliability)'. A single note is the one-part case: unchanged.
+  const parts = provisionalNoteParts(resolveSource(sourceKey), status) ?? [dutch];
+  const en = joinProvisionalNotes(
+    parts.map((part) => {
+      const mapped = CAVEAT_TRANSLATIONS[part];
+      if (mapped === undefined) {
+        throw new Error(
+          `internal: statusSuffixEn has no English mapped for Dutch suffix '${part}' (status '${status}') — extend CAVEAT_TRANSLATIONS`,
+        );
+      }
+      return mapped;
+    }),
+  );
   if (en === undefined) {
-    throw new Error(
-      `internal: statusSuffixEn has no English mapped for Dutch suffix '${dutch}' (status '${status}') — extend CAVEAT_TRANSLATIONS`,
-    );
+    throw new Error(`internal: statusSuffixEn could not join the English notes for status '${status}'`);
   }
   return en;
 }

@@ -37,6 +37,13 @@ export interface SourceInfo {
    * isProvisionalStatus (WP30b — byte-identical to the old
    * status !== 'Definitief' rule for every CBS cell). */
   provisionalDisplay: Readonly<Record<string, string>>;
+  /** #357 defect 4 (owner decision 2026-09-30, "Join the notes"): true when
+   * the source combines single-letter status flags into one code (Eurostat:
+   * 'bu' = break in series + low reliability). Such a code with no entry of
+   * its own in `provisionalDisplay` renders the notes of its letters, in
+   * order, inside one pair of brackets — see `provisionalNoteFor`. Absent
+   * (CBS) = statuses are whole words, never split. */
+  combinesFlagLetters?: boolean;
   /** WP30b (ADR 030 § WP30a as-built item 4 note): the verbatim per-cell
    * statuses that count as DEFINITIVE. Everything else is provisional — the
    * fail-safe direction: a status we cannot vouch for is marked
@@ -156,6 +163,9 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
       u: ' (lage betrouwbaarheid)',
       n: ' (niet significant)',
     },
+    // #357 defect 4: Eurostat's combined flags ('bu', 'ep', 'bdep', …) render
+    // the single-letter notes above joined — provisionalNoteFor.
+    combinesFlagLetters: true,
     // #251 (session 109) — was `[]` (Amendment B1's over-cautious
     // "everything provisional, unconditionally", correct while no per-cell
     // status could reach this lookup at all). The prerequisite that entry
@@ -237,4 +247,60 @@ export function resolveSourceForTable(tableId: string): SourceInfo {
  * for every CBS cell. */
 export function isProvisionalStatus(info: SourceInfo, status: string): boolean {
   return !info.definitiveStatuses.includes(status);
+}
+
+/** A combined flag code: two or more lowercase letters. Anything else (':',
+ * a capitalized CBS word, 'Published') is never split. */
+const COMBINED_FLAG_CODE = /^[a-z]{2,}$/;
+
+/** One registered note's inner text: ' (schatting)' → 'schatting'. */
+const NOTE_SHAPE = /^ \((.+)\)$/;
+
+/** #357 defect 4: the registered single-letter notes that make up `status`,
+ * in the order its letters appear — `[' (methodebreuk)', ' (lage
+ * betrouwbaarheid)']` for Eurostat 'bu'. A status with its own entry returns
+ * that one entry (every single letter and every CBS status: unchanged). A
+ * combined code on a source that combines letters returns one note per
+ * letter. `undefined` = no registered note: the status is unmapped, or ANY
+ * letter of a combined code is unknown (e.g. 'bz', 'b:'), so each caller
+ * keeps its own existing fallback for an unknown marker. Exported so the
+ * English path can translate letter by letter (english.ts statusSuffixEn). */
+export function provisionalNoteParts(info: SourceInfo, status: string): string[] | undefined {
+  const own = info.provisionalDisplay[status];
+  if (own !== undefined) return [own];
+  if (info.combinesFlagLetters !== true || !COMBINED_FLAG_CODE.test(status)) return undefined;
+  const parts: string[] = [];
+  for (const letter of status) {
+    const note = info.provisionalDisplay[letter];
+    if (note === undefined) return undefined;
+    parts.push(note);
+  }
+  return parts;
+}
+
+/** Joins registered notes into one: a single note is returned byte-identical;
+ * several become ' (a; b)' — inner texts in order, '; '-joined, one pair of
+ * brackets. `undefined` if a note is not in the registered ' (…)' shape
+ * (never reached by today's registry; fail-safe to the caller's fallback). */
+export function joinProvisionalNotes(parts: readonly string[]): string | undefined {
+  if (parts.length === 1) return parts[0];
+  const inner: string[] = [];
+  for (const part of parts) {
+    const match = NOTE_SHAPE.exec(part);
+    if (match === null) return undefined;
+    inner.push(match[1]!);
+  }
+  return inner.length > 0 ? ` (${inner.join('; ')})` : undefined;
+}
+
+/** THE provisional note for a cell/period status (#357 defect 4, owner
+ * decision 2026-09-30 "Join the notes"): the source's registered Dutch note,
+ * or for a combined Eurostat code the joined notes of its letters
+ * ('bu' → ' (methodebreuk; lage betrouwbaarheid)'). `undefined` when no note
+ * is registered — the Dutch template, the validator, the refusal text and the
+ * English suffix each keep their own existing fallback for that case. All
+ * four resolve through here, so they cannot disagree. */
+export function provisionalNoteFor(sourceKey: string | undefined, status: string): string | undefined {
+  const parts = provisionalNoteParts(resolveSource(sourceKey), status);
+  return parts === undefined ? undefined : joinProvisionalNotes(parts);
 }

@@ -23,7 +23,7 @@ import {
   unitMaskPhrases,
 } from './format.ts';
 import type { AnswerValidationReport } from './types.ts';
-import { CBS_SOURCE_KEY, resolveSource, sourceKeyForTableId } from '../../sources/registry.ts';
+import { CBS_SOURCE_KEY, provisionalNoteFor, sourceKeyForTableId } from '../../sources/registry.ts';
 
 /** R11's required marking for one provisional cell: `null` means the word
  * 'voorlopig' (every CBS cell — byte-identical to the pre-E2a check — and
@@ -34,7 +34,7 @@ import { CBS_SOURCE_KEY, resolveSource, sourceKeyForTableId } from '../../source
 function provisionalMarkerFor(cell: ResultCell): string | null {
   const sourceKey = sourceKeyForTableId(cell.tableId);
   if (sourceKey === CBS_SOURCE_KEY) return null;
-  const display = resolveSource(sourceKey).provisionalDisplay[cell.status];
+  const display = provisionalNoteFor(sourceKey, cell.status);
   const marker = display?.trim().replace(/^\((.*)\)$/, '$1').trim();
   return marker !== undefined && marker.length > 0 ? marker : null;
 }
@@ -1300,8 +1300,10 @@ export function validateAnswerBody(rawBody: string, result: ValidatedResult): An
   // renders (template.ts provisionalSuffix): a Eurostat 'e' cell is marked
   // "schatting", a 'b' cell "methodebreuk"; the word 'voorlopig' would
   // mislabel an estimate as a provisional figure. A flag with no registered
-  // marking (e.g. a combined 'bp') falls back to 'voorlopig', matching the
-  // template's own generic ' (voorlopig cijfer)' fallback.
+  // marking falls back to 'voorlopig', matching the template's own generic
+  // ' (voorlopig cijfer)' fallback. A combined flag ('bu') needs the joined
+  // marking the template renders ('methodebreuk; lage betrouwbaarheid',
+  // #357 defect 4); one with an unknown letter falls back the same way.
   const cellsById = new Map(result.cells.map((c) => [c.resultId, c]));
   for (const token of tokens) {
     const provisionalCells =
