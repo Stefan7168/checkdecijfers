@@ -11,9 +11,17 @@
 // (src/ingestion/pipeline.ts, src/ingestion/validate.ts) — never a second
 // copy of the fingerprint, dimension_labels batching, source-key derivation,
 // validation checks, observation column derivation or upsert.
-import type { CbsCode, CbsMeasure, CbsObservationRow, CbsSource, CbsTableSchema } from '../cbs-adapter/types.ts';
+import type {
+  CbsCode,
+  CbsMeasure,
+  CbsObservationRow,
+  CbsSlice,
+  CbsSource,
+  CbsTableSchema,
+} from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { computeFingerprint } from './fingerprint.ts';
+import { allowListedMeasures } from './measure-allow-list.ts';
 import {
   buildStagedRows,
   diffCorrections,
@@ -22,6 +30,8 @@ import {
   insertDimensionLabels,
   labelRowsFromCodeLists,
   markUnseenCellsRetained,
+  type MeasureCuration,
+  servedMeasuresForRegistration,
   stageRows,
   unitsFromMeasures,
   upsertStagedObservations,
@@ -51,6 +61,14 @@ export type SchemaOnlyResult =
         | 'registered_as_full';
       summary: string;
     };
+
+/** The seed-table curation `registerSchemaOnly` mirrors from `registerTables`
+ * (same names and types: `Phase0Table`'s `updateCadence`, `slice` — whose
+ * `measures` is the ADR 061 allow-list — and `excludeMeasures`). */
+export interface PinnedRegistration extends MeasureCuration {
+  pinned?: boolean;
+  updateCadence?: string;
+}
 
 /** jsonb round-trips as a string over the real pg driver and as an already-
  * parsed object over PGlite (same duality pipeline.ts's own parseRegistryRow
@@ -106,6 +124,11 @@ export async function registerSchemaOnly(
     schema: CbsTableSchema;
     codeLists?: Record<string, CbsCode[]> | (() => Promise<Record<string, CbsCode[]>>);
   },
+  /** ADR 065 step 2: the curation of a PINNED (seed) table, so its slice-mode
+   * row equals what registerTables + syncTable leave for the same table. Absent
+   * ⇒ an on-demand table exactly as before (unpinned, no slice, no cadence,
+   * every numeric measure served). */
+  pinnedOptions?: PinnedRegistration,
 ): Promise<SchemaOnlyResult> {
   const existing = await db.query('select ingest_mode, units from cbs_tables where id = $1', [tableId]);
   if (existing.rows.length > 0) {
@@ -194,30 +217,50 @@ export async function registerSchemaOnly(
     };
   }
 
+  // A pinned table's curation (phantom exclusions, allow-list) narrows what it
+  // serves; without options `served` is every numeric measure, as before.
+  // Throws, like registerTables, when the allow-list names a code CBS lacks.
+  const allow = allowListedMeasures(pinnedOptions?.slice);
+  const fingerprintMeasures = allow === null ? numericMeasures : numericMeasures.filter((m) => allow.has(m.code));
+  const served = servedMeasuresForRegistration(tableId, numericMeasures, pinnedOptions ?? {});
+  if (served.length === 0) {
+    return {
+      ok: false,
+      reason: 'no_numeric_measures',
+      summary: `Table "${tableId}" has no numeric measure left to serve after its curated exclusions.`,
+    };
+  }
+
   const expectedDimensions = [...schema.dimensions]
     .map((d) => ({ name: d.name, kind: d.kind }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const units = unitsFromMeasures(numericMeasures);
+  const units = unitsFromMeasures(served);
   // Computed NOW, from the schema just fetched — unlike registerTables' full-
   // ingest path (which leaves schema_fingerprint null until the first
   // syncTable), a slice-cache table has no separate "first sync" moment: its
   // schema IS what's registered, so the fingerprint is set at registration.
-  const fingerprint = computeFingerprint(schema.dimensions, numericMeasures.map((m) => m.code));
+  // It covers the excluded measures too (syncTable's rule, #167: a change to
+  // the phantom set must still fail loudly) but only the allow-listed codes
+  // when there is an allow-list (ADR 061).
+  const fingerprint = computeFingerprint(schema.dimensions, fingerprintMeasures.map((m) => m.code));
   const sourceKey = sourceKeyForTableId(tableId);
+  const slice = pinnedOptions?.slice ?? null;
 
   await db.withTransaction(async (tx) => {
     await tx.query(
       `insert into cbs_tables
-         (id, title, expected_dimensions, slice, units, schema_fingerprint, pinned, source,
+         (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned, source,
           ingest_mode, schema_cbs_modified, last_row_count)
-       values ($1, $2, $3, null, $4, $5, $6, $7, 'slice_cache', $8, null)`,
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'slice_cache', $10, null)`,
       [
         tableId,
         schema.title,
         JSON.stringify(expectedDimensions),
+        slice ? JSON.stringify(slice) : null,
         JSON.stringify(units),
+        pinnedOptions?.updateCadence ?? null,
         fingerprint,
-        false,
+        pinnedOptions?.pinned ?? false,
         sourceKey,
         // Guaranteed non-null/non-empty by the no_cbs_modified refusal above.
         schema.modified,
@@ -230,7 +273,7 @@ export async function registerSchemaOnly(
   return {
     ok: true,
     tableId,
-    numericMeasures: numericMeasures.map((m) => m.code).sort(),
+    numericMeasures: served.map((m) => m.code).sort(),
     alreadyRegistered: false,
   };
 }
@@ -277,6 +320,8 @@ export interface SliceRegistry {
   expectedDimensions: { name: string; kind: string }[];
   schemaFingerprint: string | null;
   schemaCbsModified: Date | null;
+  /** The registered slice; its `measures` is the ADR 061 allow-list. */
+  slice: CbsSlice | null;
   version: number;
 }
 
@@ -292,6 +337,7 @@ function parseSliceRegistry(row: Record<string, unknown>): SliceRegistry {
       : (row.expected_dimensions ?? [])) as { name: string; kind: string }[],
     schemaFingerprint: (row.schema_fingerprint as string | null) ?? null,
     schemaCbsModified: row.schema_cbs_modified == null ? null : new Date(row.schema_cbs_modified as string | Date),
+    slice: row.slice == null ? null : ((typeof row.slice === 'string' ? JSON.parse(row.slice) : row.slice) as CbsSlice),
     version: Number(row.version),
   };
 }
@@ -328,6 +374,8 @@ export type SchemaCheckResult =
   | {
       ok: true;
       schema: CbsTableSchema;
+      /** The measures this table serves (a curated table's exclusions are
+       * left out) — what a schema refresh rewrites the stored units from. */
       numericMeasures: CbsMeasure[];
       fingerprint: string;
       /** true when CBS's current Modified is newer than the registry's
@@ -413,8 +461,14 @@ export async function checkSliceSchema(
   }
   const refresh = storedModified === null || fetchedModified > storedModified;
 
-  const numericMeasures = schema.measures.filter((m) => m.dataType !== 'String');
-  const numericCodes = numericMeasures.map((m) => m.code);
+  // The fingerprint covers every numeric measure CBS lists — or only the
+  // allow-listed ones on an allow-listed table (ADR 061) — exactly what
+  // registerSchemaOnly stored and syncTable's fingerprint covers.
+  const allow = allowListedMeasures(registry.slice);
+  const fingerprintMeasures = schema.measures.filter(
+    (m) => m.dataType !== 'String' && (allow === null || allow.has(m.code)),
+  );
+  const numericCodes = fingerprintMeasures.map((m) => m.code);
   const fingerprint = computeFingerprint(schema.dimensions, numericCodes);
 
   const stage1 = checkSchemaFingerprint(
@@ -426,6 +480,17 @@ export async function checkSliceSchema(
   if (!stage1.ok) {
     return { ok: false, stage: stage1.stage, summary: stage1.summary, quarantine: true, fingerprint };
   }
+
+  // Curated tables (#167): the registered units are the SERVED measures, which
+  // can be fewer than the fingerprinted ones. Once the fingerprint matched, the
+  // measure set is exactly the one registered, so the served set is the
+  // fingerprinted measures the registry holds units for — derived from the
+  // stored row, no seed lookup. Without a stored fingerprint nothing was
+  // compared, so nothing is filtered (the strict check).
+  const numericMeasures =
+    registry.schemaFingerprint === null
+      ? fingerprintMeasures
+      : fingerprintMeasures.filter((m) => Object.hasOwn(registry.units, m.code));
 
   // Final-review fix 2: the unit/decimals check lives HERE, next to the
   // fingerprint check, so every path that may go on to apply a refresh
@@ -534,7 +599,7 @@ export async function fetchSlice(
   // --- 1. Request validation (no network) -----------------------------------
   const registryResult = await db.query(
     `select ingest_mode, status, needs_review_reason, units, expected_dimensions,
-            schema_fingerprint, schema_cbs_modified, version
+            schema_fingerprint, schema_cbs_modified, slice, version
        from cbs_tables where id = $1`,
     [tableId],
   );
@@ -923,7 +988,7 @@ export async function ensureSlice(
   const registryRow = (
     await db.query(
       `select ingest_mode, status, needs_review_reason, units, expected_dimensions,
-              schema_fingerprint, schema_cbs_modified, version
+              schema_fingerprint, schema_cbs_modified, slice, version
          from cbs_tables where id = $1`,
       [tableId],
     )

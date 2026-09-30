@@ -75,6 +75,36 @@ export function unitsFromMeasures(measures: CbsMeasure[]): RegistryUnits {
   return units;
 }
 
+/** The per-table curation a registration applies to CBS's measure list. */
+export interface MeasureCuration {
+  /** ADR 061: `slice.measures` is the allow-list of served codes. */
+  slice?: CbsSlice | null;
+  /** #167: curated phantom measures, treated as not published. */
+  excludeMeasures?: string[];
+}
+
+/** The measures a table registers as served: CBS's list minus the curated
+ * phantom exclusions, narrowed to the allow-list when there is one. A listed
+ * code CBS does not carry is a curation error — refused before any write.
+ * Shared by registerTables and registerSchemaOnly's pinned path so the two
+ * storage modes derive one served set. */
+export function servedMeasuresForRegistration(
+  tableId: string,
+  measures: CbsMeasure[],
+  curation: MeasureCuration,
+): CbsMeasure[] {
+  const excluded = new Set(curation.excludeMeasures ?? []);
+  const missingListed = missingAllowListedCodes(curation.slice, measures.map((m) => m.code));
+  if (missingListed.length > 0) {
+    throw new Error(
+      `Cannot register ${tableId}: its measure allow-list names code(s) CBS does not list: ` +
+        `${missingListed.join(', ')}.`,
+    );
+  }
+  const allow = allowListedMeasures(curation.slice);
+  return measures.filter((m) => !excluded.has(m.code) && (allow === null || allow.has(m.code)));
+}
+
 // ---------------------------------------------------------------------------
 // registerTables
 // ---------------------------------------------------------------------------
@@ -109,22 +139,9 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
     const expectedDimensions = [...schema.dimensions]
       .map((d) => ({ name: d.name, kind: d.kind }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    // #167: curated phantom-measure exclusion — registered units carry only
-    // the measures that actually publish data (see Phase0Table.excludeMeasures).
-    const excluded = new Set(table.excludeMeasures ?? []);
-    // ADR 061: a measure allow-list scopes what this table serves. A listed
-    // code CBS does not list is a curation error — refuse before any write.
-    const missingListed = missingAllowListedCodes(table.slice, schema.measures.map((m) => m.code));
-    if (missingListed.length > 0) {
-      throw new Error(
-        `Cannot register ${table.id}: its measure allow-list names code(s) CBS does not list: ` +
-          `${missingListed.join(', ')}.`,
-      );
-    }
-    const allow = allowListedMeasures(table.slice);
-    const units = unitsFromMeasures(
-      schema.measures.filter((m) => !excluded.has(m.code) && (allow === null || allow.has(m.code))),
-    );
+    // #167 (phantom-measure exclusion) + ADR 061 (measure allow-list): the
+    // registered units carry only the measures this table actually serves.
+    const units = unitsFromMeasures(servedMeasuresForRegistration(table.id, schema.measures, table));
 
     const sourceKey = sourceKeyForTableId(table.id);
 
