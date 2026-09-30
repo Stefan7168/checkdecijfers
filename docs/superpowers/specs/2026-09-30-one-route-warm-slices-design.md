@@ -99,6 +99,22 @@ existing answer, chart and benchmark result unchanged.
 
 Steps 2, 3 and 4 touch different files and can be built in parallel; 5 needs all three; 6 needs 5; 7 and 8 need 5.
 
+## 4a. Measured and built so far (2026-09-30)
+
+- **Step 1 measured** (`npm run ingest:warm-plan`, read-only, against production): at the 2,000-cell cap the 20 pinned CBS
+  tables hold 1,107,018 scope cells in **894 requests** — 512 of them for `86141NED` (616,714 cells), 120 for `85880NED`,
+  112 for `85615NED`; twelve tables need four requests or fewer. Longest request address 5,202 characters (cap 6,000).
+- **Live timings the same day** (consumer-price table): 34,104 rows in one filtered request took 12 s; 2,842 rows took 42 s;
+  one request stalled past 120 s. Latency is per request and erratic, so the warm job uses **fewer, bigger requests**
+  (`WARM_MAX_CELLS = 25,000`, for the job only — a reader's question keeps the 2,000 cap) and treats every request as one
+  that can fail or time out. At that cap `86141NED` needs about 25 requests.
+- **The separate change detector (step 4) is dropped for now** (cheapest mechanism first): one schema check per pinned
+  table per run (about 80 small requests a day for 20 tables) already tells whether CBS changed the table. The slim
+  catalogue call stays a recorded option if the daily job ever needs to get cheaper.
+- **Built and merged locally:** the planner (step 2, `src/ingestion/warm-plan.ts`, 51 tests), pinned slice registration
+  (step 3; units, scope, cadence, pinned flag and fingerprint equal the whole-table path for all 17 fixture-backed seed
+  tables, 25 tests). **In progress:** the warm job (step 5) and the read-only parity report (first half of step 7).
+
 ## 5. Invariants at stake
 
 R1/R2 (every number a stored cell — unchanged: cells are stored before any answer), R4 (the date shown is the latest
