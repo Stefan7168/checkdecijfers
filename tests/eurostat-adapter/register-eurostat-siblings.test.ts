@@ -45,21 +45,22 @@ const DATASETS: Readonly<Record<string, unknown>> = {
     },
     value: [3.5],
   },
-  prc_hicp_manr: {
+  prc_hicp_minr: {
     version: '2.0',
     class: 'dataset',
-    label: 'HICP - monthly data (annual rate of change)',
-    id: ['freq', 'unit', 'coicop', 'geo', 'time'],
+    label:
+      'Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data',
+    id: ['freq', 'unit', 'coicop18', 'geo', 'time'],
     size: [1, 1, 1, 1, 1],
     dimension: {
       freq: { category: { index: { M: 0 }, label: { M: 'Monthly' } } },
       unit: { category: { index: { RCH_A: 0 }, label: { RCH_A: 'Annual rate of change' } } },
-      coicop: { category: { index: { CP00: 0 }, label: { CP00: 'All-items HICP' } } },
+      coicop18: { category: { index: { TOTAL: 0 }, label: { TOTAL: 'Total' } } },
       geo: { category: { index: { NL: 0 }, label: { NL: 'Netherlands' } } },
-      // The response's own time CATEGORY codes read 'YYYY-Mnn' (with 'M') —
-      // distinct from the REQUEST's `sinceTimePeriod=YYYY-MM` (no 'M'), per
-      // statistics-api.ts's `sinceTimePeriodFor` doc comment.
-      time: { category: { index: { '2025-M03': 0 }, label: { '2025-M03': '2025-M03' } } },
+      // Real Statistics-API monthly codes are 'YYYY-MM' (verified live 2026-09-30;
+      // this fixture used to say 'YYYY-Mnn', an assumption that made the first
+      // real monthly sync throw — see the real-response test next door).
+      time: { category: { index: { '2025-03': 0 }, label: { '2025-03': '2025-03' } } },
     },
     value: [2.1],
   },

@@ -104,7 +104,7 @@ describe('the reviewed constants (requirement 1: pairs + measures)', () => {
     }
   });
 
-  it('fix round 1: every reviewed measure pins `freq` in dims (une_rt_q/namq_10_gdp quarterly, prc_hicp_manr monthly) — there is no TABLE_REGISTRY_DEFAULTS entry for a Eurostat sibling table, so this is the ONLY place freq gets a coordinate', () => {
+  it('fix round 1: every reviewed measure pins `freq` in dims (une_rt_q/namq_10_gdp quarterly, prc_hicp_minr monthly) — there is no TABLE_REGISTRY_DEFAULTS entry for a Eurostat sibling table, so this is the ONLY place freq gets a coordinate', () => {
     const byKey = Object.fromEntries(EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => [m.key, m]));
     expect(byKey.eu_unemployment_rate_harmonised!.dims.freq).toBe('Q');
     expect(byKey.eu_hicp_annual_rate!.dims.freq).toBe('M');

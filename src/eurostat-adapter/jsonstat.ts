@@ -89,7 +89,12 @@ export const EU_EFTA_STAND_IN_GEO_CODES: ReadonlySet<string> = new Set([
 
 const ANNUAL_RE = /^(\d{4})$/;
 const QUARTER_RE = /^(\d{4})-Q([1-4])$/;
-const MONTH_RE = /^(\d{4})-M(0[1-9]|1[0-2])$/;
+// The real Statistics API spells months 'YYYY-MM' ('2026-08', verified live
+// 2026-09-30: prc_hicp_minr's `time` index is ['2026-07', '2026-08']); the
+// 'YYYY-Mnn' spelling was this file's original, never-real assumption. Both
+// name one unambiguous month, so both map. (A 'YYYY-MM' code cannot collide
+// with the daily 'YYYY-MM-DD' or a quarter/week/semester code below.)
+const MONTH_RE = /^(\d{4})-M?(0[1-9]|1[0-2])$/;
 const SEMESTER_RE = /^\d{4}-S[12]$/;
 const WEEKLY_RE = /^\d{4}-W\d{2}$/;
 const DAILY_RE = /^\d{4}-\d{2}-\d{2}$/;

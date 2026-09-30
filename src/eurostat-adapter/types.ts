@@ -94,7 +94,7 @@ export class UnsupportedGrainError extends Error {
   constructor(grain: string, nativeCode: string) {
     super(
       `Eurostat time grain '${grain}' (native time code '${nativeCode}') is not supported — ` +
-        `only annual ('YYYY'), quarterly ('YYYY-Qn') and monthly ('YYYY-Mnn') grains map into the ` +
+        `only annual ('YYYY'), quarterly ('YYYY-Qn') and monthly ('YYYY-MM') grains map into the ` +
         `internal 'YYYY(JJ|KW|MM)NN' grammar (ADR 048 D6). This is a deliberate refusal, not a bug: ` +
         `a semester/weekly/daily dataset is an ADR-030-D2 grain-extension revisit trigger.`,
     );

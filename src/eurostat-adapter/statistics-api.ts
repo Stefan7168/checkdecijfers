@@ -77,10 +77,14 @@ function canonicalSliceKey(slice: CbsSlice): string {
  * `CbsSlice.periodFloor` is always expressed in) into Eurostat's OWN
  * `sinceTimePeriod` filter grammar. This is the exact inverse of
  * `mapEurostatPeriod` (jsonstat.ts) in terms of WHICH grain it accepts, but
- * NOT the same target string shape: Eurostat's `sinceTimePeriod` query
- * parameter takes plain 'YYYY' / 'YYYY-Qn' / 'YYYY-MM' — no 'M' prefix on the
- * month, unlike the JSON-stat response's own 'time' category codes (which DO
- * read '2024-M01'; see MONTH_RE in jsonstat.ts). The brief's own research
+ * NOT the same target string shape for the ANNUAL/QUARTERLY grains only by
+ * coincidence: Eurostat's `sinceTimePeriod` query parameter takes plain
+ * 'YYYY' / 'YYYY-Qn' / 'YYYY-MM', and the JSON-stat response's own 'time'
+ * category codes use the SAME spellings (verified live 2026-09-30:
+ * prc_hicp_minr's `time` index reads ['2026-07', '2026-08']). This comment
+ * used to claim the response spelled months 'YYYY-M01' — that was never true
+ * and made the first real monthly sync throw; see MONTH_RE in jsonstat.ts. The
+ * brief's own research
  * (docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md)
  * only tested the plain-year (annual) shape live; the quarterly and monthly
  * shapes below are now ALSO verified live (independent review, 2026-09-23,
@@ -90,8 +94,9 @@ function canonicalSliceKey(slice: CbsSlice): string {
  *   quarterly `YYYY-Qn` shape, and that the floor is INCLUSIVE).
  * - `prc_hicp_manr?...&geo=NL&coicop=CP00&unit=RCH_A&sinceTimePeriod=2025-03`
  *   → 10 periods returned, first `2025-03`, last `2025-12` (confirms the
- *   monthly `YYYY-MM` shape — no `M` prefix, as this comment already said —
- *   and again an inclusive floor).
+ *   monthly `YYYY-MM` shape — no `M` prefix — and again an inclusive floor;
+ *   NB the retired prc_hicp_manr stops at 2025-12, see the sibling
+ *   registration's notes in src/sources/eurostat-siblings.ts).
  * - `une_rt_q?...&sinceTimePeriod=2024` (plain year, on a QUARTERLY dataset)
  *   → first period `2024-Q1` (confirms Eurostat accepts the coarser annual
  *   shape as a floor even on a finer-grained dataset, rounding down to that

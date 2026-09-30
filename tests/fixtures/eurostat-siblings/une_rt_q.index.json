@@ -1,0 +1,6 @@
+{
+ "synthetic": false,
+ "tableId": "eurostat:une_rt_q",
+ "capturedAt": "2026-09-30T03:49:49.611Z",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_q?format=JSON&lang=EN&age=Y15-74&freq=Q&geo=AT&geo=BE&geo=BG&geo=CH&geo=CY&geo=CZ&geo=DE&geo=DK&geo=EA&geo=EA19&geo=EA20&geo=EE&geo=EFTA&geo=EL&geo=ES&geo=EU27_2020&geo=FI&geo=FR&geo=HR&geo=HU&geo=IE&geo=IS&geo=IT&geo=LI&geo=LT&geo=LU&geo=LV&geo=MT&geo=NL&geo=NO&geo=PL&geo=PT&geo=RO&geo=SE&geo=SI&geo=SK&s_adj=SA&sex=T&sinceTimePeriod=2010-Q1&unit=PC_ACT"
+}

@@ -46,6 +46,12 @@ describe('mapEurostatPeriod (D6 period grammar)', () => {
       ['2024', '2024JJ00'],
       ['2024-Q1', '2024KW01'],
       ['2024-Q4', '2024KW04'],
+      // Real Statistics-API monthly codes are 'YYYY-MM' (prc_hicp_minr returned
+      // ['2026-07','2026-08'], checked live 2026-09-30) — the 'YYYY-Mnn' spelling
+      // this file used to assume never appears in a real response; both denote
+      // one unambiguous month, so both map.
+      ['2024-01', '2024MM01'],
+      ['2024-12', '2024MM12'],
       ['2024-M01', '2024MM01'],
       ['2024-M12', '2024MM12'],
     ];

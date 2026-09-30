@@ -88,22 +88,29 @@ export const EUROSTAT_SIBLING_MEASURES_REVIEWED: readonly CanonicalMeasure[] = [
   },
   {
     key: 'eu_hicp_annual_rate',
-    tableId: 'eurostat:prc_hicp_manr',
-    measure: 'prc_hicp_manr|RCH_A',
-    measureTitle: 'HICP - monthly data (annual rate of change)',
+    tableId: 'eurostat:prc_hicp_minr',
+    measure: 'prc_hicp_minr|RCH_A',
+    measureTitle:
+      'Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data',
     // `freq` (fix round 1) — see the unemployment sibling's comment above for
     // the full account; this dataset is monthly ('M'), not quarterly.
-    dims: { freq: 'M', coicop: 'CP00' },
+    // `coicop18` (NOT the old `coicop`): the ECOICOP ver.2 successor's
+    // classification dimension is named `coicop18` and its all-items code is
+    // `TOTAL` (the retired prc_hicp_manr called it `coicop`/`CP00`). Verified
+    // live 2026-09-30.
+    dims: { freq: 'M', coicop18: 'TOTAL' },
     // **Assumption:** owner may reword before step 6 (see #313).
     definitionLabel: 'geharmoniseerde inflatie (Eurostat HICP, jaarmutatie, alle bestedingen)',
     everydayTerms: [],
     notes:
       'Sibling of CBS cpi_yearly_inflation (86141NED). Grain match: monthly-monthly. Definitional ' +
       'difference for the confirm chip: EU-harmonised COICOP basket vs. CBS\'s own national CPI basket. ' +
-      'Verified live 2026-09-23: filtered slice (coicop=CP00, EU/EFTA geo list, since 2015) = 4,488 cells, ' +
-      'zero flagged cells found (no status field in the response at all). Fully unfiltered size was ' +
-      'unverified live (download exceeded a 180s timeout at 36MB) but near-certainly far over the 500k cap ' +
-      'by extrapolation — same adapter fix as above resolves it.',
+      'DATASET CORRECTED 2026-09-30: the research doc\'s prc_hicp_manr was FROZEN — its ' +
+      'label reads "(1997-2025)", last update 2026-02-06, no period after 2025-12 — Eurostat moved HICP to ' +
+      'ECOICOP ver.2 and publishes the live series as prc_hicp_minr (last update 2026-09-17, through ' +
+      '2026-08). Verified live 2026-09-30: filtered slice (coicop18=TOTAL, unit=RCH_A, EU/EFTA geo list, ' +
+      'since 2015-01) = 4,760 cells (34 geos x 140 months), 4,737 values, 24 cells flagged \'e\' ' +
+      '(estimate), no other flag.',
   },
   {
     key: 'eu_gdp_growth_yoy_volume',
@@ -161,10 +168,10 @@ export const EUROSTAT_SIBLING_REGISTRATIONS: readonly EurostatSiblingRegistratio
     updateCadence: 'quarterly',
   },
   {
-    tableId: 'eurostat:prc_hicp_manr',
+    tableId: 'eurostat:prc_hicp_minr',
     slice: {
-      dimensionEquals: { freq: 'M', coicop: 'CP00', unit: 'RCH_A' },
-      periodFloor: '2015MM01', // since 2015-01 (research doc §2.4)
+      dimensionEquals: { freq: 'M', coicop18: 'TOTAL', unit: 'RCH_A' },
+      periodFloor: '2015MM01', // since 2015-01 (research doc §2.4; dataset swapped 2026-09-30, see the measure's notes)
     },
     updateCadence: 'monthly',
   },

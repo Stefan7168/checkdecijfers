@@ -23,6 +23,7 @@
 // ADR 003 seam applied to source two).
 //
 // Refresh: node scripts/capture-eurostat-fixtures.ts [code ...]
+//          node scripts/capture-eurostat-fixtures.ts --siblings   (the three E2a sibling slices)
 //          (network required; not CI; no args = every code below)
 //          node scripts/capture-eurostat-fixtures.ts --catalog
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -95,6 +96,33 @@ async function captureCatalog(): Promise<void> {
 if (process.argv.includes('--catalog')) {
   await captureCatalog();
   console.log('Catalog capture complete.');
+  process.exit(0);
+}
+
+// `--siblings` (session of 2026-09-30): captures the REAL response for each E2a
+// sibling registration's exact slice (the URL `buildRequestUrl` builds — one
+// source of truth with `npm run eurostat:siblings`) into
+// tests/fixtures/eurostat-siblings/<code>.json (NOT under eurostat/: the fixture-source loader treats every subfolder there as a table), so a hermetic test can prove the
+// adapter parses what the real API returns for the reviewed slice. Added after
+// the first real registration threw: monthly time codes are 'YYYY-MM', not the
+// 'YYYY-Mnn' the synthetic fixtures assumed, and prc_hicp_manr was frozen at 2025-12.
+if (process.argv.includes('--siblings')) {
+  const { buildRequestUrl } = await import('../src/eurostat-adapter/statistics-api.ts');
+  const { EUROSTAT_SIBLING_REGISTRATIONS } = await import('../src/sources/eurostat-siblings.ts');
+  const dir = join(OUT, '..', 'eurostat-siblings');
+  mkdirSync(dir, { recursive: true });
+  for (const reg of EUROSTAT_SIBLING_REGISTRATIONS) {
+    const code = reg.tableId.slice(reg.tableId.indexOf(':') + 1);
+    const url = buildRequestUrl(code, reg.slice);
+    const dataset = await fetchJson(url);
+    writeFileSync(join(dir, `${code}.json`), JSON.stringify(dataset) + '\n');
+    writeFileSync(
+      join(dir, `${code}.index.json`),
+      JSON.stringify({ synthetic: false, tableId: reg.tableId, capturedAt: new Date().toISOString(), source: url }, null, 1) + '\n',
+    );
+    console.log(`${reg.tableId}: captured -> tests/fixtures/eurostat-siblings/${code}.json`);
+  }
+  console.log('Sibling capture complete.');
   process.exit(0);
 }
 
