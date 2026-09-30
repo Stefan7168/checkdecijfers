@@ -358,6 +358,16 @@ describe('the read-only proof: refused, nothing written', () => {
     await refusedAfterProof(/different status/);
   });
 
+  it('a stored code whose group differs from CBS’s current code list', async () => {
+    // Region classes ("all municipalities") are answered from the group.
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `update dimension_labels set dimension_group = 'ELDERS' where table_id = $1 and dimension = 'RegioS' and code = 'GM0363'`,
+      [POP],
+    );
+    await refusedAfterProof(/RegioS GM0363 changed/);
+  });
+
   it('a stored code CBS no longer publishes', async () => {
     await wholeTable(POP, new FixtureSource(docsFor(POP)));
     await db.query(
