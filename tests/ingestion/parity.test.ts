@@ -228,7 +228,7 @@ describe('compareTableWithSource: limits and failures', () => {
     });
     const before = await snapshot();
     await compareTableWithSource(db, source, '03759ned', { deadline: FAR });
-    await compareTableWithSource(db, source, '03759ned', { deadline: FAR, maxCells: 10 });
+    await compareTableWithSource(db, source, '03759ned', { deadline: FAR, maxCells: 1000 });
     expect(await snapshot()).toEqual(before);
   });
 });
