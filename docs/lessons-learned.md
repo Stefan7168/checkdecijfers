@@ -6,6 +6,48 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 151 — the value research, the one-route redesign, and parallel builders
+
+1. **A read-only dry run against production found three defects the hermetic suite could not.** The conversion command
+   passed 35 tests, then refused two of the first three real tables on stale measure descriptions, three of twelve on a
+   CBS limit no fixture contains ("The node count limit of '1000' has been exceeded": 165 filter terms accepted, 180
+   refused), and one on a reworded period label. Fixtures hold what we captured, not what production has drifted into.
+   **Rule going forward:** every supervised, production-facing command gets a mode that writes nothing, and it is run
+   against production before the command is called done.
+2. **Readable upstream errors paid for themselves the same afternoon.** The node-count message only surfaced because the
+   adapter had just started including a summary of CBS's error body. It also showed the cost of the first version: the
+   message named a several-thousand-character address twice. Shorten addresses in messages.
+3. **"Whole-table copies" was the wrong mental model, and the code study corrected it before any design was written.**
+   The pinned tables are declared scopes (1.1 million cells), not whole tables; the thing to retire was the hand-run sync
+   that fills them. Three parallel read-only code studies (the answer path, the pages, the benchmark) cost about fifteen
+   minutes and changed the design from "rebuild the curated path on code lists" to "keep the scope, change how it is
+   filled". Study what the existing thing is before deciding how to replace it.
+4. **Measure a limit before choosing it.** The first time limit for metadata calls was 30 s; CBS's catalogue turned out to
+   take 21 s, and one unbounded download stalled for over five minutes during the measurement itself. Per-call limits
+   and the 25,000-cell request size were then set from timings (34,000 rows in 12 s, 2,800 rows in 42 s: latency is per
+   request, not per cell).
+5. **Builders in isolated worktrees start from `origin/main`, not from the local branch.** `git reset --hard <local sha>`
+   as the brief's first instruction let later builders build on merged-but-unpushed work. Say it in the brief; check the
+   reported base commit.
+6. **The test-runner mutex is advisory, and a verification run beside builders is not a verification.** One full block
+   showed four web failures while two builders ran tests (one test took 518 s); the same suite was green alone. One
+   builder chained its `pgrep` check with `;` and started a second runner. **Rule:** run the verification block when no
+   builder is running tests, or re-run the affected suite alone before trusting a red; tell builders to gate with
+   `pgrep … && echo BUSY || npx vitest …`.
+7. **A stricter check exposed a hand-built stub that no real response resembles.** The new "Eurostat ignored a requested
+   value" refusal failed three registry tests whose synthetic dataset lacked the `freq` dimension every real response
+   carries. The check was right; the stub was wrong (same lesson as session 150, item 1, from the other side).
+8. **A blind test needs its limits written next to its result.** "A general assistant gets CBS numbers right" came from
+   one run, ten questions, a careful brief and a fetch tool that opens any address. The brief records that it is an upper
+   bound for a skilled user; without that sentence the number would have been quoted as the consumer experience.
+9. **A new job route must be asked for from outside before it is believed.** `curl` on the freshly deployed
+   `/api/warm-job` answered 307 to `/login`: the login proxy lets through only the routes it lists
+   (`web/proxy.ts`), and a kick carries no session. The same check showed `/api/table-lane-job` had been unreachable
+   the same way since it was built — its kick could never have started the job, and only the daily sweep would have
+   answered a reader (the lane is still switched off, so nobody met it). Route tests call the handler directly and
+   never pass through the proxy. **Rule:** after deploying a route, request it over HTTP without credentials and
+   expect its own refusal (401/503), not a redirect.
+
 ## Session 150 — the first real Eurostat load (found two defects the hermetic suite could not)
 
 1. **A parser never fed a real response is a guess, however well tested.** Every Eurostat fixture was hand-built, so the monthly period

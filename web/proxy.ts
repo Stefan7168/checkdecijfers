@@ -32,6 +32,12 @@ const PUBLIC_EXACT_PATHS = [
   '/api/stripe/webhook',
   '/api/onboarding-cron',
   '/api/gdpr-purge-cron',
+  // The two job routes the app kicks itself (web/lib/cron-kick.ts): same class as the crons above —
+  // their own CRON_SECRET Bearer check (503 unset / 401 wrong) is the authorization, and the kick
+  // carries no session. Missing here until session 151: both answered 307 to /login, so a kicked
+  // job never ran (/api/table-lane-job since it was built; the daily sweep hid it).
+  '/api/table-lane-job',
+  '/api/warm-job',
   '/api/health',
   // The public, noindexed architecture reference page — no DB reads, no
   // account needed, reachable via the footer's gear icon by design.

@@ -82,6 +82,15 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/sitemap.xml/other')).toBe(false);
   });
 
+  it('lets the two kicked job routes through: their callers carry the CRON_SECRET Bearer, never a session', () => {
+    // Found live in session 151: both routes answered 307 → /login, so a kick never reached the job.
+    // /api/table-lane-job had been unreachable this way since it was built (the lane is still dark).
+    expect(isPublicPath('/api/table-lane-job')).toBe(true);
+    expect(isPublicPath('/api/warm-job')).toBe(true);
+    expect(isPublicPath('/api/warm-job-debug')).toBe(false);
+    expect(isPublicPath('/api/table-lane-job/x')).toBe(false);
+  });
+
   it('allows the auth-flow paths', () => {
     expect(isPublicPath('/login')).toBe(true);
     expect(isPublicPath('/auth/callback')).toBe(true);
