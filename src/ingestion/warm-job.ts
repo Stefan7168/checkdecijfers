@@ -9,6 +9,7 @@
 // refusal) are RESULTS, never throws; only programming/database errors throw.
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
+import { BUDGET_ENDED_PHRASE } from '../sources/fetch-with-timeout.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 import { ensureSlice, precheckSliceSchema, sliceFilterKey, type SliceRequest } from './slice-cache.ts';
 import { loadWarmScope, planWarmSlices, type WarmPlan } from './warm-plan.ts';
@@ -39,6 +40,14 @@ interface WarmOptions {
   /** Epoch ms: no new request (or table) starts at or after this moment. */
   deadline: number;
   now?: () => number;
+}
+
+/** True when a failure summary says the request was cut, or refused to start, because the run's time
+ * budget was spent (the adapter's `stopAt`). That is "not done, the next run continues" — not a failure of
+ * CBS or of the data. A cut request stored nothing (fetchSlice keeps every page in memory and writes only
+ * after all of them arrived and passed every check), so no partial request can be served. */
+function endedByBudget(summary: string): boolean {
+  return summary.includes(BUDGET_ENDED_PHRASE);
 }
 
 function skipped(tableId: string, reason: string): WarmTableResult {
@@ -228,6 +237,8 @@ export async function warmTable(
   // so the scope loaded next already holds CBS's new periods.
   const pre = await precheckSliceSchema(db, source, tableId);
   if (!pre.ok) {
+    // The budget ended during the one schema read: nothing was planned or done; the next run starts over.
+    if (endedByBudget(pre.summary)) return skipped(tableId, 'deadline');
     return failed({ planned: 0, fetched: 0, confirmed: 0 }, pre.stage, pre.summary, await isQuarantined(db, tableId));
   }
   const prechecked = pre.prechecked;
@@ -251,6 +262,11 @@ export async function warmTable(
     }
     const result = await ensureSlice(db, source, tableId, req, { maxCells: WARM_MAX_CELLS, prechecked });
     if (!result.ok) {
+      // Cut by the run's time budget mid-request: not done, so it counts as remaining and the next run
+      // repeats it; every request already stored stays stored.
+      if (endedByBudget(result.summary)) {
+        return { tableId, outcome: 'partial', planned, fetched, confirmed, remaining: planned - fetched - confirmed };
+      }
       // Already-stored requests stay stored; the next run resumes (they confirm cheaply).
       return failed({ planned, fetched, confirmed }, result.stage, result.summary, await isQuarantined(db, tableId));
     }

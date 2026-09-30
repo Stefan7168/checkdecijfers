@@ -909,6 +909,70 @@ describe('ODataV4Source — time limit, retries and readable errors (#357)', () 
     await expect(run()).rejects.toThrow(/T\/Observations.*timed out after 0\.02 seconds/);
   });
 
+  describe('the run budget (stopAt)', () => {
+    it('cuts a hung page at the time left in the budget, not at its own longer limit, and does not retry it', async () => {
+      const fetchFn = vi.fn(never);
+      const source = new ODataV4Source({
+        fetchFn: fetchFn as unknown as typeof fetch,
+        observationsTimeoutMs: 60_000,
+        stopAt: Date.now() + 150,
+        ...fast,
+      });
+      const started = Date.now();
+      const run = async () => {
+        for await (const page of source.fetchObservations('T', undefined, ['Perioden'])) void page;
+      };
+      await expect(run()).rejects.toThrow(/time budget ran out.*T\/Observations/);
+      expect(Date.now() - started).toBeLessThan(150 + 300);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('a metadata call and a $count call are cut the same way', async () => {
+      for (const call of [
+        (s: ODataV4Source) => s.fetchCodeList('T', 'Perioden'),
+        (s: ODataV4Source) => s.fetchObservationCount('T'),
+      ]) {
+        const fetchFn = vi.fn(never);
+        const source = new ODataV4Source({
+          fetchFn: fetchFn as unknown as typeof fetch,
+          metadataTimeoutMs: 60_000,
+          stopAt: Date.now() + 100,
+          ...fast,
+        });
+        const started = Date.now();
+        await expect(call(source)).rejects.toThrow(/time budget ran out/);
+        expect(Date.now() - started).toBeLessThan(100 + 300);
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('starts no request once the budget has passed', async () => {
+      const fetchFn = vi.fn(never);
+      const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, stopAt: Date.now() - 1, ...fast });
+      await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(/time budget ran out/);
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
+
+    it('a retry wait never runs past the budget', async () => {
+      const fetchFn = vi.fn(async () => ({ ok: false, status: 503, statusText: 'Service Unavailable', text: async () => '' }));
+      const source = new ODataV4Source({
+        fetchFn: fetchFn as unknown as typeof fetch,
+        stopAt: Date.now() + 120,
+        retryBackoffMs: 10_000,
+      });
+      const started = Date.now();
+      await expect(source.fetchCodeList('T', 'Perioden')).rejects.toThrow(/time budget ran out/);
+      expect(Date.now() - started).toBeLessThan(120 + 300);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('a call that finishes inside the budget is unaffected', async () => {
+      const fetchFn = vi.fn(async () => okJson({ value: [] }));
+      const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, stopAt: Date.now() + 60_000, ...fast });
+      await expect(source.fetchCodeList('T', 'Perioden')).resolves.toEqual([]);
+    });
+  });
+
   it('a non-OK answer carries a short summary of the body (OData error.message)', async () => {
     const fetchFn = vi.fn(async () => ({
       ok: false,

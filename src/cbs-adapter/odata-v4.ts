@@ -21,7 +21,7 @@ import {
   parseObservationsPage,
   type CbsMeasureGroup,
 } from './parse-v4.ts';
-import { fetchAndRead, shortUrl, summarizeErrorBody } from '../sources/fetch-with-timeout.ts';
+import { BUDGET_ENDED_PHRASE, fetchAndRead, shortUrl, summarizeErrorBody } from '../sources/fetch-with-timeout.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
 const FETCH_ATTEMPTS = 3;
@@ -121,6 +121,14 @@ export interface ODataV4SourceOptions {
   catalogTimeoutMs?: number;
   /** Base of the linear retry backoff (attempt n waits n x this). */
   retryBackoffMs?: number;
+  /**
+   * Epoch ms: the end of the run's time budget (the command line's --budget-seconds). Every attempt is
+   * limited to the SMALLER of its own limit and the time left until this moment, no attempt or retry
+   * wait starts once it has passed, and a request cut this way fails with BUDGET_ENDED_PHRASE in its
+   * message — so the budget is a real upper bound, not only checked between requests. Absent: no
+   * budget (the per-attempt limits alone apply, as before).
+   */
+  stopAt?: number;
 }
 
 /** One failed response as a message: status line, plus a short summary of the
@@ -142,6 +150,7 @@ export class ODataV4Source implements CbsSource {
   private readonly observationsTimeoutMs: number;
   private readonly catalogTimeoutMs: number;
   private readonly retryBackoffMs: number;
+  private readonly stopAt: number | undefined;
 
   constructor(options: ODataV4SourceOptions = {}) {
     this.fetchFn = options.fetchFn;
@@ -149,6 +158,35 @@ export class ODataV4Source implements CbsSource {
     this.observationsTimeoutMs = options.observationsTimeoutMs ?? OBSERVATIONS_TIMEOUT_MS;
     this.catalogTimeoutMs = options.catalogTimeoutMs ?? CATALOG_TIMEOUT_MS;
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
+    this.stopAt = options.stopAt;
+  }
+
+  /** The limit for one attempt: its own limit, or the time left in the run's budget when that is less.
+   * Throws (no request is made) when the budget is already spent. */
+  private attemptLimit(url: string, timeoutMs: number): { ms: number; capped: boolean } {
+    if (this.stopAt === undefined) return { ms: timeoutMs, capped: false };
+    const left = this.stopAt - Date.now();
+    if (left <= 0) throw this.budgetEnded(url);
+    return left < timeoutMs ? { ms: left, capped: true } : { ms: timeoutMs, capped: false };
+  }
+
+  private budgetEnded(url: string): Error {
+    return new Error(`CBS request stopped: ${BUDGET_ENDED_PHRASE} for ${shortUrl(url)}`);
+  }
+
+  /** After a failed attempt: throws a budget cut when the attempt was cut by the budget's limit (a timeout
+   * under a shortened limit) or the budget is spent — no retry then. Otherwise returns. */
+  private stopIfBudgetEnded(url: string, capped: boolean, err: unknown): void {
+    if (this.stopAt === undefined) return;
+    const timedOut = err instanceof Error && /timed out after/.test(err.message);
+    if ((capped && timedOut) || this.stopAt - Date.now() <= 0) throw this.budgetEnded(url);
+  }
+
+  /** The wait before the next attempt, never longer than the budget has left. */
+  private async backoff(attempt: number): Promise<void> {
+    const wait = this.retryBackoffMs * attempt;
+    const capped = this.stopAt === undefined ? wait : Math.max(0, Math.min(wait, this.stopAt - Date.now()));
+    await new Promise((resolve) => setTimeout(resolve, capped));
   }
 
   private async fetchJson(url: string, timeoutMs: number = this.metadataTimeoutMs): Promise<unknown> {
@@ -173,11 +211,12 @@ export class ODataV4Source implements CbsSource {
     type Outcome = { body: unknown } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      const limit = this.attemptLimit(url, timeoutMs);
       try {
         const outcome = await fetchAndRead<Outcome>(
           url,
           { headers: { Accept: 'application/json' } },
-          timeoutMs,
+          limit.ms,
           async (res) => {
             if (res.ok) return { body: await res.json() };
             if (onNotFound !== undefined && res.status === 404) return { body: onNotFound };
@@ -190,9 +229,8 @@ export class ODataV4Source implements CbsSource {
       } catch (err) {
         lastError = err;
       }
-      if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
-      }
+      this.stopIfBudgetEnded(url, limit.capped, lastError);
+      if (attempt < FETCH_ATTEMPTS) await this.backoff(attempt);
     }
     throw new Error(
       `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${
@@ -274,11 +312,12 @@ export class ODataV4Source implements CbsSource {
     type Outcome = { count: number | null } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      const limit = this.attemptLimit(url, this.metadataTimeoutMs);
       try {
         const outcome = await fetchAndRead<Outcome>(
           url,
           { headers: { Accept: 'text/plain' } },
-          this.metadataTimeoutMs,
+          limit.ms,
           async (res) => {
             if (res.ok) {
               const body = (await res.text()).trim();
@@ -298,9 +337,8 @@ export class ODataV4Source implements CbsSource {
       } catch (err) {
         lastError = err;
       }
-      if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
-      }
+      this.stopIfBudgetEnded(url, limit.capped, lastError);
+      if (attempt < FETCH_ATTEMPTS) await this.backoff(attempt);
     }
     throw new Error(
       `CBS OData $count request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${

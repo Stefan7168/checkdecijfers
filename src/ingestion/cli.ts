@@ -16,6 +16,10 @@ import { warmPinnedTables, type WarmTableResult } from './warm-job.ts';
 interface Deps {
   db: Db;
   source: CbsSource;
+  /** Builds the source for a run that has a time budget: every request it makes is limited to the time
+   * left until `stopAt` (epoch ms), so --budget-seconds is a real upper bound. Absent (tests with a
+   * fixture source): `source` is used as is. */
+  sourceForBudget?: (stopAt: number) => CbsSource;
   /** Injected for tests (hermetic Resend stubbing, same pattern every sibling
    * admin alert test uses). Defaults to the real fetch in production. */
   fetchImpl?: typeof fetch;
@@ -95,7 +99,7 @@ async function runWarm(args: ParsedArgs, deps: Deps): Promise<number> {
     return 1;
   }
   const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_WARM_BUDGET_SECONDS) * 1000;
-  const results = await warmPinnedTables(deps.db, deps.source, {
+  const results = await warmPinnedTables(deps.db, deps.sourceForBudget?.(deadline) ?? deps.source, {
     deadline,
     ...(args.tableIds.length > 0 ? { tableIds: args.tableIds } : {}),
   });
@@ -125,6 +129,7 @@ async function runStorageCommand(
   }
   const tableId = args.tableIds[0]!;
   const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_STORAGE_BUDGET_SECONDS) * 1000;
+  const source = deps.sourceForBudget?.(deadline) ?? deps.source;
 
   if (command === 'convert-to-full') {
     const result = await convertTableToFull(deps.db, tableId, { apply: args.yes });
@@ -132,13 +137,13 @@ async function runStorageCommand(
     return result.outcome === 'refused' ? 1 : 0;
   }
   if (command === 'rebaseline-slices') {
-    const result = await rebaselineSliceTable(deps.db, deps.source, tableId, { deadline, apply: args.yes });
+    const result = await rebaselineSliceTable(deps.db, source, tableId, { deadline, apply: args.yes });
     console.log(describeRebaseline(result));
     // A pinned table whose warm run did not finish still needs `ingest warm`.
     const unfinished = result.warm != null && result.warm.outcome !== 'complete';
     return result.outcome === 'refused' || unfinished ? 1 : 0;
   }
-  const result = await convertTableToSlices(deps.db, deps.source, tableId, { deadline, apply: args.yes });
+  const result = await convertTableToSlices(deps.db, source, tableId, { deadline, apply: args.yes });
   console.log(describeConversion(result));
   return result.outcome === 'converted' || result.outcome === 'dry_run' ? 0 : 1;
 }
@@ -315,11 +320,17 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   const { connectFromEnv } = await import('../db/client.ts');
   const { applyMigrations } = await import('../db/migrate.ts');
   const { adapterFor } = await import('../sources/adapters.ts');
+  const { ODataV4Source } = await import('../cbs-adapter/odata-v4.ts');
   const { CBS_SOURCE_KEY } = await import('../sources/registry.ts');
   const { db, pool } = connectFromEnv();
   try {
     await applyMigrations(db);
-    const code = await runCli(process.argv.slice(2), { db, source: adapterFor(CBS_SOURCE_KEY) });
+    const code = await runCli(process.argv.slice(2), {
+      db,
+      source: adapterFor(CBS_SOURCE_KEY),
+      // warm / convert / rebaseline: every CBS request is limited to what is left of --budget-seconds.
+      sourceForBudget: (stopAt) => new ODataV4Source({ stopAt }),
+    });
     process.exit(code);
   } finally {
     await pool.end();
