@@ -164,6 +164,12 @@ Concrete examples (offset → dimension coordinates decoded with the same unrave
 
 ---
 
+> **⚠ CORRECTED 2026-09-30 — this section's dataset is frozen.** `prc_hicp_manr` ends at 2025-12 (its own label says
+> "1997-2025"; last updated 2026-02-06) — the checks below ran on data that stopped there and did not notice. The live
+> series is `prc_hicp_minr` (ECOICOP ver.2, dimension `coicop18`, all-items `TOTAL`, unit `RCH_A`; through 2026-08;
+> 4,760 cells for the same slice). The code now uses it (`src/sources/eurostat-siblings.ts`; ADR 048 addendum
+> 2026-09-30). Everything else in this section (why a rate-of-change dataset, the definitional caveat) still holds.
+
 ## 2. Inflation: CBS `cpi_yearly_inflation` ↔ Eurostat `prc_hicp_manr`
 
 ### 2.1 CBS side (verified from `src/registry/defaults.ts`)

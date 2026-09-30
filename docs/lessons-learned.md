@@ -6,6 +6,26 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 150 — the first real Eurostat load (found two defects the hermetic suite could not)
+
+1. **A parser never fed a real response is a guess, however well tested.** Every Eurostat fixture was hand-built, so the monthly period
+   spelling (`2026-08`, not `2026-M08`) and a comment asserting the opposite survived a design review, an independent review and 4,600
+   tests. The first live `--apply` threw within seconds. **Rule going forward:** before any live registration of a source/grain, capture
+   the real response for the exact slice as a fixture and parse it (`--siblings` capture mode +
+   `tests/eurostat-adapter/sibling-real-responses.test.ts`). A synthetic fixture proves the code agrees with itself, not with the source.
+2. **"Reviewed" datasets go stale at the source.** The inflation pair pointed at `prc_hicp_manr`, whose own label read "(1997-2025)";
+   the research doc's live checks ran on data that stopped in 2025-12 and nobody looked at the last period. Check the *latest period vs
+   today* when picking a dataset, not only shape and size. Eurostat had moved HICP to ECOICOP ver.2 (`prc_hicp_minr`, dimension
+   `coicop18`, all-items `TOTAL`).
+3. **The registration script's crash left a safe half-state** (`une_rt_q` registered, never synced) and its own recovery path finished
+   it on the re-run — the "registered ≠ synced" design from the step-5 review paid off. Read back the written state anyway.
+4. **`registry:apply` aborts as a whole while any default's table is unregistered** (`70072ned`, regional Part 1 is in main's defaults
+   but not yet loaded). It failed safe (CBS fingerprint identical before/after) — but it means no registry change can be applied to
+   production until the regional load; order matters in the recording plan.
+5. **A test-fixture folder under `tests/fixtures/eurostat/` is a table.** The fixture loader treats every subfolder as a dataset;
+   real sibling captures live in `tests/fixtures/eurostat-siblings/`.
+6. **A one-line string edit can drop a space** ("map into the" + "internal"): the `/code-review` LOW pass caught it before the push.
+
 ## Session 149 — the freshness alert (a short build session)
 
 1. **Extract the shared scan before wiring a second caller.** The report script owned the "CBS date vs our last sync" loop inline; the

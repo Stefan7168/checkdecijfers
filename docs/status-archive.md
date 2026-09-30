@@ -1,5 +1,22 @@
 # STATUS archive — the session log
 
+**Session 150 (2026-09-30, owner present; zero AI spend; no DDL; data written to production: three Eurostat tables, dark).**
+
+1. Opened with the session-149 kickoff. It was 2026-09-29 19:13 UTC, before the 1 October recording window; freshness 0 of 20 behind, DNS
+   for graphmaker.studio still absent. Dogfooded the live SEO page against CBS's own API: six of eight cards match exactly
+   (consumer confidence −33, GDP 1.6, CPI 3.3, house price 503,523, bankruptcies 260, unemployment 3.9).
+2. Owner: "work on Eurostat as data". Ran E2a step 5 (RUNBOOK): `npm run eurostat:siblings -- --apply`. First run crashed on the monthly
+   grain (Eurostat spells months `YYYY-MM`); `eurostat:une_rt_q` was left registered-not-synced. Also found `prc_hicp_manr` frozen at 2025-12.
+3. Fixed (commit `7517aa1b`, pushed to `main`): `MONTH_RE` accepts `YYYY-MM`; inflation sibling now `eurostat:prc_hicp_minr`
+   (`coicop18=TOTAL`); real captured responses as fixtures (`tests/fixtures/eurostat-siblings/`) + `sibling-real-responses.test.ts`;
+   `--siblings` mode in `scripts/capture-eurostat-fixtures.ts`. Verified before push: both typechecks, backend 269 files / 4,693 tests
+   (+1 todo), benchmark PASS (6/6, 0 fabricated), web 188 files / 3,479 tests, real build; `/code-review` LOW found one typo, fixed.
+4. Live state after the re-run (read back): `une_rt_q` 2,112 rows, `prc_hicp_minr` 4,760, `namq_10_gdp` 2,244; all pinned, DOIs verified,
+   latest periods 2026-Q2 / 2026-08 / 2026-Q2; NL values match a fresh Eurostat fetch. `EUROSTAT_SIBLINGS_ENABLED` unset — nothing reader-visible.
+5. `registry:apply` (step 3) aborted, wrote nothing: "1 table(s) not yet registered: 70072ned" — it follows the regional prod load.
+6. Docs: ADR 048 addendum, sibling research doc correction, RUNBOOK step 5 status, #313, build plan, lessons.
+7. Open: `backfill:eurostat-doi` for `tipsbd30`; a Eurostat freshness check; the 1 October recording run (unchanged, next).
+
 **Session 149 (2026-09-29 late night, local 2026-09-30; owner present; zero AI spend; no DDL; no data written).**
 
 1. Opened with the session-148 kickoff. Verified: tree clean at `04852e1d`, CI green, prod 200, DNS for graphmaker.studio still absent,

@@ -17,6 +17,12 @@
 > convention calls for. The ~1,180-line duplicate narrative block that used to sit below this point is
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
+**▶ SESSION 150 (2026-09-30, owner present) — EUROSTAT SIBLING TABLES LOADED (DARK), TWO DEFECTS FIXED ([#313](open-questions.md)):** owner asked
+  for Eurostat data work; E2a step 5 ran for real: unemployment (2,112 rows), inflation (4,760), GDP growth (2,244) are registered, pinned and
+  synced in production, nothing reader-visible. Found + fixed: monthly periods are `YYYY-MM`; inflation moved from the frozen `prc_hicp_manr` to
+  `prc_hicp_minr`. Commit `7517aa1b`. `registry:apply` waits for the regional `70072ned` load. Kickoff:
+  [session-briefs/2026-09-30-session-150-kickoff.md](session-briefs/2026-09-30-session-150-kickoff.md).
+
 **▶ SESSION 149 (2026-09-29 late night, owner present) — NEW-CBS-DATA E-MAIL ALERT BUILT ([#355](open-questions.md)):** owner said "up to you";
   the daily cron now e-mails when CBS has newer data than our copy (day 0, then weekly; read-only, no AI, never syncs). Commit `5d8bb265`;
   CI run 36603120766 green end to end incl. deploy. Freshness report still reads 0 of 20 behind. Nothing else moved.
@@ -39,8 +45,8 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145, kickoff pointer updated session 149 — verify against `git log` /
-Actions runs before trusting this). Kickoff: [session-briefs/2026-09-30-session-149-kickoff.md](session-briefs/2026-09-30-session-149-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145, kickoff pointer updated session 150 — verify against `git log` /
+Actions runs before trusting this). Kickoff: [session-briefs/2026-09-30-session-150-kickoff.md](session-briefs/2026-09-30-session-150-kickoff.md).**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables
   behind. Nothing REFRESHES them automatically, but since session 149 the daily cron e-mails the owner when CBS has newer data — still

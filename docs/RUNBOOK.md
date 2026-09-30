@@ -1829,6 +1829,14 @@ before step 6 (mirrored in [#313](open-questions.md)). Editing a `definitionLabe
    `canonical_measures` rows stay in the database, harmlessly unreachable and excluded from the public
    coverage report, exactly as they are right now before step 6 has ever happened).
 
+**Status 2026-09-30 (owner present):** steps 1–2 DONE for real — `eurostat:une_rt_q` (2,112 rows), `eurostat:prc_hicp_minr`
+(4,760) and `eurostat:namq_10_gdp` (2,244) are registered, pinned and synced in production, dark. Two defects were found and
+fixed on the way (monthly periods are `YYYY-MM`; inflation moved from the frozen `prc_hicp_manr` to `prc_hicp_minr`, dimension
+`coicop18`/`TOTAL` — ADR 048 addendum 2026-09-30). **Step 3 (`registry:apply`) is NOT done:** it aborts ("1 table(s) not yet
+registered: 70072ned", nothing written) until the regional table is loaded — run it after the regional prod load (recording
+plan step B6). Step 4's SQL therefore still returns zero rows. Still open: `npm run backfill:eurostat-doi -- --apply` for
+`eurostat:tipsbd30` (its `doi` is null in production).
+
 Nothing above needs any AI/LLM spend — this is DB writes + free, read-only Eurostat API calls only (the
 Statistics API `sinceTimePeriod`/`geo=`/dimension-pin filters keep each table's fetch to 2,112–4,488 cells,
 comfortably under the 500k synchronous cap — research doc §1–3).

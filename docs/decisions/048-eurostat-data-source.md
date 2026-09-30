@@ -142,7 +142,7 @@ change only in E2's owner-signed sweep, with fixtures re-recorded there.
 
 **D6 — Eurostat's native grammar maps INTO the waist at the adapter boundary (ADR 030 D2), with these
 obligations:**
-- *Periods:* `2024` / `2024-Q1` / `2024-M01` map losslessly to `2024JJ00` / `2024KW01` / `2024MM01` (F2
+- *Periods:* `2024` / `2024-Q1` / `2024-01` (the real wire spelling; `2024-M01` is also accepted, see the 2026-09-30 addendum) map losslessly to `2024JJ00` / `2024KW01` / `2024MM01` (F2
   round-trip holds). Semester (`-S1`), weekly (`-W01`) and daily datasets are **refused by the fit gate in
   E1/E2** — ADR 030 D2's grain-extension revisit trigger, not silently mapped (CBS's own `80416ned` daily
   specimen is the precedent).
@@ -882,3 +882,30 @@ D3's "never announced before it answers" rule was never at stake, since `tipsbd3
 visible coverage row before this fix (E1's own D3 posture never hid a registered table from `/llms.txt`,
 only from chat and the finder).
 
+## As-built addendum — first real E2a sibling registration: monthly grain fixed, inflation dataset swapped (2026-09-30, owner present)
+
+`npm run eurostat:siblings -- --apply` (E2a step 5) was run for real for the first time and hit two defects the
+hermetic suite could not see, because every Eurostat parser fixture was hand-built (no real monthly response had
+ever been captured):
+
+1. **Monthly period spelling.** The Statistics API's `time` codes are `YYYY-MM` (`2026-08`), not `YYYY-Mnn`.
+   `MONTH_RE` (`src/eurostat-adapter/jsonstat.ts`) now accepts both; a comment in `statistics-api.ts` that claimed the
+   response used `2024-M01` was wrong and is corrected. D6's "monthly" grain had therefore never worked on real data.
+2. **The reviewed inflation dataset was frozen.** `prc_hicp_manr` labels itself "(1997-2025)", last updated
+   2026-02-06, no period after 2025-12. Eurostat's HICP moved to ECOICOP ver.2: the live series is
+   `prc_hicp_minr` (updated 2026-09-17, through 2026-08), classification dimension `coicop18` (all-items = `TOTAL`),
+   unit `RCH_A`. The pair `cpi_yearly_inflation` ↔ `eu_hicp_annual_rate` now points at `eurostat:prc_hicp_minr`
+   (`coicop18=TOTAL`); the key name is unchanged. Slice: 34 geos × 140 months = 4,760 cells, 24 flagged `e`.
+
+**Measured live state after the fix** (production, dark): `eurostat:une_rt_q` 2,112 rows (to 2026-Q2; flags `b`, `bu`,
+`d`, `u` present — the D5b break-in-series refusal has real cases), `eurostat:prc_hicp_minr` 4,760 rows (to 2026-08),
+`eurostat:namq_10_gdp` 2,244 rows (to 2026-Q2, `p` flags); all pinned, DOIs verified at registration. NL latest values
+match a fresh Eurostat fetch (GDP 1.8 `p`, unemployment 3.9, HICP 2.8). `registry:apply` (step 3) is NOT yet run: it
+aborts while `70072ned` (in main's defaults, not yet loaded in production) is unregistered — it follows the regional
+prod load.
+
+**Guard added:** `tests/eurostat-adapter/sibling-real-responses.test.ts` parses the REAL captured responses
+(`tests/fixtures/eurostat-siblings/`, refresh with `node scripts/capture-eurostat-fixtures.ts --siblings`) for every
+reviewed registration and checks the reviewed measure code, every pinned coordinate and the period grammar against them.
+**Revisit:** Eurostat retires/renames datasets without notice — a future freshness check for Eurostat tables (the CBS
+`ingest:freshness` reports them as "not checked") would catch the next frozen one; tracked in [#313](../open-questions.md).
