@@ -1,6 +1,7 @@
 // Ingestion CLI (docs/05-data-rules.md: "Loud includes the operator" — Phase
 // 0's ingestion CLI fails with a non-zero exit and a plain-language summary
-// the owner can read). Commands: register, sync, warm.
+// the owner can read). Commands: register, sync, warm, and the supervised
+// storage commands convert-to-slices, convert-to-full, rebaseline-slices.
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { maybeAlertIngestionRunProblems, type IngestionRunProblem } from '../answer/audit/alerts.ts';
@@ -8,6 +9,8 @@ import { sourceKeyForTableId } from '../sources/registry.ts';
 import { SEED_TABLES } from './registry-seed.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Correction, SyncResult } from './types.ts';
+import { convertTableToFull, convertTableToSlices, describeConversion, describeConversionToFull } from './convert.ts';
+import { describeRebaseline, rebaselineSliceTable } from './rebaseline-slices.ts';
 import { warmPinnedTables, type WarmTableResult } from './warm-job.ts';
 
 interface Deps {
@@ -18,18 +21,26 @@ interface Deps {
   fetchImpl?: typeof fetch;
 }
 
+const COMMANDS = ['register', 'sync', 'warm', 'convert-to-slices', 'convert-to-full', 'rebaseline-slices'] as const;
+type Command = (typeof COMMANDS)[number];
+
 interface ParsedArgs {
-  command: 'register' | 'sync' | 'warm' | null;
+  command: Command | null;
   tableIds: string[];
   all: boolean;
   acceptNewCodes: boolean;
   rebaseline: boolean;
-  /** warm only: the run's time budget; null when the value given was not a positive number. */
-  budgetSeconds: number | null;
+  /** The storage commands: perform the change (without it they are a dry run). */
+  yes: boolean;
+  /** warm and the storage commands: the run's time budget; undefined when not
+   * given (each command has its default), null when the value was not a positive number. */
+  budgetSeconds: number | null | undefined;
 }
 
 /** warm's default time budget (seconds). */
 const DEFAULT_WARM_BUDGET_SECONDS = 240;
+/** convert-to-slices / rebaseline-slices: the proof and the warm run of a big table take longer. */
+const DEFAULT_STORAGE_BUDGET_SECONDS = 900;
 
 function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
@@ -37,13 +48,15 @@ function parseArgs(argv: string[]): ParsedArgs {
   let all = false;
   let acceptNewCodes = false;
   let rebaseline = false;
-  let budgetSeconds: number | null = DEFAULT_WARM_BUDGET_SECONDS;
+  let yes = false;
+  let budgetSeconds: number | null | undefined;
 
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!;
     if (arg === '--all') all = true;
     else if (arg === '--accept-new-codes') acceptNewCodes = true;
     else if (arg === '--rebaseline') rebaseline = true;
+    else if (arg === '--yes') yes = true;
     else if (arg === '--budget-seconds') {
       const value = Number(rest[++i]);
       budgetSeconds = Number.isFinite(value) && value > 0 ? value : null;
@@ -51,11 +64,12 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
 
   return {
-    command: command === 'register' || command === 'sync' || command === 'warm' ? command : null,
+    command: (COMMANDS as readonly string[]).includes(command ?? '') ? (command as Command) : null,
     tableIds,
     all: all || tableIds.length === 0,
     acceptNewCodes,
     rebaseline,
+    yes,
     budgetSeconds,
   };
 }
@@ -80,7 +94,7 @@ async function runWarm(args: ParsedArgs, deps: Deps): Promise<number> {
     console.error('warm: --budget-seconds needs a positive number of seconds.');
     return 1;
   }
-  const deadline = Date.now() + args.budgetSeconds * 1000;
+  const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_WARM_BUDGET_SECONDS) * 1000;
   const results = await warmPinnedTables(deps.db, deps.source, {
     deadline,
     ...(args.tableIds.length > 0 ? { tableIds: args.tableIds } : {}),
@@ -88,6 +102,45 @@ async function runWarm(args: ParsedArgs, deps: Deps): Promise<number> {
   if (results.length === 0) console.log('No pinned slice-cache table to warm.');
   for (const r of results) printWarmResult(r);
   return results.some((r) => r.outcome === 'failed') ? 1 : 0;
+}
+
+/**
+ * ADR 065 step 7: the supervised storage commands, one table at a time. Each is
+ * a dry run (checks only, nothing written) unless --yes is given. Exit 0 for a
+ * dry run and a finished change; 1 for a refusal, an unfinished conversion and
+ * a failed after-check (the printed text says what to do next).
+ */
+async function runStorageCommand(
+  command: 'convert-to-slices' | 'convert-to-full' | 'rebaseline-slices',
+  args: ParsedArgs,
+  deps: Deps,
+): Promise<number> {
+  if (args.tableIds.length !== 1) {
+    console.error(`${command}: give exactly one table id: ingest ${command} <tableId> [--yes]`);
+    return 1;
+  }
+  if (args.budgetSeconds === null) {
+    console.error(`${command}: --budget-seconds needs a positive number of seconds.`);
+    return 1;
+  }
+  const tableId = args.tableIds[0]!;
+  const deadline = Date.now() + (args.budgetSeconds ?? DEFAULT_STORAGE_BUDGET_SECONDS) * 1000;
+
+  if (command === 'convert-to-full') {
+    const result = await convertTableToFull(deps.db, tableId, { apply: args.yes });
+    console.log(describeConversionToFull(result));
+    return result.outcome === 'refused' ? 1 : 0;
+  }
+  if (command === 'rebaseline-slices') {
+    const result = await rebaselineSliceTable(deps.db, deps.source, tableId, { deadline, apply: args.yes });
+    console.log(describeRebaseline(result));
+    // A pinned table whose warm run did not finish still needs `ingest warm`.
+    const unfinished = result.warm != null && result.warm.outcome !== 'complete';
+    return result.outcome === 'refused' || unfinished ? 1 : 0;
+  }
+  const result = await convertTableToSlices(deps.db, deps.source, tableId, { deadline, apply: args.yes });
+  console.log(describeConversion(result));
+  return result.outcome === 'converted' || result.outcome === 'dry_run' ? 0 : 1;
 }
 
 function formatCorrections(corrections: Correction[]): string[] {
@@ -126,12 +179,22 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   if (args.command === null) {
     console.error('Usage: ingest <register|sync> [tableIds...] [--all] [--accept-new-codes] [--rebaseline]');
     console.error('       ingest warm [tableIds...] [--budget-seconds N]');
+    console.error('       ingest convert-to-slices <tableId> [--budget-seconds N] [--yes]');
+    console.error('       ingest convert-to-full <tableId> [--yes]');
+    console.error('       ingest rebaseline-slices <tableId> [--budget-seconds N] [--yes]');
     return 1;
   }
 
   // ADR 065 step 2: fills pinned slice-cache tables' declared scopes. Never
   // registers or converts a table.
   if (args.command === 'warm') return runWarm(args, deps);
+  if (
+    args.command === 'convert-to-slices' ||
+    args.command === 'convert-to-full' ||
+    args.command === 'rebaseline-slices'
+  ) {
+    return runStorageCommand(args.command, args, deps);
+  }
 
   if (args.command === 'register') {
     const start = Date.now();
@@ -247,7 +310,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   return allSucceeded ? 0 : 1;
 }
 
-// CLI entry: node --env-file=.env src/ingestion/cli.ts <register|sync|warm> ...
+// CLI entry: node --env-file=.env src/ingestion/cli.ts <register|sync|warm|convert-to-slices|convert-to-full|rebaseline-slices> ...
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   const { connectFromEnv } = await import('../db/client.ts');
   const { applyMigrations } = await import('../db/migrate.ts');

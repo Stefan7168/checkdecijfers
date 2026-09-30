@@ -232,6 +232,100 @@ describe('breadth step 2 — sync and slice-cache tables', () => {
   });
 });
 
+// ADR 065 step 7: the supervised storage commands. Without --yes each is a dry
+// run that writes nothing; a refusal exits 1.
+describe('ADR 065 — convert-to-slices, convert-to-full, rebaseline-slices', () => {
+  async function wholePop(db: Db): Promise<FixtureSource> {
+    const source = new FixtureSource(loadDocs('03759ned'));
+    await registerTables(db, source, [table('03759ned')], { pinned: true });
+    const { output } = await withSpies(() => runCli(['sync', '03759ned'], { db, source }));
+    expect(output).toContain('Synced');
+    return source;
+  }
+
+  async function mode(db: Db, id: string) {
+    return (await db.query('select ingest_mode, status from cbs_tables where id = $1', [id])).rows[0];
+  }
+
+  it('convert-to-slices: a dry run without --yes, the conversion with it, and back with convert-to-full', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    try {
+      const source = await wholePop(db);
+
+      const dry = await withSpies(() => runCli(['convert-to-slices', '03759ned'], { db, source }));
+      expect(dry.result).toBe(0);
+      expect(dry.output).toContain('DRY RUN');
+      expect(await mode(db, '03759ned')).toMatchObject({ ingest_mode: 'full' });
+
+      const done = await withSpies(() =>
+        runCli(['convert-to-slices', '03759ned', '--yes', '--budget-seconds', '600'], { db, source }),
+      );
+      expect(done.result).toBe(0);
+      expect(done.output).toContain('converted to slice storage');
+      expect(await mode(db, '03759ned')).toMatchObject({ ingest_mode: 'slice_cache', status: 'active' });
+
+      const backDry = await withSpies(() => runCli(['convert-to-full', '03759ned'], { db, source }));
+      expect(backDry.result).toBe(0);
+      expect(backDry.output).toContain('DRY RUN');
+      const back = await withSpies(() => runCli(['convert-to-full', '03759ned', '--yes'], { db, source }));
+      expect(back.result).toBe(0);
+      expect(back.output).toContain('ingest sync 03759ned');
+      expect(await mode(db, '03759ned')).toMatchObject({ ingest_mode: 'full' });
+    } finally {
+      await close();
+    }
+  });
+
+  it('a refusal, a missing or second table id and a bad budget exit 1 and write nothing', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    try {
+      const source = new FixtureSource(loadDocs('03759ned'));
+      const refused = await withSpies(() => runCli(['convert-to-slices', '03759ned', '--yes'], { db, source }));
+      expect(refused.result).toBe(1);
+      expect(refused.output).toContain('REFUSED');
+      for (const argv of [
+        ['convert-to-slices'],
+        ['convert-to-slices', '03759ned', '83625NED', '--yes'],
+        ['convert-to-full'],
+        ['rebaseline-slices', '--yes'],
+        ['convert-to-slices', '03759ned', '--budget-seconds', 'soon'],
+      ]) {
+        const run = await withSpies(() => runCli(argv, { db, source }));
+        expect(run.result, argv.join(' ')).toBe(1);
+      }
+      const rows = await db.query('select count(*)::int as n from cbs_tables');
+      expect(Number(rows.rows[0]!.n)).toBe(0);
+    } finally {
+      await close();
+    }
+  });
+
+  it('rebaseline-slices: a dry run without --yes, the re-baseline with it; a table that is not quarantined exits 1', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    try {
+      const source = new FixtureSource(loadDocs('83625NED'));
+      expect((await registerSchemaOnly(db, source, '83625NED')).ok).toBe(true);
+
+      const notQuarantined = await withSpies(() => runCli(['rebaseline-slices', '83625NED', '--yes'], { db, source }));
+      expect(notQuarantined.result).toBe(1);
+      expect(notQuarantined.output).toContain('not quarantined');
+
+      await db.query(`update cbs_tables set status = 'needs_review', needs_review_reason = 'test' where id = '83625NED'`);
+      const dry = await withSpies(() => runCli(['rebaseline-slices', '83625NED'], { db, source }));
+      expect(dry.result).toBe(0);
+      expect(dry.output).toContain('DRY RUN');
+      expect(await mode(db, '83625NED')).toMatchObject({ status: 'needs_review' });
+
+      const done = await withSpies(() => runCli(['rebaseline-slices', '83625NED', '--yes'], { db, source }));
+      expect(done.result).toBe(0);
+      expect(done.output).toContain('re-baselined');
+      expect(await mode(db, '83625NED')).toMatchObject({ status: 'active', ingest_mode: 'slice_cache' });
+    } finally {
+      await close();
+    }
+  });
+});
+
 // #23 (2026-09-17, session 109): `ingest sync` fires AT MOST ONE owner-alert
 // email per run when any target table failed/threw — never one per table.
 // Hermetic on the alert side: fetch is stubbed exactly like every sibling

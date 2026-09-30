@@ -151,11 +151,64 @@ export async function registerSchemaOnly(
   }
   const schema = prefetched?.schema ?? (await source.fetchTableSchema(tableId));
 
+  // Final-review fix 5: the refusals that need only the schema run BEFORE the
+  // (per-dimension) code-list fetch.
+  const early = schemaOnlyPropertiesRefusal(tableId, schema);
+  if (early) return early;
+
+  const given = prefetched?.codeLists;
+  const codeLists =
+    given === undefined
+      ? await fetchAllCodeLists(source, tableId, schema.dimensions)
+      : typeof given === 'function'
+        ? await given()
+        : given;
+
+  const planned = planSchemaOnlyRegistration(tableId, schema, codeLists, pinnedOptions);
+  if (!planned.ok) return planned;
+
+  await db.withTransaction(async (tx) => {
+    await writeSliceRegistration(tx, planned.registration, 'insert');
+  });
+
+  return {
+    ok: true,
+    tableId,
+    numericMeasures: planned.registration.numericMeasures,
+    alreadyRegistered: false,
+  };
+}
+
+/** Everything a slice-mode registration writes for one table: the
+ * `cbs_tables` columns and the `dimension_labels` rows. Computed once by
+ * `planSchemaOnlyRegistration`, written by `writeSliceRegistration` — shared by
+ * registerSchemaOnly (a new row), the conversion of a whole-table row
+ * (src/ingestion/convert.ts) and the slice re-baseline
+ * (src/ingestion/rebaseline-slices.ts), so the three can never derive units,
+ * fingerprint or labels differently. */
+export interface SliceRegistration {
+  tableId: string;
+  title: string;
+  expectedDimensions: { name: string; kind: string }[];
+  slice: CbsSlice | null;
+  units: RegistryUnits;
+  updateCadence: string | null;
+  fingerprint: string;
+  pinned: boolean;
+  source: string;
+  schemaCbsModified: string;
+  labelRows: ReturnType<typeof labelRowsFromCodeLists>;
+  /** The served measure codes, sorted. */
+  numericMeasures: string[];
+}
+
+export type SchemaOnlyRefusal = Extract<SchemaOnlyResult, { ok: false }>;
+
+/** registerSchemaOnly's refusals that need only CBS's schema (no code lists). */
+export function schemaOnlyPropertiesRefusal(tableId: string, schema: CbsTableSchema): SchemaOnlyRefusal | null {
   // Controller ruling, fix round 1: a slice-cache table's ONLY freshness
   // signal is CBS's own 'Modified' date — a source that cannot state one
   // cannot be schema-only registered at all, checked before anything else.
-  // Final-review fix 5: this and the no_time_dimension refusal below need
-  // only the schema, so they run BEFORE the (per-dimension) code-list fetch.
   if (schema.modified == null || schema.modified.trim().length === 0) {
     return {
       ok: false,
@@ -166,9 +219,7 @@ export async function registerSchemaOnly(
         `schema-only registered.`,
     };
   }
-
-  const periodDim = schema.dimensions.find((d) => d.kind === 'TimeDimension');
-  if (!periodDim) {
+  if (!schema.dimensions.some((d) => d.kind === 'TimeDimension')) {
     return {
       ok: false,
       reason: 'no_time_dimension',
@@ -177,14 +228,24 @@ export async function registerSchemaOnly(
         `evicts by period, so a table with no time dimension cannot be registered this way.`,
     };
   }
+  return null;
+}
 
-  const given = prefetched?.codeLists;
-  const codeLists =
-    given === undefined
-      ? await fetchAllCodeLists(source, tableId, schema.dimensions)
-      : typeof given === 'function'
-        ? await given()
-        : given;
+/**
+ * Pure: every refusal of registerSchemaOnly, then the registration it would
+ * write, from a schema and its code lists already fetched. No I/O.
+ * Throws, like registerTables, when the allow-list names a code CBS lacks.
+ */
+export function planSchemaOnlyRegistration(
+  tableId: string,
+  schema: CbsTableSchema,
+  codeLists: Record<string, CbsCode[]>,
+  pinnedOptions?: PinnedRegistration,
+): { ok: true; registration: SliceRegistration } | SchemaOnlyRefusal {
+  const early = schemaOnlyPropertiesRefusal(tableId, schema);
+  if (early) return early;
+  const periodDim = schema.dimensions.find((d) => d.kind === 'TimeDimension')!;
+
   const periodCodes: CbsCode[] = codeLists[periodDim.name] ?? [];
   if (periodCodes.length === 0) {
     return {
@@ -243,39 +304,90 @@ export async function registerSchemaOnly(
   // the phantom set must still fail loudly) but only the allow-listed codes
   // when there is an allow-list (ADR 061).
   const fingerprint = computeFingerprint(schema.dimensions, fingerprintMeasures.map((m) => m.code));
-  const sourceKey = sourceKeyForTableId(tableId);
-  const slice = pinnedOptions?.slice ?? null;
-
-  await db.withTransaction(async (tx) => {
-    await tx.query(
-      `insert into cbs_tables
-         (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned, source,
-          ingest_mode, schema_cbs_modified, last_row_count)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'slice_cache', $10, null)`,
-      [
-        tableId,
-        schema.title,
-        JSON.stringify(expectedDimensions),
-        slice ? JSON.stringify(slice) : null,
-        JSON.stringify(units),
-        pinnedOptions?.updateCadence ?? null,
-        fingerprint,
-        pinnedOptions?.pinned ?? false,
-        sourceKey,
-        // Guaranteed non-null/non-empty by the no_cbs_modified refusal above.
-        schema.modified,
-      ],
-    );
-
-    await insertDimensionLabels(tx, tableId, labelRowsFromCodeLists(schema.dimensions, codeLists), 'ignore');
-  });
 
   return {
     ok: true,
-    tableId,
-    numericMeasures: served.map((m) => m.code).sort(),
-    alreadyRegistered: false,
+    registration: {
+      tableId,
+      title: schema.title,
+      expectedDimensions,
+      slice: pinnedOptions?.slice ?? null,
+      units,
+      updateCadence: pinnedOptions?.updateCadence ?? null,
+      fingerprint,
+      pinned: pinnedOptions?.pinned ?? false,
+      source: sourceKeyForTableId(tableId),
+      // Guaranteed non-null/non-empty by the no_cbs_modified refusal above.
+      schemaCbsModified: schema.modified!,
+      labelRows: labelRowsFromCodeLists(schema.dimensions, codeLists),
+      numericMeasures: served.map((m) => m.code).sort(),
+    },
   };
+}
+
+/** The `cbs_tables` columns a slice-mode registration sets — one list, so a
+ * new row and a replaced row can never write a different set. */
+function registrationColumns(reg: SliceRegistration): [string, unknown][] {
+  return [
+    ['title', reg.title],
+    ['expected_dimensions', JSON.stringify(reg.expectedDimensions)],
+    ['slice', reg.slice ? JSON.stringify(reg.slice) : null],
+    ['units', JSON.stringify(reg.units)],
+    ['update_cadence', reg.updateCadence],
+    ['schema_fingerprint', reg.fingerprint],
+    ['pinned', reg.pinned],
+    ['source', reg.source],
+    ['ingest_mode', 'slice_cache'],
+    ['schema_cbs_modified', reg.schemaCbsModified],
+    ['last_row_count', null],
+  ];
+}
+
+/**
+ * Writes a planned slice registration inside the caller's transaction.
+ *
+ * - `'insert'`: a new `cbs_tables` row and its labels — registerSchemaOnly.
+ * - `'replace'`: the EXISTING row of this id is rewritten in place to exactly
+ *   the columns `'insert'` writes, and its labels are replaced. For the two
+ *   supervised commands only — converting a whole-table row
+ *   (src/ingestion/convert.ts) and re-baselining a quarantined slice table
+ *   (src/ingestion/rebaseline-slices.ts); the caller holds the per-table
+ *   exclusive advisory lock and has already removed the table's cells and
+ *   slice records. registerSchemaOnly never replaces (it still refuses a
+ *   `full` row as `registered_as_full`). In place, not delete
+ *   + insert: `canonical_measures` and `ingestion_batches` reference the row
+ *   (no cascade), and `default_coordinates`, `period_semantics`, `created_at`
+ *   and `last_queried_at` must survive untouched. The row leaves active, not
+ *   yet synced, one version up (so a request validated against the old row
+ *   aborts at its version fence).
+ */
+export async function writeSliceRegistration(
+  tx: Db,
+  reg: SliceRegistration,
+  mode: 'insert' | 'replace',
+): Promise<void> {
+  const columns = registrationColumns(reg);
+  if (mode === 'insert') {
+    await tx.query(
+      `insert into cbs_tables (id, ${columns.map(([c]) => c).join(', ')})
+       values ($1, ${columns.map((_, i) => `$${i + 2}`).join(', ')})`,
+      [reg.tableId, ...columns.map(([, v]) => v)],
+    );
+    await insertDimensionLabels(tx, reg.tableId, reg.labelRows, 'ignore');
+    return;
+  }
+  await tx.query(
+    `update cbs_tables
+        set ${columns.map(([c], i) => `${c} = $${i + 2}`).join(', ')},
+            status = 'active', needs_review_reason = null, last_sync_at = null,
+            version = version + 1, updated_at = now()
+      where id = $1`,
+    [reg.tableId, ...columns.map(([, v]) => v)],
+  );
+  await tx.query('delete from dimension_labels where table_id = $1', [reg.tableId]);
+  // 'none': follows the delete, so a conflict is a duplicate inside CBS's own
+  // code list — loud, as in syncTable's rebaseline rewrite.
+  await insertDimensionLabels(tx, reg.tableId, reg.labelRows, 'none');
 }
 
 // ---------------------------------------------------------------------------
