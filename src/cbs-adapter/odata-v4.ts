@@ -30,6 +30,8 @@ const RETRY_BACKOFF_MS = 1500;
 // of a big table is legitimately slow, so it gets far longer.
 const METADATA_TIMEOUT_MS = 30_000;
 const OBSERVATIONS_TIMEOUT_MS = 300_000;
+// The full catalogue is one 6.8 MB response (21 s measured 2026-09-30): its own limit.
+const CATALOG_TIMEOUT_MS = 300_000;
 
 /** OData string literals escape a single quote by doubling it. */
 const q = (value: string): string => value.replace(/'/g, "''");
@@ -115,6 +117,8 @@ export interface ODataV4SourceOptions {
   metadataTimeoutMs?: number;
   /** Per-attempt limit for one Observations page. */
   observationsTimeoutMs?: number;
+  /** Per-attempt limit for one catalogue (Datasets) page. */
+  catalogTimeoutMs?: number;
   /** Base of the linear retry backoff (attempt n waits n x this). */
   retryBackoffMs?: number;
 }
@@ -136,12 +140,14 @@ export class ODataV4Source implements CbsSource {
   private readonly fetchFn: typeof fetch | undefined;
   private readonly metadataTimeoutMs: number;
   private readonly observationsTimeoutMs: number;
+  private readonly catalogTimeoutMs: number;
   private readonly retryBackoffMs: number;
 
   constructor(options: ODataV4SourceOptions = {}) {
     this.fetchFn = options.fetchFn;
     this.metadataTimeoutMs = options.metadataTimeoutMs ?? METADATA_TIMEOUT_MS;
     this.observationsTimeoutMs = options.observationsTimeoutMs ?? OBSERVATIONS_TIMEOUT_MS;
+    this.catalogTimeoutMs = options.catalogTimeoutMs ?? CATALOG_TIMEOUT_MS;
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
   }
 
@@ -240,7 +246,7 @@ export class ODataV4Source implements CbsSource {
     let url: string | null = `${BASE}/Datasets?${params.toString()}`;
     const all: CbsCatalogEntry[] = [];
     while (url) {
-      const raw = await this.fetchJson(url);
+      const raw = await this.fetchJson(url, this.catalogTimeoutMs);
       const { entries, nextLink } = parseCatalogPage(raw);
       all.push(...entries);
       url = nextLink;

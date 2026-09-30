@@ -13,6 +13,8 @@
 // (scripts/freshness-report.ts). No schema change, no write, no AI. Whether to
 // AUTOMATE the refresh is a separate decision (#355), made on evidence from
 // this report.
+import type { CbsCatalogEntry } from '../cbs-adapter/types.ts';
+
 export interface FreshnessInputRow {
   tableId: string;
   /** cbs_tables.last_sync_at, ISO string, or null (never synced). */

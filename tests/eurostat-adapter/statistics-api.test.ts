@@ -96,6 +96,23 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
     expect(fetchFn).toHaveBeenCalledTimes(3); // FETCH_ATTEMPTS
   }, 15_000);
 
+  it('a hung request fails after 3 timed-out attempts, naming the URL and the time limit (#357)', async () => {
+    const fetchFn = vi.fn(() => new Promise<never>(() => {}));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch, { timeoutMs: 20, retryBackoffMs: 1 });
+    const err = await source.fetchTableSchema('eurostat:demo_pjan').catch((e: Error) => e);
+    expect((err as Error).message).toMatch(/failed after 3 attempts/);
+    expect((err as Error).message).toContain('demo_pjan');
+    expect((err as Error).message).toMatch(/timed out after 0\.02 seconds/);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('a response whose body stalls after the headers is cut off too (#357)', async () => {
+    const fetchFn = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: () => new Promise<never>(() => {}) }));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch, { timeoutMs: 20, retryBackoffMs: 1 });
+    await expect(source.fetchTableSchema('eurostat:demo_pjan')).rejects.toThrow(/timed out after 0\.02 seconds/);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
   it('fetchCatalog parses the REAL, verified Catalogue "table of contents" TEXT shape via the injected stub', async () => {
     const toc = [
       '"title"\t"code"\t"type"\t"last update of data"\t"last table structure change"\t"data start"\t"data end"\t"values"',

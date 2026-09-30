@@ -22,6 +22,7 @@ import type {
   CbsTableSchema,
 } from '../cbs-adapter/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
+import { fetchAndRead } from '../sources/fetch-with-timeout.ts';
 import {
   EU_EFTA_STAND_IN_GEO_CODES,
   parseJsonStatCatalog,
@@ -39,6 +40,16 @@ const CATALOGUE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/catalogue
 
 const FETCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_MS = 1500;
+// Time limit per attempt (#357). One dataset response can hold up to SYNC_CELL_THRESHOLD cells and
+// the catalogue file is several MB, so the limit is generous; its job is to end a hung connection.
+const REQUEST_TIMEOUT_MS = 300_000;
+
+export interface StatisticsApiSourceOptions {
+  /** Per-attempt limit for every request (body read included). */
+  timeoutMs?: number;
+  /** Base of the linear retry backoff (attempt n waits n x this). */
+  retryBackoffMs?: number;
+}
 
 /** D4: strips the '<key>:' prefix internally (never the caller's job) —
  * a local copy of the same first-colon rule every other module in this
@@ -224,22 +235,38 @@ export class StatisticsApiSource implements CbsSource {
    * fetchCodeList + fetchObservationCount + fetchObservations on one table. */
   private readonly cache = new Map<string, Promise<ParsedEurostatDataset>>();
 
-  constructor(fetchFn: FetchFn = fetch) {
+  private readonly timeoutMs: number;
+  private readonly retryBackoffMs: number;
+
+  constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
+    this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+    this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
   }
 
   private async fetchWith<T>(url: string, headers: Record<string, string>, read: (res: Response) => Promise<T>): Promise<T> {
+    type Outcome = { body: T } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
       try {
-        const res = await this.fetchFn(url, { headers });
-        if (res.ok) return await read(res);
-        lastError = new Error(`Eurostat request failed: ${res.status} ${res.statusText} for ${url}`);
+        // One time limit per attempt, covering the body read too; a timeout is a failed attempt.
+        const outcome = await fetchAndRead<Outcome>(
+          url,
+          { headers },
+          this.timeoutMs,
+          async (res) =>
+            res.ok
+              ? { body: await read(res) }
+              : { failure: `Eurostat request failed: ${res.status} ${res.statusText} for ${url}` },
+          this.fetchFn,
+        );
+        if ('body' in outcome) return outcome.body;
+        lastError = new Error(outcome.failure);
       } catch (err) {
         lastError = err;
       }
       if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
       }
     }
     throw new Error(

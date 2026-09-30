@@ -862,6 +862,24 @@ describe('ODataV4Source — time limit, retries and readable errors (#357)', () 
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
+  it('the catalogue download has its own (longer) limit than metadata calls', async () => {
+    // Measured 2026-09-30: the full catalogue is 6.8 MB and took 21 s — too close to the 30 s
+    // metadata limit. Here it takes 60 ms: over the 20 ms metadata limit, inside its own 2 s.
+    const fetchFn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+      return okJson({ value: [{ Identifier: '85773NED', Title: 'Koopwoningen', Status: 'Regulier' }] });
+    });
+    const source = new ODataV4Source({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      metadataTimeoutMs: 20,
+      catalogTimeoutMs: 2000,
+      ...fast,
+    });
+    const entries = await source.fetchCatalog();
+    expect(entries.map((e) => e.tableId)).toEqual(['85773NED']);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
   it('a hung Observations page fails on the observations limit, naming the URL', async () => {
     const fetchFn = vi.fn(never);
     const source = new ODataV4Source({
