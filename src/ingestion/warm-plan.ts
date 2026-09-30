@@ -120,6 +120,78 @@ function longestClause(axis: Axis, size: number): number {
   return Math.max(...chunk(axis.codes, size).map((c) => clauseOf(axis, c).length));
 }
 
+/** Splits whole per-axis code lists into requests that obey every cap: start from
+ * whole lists and halve the largest axis until each cap holds, then emit the
+ * Cartesian product of the chunks. Shared by the warm planner and the table lane
+ * (`splitSliceRequest`) so the one limit CBS enforces lives in one place. */
+function splitAxes(
+  axes: Axis[],
+  timeDim: string,
+  caps: { maxCells: number; maxFilterChars: number; maxFilterTerms: number },
+  fail: (why: string) => never,
+): { requests: SliceRequest[]; longestFilterChars: number } {
+  const { maxCells, maxFilterChars, maxFilterTerms } = caps;
+  // Start from whole lists and halve the largest axis until every cap holds.
+  const sizes = axes.map((a) => a.codes.length);
+  const filterBound = (): number =>
+    axes.reduce((sum, axis, i) => sum + longestClause(axis, sizes[i]!), 0) + CLAUSE_JOIN_CHARS * (axes.length - 1);
+  for (;;) {
+    const cells = sizes.reduce((n, s) => n * s, 1);
+    const filterChars = filterBound();
+    const terms = sizes.reduce((n, size) => n + size, 0);
+    if (cells <= maxCells && filterChars <= maxFilterChars && terms <= maxFilterTerms) break;
+    const splittable = axes.map((_, i) => i).filter((i) => sizes[i]! > 1);
+    if (splittable.length === 0) {
+      fail(
+        `even a single-cell request is too big (${cells} cell(s) against a cap of ${maxCells}, ` +
+          `a ${filterChars}-character filter against a cap of ${maxFilterChars}, ` +
+          `${terms} filter term(s) against a cap of ${maxFilterTerms}).`,
+      );
+    }
+    // Cells or terms too many: split the axis with the most codes per chunk. Only
+    // the filter too long: split the axis whose longest clause is the longest.
+    const weight = (i: number): number =>
+      cells > maxCells || terms > maxFilterTerms ? sizes[i]! : longestClause(axes[i]!, sizes[i]!);
+    let pick = splittable[0]!;
+    for (const i of splittable) if (weight(i) > weight(pick)) pick = i;
+    sizes[pick] = Math.ceil(sizes[pick]! / 2);
+  }
+
+  // Cartesian product of the chunks, first axis outermost. Inside a request the
+  // code lists are ascending, the canonical form fetchSlice keys a request by.
+  const chunked = axes.map((axis, i) => chunk(axis.codes, sizes[i]!).map((c) => [...c].sort()));
+  const requests: SliceRequest[] = [];
+  const pickIdx = new Array<number>(axes.length).fill(0);
+  for (;;) {
+    const req: SliceRequest = { measures: [], members: {}, periods: [] };
+    axes.forEach((axis, i) => {
+      const codes = chunked[i]![pickIdx[i]!]!;
+      if (axis.kind === 'periods') req.periods = codes;
+      else if (axis.kind === 'measures') req.measures = codes;
+      else req.members[axis.name] = codes;
+    });
+    requests.push(req);
+    let level = axes.length - 1;
+    while (level >= 0 && pickIdx[level]! + 1 >= chunked[level]!.length) {
+      pickIdx[level] = 0;
+      level -= 1;
+    }
+    if (level < 0) break;
+    pickIdx[level]! += 1;
+  }
+
+  const longestFilterChars = Math.max(
+    ...requests.map((req) =>
+      sliceToFilter({
+        measures: req.measures,
+        dimensionIn: req.members,
+        periodIn: { dimension: timeDim, codes: req.periods },
+      })!.length,
+    ),
+  );
+  return { requests, longestFilterChars };
+}
+
 export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions = {}): WarmPlan {
   const { tableId, slice } = input;
   const maxCells = options.maxCells ?? SLICE_MAX_CELLS;
@@ -203,65 +275,45 @@ export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions =
     { kind: 'measures', name: 'Measure', codes: measures },
   ];
 
-  // Start from whole lists and halve the largest axis until every cap holds.
-  const sizes = axes.map((a) => a.codes.length);
-  const filterBound = (): number =>
-    axes.reduce((sum, axis, i) => sum + longestClause(axis, sizes[i]!), 0) + CLAUSE_JOIN_CHARS * (axes.length - 1);
-  for (;;) {
-    const cells = sizes.reduce((n, s) => n * s, 1);
-    const filterChars = filterBound();
-    const terms = sizes.reduce((n, size) => n + size, 0);
-    if (cells <= maxCells && filterChars <= maxFilterChars && terms <= maxFilterTerms) break;
-    const splittable = axes.map((_, i) => i).filter((i) => sizes[i]! > 1);
-    if (splittable.length === 0) {
-      fail(
-        `even a single-cell request is too big (${cells} cell(s) against a cap of ${maxCells}, ` +
-          `a ${filterChars}-character filter against a cap of ${maxFilterChars}, ` +
-          `${terms} filter term(s) against a cap of ${maxFilterTerms}).`,
-      );
-    }
-    // Cells or terms too many: split the axis with the most codes per chunk. Only
-    // the filter too long: split the axis whose longest clause is the longest.
-    const weight = (i: number): number =>
-      cells > maxCells || terms > maxFilterTerms ? sizes[i]! : longestClause(axes[i]!, sizes[i]!);
-    let pick = splittable[0]!;
-    for (const i of splittable) if (weight(i) > weight(pick)) pick = i;
-    sizes[pick] = Math.ceil(sizes[pick]! / 2);
-  }
-
-  // Cartesian product of the chunks, first axis outermost. Inside a request the
-  // code lists are ascending, the canonical form fetchSlice keys a request by.
-  const chunked = axes.map((axis, i) => chunk(axis.codes, sizes[i]!).map((c) => [...c].sort()));
-  const requests: SliceRequest[] = [];
-  const pickIdx = new Array<number>(axes.length).fill(0);
-  for (;;) {
-    const req: SliceRequest = { measures: [], members: {}, periods: [] };
-    axes.forEach((axis, i) => {
-      const codes = chunked[i]![pickIdx[i]!]!;
-      if (axis.kind === 'periods') req.periods = codes;
-      else if (axis.kind === 'measures') req.measures = codes;
-      else req.members[axis.name] = codes;
-    });
-    requests.push(req);
-    let level = axes.length - 1;
-    while (level >= 0 && pickIdx[level]! + 1 >= chunked[level]!.length) {
-      pickIdx[level] = 0;
-      level -= 1;
-    }
-    if (level < 0) break;
-    pickIdx[level]! += 1;
-  }
-
-  const longestFilterChars = Math.max(
-    ...requests.map((req) =>
-      sliceToFilter({
-        measures: req.measures,
-        dimensionIn: req.members,
-        periodIn: { dimension: timeDim, codes: req.periods },
-      })!.length,
-    ),
-  );
+  const { requests, longestFilterChars } = splitAxes(axes, timeDim, { maxCells, maxFilterChars, maxFilterTerms }, fail);
   return { requests, totalCells, longestFilterChars };
+}
+
+/** A reader's table-lane slice, split into requests CBS accepts: the SAME halving and
+ * product as the warm planner (one `splitAxes`), so the 150-code cap
+ * (DEFAULT_MAX_FILTER_TERMS) is not restated. A request that already fits comes back as
+ * exactly one request (same code lists), so nothing under the cap changes. The pieces
+ * cover the request exactly (Cartesian product of per-axis chunks — no gap, no overlap).
+ * Only the code-count and cell caps apply here; the warm job's URL-length cap does not
+ * (a reader's slice was never bound by it, and adding it would split below 150 codes).
+ * Throws only when even a single-cell request would break a cap. */
+export function splitSliceRequest(
+  req: SliceRequest,
+  timeDim: string,
+  options: { maxCells?: number; maxFilterTerms?: number } = {},
+): SliceRequest[] {
+  const memberDims = Object.keys(req.members).sort();
+  const axes: Axis[] = [
+    { kind: 'periods', name: timeDim, codes: sortUnique(req.periods).reverse() },
+    ...memberDims.map((dim): Axis => ({ kind: 'members', name: dim, codes: sortUnique(req.members[dim]!) })),
+    { kind: 'measures', name: 'Measure', codes: sortUnique(req.measures) },
+  ];
+  if (axes.some((a) => a.codes.length === 0)) {
+    throw new Error('Slice split: every axis needs at least one code.');
+  }
+  const fail = (why: string): never => {
+    throw new Error(`Slice split: ${why}`);
+  };
+  return splitAxes(
+    axes,
+    timeDim,
+    {
+      maxCells: options.maxCells ?? SLICE_MAX_CELLS,
+      maxFilterChars: Number.POSITIVE_INFINITY,
+      maxFilterTerms: options.maxFilterTerms ?? DEFAULT_MAX_FILTER_TERMS,
+    },
+    fail,
+  ).requests;
 }
 
 /** jsonb round-trips as a string over the real pg driver and as an already-

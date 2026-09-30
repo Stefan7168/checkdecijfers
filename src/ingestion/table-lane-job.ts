@@ -55,6 +55,7 @@ import {
   TABLE_LANE_MAX_ATTEMPTS,
   type TableLaneRow,
 } from './table-lane-store.ts';
+import { splitSliceRequest } from './warm-plan.ts';
 
 /** Stop claiming new rows after this long (the route's maxDuration is 300 s;
  * one row can take tens of seconds — CBS fetch + parse + compose). */
@@ -189,6 +190,32 @@ async function ensureWithFallback(ctx: Ctx, tableId: string, slice: SliceRequest
   return { kind: 'ineligible', detail: `${result.stage}: ${result.summary}` };
 }
 
+/** Step 4 for a whole plan slice. CBS refuses a request whose $filter names about 170
+ * codes or more (#358 (11)), so a big slice (a region class of hundreds of codes) is split
+ * by the warm planner's own splitter into requests of at most DEFAULT_MAX_FILTER_TERMS
+ * codes and each is ensured in turn. All or nothing: the first piece that does not
+ * end 'stored' decides the outcome, so an answer is never built from a subset (pieces
+ * stored before it stay in the cache, honestly dated, and are reused by a retry). A slice
+ * that fits is exactly one piece — the same call as before. The audit's sliceFilterKey
+ * is the whole request's key when it was split (the pieces are its covering slices);
+ * fromCache is true if ANY piece was served from the <24 h fallback. */
+async function ensureAllPieces(ctx: Ctx, tableId: string, slice: SliceRequest, timeDim: string): Promise<SliceOutcome> {
+  let pieces: SliceRequest[];
+  try {
+    pieces = splitSliceRequest(slice, timeDim);
+  } catch (error) {
+    return { kind: 'ineligible', detail: `request: ${error instanceof Error ? error.message : String(error)}` };
+  }
+  if (pieces.length === 1) return ensureWithFallback(ctx, tableId, pieces[0]!);
+  let fromCache = false;
+  for (const piece of pieces) {
+    const outcome = await ensureWithFallback(ctx, tableId, piece);
+    if (outcome.kind !== 'stored') return outcome;
+    fromCache ||= outcome.fetch.fromCache;
+  }
+  return { kind: 'stored', fetch: { ok: true, filterKey: sliceFilterKey(slice), fromCache } };
+}
+
 /** Steps 1–5 for one claimed row: exactly one audited response. Throws on
  * anything unexpected (the caller retries or gives up). `seen` receives the
  * table title and the plan as soon as they exist, so a give-up after them
@@ -249,7 +276,11 @@ async function produce(
   seen.plan = plan;
   if (plan.kind !== 'fetch') return respond({ plan, fetch: null, startedAt });
 
-  const slice = await ensureWithFallback(ctx, row.tableId, plan.slice);
+  const timeDim = table.schema.dimensions.find((d) => d.kind === 'TimeDimension');
+  if (timeDim === undefined) {
+    return respond({ plan: refusePlan('table_lane_ineligible', 'the table has no time dimension', plan), fetch: null, startedAt });
+  }
+  const slice = await ensureAllPieces(ctx, row.tableId, plan.slice, timeDim.name);
   switch (slice.kind) {
     case 'stored':
       return respond({ plan, fetch: slice.fetch, startedAt });

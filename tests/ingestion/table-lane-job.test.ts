@@ -130,6 +130,9 @@ class SpySource implements CbsSource {
   codeListCalls = 0;
   failCodeListCall: (n: number) => boolean = () => false;
   failSchemaCall: (n: number) => boolean = () => false;
+  observationCalls = 0;
+  observedSlices: (CbsSlice | undefined)[] = [];
+  failObservationCall: (n: number) => boolean = () => false;
   mutateSchema: (schema: CbsTableSchema, n: number) => CbsTableSchema = (s) => s;
   private readonly byTable: Record<string, CbsSource>;
   constructor(byTable: Record<string, CbsSource>) {
@@ -155,6 +158,9 @@ class SpySource implements CbsSource {
   }
   fetchObservations(tableId: string, slice?: CbsSlice, dimensionNames?: string[]): AsyncIterable<CbsObservationRow[]> {
     events.log.push({ type: 'source', call: 'fetchObservations', tableId });
+    this.observationCalls += 1;
+    if (this.failObservationCall(this.observationCalls)) throw new Error('CBS is down (test)');
+    this.observedSlices.push(slice);
     return this.src(tableId).fetchObservations(tableId, slice, dimensionNames);
   }
   async fetchObservationCount(tableId: string): Promise<number | null> {
@@ -450,6 +456,77 @@ describe('runTableLaneJob — answer path', () => {
     expect(ensureCalls).toBe(1);
     // The spy does see the shared lock — runQuery takes it, AFTER ensureSlice.
     expect(sharedAfterEnsure).toBeGreaterThan(0);
+  });
+});
+
+/** Names of `n` gemeenten that resolve unambiguously (no bracket, no repeat). */
+function gemeenteNames(n: number): string[] {
+  const titles = lane.codeLists['RegioS']!.filter((c) => c.code.startsWith('GM')).map((c) => c.title);
+  const counts = new Map<string, number>();
+  for (const t of titles) counts.set(t, (counts.get(t) ?? 0) + 1);
+  return titles.filter((t) => !t.includes('(') && counts.get(t) === 1).slice(0, n);
+}
+
+describe('runTableLaneJob — a slice over CBS’s filter limit is split (#358 (11))', () => {
+  function manyRegions(n: number): string {
+    return parseOutput(lane, LANE_QUESTION, {
+      measureCode: LANE_MEASURE,
+      period: { kind: 'year', year: 2024 },
+      regions: gemeenteNames(n).map((name) => ({ name, kind: 'gemeente' as const })),
+    });
+  }
+
+  it('a question naming 200 gemeenten fetches in several requests of at most 150 codes, stores them all and answers', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const source = await makeSource();
+
+    const summary = await runTableLaneJob(deps(source, new ScriptedParseClient([manyRegions(200)])));
+
+    expect(summary).toEqual({ processed: 1, answered: 1, asked: 0, refused: 0, failed: 0 });
+    expect(source.observedSlices.length).toBeGreaterThanOrEqual(2);
+    let regionsSeen = 0;
+    for (const s of source.observedSlices) {
+      const regions = s!.dimensionIn!['RegioS']!;
+      expect(regions.length + s!.periodIn!.codes.length + s!.measures!.length).toBeLessThanOrEqual(150);
+      regionsSeen += regions.length;
+    }
+    expect(regionsSeen).toBe(200);
+    // one stored slice per piece; the audit carries the whole request's key, not a piece's
+    expect(await count('select count(*)::int as n from slice_fetches where table_id = $1', [LANE_TABLE])).toBe(
+      source.observedSlices.length,
+    );
+    const rows = await audits(userId);
+    expect(rows[0]!.kind).toBe('answer');
+    expect(lanePart(rows[0]!).fromCachedSlice).toBe(false);
+    const key = JSON.parse(lanePart(rows[0]!).sliceFilterKey as string) as { members: { RegioS: string[] } };
+    expect(key.members.RegioS).toHaveLength(200);
+  });
+
+  it('a small question still makes exactly one request (nothing below 150 changes)', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const source = await makeSource();
+    await runTableLaneJob(deps(source, new ScriptedParseClient([amsterdam()])));
+    expect(source.observedSlices).toHaveLength(1);
+    expect(await count('select count(*)::int as n from slice_fetches where table_id = $1', [LANE_TABLE])).toBe(1);
+  });
+
+  it('if one split request fails, the whole question refuses (cbs_unreachable) — never an answer from a subset', async () => {
+    const userId = await seedUser();
+    const queued = await queue(userId);
+    const source = await makeSource();
+    source.failObservationCall = (n) => n >= 2; // the first piece succeeds, every later one fails
+    const summary = await runTableLaneJob(deps(source, new ScriptedParseClient([manyRegions(200)])));
+
+    expect(summary.answered).toBe(0);
+    expect(summary.refused).toBe(1);
+    const rows = await audits(userId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.kind).toBe('refusal');
+    expect(rows[0]!.refusalReason).toBe('cbs_unreachable');
+    expect((await row(queued.id, userId)).outcomeKind).toBe('refusal');
+    expect(await getBalance(rawDb, userId)).toBe(100); // net 0
   });
 });
 
