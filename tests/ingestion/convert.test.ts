@@ -337,6 +337,15 @@ describe('the read-only proof: refused, nothing written', () => {
     await refusedAfterProof(/update_cadence/);
   });
 
+  it('a stored unit or decimals that differs from CBS', async () => {
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `update cbs_tables set units = jsonb_set(units, '{M000352,unit}', '"x 1 000"') where id = $1`,
+      [POP],
+    );
+    await refusedAfterProof(/units of measure M000352/);
+  });
+
   it('a stored label that differs from CBS’s current code list', async () => {
     await wholeTable(POP, new FixtureSource(docsFor(POP)));
     await db.query(`update dimension_labels set label = 'Renamed' where table_id = $1 and dimension = 'RegioS' and code = 'NL01'`, [
@@ -366,6 +375,21 @@ describe('the read-only proof: refused, nothing written', () => {
 });
 
 describe('the dry run (no --yes)', () => {
+  it('measure text CBS has since enriched (title, description) does not block; it is reported as a note', async () => {
+    // Registrations older than #115 stored no `description`; the ingestion checks compare unit and
+    // decimals only (validate.ts RegistryUnits), so the conversion must not be stricter than they are.
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `update cbs_tables set units = (
+         select jsonb_object_agg(key, value - 'description') from jsonb_each(units)
+       ) where id = $1`,
+      [POP],
+    );
+    const result = await convertTableToSlices(db, new FixtureSource(docsFor(POP)), POP, { deadline: FAR(), apply: false });
+    expect(result.outcome).toBe('dry_run');
+    expect(result.notes.join(' ')).toMatch(/measure text/);
+  });
+
   it('runs the checks and the proof, reports what it would do, and writes nothing', async () => {
     await wholeTable(POP, new FixtureSource(docsFor(POP)));
     const before = await wholeState();

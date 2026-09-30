@@ -230,6 +230,21 @@ async function registrySnapshot(db: Db, tableId: string): Promise<Record<string,
   return out;
 }
 
+/** How many measures' descriptive text (title, description) the conversion refreshes to CBS's
+ * current text. Not a reason to refuse: unit and decimals are compared in registrationDifferences. */
+function measureTextChanges(stored: Record<string, unknown>, reg: SliceRegistration): number {
+  const units = parseJsonb<Record<string, { title?: unknown; description?: unknown }>>(stored.units, {});
+  let changed = 0;
+  for (const [code, now] of Object.entries(reg.units)) {
+    const before = units[code];
+    if (before === undefined) continue;
+    if ((before.title ?? null) !== (now.title ?? null) || (before.description ?? null) !== (now.description ?? null)) {
+      changed += 1;
+    }
+  }
+  return changed;
+}
+
 /** Why the slice registration of this table would differ from what is stored — empty when it would not. */
 async function registrationDifferences(
   db: Db,
@@ -248,10 +263,14 @@ async function registrationDifferences(
   compare('source', stored.source, reg.source);
   if (stored.schema_fingerprint != null) compare('schema_fingerprint', stored.schema_fingerprint, reg.fingerprint);
 
-  const units = parseJsonb<Record<string, unknown>>(stored.units, {});
+  // Unit and decimals are what a number means; title and description are descriptive text that
+  // the ingestion checks never compare (validate.ts RegistryUnits) — see measureTextChanges.
+  const units = parseJsonb<Record<string, { unit?: unknown; decimals?: unknown }>>(stored.units, {});
   const codes = new Set([...Object.keys(units), ...Object.keys(reg.units)]);
+  const meaning = (u: { unit?: unknown; decimals?: unknown } | undefined) =>
+    u === undefined ? null : { unit: u.unit ?? null, decimals: u.decimals ?? null };
   for (const code of [...codes].sort()) {
-    if (canonical(units[code] ?? null) !== canonical(reg.units[code] ?? null)) {
+    if (canonical(meaning(units[code])) !== canonical(meaning(reg.units[code]))) {
       out.push(`units of measure ${code}: stored ${canonical(units[code] ?? null)}, CBS now ${canonical(reg.units[code] ?? null)}`);
     }
   }
@@ -419,6 +438,10 @@ export async function convertTableToSlices(
         `--rebaseline for a reviewed layout/unit/label change), then convert. Nothing was written.`,
       { parity, plannedRequests },
     );
+  }
+  const textChanges = measureTextChanges(row, registration);
+  if (textChanges > 0) {
+    notes.push(`The measure text (title or description) of ${textChanges} measure(s) becomes CBS's current text.`);
   }
   if (row.title !== registration.title) {
     notes.push(`The table title becomes CBS's current title "${registration.title}" (stored: "${String(row.title)}").`);
