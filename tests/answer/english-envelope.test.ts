@@ -34,7 +34,7 @@ import {
 } from '../../src/answer/audit/index.ts';
 import type { AuditRecord } from '../../src/answer/audit/index.ts';
 import { REFUSAL_TASK_QUESTIONS } from '../helpers/benchmark-intents.ts';
-import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { backdateTableSync, createIngestedDb } from '../helpers/ingested-db.ts';
 import { loadLabelledSet } from '../helpers/intent-expectations.ts';
 import type { Db } from '../../src/db/types.ts';
 
@@ -328,10 +328,9 @@ describe('the staleness refusal: `english` present only for lang "en"', () => {
     ({ db, close } = await createIngestedDb());
     // 86141NED (CPI) is registered 'monthly' -> maxAgeDays 47; this pushes it
     // far past that so impliedRecency=true refuses (never warns-and-serves).
-    await db.query('update cbs_tables set last_sync_at = $2 where id = $1', [
-      '86141NED',
-      '2020-01-01T00:00:00.000Z',
-    ]);
+    // At the table's own date source in either build mode (whole-table or
+    // slice-stored, INGEST_FIXTURE_MODE).
+    await backdateTableSync(db, '86141NED', '2020-01-01T00:00:00.000Z');
   }, 300_000);
 
   afterAll(async () => {

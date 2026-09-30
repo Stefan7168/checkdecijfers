@@ -289,6 +289,16 @@ function dateSliceCacheCells(
   return { ok: true, syncedAt, lastSyncAt };
 }
 
+/** Is `periodCode` in the table's own period code list? */
+async function isPeriodListed(db: Db, tableId: string, timeDimension: string, periodCode: string): Promise<boolean> {
+  const { rows } = await db.query('select 1 from dimension_labels where table_id = $1 and dimension = $2 and code = $3', [
+    tableId,
+    timeDimension,
+    periodCode,
+  ]);
+  return rows.length > 0;
+}
+
 /** Why is a requested cell missing? Ordered diagnosis producing the refusal
  * kind docs/05's failure table requires: freshness (beyond what we can serve,
  * with the freshest period offered) / not_published (CBS never published it) /
@@ -352,8 +362,18 @@ async function diagnoseMissing(
   // full table racing the same eviction — an accepted, narrow misdiagnosis
   // (same class of race the #196 comments elsewhere in this file describe),
   // not fixed here.
-  const isSliceCache = q.table.ingestMode === 'slice_cache';
-  if (isSliceCache && !(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
+  //
+  // ADR 065 step 6: `not_fetched` means "CBS may publish this cell and we
+  // never asked". A period that is not in the table's own period code list
+  // (dimension_labels holds CBS's WHOLE list for a slice-cache table) is one
+  // CBS has not published, so no fetch could ever have covered it: it skips
+  // the slice-cache branches and gets the whole-table diagnosis below
+  // (freshness / not_published), exactly as a full table does — found when
+  // the benchmark's "inflation for a month not yet published" task (B20)
+  // refused `not_fetched` instead of `freshness` on slice-stored data.
+  const sliceDiagnosis =
+    q.table.ingestMode === 'slice_cache' && (await isPeriodListed(db, q.tableId, q.timeDimension, missingPeriod));
+  if (sliceDiagnosis && !(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
     return refuse(
       q.intent,
       'not_fetched',
@@ -377,7 +397,7 @@ async function diagnoseMissing(
     }
   }
 
-  if (isSliceCache) {
+  if (sliceDiagnosis) {
     // Reached only when insideAnyFetchedSlice was true above (the outside
     // case already returned) — CBS genuinely returned no cell for this
     // coordinate, inside a slice we DID fetch. Reuses the EXISTING

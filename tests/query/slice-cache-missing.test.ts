@@ -123,6 +123,17 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     expect(outcome.refusal.message.toLowerCase()).toContain('ensureslice');
   });
 
+  it('(d) a period outside CBS\'s own Perioden code list -> the whole-table not_published, never not_fetched', async () => {
+    // ADR 065 step 6: no fetch could ever cover a period CBS does not list, so
+    // "never fetched" would be a false owner alert; this is the same diagnosis
+    // a full table gives for the same ask (the describe block below).
+    const outcome = await runQuery(db, houseIntent('1899JJ00'));
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.kind).toBe('not_published');
+    expect(outcome.refusal.message).toContain('CBS has not published period 1899JJ00');
+  });
+
   // Fix round 1 (minor finding 2) left an it.todo here: a slice-cache table
   // could not be SERVED at all (cbs_tables.last_sync_at stays null for it and
   // run.ts refused any such result). Task 5b replaced that refusal with the

@@ -48,12 +48,49 @@ import { PGlite } from '@electric-sql/pglite';
 import { FixtureSource, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { registerSchemaOnly } from '../../src/ingestion/slice-cache.ts';
+import { warmTable } from '../../src/ingestion/warm-job.ts';
 import { applyRegistryDefaults } from '../../src/registry/apply.ts';
 import { applyMigrations, MIGRATIONS_DIR } from '../../src/db/migrate.ts';
+import type { Db } from '../../src/db/types.ts';
 import { wrapPGlite } from './pglite-db.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SRC_DIR = fileURLToPath(new URL('../../src', import.meta.url));
+// This file itself decides what the database holds (the two builds below), so
+// it is part of the cache key too.
+const THIS_FILE = fileURLToPath(import.meta.url);
+
+/**
+ * How the hermetic database stores the seed tables (ADR 065 step 6, design
+ * D8). `full`: registerTables + one whole-scope syncTable per table — today's
+ * default. `slice`: each table registered in slice mode with its seed
+ * curation (pinned, cadence, declared scope, measure curation) and its scope
+ * filled by the warm job through bounded, validated slice requests.
+ */
+export type FixtureMode = 'full' | 'slice';
+
+/** The one place the mode is read. An unknown value throws rather than falling
+ * back to a default: a typo must never run the suite in the other mode. */
+export function fixtureMode(): FixtureMode {
+  const raw = process.env.INGEST_FIXTURE_MODE;
+  if (raw === undefined || raw === '' || raw === 'full') return 'full';
+  if (raw === 'slice') return 'slice';
+  throw new Error(`INGEST_FIXTURE_MODE must be "full" or "slice", not "${raw}"`);
+}
+
+/**
+ * Seed tables the slice-mode build keeps on the whole-table path, with the
+ * reason. The slice store refuses a table whose periods carry no machine status
+ * (`registerSchemaOnly` → `no_machine_period_status`); 70072ned's statuses come
+ * from its reviewed period notes, which only syncTable reads (ADR 061; out of
+ * scope for the one route per ADR 065 D3). So the slice-mode database is MIXED:
+ * every other seed table slice-stored, this one whole-table.
+ */
+export const SLICE_BUILD_FULL_FALLBACK: Readonly<Record<string, string>> = {
+  '70072ned':
+    'no machine period status (statuses come from reviewed period notes, which only the whole-table sync reads)',
+};
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 const CACHE_DIR = fileURLToPath(new URL('../../node_modules/.cache/cdc-fixture-db', import.meta.url));
 
@@ -90,7 +127,7 @@ function walkFiles(dir: string): string[] {
  * source edit — against re-ingesting 17 tables 34 times, which is what this
  * replaced. Cheap insurance against a silent lie. */
 export function fixtureInputFiles(): string[] {
-  return [...walkFiles(SRC_DIR), ...walkFiles(MIGRATIONS_DIR), ...walkFiles(FIXTURES_DIR)];
+  return [...walkFiles(SRC_DIR), ...walkFiles(MIGRATIONS_DIR), ...walkFiles(FIXTURES_DIR), THIS_FILE];
 }
 
 export function fixtureInputsHash(): string {
@@ -111,8 +148,17 @@ export function fixtureInputsHash(): string {
   return hash.digest('hex').slice(0, 16);
 }
 
-function snapshotPathFor(hash: string): string {
-  return join(CACHE_DIR, `ingested-${hash}.tar`);
+/** The snapshot key for one build mode: the inputs hash, with the mode folded
+ * in for the slice build so the two builds can never share a snapshot. Still a
+ * plain hex name, so pruneSnapshots bounds both kinds alike. */
+export function fixtureSnapshotKey(mode: FixtureMode = fixtureMode()): string {
+  const inputs = fixtureInputsHash();
+  if (mode === 'full') return inputs;
+  return createHash('sha256').update(`${inputs}:${mode}`).digest('hex').slice(0, 16);
+}
+
+function snapshotPathFor(key: string): string {
+  return join(CACHE_DIR, `ingested-${key}.tar`);
 }
 
 /** How many snapshots the cache keeps. The key above hashes ALL of `src/`, so
@@ -153,44 +199,107 @@ export function pruneSnapshots(dir: string = CACHE_DIR, keep: number = SNAPSHOTS
   return removed;
 }
 
-/** The cold path: boot PGlite, migrate, register, sync all 17 seed tables.
- * This is what every suite used to do on its own. */
-async function buildIngested(): Promise<PGlite> {
+/** Migrations applied to a fresh PGlite, plus the fixture source every build
+ * reads — the part both builds share. */
+async function freshDatabase(): Promise<{ client: PGlite; db: Db; source: FixtureSource }> {
   const client = new PGlite();
   const db = wrapPGlite(client);
   await applyMigrations(db);
-  const source = new FixtureSource(loadFixtureDocsTree(FIXTURES_DIR));
-  // #110(c): pinned, mirroring `ingest register` — the seed set is eviction-exempt.
-  await registerTables(db, source, SEED_TABLES, { pinned: true });
+  return { client, db, source: new FixtureSource(loadFixtureDocsTree(FIXTURES_DIR)) };
+}
+
+async function applyDefaultsOrThrow(db: Db): Promise<void> {
   const applied = await applyRegistryDefaults(db);
   if (applied.tablesMissing.length > 0) {
     throw new Error(
       `registry defaults reference unregistered table(s): ${applied.tablesMissing.join(', ')}`,
     );
   }
+}
+
+async function syncOrThrow(db: Db, source: FixtureSource, tableId: string): Promise<void> {
+  const result = await syncTable(db, source, tableId);
+  if (result.outcome !== 'succeeded') {
+    throw new Error(`fixture sync of ${tableId} failed at ${result.failureStage}: ${result.failureSummary}`);
+  }
+}
+
+/** The cold path, full mode: boot PGlite, migrate, register, sync all 17 seed
+ * tables. This is what every suite used to do on its own. */
+async function buildFullIngested(): Promise<PGlite> {
+  const { client, db, source } = await freshDatabase();
+  // #110(c): pinned, mirroring `ingest register` — the seed set is eviction-exempt.
+  await registerTables(db, source, SEED_TABLES, { pinned: true });
+  await applyDefaultsOrThrow(db);
+  for (const table of SEED_TABLES) await syncOrThrow(db, source, table.id);
+  return client;
+}
+
+/** The cold path, slice mode (ADR 065 step 6): the same seed tables, the same
+ * registry defaults, but each table registered in slice mode with its seed
+ * curation and its declared scope filled by the warm job. Any outcome other
+ * than `complete` fails the build — a half-filled scope would make every
+ * dependent suite test something other than what production would hold.
+ * SLICE_BUILD_FULL_FALLBACK tables are registered and synced the whole-table
+ * way, and only when the slice store refuses them for exactly that reason. */
+async function buildSliceIngested(): Promise<PGlite> {
+  const { client, db, source } = await freshDatabase();
+  const wholeTable = new Set<string>();
+  // Seed order, as the full build registers them.
   for (const table of SEED_TABLES) {
-    const result = await syncTable(db, source, table.id);
-    if (result.outcome !== 'succeeded') {
-      throw new Error(
-        `fixture sync of ${table.id} failed at ${result.failureStage}: ${result.failureSummary}`,
-      );
+    const registered = await registerSchemaOnly(db, source, table.id, undefined, {
+      pinned: true,
+      updateCadence: table.updateCadence,
+      slice: table.slice ?? null,
+      excludeMeasures: table.excludeMeasures,
+    });
+    if (registered.ok) continue;
+    if (registered.reason === 'no_machine_period_status' && Object.hasOwn(SLICE_BUILD_FULL_FALLBACK, table.id)) {
+      await registerTables(db, source, [table], { pinned: true });
+      wholeTable.add(table.id);
+      continue;
+    }
+    throw new Error(`slice-mode registration of ${table.id} refused (${registered.reason}): ${registered.summary}`);
+  }
+  for (const id of Object.keys(SLICE_BUILD_FULL_FALLBACK)) {
+    // A fallback the slice store no longer refuses is stale: say so, loudly.
+    if (!wholeTable.has(id)) throw new Error(`${id} is listed as a whole-table fallback but was slice-registered`);
+  }
+  await applyDefaultsOrThrow(db);
+  // Far enough that the deadline never decides a fixture build.
+  const deadline = Date.now() + 24 * 60 * 60 * 1000;
+  for (const table of SEED_TABLES) {
+    if (wholeTable.has(table.id)) {
+      await syncOrThrow(db, source, table.id);
+      continue;
+    }
+    const warmed = await warmTable(db, source, table.id, { deadline });
+    if (warmed.outcome !== 'complete') {
+      const why = warmed.failure
+        ? `${warmed.failure.stage}: ${warmed.failure.summary}`
+        : (warmed.skippedReason ?? `${warmed.remaining} of ${warmed.planned} requests not done`);
+      throw new Error(`fixture warm of ${table.id} ended ${warmed.outcome} (${why})`);
     }
   }
   return client;
 }
 
+/** The cold path for a mode (default: the INGEST_FIXTURE_MODE one). */
+async function buildIngested(mode: FixtureMode = fixtureMode()): Promise<PGlite> {
+  return mode === 'slice' ? buildSliceIngested() : buildFullIngested();
+}
+
 /**
- * Ensures a snapshot for the current inputs exists on disk and returns its path.
- * Called once per `vitest run` from tests/global-setup.ts; a warm cache makes it
- * a stat() call, so a single-file run pays nothing.
+ * Ensures a snapshot for the current inputs and mode exists on disk and returns
+ * its path. Called once per `vitest run` from tests/global-setup.ts; a warm
+ * cache makes it a stat() call, so a single-file run pays nothing.
  */
-export async function ensureSnapshot(): Promise<{ path: string; built: boolean }> {
-  const hash = fixtureInputsHash();
-  const path = snapshotPathFor(hash);
+export async function ensureSnapshot(mode: FixtureMode = fixtureMode()): Promise<{ path: string; built: boolean }> {
+  const path = snapshotPathFor(fixtureSnapshotKey(mode));
   if (existsSync(path) && statSync(path).size > 0) return { path, built: false };
 
   mkdirSync(CACHE_DIR, { recursive: true });
-  const client = await buildIngested();
+  const client = await buildIngested(mode);
   const blob = await client.dumpDataDir('none');
   await client.close();
 
@@ -204,7 +313,7 @@ export async function ensureSnapshot(): Promise<{ path: string; built: boolean }
   return { path, built: true };
 }
 
-let cachedBytes: Buffer | null = null;
+const cachedBytes = new Map<FixtureMode, Buffer>();
 
 /** The snapshot for the current inputs, or null when there is none to use.
  *
@@ -214,13 +323,15 @@ let cachedBytes: Buffer | null = null;
  * throw: a broken cache is allowed to make the suite slow, and is never allowed
  * to make it red. Getting this wrong would hand all 34 dependent suites a
  * shared new way to fail. */
-export function readSnapshot(): Buffer | null {
-  if (cachedBytes !== null) return cachedBytes;
+export function readSnapshot(mode: FixtureMode = fixtureMode()): Buffer | null {
+  const cached = cachedBytes.get(mode);
+  if (cached !== undefined) return cached;
   try {
-    const path = snapshotPathFor(fixtureInputsHash());
+    const path = snapshotPathFor(fixtureSnapshotKey(mode));
     if (!existsSync(path)) return null;
-    cachedBytes = readFileSync(path);
-    return cachedBytes;
+    const bytes = readFileSync(path);
+    cachedBytes.set(mode, bytes);
+    return bytes;
   } catch (error) {
     console.warn(
       '[fixture-db] snapshot unreadable, building the database instead:',

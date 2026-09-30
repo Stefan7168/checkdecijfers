@@ -55,11 +55,21 @@ describe('createIngestedDb hands out isolated databases', () => {
     try {
       const { rows: tables } = await db.query('select count(*)::int as n from cbs_tables');
       const { rows: batches } = await db.query('select count(*)::int as n from ingestion_batches');
-      // Registered tables, a completed sync batch each, and real cells: a
+      // One completed batch per whole-table sync, one per stored slice for a
+      // slice-stored table (INGEST_FIXTURE_MODE=slice) — so in the full build
+      // this is exactly one batch per table.
+      const { rows: expected } = await db.query(
+        `select sum(case when t.ingest_mode = 'full' then 1
+                         else (select count(*) from slice_fetches sf where sf.table_id = t.id) end)::int as n
+           from cbs_tables t`,
+      );
+      // Registered tables, their completed batches, and real cells: a
       // restore that silently produced an empty-but-migrated database would
       // otherwise turn every downstream suite red in a confusing way.
       expect(Number(tables[0]!.n)).toBeGreaterThan(0);
-      expect(Number(batches[0]!.n)).toBe(Number(tables[0]!.n));
+      expect(Number(batches[0]!.n)).toBe(Number(expected[0]!.n));
+      const { rows: unfinished } = await db.query(`select id from ingestion_batches where outcome <> 'succeeded'`);
+      expect(unfinished).toEqual([]);
       expect(await countObservations(db)).toBeGreaterThan(0);
     } finally {
       await close();

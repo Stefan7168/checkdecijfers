@@ -9,7 +9,7 @@ import { checkStaleness, maxAgeDaysForCadence, respondToIntent } from '../../src
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import { makeCell, makeResult } from '../helpers/synthetic-results.ts';
-import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { backdateTableSync, createIngestedDb } from '../helpers/ingested-db.ts';
 
 /** Errors so composeAnswer falls through to the deterministic template path
  * (same pattern as compose-template.test.ts's ThrowingClient) — the
@@ -209,10 +209,12 @@ describe('respondToIntent — recency-refusal branch (respond-level unit)', () =
 
   // respondToIntent calls runQuery ITSELF from the intent (it does not reuse
   // a pre-fetched ValidatedResult), so staleness must be forced at its
-  // source: the registered table's last_sync_at. Mutating an outcome object
+  // source: the table's data date (last_sync_at for a whole-table table, the
+  // covering slices' checked_at for a slice-stored one — both build modes,
+  // INGEST_FIXTURE_MODE). Mutating an outcome object
   // built by a throwaway runQuery call would be invisible to it.
   async function setLastSyncAt(tableId: string, iso: string): Promise<void> {
-    await db.query('update cbs_tables set last_sync_at = $2 where id = $1', [tableId, iso]);
+    await backdateTableSync(db, tableId, iso);
   }
 
   it('stale + impliedRecency=true refuses (never serves an answer or a warning-only answer)', async () => {
