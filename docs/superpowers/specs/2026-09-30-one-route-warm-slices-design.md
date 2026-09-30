@@ -127,6 +127,10 @@ Steps 2, 3 and 4 touch different files and can be built in parallel; 5 needs all
 - **Dry runs against production (read-only):** the parity report found three small tables identical; the conversion
   dry run then showed the first version's registration check was stricter than the ingestion rules (it refused on
   descriptive measure text); relaxed to unit and decimals.
+- **CBS's filter limit, found by the dry runs:** CBS refuses a request whose filter names about 170 codes or more ("The
+  node count limit of '1000' has been exceeded"; 165 accepted, 180 refused, measured). The planner now caps a request at
+  150 codes across all axes. With the job's real caps (25,000 cells, 6,000 characters, 150 codes) the 20 pinned tables
+  need **108 requests** in total, 32 of them for `86141NED` (`npm run ingest:warm-plan -- --max-cells 25000`).
 - **Not done:** step 9 (converting production, owner present; then the deletions of D10). The test default stays
   whole-table until production is converted, because production still runs that path. `70072ned` needs period-note
   status in the slice store before the whole-table sync can be deleted.

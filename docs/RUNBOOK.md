@@ -1273,7 +1273,9 @@ still apply to every whole-table table.
    The conversion refuses a table whose stored cells or statuses differ from CBS.
 2. Dry run (above). `REFUSED` names the reason; the usual ones and their fix:
    - a value or status differs → sync first (step 1);
-   - a label, unit or layout differs → `ingest sync <id> --rebaseline` (a reviewed hand refresh), then retry;
+   - a unit or decimals, the layout, a code CBS added or dropped, or a code's group differs → `ingest sync <id>
+     --rebaseline` (a reviewed hand refresh), then retry. Reworded labels and measure descriptions do NOT refuse: the
+     conversion takes CBS's current wording and says how many it refreshed;
    - a stored cell outside the declared scope, or a sync still marked running → read the message, do not force it.
 3. `npm run ingest -- convert-to-slices <tableId> --yes [--budget-seconds N]` (default budget 900 s, shared by the proof
    and the refill). Outcomes:
