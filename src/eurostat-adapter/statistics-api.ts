@@ -29,6 +29,13 @@ import {
   parseJsonStatDataset,
   type ParsedEurostatDataset,
 } from './jsonstat.ts';
+import {
+  eurostatLayoutFromStructure,
+  EurostatLayoutRefusalError,
+  readEurostatStructure,
+  type EurostatLayout,
+  type EurostatStructure,
+} from './sdmx-structure.ts';
 
 /** VERIFIED live (session 107, 2026-09-16) — Eurostat's real Statistics API
  * dissemination endpoint. */
@@ -37,6 +44,25 @@ const STATISTICS_BASE = 'https://ec.europa.eu/eurostat/api/dissemination/statist
  * "table of contents" endpoint; see parseJsonStatCatalog's own doc comment
  * in ./jsonstat.ts for the tab-separated TEXT (not JSON) shape this returns. */
 const CATALOGUE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/catalogue/toc/txt?lang=EN';
+/** VERIFIED live (2026-09-30, #357 step 1) — Eurostat's SDMX 2.1 structure endpoints (SDMX-ML only; no JSON
+ * rendering carries code lists, see ./xml.ts). */
+const SDMX_BASE = 'https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1';
+
+/** The two structure requests for one dataset (see ./sdmx-structure.ts for what each returns). The dataflow
+ * is always version 1.0 at Eurostat and references the CURRENT data structure (verified: une_rt_q's 1.0
+ * dataflow references data structure 57.0); a data structure is never requested by a pinned version. Only
+ * main-server dataset codes are accepted (letters, digits, underscore) — the Comext `DS-*` collections live
+ * on another server and are not read. */
+export function structureUrls(nativeCode: string): { dataflow: string; constraint: string } {
+  if (!/^[A-Za-z0-9_]+$/.test(nativeCode)) {
+    throw new Error(`Eurostat adapter: '${nativeCode}' is not a main-server dataset code — refusing to build a structure request.`);
+  }
+  const code = nativeCode.toUpperCase();
+  return {
+    dataflow: `${SDMX_BASE}/dataflow/ESTAT/${code}/1.0?references=descendants&detail=referencepartial`,
+    constraint: `${SDMX_BASE}/contentconstraint/ESTAT/${code}/1.0`,
+  };
+}
 
 const FETCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_MS = 1500;
@@ -55,6 +81,13 @@ export interface StatisticsApiSourceOptions {
    * BUDGET_ENDED_PHRASE in its message (the warm job then counts it as remaining, not failed). Absent: no
    * budget. */
   stopAt?: number;
+  /** #357 step 1: read a dataset's layout (`fetchTableSchema`, `fetchCodeList`) from Eurostat's SDMX
+   * structure messages instead of downloading its observations — no SYNC_CELL_THRESHOLD, so any dataset that
+   * fits can be registered. `decimals` supplies each unit's number of decimals, which no structure message
+   * states; a unit it does not know refuses (`EurostatLayoutRefusalError`, reason `decimals_unknown`).
+   * The layout is the whole dataset's (every code that occurs, licensed geo only); a `slice` argument does not
+   * narrow it. Absent (the default, and every production caller today): the download path, unchanged. */
+  structureLayout?: { decimals: (tableId: string, unitCode: string) => number | undefined };
 }
 
 /** D4: strips the '<key>:' prefix internally (never the caller's job) —
@@ -278,12 +311,16 @@ export class StatisticsApiSource implements CbsSource {
   private readonly timeoutMs: number;
   private readonly retryBackoffMs: number;
   private readonly stopAt: number | undefined;
+  private readonly structureLayout: StatisticsApiSourceOptions['structureLayout'];
+  /** One structure read (two requests) per dataset; a failed read is not kept. */
+  private readonly structureCache = new Map<string, Promise<EurostatStructure>>();
 
   constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
     this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
     this.stopAt = options.stopAt;
+    this.structureLayout = options.structureLayout;
   }
 
   private budgetEnded(url: string): Error {
@@ -396,11 +433,37 @@ export class StatisticsApiSource implements CbsSource {
   // slice for schema, code lists AND observations, all three come from ONE
   // underlying fetch (the cache key is identical). No slice ⇒ unchanged.
   async fetchTableSchema(tableId: string, slice?: CbsSlice): Promise<CbsTableSchema> {
+    if (this.structureLayout) return (await this.loadLayout(tableId)).schema;
     return (await this.loadDataset(tableId, slice)).schema;
   }
 
+  /** A dataset's structure from its two SDMX structure messages — no observations (#357 step 1). */
+  fetchStructure(tableId: string): Promise<EurostatStructure> {
+    const nativeCode = nativeIdFrom(tableId);
+    let cached = this.structureCache.get(nativeCode);
+    if (!cached) {
+      // One request at a time (ADR 048 D6: Eurostat fetches serialise); a bad code rejects, never throws.
+      cached = (async () => {
+        const urls = structureUrls(nativeCode);
+        const dataflow = await this.fetchText(urls.dataflow);
+        const constraint = await this.fetchText(urls.constraint);
+        return readEurostatStructure(nativeCode, dataflow, constraint);
+      })();
+      this.structureCache.set(nativeCode, cached);
+      cached.catch(() => this.structureCache.delete(nativeCode));
+    }
+    return cached;
+  }
+
+  private async loadLayout(tableId: string): Promise<EurostatLayout> {
+    const decimals = this.structureLayout!.decimals;
+    const layout = eurostatLayoutFromStructure(tableId, await this.fetchStructure(tableId), (unit) => decimals(tableId, unit));
+    if (!layout.ok) throw new EurostatLayoutRefusalError(layout);
+    return layout;
+  }
+
   async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
-    const parsed = await this.loadDataset(tableId, slice);
+    const parsed = this.structureLayout ? await this.loadLayout(tableId) : await this.loadDataset(tableId, slice);
     const codes = parsed.codeLists[dimension];
     if (!codes) {
       throw new Error(

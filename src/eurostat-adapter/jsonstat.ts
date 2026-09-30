@@ -73,14 +73,25 @@ export const EUROSTAT_NOT_AVAILABLE = ':';
  * Never widen this without checking Assumption 2 first; narrowing it is
  * always safe (principle c — under-inclusive means "excluded", never wrong).
  */
-export const EU_EFTA_STAND_IN_GEO_CODES: ReadonlySet<string> = new Set([
+export const EU_EFTA_LICENSED_COUNTRY_CODES: ReadonlySet<string> = new Set([
   // EU-27
   'BE', 'BG', 'CZ', 'DK', 'DE', 'EE', 'IE', 'EL', 'ES', 'FR', 'HR', 'IT', 'CY',
   'LV', 'LT', 'LU', 'HU', 'MT', 'NL', 'AT', 'PL', 'PT', 'RO', 'SI', 'SK', 'FI', 'SE',
   // EFTA
   'IS', 'LI', 'NO', 'CH',
-  // Common Eurostat aggregates over the above (never a single country)
-  'EU27_2020', 'EA', 'EA19', 'EA20', 'EFTA',
+]);
+
+/** Common Eurostat aggregates over the countries above (never a single country). */
+export const EU_EFTA_LICENSED_AGGREGATE_CODES: ReadonlySet<string> = new Set(['EU27_2020', 'EA', 'EA19', 'EA20', 'EFTA']);
+
+/** The stand-in licence scope: both halves above. Since the SDMX structure reader (#357 step 1,
+ * `sdmx-structure.ts`) the two halves are also kept apart, because whether a code IS a country or an
+ * aggregate is read from Eurostat's own `LEVEL` annotation on the GEO code list, not from these lists; the
+ * lists only say which countries and aggregates are licensed. A listed code whose level disagrees is excluded
+ * there. The scope itself is unchanged. */
+export const EU_EFTA_STAND_IN_GEO_CODES: ReadonlySet<string> = new Set([
+  ...EU_EFTA_LICENSED_COUNTRY_CODES,
+  ...EU_EFTA_LICENSED_AGGREGATE_CODES,
 ]);
 
 // ---------------------------------------------------------------------------

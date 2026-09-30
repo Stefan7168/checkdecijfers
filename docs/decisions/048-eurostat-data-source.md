@@ -911,3 +911,59 @@ reviewed registration and checks the reviewed measure code, every pinned coordin
 `ingest:freshness` reports them as "not checked") would catch the next frozen one; tracked in [#313](../open-questions.md).
 *(Built: the freshness report's "possibly frozen" verdict (#357), and — for a slice-stored dataset — the warm job, which
 quarantines a dataset whose newest period is too old for its grain; ADR 065's #358 item 4 as-built note.)*
+
+## As-built addendum — structure reader: a dataset's layout without downloading its numbers (2026-10-01, #357 study step 1, branch `eurostat-structure-reader`, dark)
+
+**What it is.** `src/eurostat-adapter/sdmx-structure.ts` reads a Eurostat dataset's layout from Eurostat's own SDMX 2.1
+structure messages, never from an observation download: the dataflow with its current data structure and partial code
+lists (`dataflow/ESTAT/{CODE}/1.0?references=descendants&detail=referencepartial`) and the content constraint
+(`contentconstraint/ESTAT/{CODE}/1.0`, the codes that actually occur, incl. `TIME_PERIOD`). It yields dimensions in key
+order with their concept labels, the occurring codes with English labels, the **GEO level of every geo code** (Eurostat's
+`LEVEL` annotation: `0` country, `1`–`3` NUTS, `AGG` aggregate), the time span and `UPDATE_DATA`. Technique credited to
+cyanheads/eurostat-mcp-server (read, not copied; study doc §1.2). Verified live on `tipsbd30`, `une_rt_q`,
+`prc_hicp_minr`, `namq_10_gdp`; captured verbatim in `tests/fixtures/eurostat-structure/` (refresh:
+`node scripts/capture-eurostat-fixtures.ts --structure`).
+
+**XML, not JSON (the study's Assumption A3, measured false).** Eurostat serves no JSON rendering that carries code lists:
+the SDMX-JSON Accept header gets 406 on the 2.1 and 3.0 structure endpoints, and `format=JSON` is refused unless
+`references=none`, which returns annotations only. So `src/eurostat-adapter/xml.ts` is a small strict XML reader (no new
+dependency): it refuses a DOCTYPE/DTD, processing instructions, unknown entities, unbound prefixes, duplicate attributes
+and anything else outside the subset these messages use. The SDMX reader is equally strict: an unexpected message
+namespace, a second dataflow, an excluding cube region, a time range instead of listed periods, a constraint value with no
+code, or a dimension the constraint says nothing about all throw `EurostatStructureError` (fail closed).
+
+**Today's rules, applied generically** (`fitEurostatStructure`, `eurostatLayoutFromStructure`): one measure per `unit`
+code (`<code>|<unit>`, titled "dataset title — unit label", the same shapes the JSON-stat path builds); a dataset without
+a `unit` dimension (`no_unit_dimension`) or with a grain outside A/Q/M, by `freq` code or by period spelling
+(`unsupported_grain`), is refused, never mapped by guesswork. Two new refusals: the constraint's time list must hold and
+(one grain) run exactly between Eurostat's stated `OBS_PERIOD_OVERALL_OLDEST`/`_LATEST` (`time_span_mismatch` — the
+study's A1, checked on every read, held on every dataset measured), and an `UPDATE_DATA` date is required
+(`no_update_date`; it becomes the registration's `modified`, the value JSON-stat's `updated` also carries).
+
+**Geo levels replace the hand list as the source of level information; the D6 licence exclusion stays a code rule on
+top.** `EU_EFTA_STAND_IN_GEO_CODES` is now the union of `EU_EFTA_LICENSED_COUNTRY_CODES` (31) and
+`EU_EFTA_LICENSED_AGGREGATE_CODES` (5) — the same 36 codes, test-pinned. A geo code is kept only when Eurostat's level says
+country and it is a licensed country, or aggregate and it is a licensed aggregate; no level, or a level that disagrees with
+its list, excludes it. Finding: the euro area's 2026 aggregate `EA21` exists and is outside the reviewed aggregates, so it
+stays excluded until reviewed (Assumption 2); level `OTH` also occurs (excluded, unknown).
+
+**Wiring: opt-in, production unchanged.** `StatisticsApiSource` gains `fetchStructure(tableId)` and a constructor option
+`structureLayout`; with it, `fetchTableSchema`/`fetchCodeList` read the structure (two requests, no `SYNC_CELL_THRESHOLD`,
+the whole dataset's codes) and `registerSchemaOnly` can register any fitting Eurostat id (proven hermetically on
+`eurostat:tipsbd30`). Without it — every production caller today — the download path is byte-identical. The four live
+datasets were deliberately not switched: their registered fingerprints cover the scoped unit only, so the structure's
+full unit list would read as a redesign and quarantine them; a switch needs a re-baseline.
+
+**Open (step 2 must settle): decimals.** No structure message states a unit's decimals (the primary measure is a bare
+`Double`), and decimals set how a figure is rounded on screen (`formatValueNl`), so a guess could change a published
+figure. The structure layout therefore takes decimals from a caller-supplied function and refuses a unit it cannot answer
+for (`decimals_unknown`). An honest source is observed data — for example a small read at registration plus a slice-time
+check that refuses any value carrying more decimals than registered.
+
+**Measured (read-only crawl, not committed, 30 datasets drawn at random from the committed catalogue capture, structure
+requests only, sequential):** 30/30 read cleanly; 28/30 fit (1 without `unit` — A5 ≈ 3%; 1 whose only geos are outside the
+licence); every geo code carried a `LEVEL`; datasets hold 13–839 non-time codes (median 63); 5/30 declare over 500,000
+cells and could never have been laid out by the old whole-dataset download. Total members (A4): of 75 classification
+dimensions, 42 use `TOTAL` or `T`, at least 5 use other codes (`TOT_FTE`, `C-O`, `TOT_IN`, `IND_TOTAL`, `0`), about 28 have
+none — a total must be read per dataset, never assumed. Also seen: 3/30 datasets have no `geo` dimension (geography in
+`rep_mar`, `airp_pr`, …), which the licence rule, as before, does not restrict; one dataset mixes A, Q and M.
