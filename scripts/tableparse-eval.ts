@@ -31,6 +31,12 @@
 //     live LLM spend stays owner-supervised) — an autonomous/session-driven
 //     run must never flip that env var itself.
 //
+// ADR 062 step 6: every mode ALSO covers the table-lane benchmark's parse
+// requests (benchmark/tablelane-tasks.json, one per task, labelled
+// `bench:<id>`): dry-run lists them and their token estimate, --record records
+// them in the same run, --replay checks their fixtures exist. They are not
+// scored here (the table-lane benchmark scores the audited outcomes).
+//
 //   npm run tableparse:eval             dry-run (no client, no spend)
 //   npm run tableparse:eval -- --replay re-check committed fixtures, no key
 //   npm run tableparse:eval -- --record live eval + (re)write fixtures — OWNER-SUPERVISED ONLY
@@ -55,6 +61,7 @@ import {
   type LlmClient,
   type LlmRequest,
 } from '../src/answer/llm/client.ts';
+import { loadTableLaneTasks, taskParseRequest } from './tablelane-bench-lib.ts';
 
 const SCHEMAS_DIR = fileURLToPath(new URL('../tests/fixtures/tableparse/schemas', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tableparse', import.meta.url));
@@ -227,21 +234,70 @@ export function buildLabelIndex(cases: LabelledCase[]): Map<string, string> {
   return index;
 }
 
-function runDryRun(): void {
-  const set = loadLabelledSet();
-  const summary = summarizeDryRun(buildDryRunRows(set.cases));
-  console.log(`mode=dry-run cases=${set.cases.length} (zero spend, no client constructed)\n`);
-  for (const row of summary.rows) {
+// ---------------------------------------------------------------------------
+// ADR 062 step 6 — the table-lane benchmark's parse requests ride the SAME
+// supervised recording run: one request per benchmark task
+// (benchmark/tablelane-tasks.json), built by the benchmark's own builder
+// (scripts/tablelane-bench-lib.ts taskParseRequest — exactly what the lane
+// sends for that task; a button-click reply re-sends the same request). They
+// are recorded next to the labelled cases, labelled `bench:<task id>`, and are
+// NOT scored here: the table-lane benchmark (npm run tablelane:bench:run)
+// scores the audited outcomes. The labelled cases' requests are untouched.
+// ---------------------------------------------------------------------------
+
+export const BENCH_LABEL_PREFIX = 'bench:';
+
+export interface BenchRequest {
+  id: string;
+  table: string;
+  request: LlmRequest;
+}
+
+export function benchmarkRequests(): BenchRequest[] {
+  return loadTableLaneTasks().tasks.map((t) => ({ id: `${BENCH_LABEL_PREFIX}${t.id}`, table: t.table, request: taskParseRequest(t) }));
+}
+
+/** Dry-run rows for the benchmark requests — the same size estimate as the
+ * labelled cases' rows (buildDryRunRows). */
+export function buildBenchmarkDryRunRows(): DryRunRow[] {
+  return benchmarkRequests().map(({ id, table, request }) => {
+    const promptChars = request.system.length + request.question.length;
+    return { id, table, requestHash: requestHash(request), promptChars, estimatedTokens: Math.round(promptChars / 3.5) };
+  });
+}
+
+function printRows(rows: DryRunRow[]): void {
+  for (const row of rows) {
     console.log(
       `${row.id.padEnd(40)} table=${row.table.padEnd(10)} hash=${row.requestHash.slice(0, 12)} ` +
         `chars=${String(row.promptChars).padStart(5)} estTokens=${row.estimatedTokens}`,
     );
   }
+}
+
+function runDryRun(): void {
+  const set = loadLabelledSet();
+  const summary = summarizeDryRun(buildDryRunRows(set.cases));
+  console.log(`mode=dry-run cases=${set.cases.length} (zero spend, no client constructed)\n`);
+  printRows(summary.rows);
   console.log(
     `\nlargest prompt: ${summary.largestPromptCaseId} (${summary.largestPromptChars} chars, ` +
       `~${Math.round(summary.largestPromptChars / 3.5)} tokens)`,
   );
   console.log(`total estimated tokens across ${summary.rows.length} cases: ${summary.totalEstimatedTokens}`);
+
+  const bench = summarizeDryRun(buildBenchmarkDryRunRows());
+  console.log(`\ntable-lane benchmark requests (ADR 062 step 6, recorded in the same run, not scored here):\n`);
+  printRows(bench.rows);
+  console.log(
+    `\nlargest benchmark prompt: ${bench.largestPromptCaseId} (${bench.largestPromptChars} chars, ` +
+      `~${Math.round(bench.largestPromptChars / 3.5)} tokens)`,
+  );
+  console.log(`total estimated tokens across ${bench.rows.length} benchmark requests: ${bench.totalEstimatedTokens}`);
+  console.log(
+    `\nrecording run total (labelled cases + benchmark requests): ${summary.rows.length + bench.rows.length} calls, ` +
+      `~${summary.totalEstimatedTokens + bench.totalEstimatedTokens} estimated input tokens`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -335,7 +391,30 @@ function buildClient(mode: 'replay' | 'record'): LlmClient {
   if (mode === 'replay') return new ReplayLlmClient(FIXTURES_DIR);
   const live = new AnthropicLlmClient();
   const labels = buildLabelIndex(loadLabelledSet().cases);
-  return new RecordingLlmClient(live, FIXTURES_DIR, (serializedTurn) => labels.get(serializedTurn) ?? null);
+  const benchLabels = new Map(benchmarkRequests().map((b) => [b.request.question, b.id]));
+  return new RecordingLlmClient(
+    live,
+    FIXTURES_DIR,
+    (serializedTurn) => labels.get(serializedTurn) ?? benchLabels.get(serializedTurn) ?? null,
+  );
+}
+
+/** Record (or, in replay, check) every benchmark request's fixture. Returns
+ * the ids whose call failed — in replay: a missing fixture. */
+async function runBenchmarkRequests(client: LlmClient, mode: 'replay' | 'record'): Promise<{ total: number; failed: { id: string; error: string }[] }> {
+  const requests = benchmarkRequests();
+  const failed: { id: string; error: string }[] = [];
+  for (const { id, request } of requests) {
+    try {
+      await client.complete(request);
+      console.log(`${mode === 'record' ? 'rec ' : 'ok  '} ${id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message.split('\n')[0]! : String(error);
+      failed.push({ id, error: message });
+      console.log(`FAIL ${id}\n       ${message}`);
+    }
+  }
+  return { total: requests.length, failed };
 }
 
 async function runReplayOrRecord(mode: 'replay' | 'record'): Promise<void> {
@@ -350,11 +429,16 @@ async function runReplayOrRecord(mode: 'replay' | 'record'): Promise<void> {
     console.log(`${mark} ${scored.id}`);
     for (const p of scored.problems) console.log(`       ${p}`);
   }
+  console.log(`\ntable-lane benchmark requests (${mode === 'record' ? 'recording' : 'checking fixtures'}):`);
+  const bench = await runBenchmarkRequests(client, mode);
   const summary = {
     generatedAt: new Date().toISOString(),
     mode,
     totals: { pass: results.filter((r) => r.pass).length, total: results.length },
     results,
+    // ADR 062 step 6: fixture coverage of the table-lane benchmark (scored by
+    // npm run tablelane:bench:run / :score, not here).
+    benchmarkFixtures: { ok: bench.total - bench.failed.length, total: bench.total, failed: bench.failed },
   };
   const prior: unknown[] = existsSync(REPORT_PATH)
     ? ((JSON.parse(readFileSync(REPORT_PATH, 'utf8')) as { history?: unknown[] }).history ?? [])
@@ -362,7 +446,11 @@ async function runReplayOrRecord(mode: 'replay' | 'record'): Promise<void> {
   writeFileSync(REPORT_PATH, `${JSON.stringify({ ...summary, history: [...prior, summary].slice(-20) }, null, 2)}\n`);
   console.log(`report written to ${REPORT_PATH}`);
   console.log(`\n${summary.totals.pass}/${summary.totals.total} passed`);
-  if (summary.totals.pass < summary.totals.total) process.exitCode = 1;
+  console.log(
+    `table-lane benchmark fixtures: ${summary.benchmarkFixtures.ok}/${summary.benchmarkFixtures.total} ` +
+      `${mode === 'record' ? 'recorded' : 'present'}`,
+  );
+  if (summary.totals.pass < summary.totals.total || bench.failed.length > 0) process.exitCode = 1;
 }
 
 async function main(): Promise<void> {

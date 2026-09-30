@@ -1230,9 +1230,12 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
   Design items closed in [#336](open-questions.md) / [#339](open-questions.md) (status blocks there); new rows #340–#345 (deliberate
   refusals, the 24 h cached-slice assumption, where the lane does not reach, hygiene minors). ADR 062 "As built — step 5".
 - **Migrations 037 + 038 ✅ APPLIED on the live database (session 145, 2026-09-29, owner present; RUNBOOK "Table lane" step 1).**
-- **Next (owner-supervised, in order):** the recording + calibration run (after 2026-10-01, ~114k input tokens,
-  cheap tier; [#338](open-questions.md)) → **step 6** table-lane benchmark (0 fabricated, refusals correct; also measures #340/#342/#343/#344) →
-  flip `TABLE_LANE_ENABLED` (RUNBOOK "Table lane (breadth step 5)").
+- **Step 6 harness ✅ BUILT (2026-09-30, dark, zero spend; ADR 062 "As built — step 6 (harness)"):** 23 frozen tasks over 8
+  non-curated tables, key verified against CBS, hermetic runner + scorer, CI test that switches on with the fixtures.
+- **Next (owner-supervised, in order):** the recording + calibration run (after 2026-10-01, ~189k input tokens incl. the
+  23 benchmark requests, cheap tier; [#338](open-questions.md)) → fix the "miljard" unit finding ([#339](open-questions.md)
+  item 14) → **step 6** measured run (`npm run tablelane:bench:run` + `:score`: answer tasks ≥ 12 of 14, refuse + ask 9 of 9,
+  0 invented numbers) → flip `TABLE_LANE_ENABLED` (RUNBOOK "Table lane (breadth step 5)").
 
 ## SEO landing pages ([#353](open-questions.md), owner pick session 145, 2026-09-29) — NETHERLANDS PAGE ✅ BUILT DARK; EUROSTAT PAGE WAITS FOR CURATED EUROSTAT SERIES; SWITCH-ON WAITS FOR THE DOMAIN
 

@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "source": "Frozen ground truth for the table-lane benchmark (benchmark/tablelane-tasks.json): one entry per answer task and per ask task's post-click answer. Every cell was read on 2026-09-30 (18:48 UTC) from CBS's public OData API (datasets.cbs.nl) by scripts/capture-tablelane-bench.ts through the live adapter, AND re-read independently with the raw OData URL in verifyUrl (curl, not our adapter) — 16 of 16 matched. The CBS table versions are pinned by the schema fixtures' 'modified' (tests/fixtures/tableparse/schemas/) and the cell snapshot's cbsModified (tests/fixtures/tablelane-bench/cells/), which were equal at capture. Never hand-edited to green: a changed value means a new CBS version — re-capture the snapshot and re-freeze this key in one reviewed change.",
+  "frozenAt": "2026-09-30",
+  "tasks": {
+    "L1": {
+      "table": "85669NED",
+      "cells": [
+        {
+          "measure": "D003040",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "T001372",
+            "Klimaatsectoren": "T001616"
+          },
+          "value": 146.1,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85669NED/Observations?$filter=Measure%20eq%20'D003040'%20and%20EmissiesNaarLucht%20eq%20'T001372'%20and%20Klimaatsectoren%20eq%20'T001616'%20and%20Perioden%20eq%20'2023JJ00'"
+    },
+    "L2": {
+      "table": "85669NED",
+      "cells": [
+        {
+          "measure": "D003040",
+          "period": "2022JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "T001372",
+            "Klimaatsectoren": "328100"
+          },
+          "value": 4.7,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85669NED/Observations?$filter=Measure%20eq%20'D003040'%20and%20EmissiesNaarLucht%20eq%20'T001372'%20and%20Klimaatsectoren%20eq%20'328100'%20and%20Perioden%20eq%20'2022JJ00'"
+    },
+    "L3": {
+      "table": "85669NED",
+      "cells": [
+        {
+          "measure": "D003040",
+          "period": "2019JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "A044109",
+            "Klimaatsectoren": "A025424"
+          },
+          "value": 28,
+          "status": "Definitief"
+        },
+        {
+          "measure": "D003040",
+          "period": "2020JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "A044109",
+            "Klimaatsectoren": "A025424"
+          },
+          "value": 23.7,
+          "status": "Definitief"
+        },
+        {
+          "measure": "D003040",
+          "period": "2021JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "A044109",
+            "Klimaatsectoren": "A025424"
+          },
+          "value": 23.9,
+          "status": "Definitief"
+        },
+        {
+          "measure": "D003040",
+          "period": "2022JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "A044109",
+            "Klimaatsectoren": "A025424"
+          },
+          "value": 23.6,
+          "status": "Definitief"
+        },
+        {
+          "measure": "D003040",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "EmissiesNaarLucht": "A044109",
+            "Klimaatsectoren": "A025424"
+          },
+          "value": 24.8,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85669NED/Observations?$filter=Measure%20eq%20'D003040'%20and%20EmissiesNaarLucht%20eq%20'A044109'%20and%20Klimaatsectoren%20eq%20'A025424'%20and%20(Perioden%20eq%20'2019JJ00'%20or%20Perioden%20eq%20'2020JJ00'%20or%20Perioden%20eq%20'2021JJ00'%20or%20Perioden%20eq%20'2022JJ00'%20or%20Perioden%20eq%20'2023JJ00')"
+    },
+    "L4": {
+      "table": "84521NED",
+      "cells": [
+        {
+          "measure": "M006162_1",
+          "period": "2022JJ00",
+          "region": "NL01",
+          "dims": {
+            "Diagnose": "T001387",
+            "Geslacht": "T001038",
+            "Leeftijd": "21700",
+            "SoortOpname": "T001389"
+          },
+          "value": 350400,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/84521NED/Observations?$filter=Measure%20eq%20'M006162_1'%20and%20Diagnose%20eq%20'T001387'%20and%20Geslacht%20eq%20'T001038'%20and%20Leeftijd%20eq%20'21700'%20and%20SoortOpname%20eq%20'T001389'%20and%20RegioS%20eq%20'NL01'%20and%20Perioden%20eq%20'2022JJ00'"
+    },
+    "L5": {
+      "table": "85245NED",
+      "cells": [
+        {
+          "measure": "A047215",
+          "period": "2024JJ00",
+          "region": null,
+          "dims": {
+            "VoertuigType": "A018935"
+          },
+          "value": 9517,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85245NED/Observations?$filter=Measure%20eq%20'A047215'%20and%20VoertuigType%20eq%20'A018935'%20and%20Perioden%20eq%20'2024JJ00'"
+    },
+    "L6": {
+      "table": "85245NED",
+      "cells": [
+        {
+          "measure": "A019276",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "VoertuigType": "A018943"
+          },
+          "value": 116639,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85245NED/Observations?$filter=Measure%20eq%20'A019276'%20and%20VoertuigType%20eq%20'A018943'%20and%20Perioden%20eq%20'2023JJ00'"
+    },
+    "L7": {
+      "table": "82883NED",
+      "cells": [
+        {
+          "measure": "M006369_2",
+          "period": "2020JJ00",
+          "region": null,
+          "dims": {
+            "Watergebruikers": "301000"
+          },
+          "value": 214.2,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/82883NED/Observations?$filter=Measure%20eq%20'M006369_2'%20and%20Watergebruikers%20eq%20'301000'%20and%20Perioden%20eq%20'2020JJ00'"
+    },
+    "L8": {
+      "table": "82883NED",
+      "cells": [
+        {
+          "measure": "M006372_2",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "Watergebruikers": "320700"
+          },
+          "value": 1932.2,
+          "status": "Voorlopig"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/82883NED/Observations?$filter=Measure%20eq%20'M006372_2'%20and%20Watergebruikers%20eq%20'320700'%20and%20Perioden%20eq%20'2023JJ00'"
+    },
+    "L9": {
+      "table": "82291NED",
+      "cells": [
+        {
+          "measure": "M005476_2",
+          "period": "2021JJ00",
+          "region": null,
+          "dims": {
+            "CaribischNederland": "GM9001",
+            "Marges": "MW00000",
+            "Persoonskenmerken": "T009002"
+          },
+          "value": 8.3,
+          "status": "Voorlopig"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/82291NED/Observations?$filter=Measure%20eq%20'M005476_2'%20and%20CaribischNederland%20eq%20'GM9001'%20and%20Marges%20eq%20'MW00000'%20and%20Persoonskenmerken%20eq%20'T009002'%20and%20Perioden%20eq%20'2021JJ00'"
+    },
+    "L10": {
+      "table": "85004NED",
+      "cells": [
+        {
+          "measure": "M002199",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "BronEnTechniek": "E006590",
+            "RegioS": "PV26"
+          },
+          "value": 1309,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85004NED/Observations?$filter=Measure%20eq%20'M002199'%20and%20BronEnTechniek%20eq%20'E006590'%20and%20RegioS%20eq%20'PV26'%20and%20Perioden%20eq%20'2023JJ00'"
+    },
+    "L11": {
+      "table": "37478hvv",
+      "cells": [
+        {
+          "measure": "D001620_3",
+          "period": "2025MM07",
+          "region": null,
+          "dims": {
+            "Luchthavens": "A043590"
+          },
+          "value": 6552356,
+          "status": "Voorlopig"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/37478hvv/Observations?$filter=Measure%20eq%20'D001620_3'%20and%20Luchthavens%20eq%20'A043590'%20and%20Perioden%20eq%20'2025MM07'"
+    },
+    "L12": {
+      "table": "37478hvv",
+      "cells": [
+        {
+          "measure": "D003076_3",
+          "period": "2024JJ00",
+          "region": null,
+          "dims": {
+            "Luchthavens": "A045844"
+          },
+          "value": 1520986,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/37478hvv/Observations?$filter=Measure%20eq%20'D003076_3'%20and%20Luchthavens%20eq%20'A045844'%20and%20Perioden%20eq%20'2024JJ00'"
+    },
+    "L13": {
+      "table": "80567ned",
+      "cells": [
+        {
+          "measure": "M002041",
+          "period": "2025KW02",
+          "region": null,
+          "dims": {
+            "SBI2008": "389100"
+          },
+          "value": 55,
+          "status": "Voorlopig"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/80567ned/Observations?$filter=Measure%20eq%20'M002041'%20and%20SBI2008%20eq%20'389100'%20and%20Perioden%20eq%20'2025KW02'"
+    },
+    "L14": {
+      "table": "85245NED",
+      "cells": [
+        {
+          "measure": "A047215",
+          "period": "2020JJ00",
+          "region": null,
+          "dims": {
+            "VoertuigType": "A018935"
+          },
+          "value": 11864,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85245NED/Observations?$filter=Measure%20eq%20'A047215'%20and%20VoertuigType%20eq%20'A018935'%20and%20Perioden%20eq%20'2020JJ00'"
+    },
+    "L15": {
+      "table": "84521NED",
+      "cells": [
+        {
+          "measure": "M006162_1",
+          "period": "2022JJ00",
+          "region": "GM0344",
+          "dims": {
+            "Diagnose": "T001387",
+            "Geslacht": "T001038",
+            "Leeftijd": "10000",
+            "SoortOpname": "T001389"
+          },
+          "value": 49525,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/84521NED/Observations?$filter=Measure%20eq%20'M006162_1'%20and%20Diagnose%20eq%20'T001387'%20and%20Geslacht%20eq%20'T001038'%20and%20Leeftijd%20eq%20'10000'%20and%20SoortOpname%20eq%20'T001389'%20and%20RegioS%20eq%20'GM0344'%20and%20Perioden%20eq%20'2022JJ00'"
+    },
+    "L16": {
+      "table": "85004NED",
+      "cells": [
+        {
+          "measure": "M002199",
+          "period": "2023JJ00",
+          "region": null,
+          "dims": {
+            "BronEnTechniek": "E006637",
+            "RegioS": "PV20"
+          },
+          "value": 868,
+          "status": "Definitief"
+        }
+      ],
+      "verifyUrl": "https://datasets.cbs.nl/odata/v1/CBS/85004NED/Observations?$filter=Measure%20eq%20'M002199'%20and%20BronEnTechniek%20eq%20'E006637'%20and%20RegioS%20eq%20'PV20'%20and%20Perioden%20eq%20'2023JJ00'"
+    }
+  }
+}

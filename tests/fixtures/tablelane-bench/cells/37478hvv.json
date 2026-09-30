@@ -1,0 +1,68 @@
+{
+ "tableId": "37478hvv",
+ "capturedAt": "2026-09-30T18:48:22.884Z",
+ "cbsModified": "2026-09-30T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/37478hvv/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "D001620_3"
+    ],
+    "dimensionIn": {
+     "Luchthavens": [
+      "A043590"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2025MM07"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "D001620_3",
+     "coordinates": {
+      "Luchthavens": "A043590",
+      "Perioden": "2025MM07"
+     },
+     "value": 6552356,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "D003076_3"
+    ],
+    "dimensionIn": {
+     "Luchthavens": [
+      "A045844"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2024JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "D003076_3",
+     "coordinates": {
+      "Luchthavens": "A045844",
+      "Perioden": "2024JJ00"
+     },
+     "value": 1520986,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}

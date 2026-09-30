@@ -1,0 +1,100 @@
+{
+ "tableId": "84521NED",
+ "capturedAt": "2026-09-30T18:48:17.109Z",
+ "cbsModified": "2026-07-31T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/84521NED/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "M006162_1"
+    ],
+    "dimensionIn": {
+     "Diagnose": [
+      "T001387"
+     ],
+     "Geslacht": [
+      "T001038"
+     ],
+     "Leeftijd": [
+      "21700"
+     ],
+     "SoortOpname": [
+      "T001389"
+     ],
+     "RegioS": [
+      "NL01"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M006162_1",
+     "coordinates": {
+      "Diagnose": "T001387",
+      "Geslacht": "T001038",
+      "Leeftijd": "21700",
+      "SoortOpname": "T001389",
+      "RegioS": "NL01",
+      "Perioden": "2022JJ00"
+     },
+     "value": 350400,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "M006162_1"
+    ],
+    "dimensionIn": {
+     "Diagnose": [
+      "T001387"
+     ],
+     "Geslacht": [
+      "T001038"
+     ],
+     "Leeftijd": [
+      "10000"
+     ],
+     "SoortOpname": [
+      "T001389"
+     ],
+     "RegioS": [
+      "GM0344"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M006162_1",
+     "coordinates": {
+      "Diagnose": "T001387",
+      "Geslacht": "T001038",
+      "Leeftijd": "10000",
+      "SoortOpname": "T001389",
+      "RegioS": "GM0344",
+      "Perioden": "2022JJ00"
+     },
+     "value": 49525,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}

@@ -5,9 +5,10 @@
 the owner approved the design ("Yes, write the plan (Recommended)"). Design:
 [superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md](../superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md).
 **Steps 2 (slice cache), 3 (breakdown resolver), 4/4b (table-scoped parser, hermetic) and 5 (the table lane wired into
-the workspace chat, DARK behind `TABLE_LANE_ENABLED`) built** — see the "As built" sections. Step 4's recording +
-calibration run (after 2026-10-01) and step 6 (the table-lane benchmark, then the flag flip) are not done: the parser has
-still never called the AI.
+the workspace chat, DARK behind `TABLE_LANE_ENABLED`) built** — see the "As built" sections. **Step 6's harness (the
+table-lane benchmark: frozen tasks, key, hermetic runner + scorer, CI test) built 2026-09-30** — its measured run waits
+for step 4's recording + calibration run (after 2026-10-01), which now records the benchmark's parse requests too; the
+flag flip comes after both. The parser has still never called the AI.
 
 **Decision 1 superseded 2026-09-30 (session 151) by ADR [065](065-retire-whole-table-copies-one-route.md):** the curated
 whole-table set does not stay as a permanent fast lane; this slice cache becomes the only way data enters, with the pinned
@@ -243,6 +244,60 @@ input tokens for the recording run.
 `ONBOARDING_ENABLED=1` (already set); `CRON_SECRET` (already set — the job route and the daily sweep both refuse to run
 without it, so a queued row would hold the reader's credits with nothing to answer or refund it); the parser recording + calibration run (after 2026-10-01, [#338](../open-questions.md));
 and step 6's benchmark. Sequence and manual job kick: RUNBOOK "Table lane (breadth step 5)".
+
+## As built — step 6 (harness) (2026-09-30, branch `worktree-agent-ac775b07853a4bbb1`; built dark, zero spend)
+
+The table-lane benchmark exists and runs hermetically; its **measured** run needs the recorded parser (the supervised
+`tableparse:record` run, which now records these requests too). Nothing here touches the parser's prompt bytes, the
+database schema or production.
+
+- **Task set** (`benchmark/tablelane-tasks.json`, frozen): 23 questions over 8 CBS tables that are NOT in the curated
+  set (6 from step 4's schema fixtures, plus 2 held-out tables never seen in calibration: `37478hvv` airports, monthly,
+  102 measures in nested groups; `80567ned` vacancy rate, quarters only). None repeats a labelled calibration question
+  (pinned by test), so the accept threshold is never tuned on it. **14 answer** tasks (single values, a year-range series,
+  a follow-up, a GeoDimension default, a region-coded breakdown member, a measure picked through its CBS group, month,
+  quarter, provisional cells), **2 ask** tasks (two total-like age members; the look-alike "Groningen") each followed by
+  their one button click, **7 refuse** tasks (no matching measure, a forecast year, a causal "waarom", a town on a national
+  table, a year on a quarters-only table, a survey year not published, a cell CBS left empty → `not_published`). The table
+  is given per task: it stands in for the finder's pick, which is measured by the finder's own calibration.
+- **Answer key** (`benchmark/tablelane-answer-key.json`): 16 entries (14 answers + 2 post-click answers), every value read
+  from CBS OData on 2026-09-30 through the live adapter AND re-read with the raw OData URL (`verifyUrl`, plain fetch):
+  16/16 identical. Re-check any time: `npm run tablelane:bench:capture -- --verify-key` (read-only).
+- **CBS snapshot:** schema + code lists from `tests/fixtures/tableparse/schemas/` (the same files the parser requests are
+  built from, so hashes match the recording), cells in `tests/fixtures/tablelane-bench/cells/` (only the planned slices,
+  captured read-only by `scripts/capture-tablelane-bench.ts`, which refuses when CBS's `Modified` differs from the schema
+  fixture's). The stand-in source (`tests/helpers/tablelane-bench-source.ts`) throws on any slice it does not hold and
+  logs it, so a fetch nobody expected is a scored failure, never "CBS has no data".
+- **Runner** (`scripts/run-tablelane-benchmark.ts`, `npm run tablelane:bench:run`): per task a real `table_lane_requests`
+  row (money reserved) → `runTableLaneJob` (the route's code) on a fresh PGlite; an ask task plays its click exactly like
+  `replyToTableLane`. `--replay` (default) checks EVERY needed fixture before running and stops with the full list if one
+  is missing; any failing parse call during the run also invalidates it (the job would otherwise turn it into a refusal).
+  `--canned` feeds each task's expected parse as the model output (harness self-check). The answer text is the
+  deterministic template (no compose model is recorded for the lane; prose is the curated benchmark's job).
+- **Scorer** (`scripts/score-tablelane-benchmark.ts`): reads the dumped audit records only (R8). Answer = every key cell
+  among the stored result cells (table, measure, period, region, breakdown coordinates, value, CBS status, provisional
+  flag) and no extra cells; refuse = typed reason in the task's list; ask = one question about the expected dimension
+  with options, then an answer matching the key after the click; all = R8 reconstruction clean, no unexpected fetch.
+  Invented numbers: the R1 body scan on answers; on non-answers every number not from a structured source.
+- **Gate:** answer tasks ≥ 12 of 14 (85.7% — the curated benchmark's own floor, 12 of 14; the revisit trigger above is
+  "below the curated lane's quality floor"), refuse + ask 9 of 9, invented numbers 0.
+- **Recording:** `tableparse:eval` (dry-run / `--record` / `--replay`) also covers one request per benchmark task,
+  labelled `bench:<id>`, not scored there. Dry run: labelled 39 cases / 114,136 tokens (unchanged) + benchmark 23 requests
+  / 74,991 tokens = 62 calls / ~189,127 estimated input tokens per record run.
+- **CI** (`tests/benchmark/tablelane-benchmark.test.ts`): definition + key-equals-snapshot checks; the canned run (always);
+  the replay machinery over canned outputs recorded to a temp dir (a deleted fixture must raise `MissingFixturesError`);
+  and the real replay, **skipped until `tests/fixtures/llm/tableparse/` exists** — from then on a missing benchmark
+  fixture fails, invented numbers fail always, and the full gate fails CI once `gate.enforcedInCi` is set to true in the
+  task file (false today so the calibration commit is not blocked by a dark feature; the flip needs
+  `npm run tablelane:bench:score` to exit 0 regardless).
+- **First finding (canned run, before any model call):** tasks L1–L3 (85669NED, unit "miljard kg CO2-equivalent") fail
+  R8 — the answer template writes the unit into the body and the R3 number-word check (`wordFormProblems`) flags
+  "miljard", so the answer is served with a failing verdict and an admin alert. Pinned in the test as a known finding;
+  **fix before the flip** ([#339](../open-questions.md) item 14). With it, even a perfect parse scores 11 of 14.
+- **Not covered, stated:** a curated-front-door refusal (causal/forecast are refused by the curated intent parser before
+  the lane in production; L18/L19 test the lane's own defence); an indistinguishable-measure refusal
+  (`TableParseAmbiguousMeasureError`) — no non-curated fixture table has two measures the model cannot tell apart (checked
+  over all 8), so it stays covered by calibration case `ambiguous-arbeid-werklozen` (80590ned) and the unit tests.
 
 ## Trade-offs and open points (after step 5)
 

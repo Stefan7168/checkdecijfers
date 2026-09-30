@@ -1,0 +1,87 @@
+{
+ "tableId": "82883NED",
+ "capturedAt": "2026-09-30T18:48:19.203Z",
+ "cbsModified": "2026-08-28T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/82883NED/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "M006369_2"
+    ],
+    "dimensionIn": {
+     "Watergebruikers": [
+      "301000"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2020JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M006369_2",
+     "coordinates": {
+      "Watergebruikers": "301000",
+      "Perioden": "2020JJ00"
+     },
+     "value": 214.2,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "M006372_2"
+    ],
+    "dimensionIn": {
+     "Watergebruikers": [
+      "320700"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "M006372_2",
+     "coordinates": {
+      "Watergebruikers": "320700",
+      "Perioden": "2023JJ00"
+     },
+     "value": 1932.2,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "M005248_2"
+    ],
+    "dimensionIn": {
+     "Watergebruikers": [
+      "1050010"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": []
+  }
+ ]
+}

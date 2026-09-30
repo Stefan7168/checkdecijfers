@@ -1,0 +1,158 @@
+{
+ "tableId": "85669NED",
+ "capturedAt": "2026-09-30T18:48:15.684Z",
+ "cbsModified": "2026-09-03T00:00:00+02:00",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85669NED/Observations",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "D003040"
+    ],
+    "dimensionIn": {
+     "EmissiesNaarLucht": [
+      "T001372"
+     ],
+     "Klimaatsectoren": [
+      "T001616"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "T001372",
+      "Klimaatsectoren": "T001616",
+      "Perioden": "2023JJ00"
+     },
+     "value": 146.1,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "D003040"
+    ],
+    "dimensionIn": {
+     "EmissiesNaarLucht": [
+      "T001372"
+     ],
+     "Klimaatsectoren": [
+      "328100"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "T001372",
+      "Klimaatsectoren": "328100",
+      "Perioden": "2022JJ00"
+     },
+     "value": 4.7,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "D003040"
+    ],
+    "dimensionIn": {
+     "EmissiesNaarLucht": [
+      "A044109"
+     ],
+     "Klimaatsectoren": [
+      "A025424"
+     ]
+    },
+    "periodIn": {
+     "dimension": "Perioden",
+     "codes": [
+      "2019JJ00",
+      "2020JJ00",
+      "2021JJ00",
+      "2022JJ00",
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "A044109",
+      "Klimaatsectoren": "A025424",
+      "Perioden": "2019JJ00"
+     },
+     "value": 28,
+     "valueAttribute": "None",
+     "stringValue": null
+    },
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "A044109",
+      "Klimaatsectoren": "A025424",
+      "Perioden": "2020JJ00"
+     },
+     "value": 23.7,
+     "valueAttribute": "None",
+     "stringValue": null
+    },
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "A044109",
+      "Klimaatsectoren": "A025424",
+      "Perioden": "2021JJ00"
+     },
+     "value": 23.9,
+     "valueAttribute": "None",
+     "stringValue": null
+    },
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "A044109",
+      "Klimaatsectoren": "A025424",
+      "Perioden": "2022JJ00"
+     },
+     "value": 23.6,
+     "valueAttribute": "None",
+     "stringValue": null
+    },
+    {
+     "measure": "D003040",
+     "coordinates": {
+      "EmissiesNaarLucht": "A044109",
+      "Klimaatsectoren": "A025424",
+      "Perioden": "2023JJ00"
+     },
+     "value": 24.8,
+     "valueAttribute": "None",
+     "stringValue": null
+    }
+   ]
+  }
+ ]
+}
