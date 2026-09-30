@@ -33,6 +33,12 @@ on top.
    from Eurostat's SDMX structure (no numbers) is what makes "any Eurostat dataset" possible; session 151's skim had listed
    it only as tricks. The structure crawl then measured three open assumptions instead of leaving them as guesses (A3 false:
    XML only; A4: totals vary per dataset; A5: ~3% without a unit dimension).
+7. **The same direction error came back one level up, about two hours after the rule was written.** Having written "layer, not single
+   tables", the session proposed refreshing and converting four hand-picked Eurostat datasets and polishing their markers and
+   decimals — owner: "you completely lost the plot". Writing a rule did not change the habit: the pull toward finishing the
+   storage work in front of it won over the product direction. What worked: stop, state the plot back in one paragraph, ask for a
+   yes, write it at the very top of STATUS, and brief every later agent with it. **Next time:** before each owner question, re-read
+   STATUS "THE PLOT" and check the proposal against it.
 
 ## Session 151 — the value research, the one-route redesign, and parallel builders
 

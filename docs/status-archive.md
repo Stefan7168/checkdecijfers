@@ -1,5 +1,36 @@
 # STATUS archive — the session log
 
+**Session 152 (2026-09-30 → 2026-10-01 on the machine's +07 clock; 2026-09-30 UTC; owner present; zero AI spend; no DDL; production data
+written: 17 CBS tables converted to slice storage, 2 WP16 tables evicted).**
+
+1. Opened on the session-148 kickoff pointer (stale; STATUS's session-151 block was authoritative). Free checks: both kicked job routes answer
+   401 without credentials (#358 item 10 verified), freshness 0 of 20 behind.
+2. **Production conversion (ADR 065 step 9), owner GO "all 20, stop on problem":** 17 pinned CBS tables converted one at a time, least-shown
+   first, homepage tables last. Every table: conversion proof + after-check, warm `complete`, `ingest:parity` IDENTICAL (86141NED: 616,714
+   cells, re-run with `--max-cells 25000` after the default 2,000-cell run hit its deadline). Stops: `37789ksz` not pinned (3 of the 20 are
+   unpinned WP16 tables); `83932NED` after-check false alarm (compared the measure text the conversion refreshes; fixed `425937f0`). A manual
+   warm over all 17: all `complete`, 0 refetched. Live read-only probe (real query path, `probe: true`): every curated measure served.
+3. Parallel agents (merged after review + verification): table-lane split at 150 codes (#358 11, `5ae1f767`); `--budget-seconds` a hard
+   bound (#358 5, `e26b7327`); period-note status in slice storage (#358 3, `fd250343`); slice storage as default test build (#358 2 first
+   half, `4204a219`). CI caught a timer edge in the budget code (run 36733378482 red) → fixed `67e07782`; a slow parity test fixed `d5ff47b2`.
+4. **Owner correction 1 — "layer, not single tables":** the session had dispatched pinning `37789ksz`; stopped and discarded. Rule written
+   into CLAUDE.md (`882a9660`). Owner: keep 1 (until the table lane is on), delete 2 → `83694NED` (18,975 cells, 115 vocabulary rows) and
+   `85615NED` (132,840 cells) evicted with the new targeted `tables:evict --table` (`ed68a522`); `83693NED` still served (−33, Sep 2026).
+5. Owner asked for a deeper look at the cyanheads Eurostat connector → deep study (`bd53ad29`). Built dark (no AI, no schema): Eurostat
+   datasets on the slice plumbing (`b3e4676a`), adapter defects 1–3 (`496e93b6`), SDMX structure reader (`1e761044`; crawl 30/30 read,
+   28/30 fit, A3 false, A4 totals vary, A5 ≈3%), combined-flag notes by the owner's "join the notes" rule (`4f071622`), observed decimals +
+   licence rule over every geography dimension (`f0e021d8`).
+6. **Owner correction 2 — "you completely lost the plot"** when the session proposed refreshing + converting the four Eurostat datasets.
+   Owner confirmed THE PLOT (STATUS top block, `68022adf`): a layer over any CBS/Eurostat table; curation stops.
+7. On-plot work, agents, merged: Eurostat in the finder behind `EUROSTAT_FINDER_ENABLED` (`6d7f23d9`; shortlist recall English 10/12,
+   Dutch 0/12); table-lane benchmark ADR 062 step 6 (`3e84e452`; 23 tasks, key 16/16 re-read from CBS; recorded by the same
+   `tableparse:record` run, +74,991 tokens); region classes / now-vs-then / date ranges / "vorig jaar" in the table lane (`cdea032d`);
+   the "miljard" unit false positive in the number-word check fixed (`b388a14c`; canned table-lane run 14/14 + 9/9 + 0 invented).
+8. `audit:verify` over rows 1–336 (read-only): 258/300 clean + 1 pinned + 36/36 redacted; 41 rows fail since the rebrand — pre-existing,
+   #359. Prompt additions B1–B4 for the table reader proposed for the recording session (#360).
+9. CI: runs 36741310618, 36747723518, 36752886180, 36755552988, 36759526128 green incl. deploy; 36733378482 red (timer edge, fixed next push).
+   Final push of the session and its CI: see STATUS top block. Next: session-153 kickoff.
+
 **Session 150 (2026-09-30, owner present; zero AI spend; no DDL; data written to production: three Eurostat tables, dark).**
 
 1. Opened with the session-149 kickoff. It was 2026-09-29 19:13 UTC, before the 1 October recording window; freshness 0 of 20 behind, DNS

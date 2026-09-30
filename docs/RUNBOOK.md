@@ -1329,7 +1329,8 @@ running when the budget ends is cut; it shows as `partial` with that request cou
   refuses, naming the code, if a pinned definition points at a code CBS no longer has: fix the definition in
   `src/registry/defaults.ts` first.
 
-**Eurostat datasets** (supported since #358 item 4, 2026-09-30): the same commands work for `eurostat:tipsbd30`,
+**Eurostat datasets** (supported since #358 item 4, 2026-09-30 — but by owner direction the four production datasets are NOT to be
+converted or hand-refreshed; they go once the Eurostat any-dataset route answers, STATUS "THE PLOT"): the same commands work for `eurostat:tipsbd30`,
 `eurostat:une_rt_q`, `eurostat:prc_hicp_minr` and `eurostat:namq_10_gdp` — the command line and `ingest:parity` pick
 each table's own adapter from its id. Once converted, `ingest:freshness`'s "possibly frozen" check is done by the warm
 job itself: a dataset whose newest period is too old for its grain (monthly 4 months, quarterly 3 quarters, annual 30 months) is

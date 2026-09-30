@@ -88,8 +88,10 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-29, session 145, kickoff pointer updated session 150 — verify against `git log` /
-Actions runs before trusting this). Kickoff: [session-briefs/2026-09-30-session-150-kickoff.md](session-briefs/2026-09-30-session-150-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 152 — verify against `git log` / Actions runs before trusting this).
+Kickoff: [session-briefs/2026-10-01-session-153-kickoff.md](session-briefs/2026-10-01-session-153-kickoff.md). Single priority: switch on the
+CBS any-table route — decide #360 (prompt additions) FIRST, then recording plan part A (owner present, after 00:00 UTC), table-lane benchmark,
+flag flip, evict `37789ksz`. The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables
   behind. Nothing REFRESHES them automatically, but since session 149 the daily cron e-mails the owner when CBS has newer data — still

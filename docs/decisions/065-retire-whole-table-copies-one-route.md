@@ -133,7 +133,7 @@ Operating procedure: RUNBOOK "Slice storage for the pinned tables".
 - **Proven hermetically** on the real captured responses (`tests/ingestion/eurostat-slices.test.ts`): slice-mode build
   equals the whole-table build for all four datasets (cells, statuses, registry, labels); parity identical; dry run and
   conversion keep every cell and the DOI; the way back works; frozen data and a changed unit quarantine.
-- **Not done:** converting production's four datasets (owner present, RUNBOOK "Slice storage for the pinned tables").
+- **Not done, by owner direction (2026-09-30, "the plot"):** production's four datasets are NOT converted or hand-refreshed; they are evicted once the Eurostat any-dataset route answers (STATUS top block). This code stays as the route's plumbing.
   Design: [spec section 7](../superpowers/specs/2026-09-30-one-route-warm-slices-design.md).
 
 ## As built (2026-09-30, #358 item 2, first half) — slice storage is the default test build
