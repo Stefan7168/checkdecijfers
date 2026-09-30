@@ -220,9 +220,21 @@ async function registrySnapshot(db: Db, tableId: string): Promise<Record<string,
     )
   ).rows;
   const out: Record<string, string> = {};
-  for (const col of ['expected_dimensions', 'slice', 'units', 'default_coordinates', 'period_semantics']) {
+  for (const col of ['expected_dimensions', 'slice', 'default_coordinates', 'period_semantics']) {
     out[col] = canonical(parseJsonb(row?.[col], null));
   }
+  // Units: only what changes a figure's meaning (unit, decimals) — the same rule as the
+  // pre-switch check. The conversion deliberately takes CBS's current measure text
+  // (title, description; see measureTextChanges), so comparing that text here failed
+  // every table CBS had reworded (83932NED, session 152).
+  const units = parseJsonb<Record<string, Record<string, unknown>> | null>(row?.units, null);
+  out.units = canonical(
+    units === null
+      ? null
+      : Object.fromEntries(
+          Object.entries(units).map(([code, u]) => [code, { unit: u?.unit ?? null, decimals: u?.decimals ?? null }]),
+        ),
+  );
   for (const col of ['update_cadence', 'pinned', 'source', 'schema_fingerprint']) out[col] = canonical(row?.[col] ?? null);
   out.canonical_measures = canonical(
     canonicalRows.map((r) => ({ ...r, dims: parseJsonb(r.dims, {}), alternates: parseJsonb(r.alternates, null) })),

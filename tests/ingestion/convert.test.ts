@@ -389,6 +389,24 @@ describe('the read-only proof: refused, nothing written', () => {
   });
 });
 
+describe('refreshed measure text on a real conversion', () => {
+  it('converts when CBS has reworded measure text; the after-check compares unit and decimals only', async () => {
+    // Session 152: 83932NED failed its after-check because the check compared the measure text the
+    // conversion itself refreshes to CBS's current wording.
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `update cbs_tables set units = (
+         select jsonb_object_agg(key, jsonb_set(value, '{description}', '"Old wording"'::jsonb)) from jsonb_each(units)
+       ) where id = $1`,
+      [POP],
+    );
+    const result = await convertTableToSlices(db, new FixtureSource(docsFor(POP)), POP, { deadline: FAR(), apply: true });
+    expect(result.afterCheck?.registryDifferences ?? []).toEqual([]);
+    expect(result.outcome).toBe('converted');
+    expect(result.notes.join(' ')).toMatch(/measure text/);
+  });
+});
+
 describe('the dry run (no --yes)', () => {
   it('measure text CBS has since enriched (title, description) does not block; it is reported as a note', async () => {
     // Registrations older than #115 stored no `description`; the ingestion checks compare unit and
