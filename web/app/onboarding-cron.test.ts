@@ -179,6 +179,15 @@ describe('onboarding-cron wiring (source pins)', () => {
     expect(block).not.toMatch(/sync/i);
   });
 
+  // #357: the owner's report can check Eurostat tables too (scanFreshness's optional catalogue
+  // supplier); the daily e-mail must stay CBS-only, so the cron never passes one.
+  it('#357: the cron scan stays CBS-only — no Eurostat catalogue supplier is passed, only scan.inputs is read', () => {
+    const block = source.slice(source.indexOf('await withDeadline('), source.indexOf('new-CBS-data check failed'));
+    expect(block).not.toMatch(/eurostat|fetchCatalog|StatisticsApiSource/i);
+    expect(block).not.toMatch(/scan\.eurostat/);
+    expect(source).not.toMatch(/StatisticsApiSource|eurostat-adapter/i);
+  });
+
   it('#355: the new-CBS-data check is fail-open, deadline-bounded, and runs AFTER the onboarding job, BEFORE the 200 response', () => {
     const jobCallEnd = source.indexOf('});', source.indexOf('await runOnboardingJob({'));
     const blockStart = source.indexOf('await withDeadline(');

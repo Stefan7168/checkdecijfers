@@ -178,6 +178,12 @@ export interface CbsCatalogEntry {
   language: string | null;
   /** CBS 'Modified' ISO timestamp (when CBS last changed the dataset), or null. */
   modified: string | null;
+  /** Eurostat only (its catalogue file lists them; CBS's does not, so absent there): first and
+   * last period the dataset holds, verbatim ('2024', '2026-Q2', '2026-08'), and its value count.
+   * null = the catalogue row gave none or an unreadable one. Never mirrored into the database. */
+  dataStart?: string | null;
+  dataEnd?: string | null;
+  valueCount?: number | null;
 }
 
 /** One observation as fetched — codes trimmed, otherwise verbatim from CBS. */

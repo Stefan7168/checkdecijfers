@@ -40,6 +40,18 @@ const SAMPLE_DATASET = {
   value: [17_811_291],
 };
 
+/** SAMPLE_DATASET plus a one-category dimension per pinned code — a real Eurostat response always
+ * contains the codes we pinned (the adapter refuses one that does not, #357). */
+function datasetWithPins(pins: Record<string, string>): typeof SAMPLE_DATASET {
+  const dimension: Record<string, unknown> = { ...SAMPLE_DATASET.dimension };
+  const id = [...SAMPLE_DATASET.id];
+  for (const [dim, code] of Object.entries(pins)) {
+    dimension[dim] = { category: { index: { [code]: 0 } } };
+    if (!id.includes(dim)) id.push(dim);
+  }
+  return { ...SAMPLE_DATASET, id, size: id.map(() => 1), dimension } as unknown as typeof SAMPLE_DATASET;
+}
+
 describe('StatisticsApiSource — dependency-injected fetch only, never a live URL', () => {
   it('fetchTableSchema/fetchCodeList/fetchObservations/fetchObservationCount all derive from ONE fetch', async () => {
     const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
@@ -101,6 +113,9 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
         datasetType: 'dataset',
         language: 'en',
         modified: '2026-08-14',
+        dataStart: '1960',
+        dataEnd: '2025',
+        valueCount: 742730,
       },
     ]);
     // No Accept:application/json header — the real endpoint 406s on that.
@@ -135,9 +150,9 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
   });
 
   it('dimensionEquals entries each become one <dim>=<code> query param', async () => {
-    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
-    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
     const slice: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(datasetWithPins(slice.dimensionEquals!)));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
 
     for await (const _page of source.fetchObservations('eurostat:une_rt_q', slice)) {
       // draining
@@ -202,11 +217,30 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     expect(fetchFn).not.toHaveBeenCalled(); // refused before ever hitting the wire
   });
 
-  it('param order is deterministic (sorted) — same slice, same URL, every time', async () => {
+  // #357: Eurostat rolls an impossible period into the next one (2020-13 -> 2021-01). parsePeriodCode
+  // already rejects such codes, so none can reach the URL; this pins that.
+  it.each(['2020MM13', '2020MM00', '2020KW05', '2020KW00', '2020JJ01', '2020MM1', '20MM01'])(
+    'an impossible periodFloor %j never reaches the URL — it throws',
+    (periodFloor) => {
+      expect(() => buildRequestUrl('demo_pjan', { periodFloor })).toThrow(/not a valid CBS period code/);
+    },
+  );
+
+  it('a pinned dimensionEquals code missing from the response refuses the whole fetch (Eurostat ignored the filter)', async () => {
     const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    await expect(async () => {
+      for await (const _page of source.fetchObservations('eurostat:demo_pjan', { dimensionEquals: { unit: 'ZZZ' } })) {
+        // should never get here
+      }
+    }).rejects.toThrow(/eurostat:demo_pjan.*'unit' = 'ZZZ'/);
+  });
+
+  it('param order is deterministic (sorted) — same slice, same URL, every time', async () => {
+    const slice: CbsSlice = { dimensionEquals: { sex: 'T', age: 'Y15-74' }, periodFloor: '2015JJ00' };
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(datasetWithPins(slice.dimensionEquals!)));
     const source1 = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
     const source2 = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
-    const slice: CbsSlice = { dimensionEquals: { sex: 'T', age: 'Y15-74' }, periodFloor: '2015JJ00' };
 
     for await (const _page of source1.fetchObservations('eurostat:demo_pjan', slice)) {
       // draining
@@ -225,7 +259,9 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     // back after a round trip through the `cbs_tables.slice` JSONB column,
     // which does not preserve key order — two calls that are semantically
     // the SAME slice could serialize differently and miss the cache.
-    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse(datasetWithPins({ s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' })),
+    );
     const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
     const sliceKeysInOrderA: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
     // Same entries, different key insertion order — plain JSON.stringify

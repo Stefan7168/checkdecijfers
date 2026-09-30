@@ -1,6 +1,10 @@
 // #355: assessFreshness is pure — fixture rows in, findings out (no DB, no clock, no network).
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import type { CbsCatalogEntry } from '../../src/cbs-adapter/types.ts';
+import { parseJsonStatCatalog } from '../../src/eurostat-adapter/jsonstat.ts';
 import {
+  assessEurostatFreshness,
   assessFreshness,
   classifyRelease,
   findNewCbsData,
@@ -140,5 +144,99 @@ describe('shouldAlertAboutNewData (#355 dedupe)', () => {
 
   it('never fires for a negative age', () => {
     expect(shouldAlertAboutNewData(-7)).toBe(false);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Eurostat tables (#357): the catalogue's own dates, plus "frozen dataset" detection — the
+// session-150 case where prc_hicp_manr kept its old data and Eurostat moved to prc_hicp_minr.
+// ---------------------------------------------------------------------------
+const { raw: REAL_TOC } = JSON.parse(readFileSync('tests/fixtures/eurostat-toc/toc-freshness-2026-09-30.json', 'utf8')) as {
+  raw: string;
+};
+const realEntry = (code: string): CbsCatalogEntry => parseJsonStatCatalog(REAL_TOC).find((e) => e.tableId === `eurostat:${code}`)!;
+const NOW = new Date('2026-09-30T12:00:00.000Z');
+
+function entry(overrides: Partial<CbsCatalogEntry>): CbsCatalogEntry {
+  return {
+    tableId: 'eurostat:x_test',
+    title: 'x',
+    summary: '',
+    status: null,
+    datasetType: 'dataset',
+    language: 'en',
+    modified: '2026-09-17',
+    dataStart: '2000-01',
+    dataEnd: '2026-08',
+    valueCount: 10,
+    ...overrides,
+  };
+}
+const verdict = (e: CbsCatalogEntry | null, lastSyncAt: string | null = '2026-09-30T03:49:52.016Z', now: Date = NOW) =>
+  assessEurostatFreshness({ tableId: 'eurostat:x_test', lastSyncAt, entry: e }, now);
+
+describe('assessEurostatFreshness', () => {
+  it('prc_hicp_manr (real capture: data end 2025-12) checked on 2026-09-30 is possibly_frozen', () => {
+    const v = verdict(realEntry('prc_hicp_manr'));
+    expect(v.status).toBe('possibly_frozen');
+    expect(v.dataEnd).toBe('2025-12');
+    expect(v.reasons.join(' ')).toMatch(/2025-12/);
+  });
+
+  it('the live replacement prc_hicp_minr, the quarterly and the annual real datasets are current after a fresh sync', () => {
+    for (const code of ['prc_hicp_minr', 'une_rt_q', 'namq_10_gdp', 'tipsbd30']) {
+      expect(verdict(realEntry(code)).status, code).toBe('current');
+    }
+  });
+
+  it('is behind when Eurostat updated the data on a later day than our last sync', () => {
+    const v = verdict(entry({ modified: '2026-09-17' }), '2026-09-01T10:00:00.000Z');
+    expect(v.status).toBe('behind');
+    expect(v.reasons.join(' ')).toMatch(/2026-09-17/);
+  });
+
+  it('a frozen dataset that also changed after our sync is reported frozen, with both reasons', () => {
+    const v = verdict(realEntry('prc_hicp_manr'), '2026-01-01T00:00:00.000Z');
+    expect(v.status).toBe('possibly_frozen');
+    expect(v.reasons.length).toBe(2);
+  });
+
+  it('monthly: more than 4 months old is frozen, exactly 4 is not', () => {
+    expect(verdict(entry({ dataEnd: '2026-05' })).status).toBe('current');
+    expect(verdict(entry({ dataEnd: '2026-04' })).status).toBe('possibly_frozen');
+  });
+
+  it('quarterly: more than 3 quarters old is frozen, exactly 3 is not (now = 2026-Q3)', () => {
+    expect(verdict(entry({ dataEnd: '2025-Q4' })).status).toBe('current');
+    expect(verdict(entry({ dataEnd: '2025-Q3' })).status).toBe('possibly_frozen');
+  });
+
+  it('annual: more than 30 months after the end of the last year is frozen, exactly 30 is not', () => {
+    const june = new Date('2026-06-15T00:00:00.000Z');
+    expect(verdict(entry({ dataEnd: '2023', modified: '2026-01-01' }), '2026-06-15T00:00:00.000Z', june).status).toBe('current');
+    expect(
+      verdict(entry({ dataEnd: '2023', modified: '2026-01-01' }), '2026-07-15T00:00:00.000Z', new Date('2026-07-15T00:00:00.000Z')).status,
+    ).toBe('possibly_frozen');
+  });
+
+  it('is unknown, never current, when the dataset is missing from the catalogue', () => {
+    const v = verdict(null);
+    expect(v.status).toBe('unknown');
+    expect(v.reasons.join(' ')).toMatch(/not in Eurostat's catalogue/i);
+  });
+
+  it.each([
+    ['no data end', { dataEnd: null }],
+    ['a weekly data end we have no threshold for', { dataEnd: '2026-W32' }],
+    ['a month 13', { dataEnd: '2026-13' }],
+    ['a quarter 5', { dataEnd: '2026-Q5' }],
+    ['no update date', { modified: null }],
+  ])('is unknown when the catalogue row has %s', (_label, overrides) => {
+    expect(verdict(entry(overrides)).status).toBe('unknown');
+  });
+
+  it('is unknown when we have no last-sync time', () => {
+    expect(verdict(entry({}), null).status).toBe('unknown');
   });
 });

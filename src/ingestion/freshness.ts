@@ -189,3 +189,96 @@ export function classifyRelease(input: ReleaseDiffInput): ReleaseVerdict {
 
   return { verdict: reasons.length === 0 ? 'safe' : 'review', newPeriodCodes, reasons };
 }
+
+// ---------------------------------------------------------------------------
+// Eurostat tables (#357). Eurostat's catalogue file gives, per dataset, the day its data last
+// changed and the first/last period it holds. Two questions, both from that one file:
+//   behind          - Eurostat changed the data on a later day than our last sync;
+//   possibly_frozen - the dataset's last period is older than its grain allows. Eurostat retires
+//                     datasets without notice (prc_hicp_manr stayed at 2025-12 while the live
+//                     series moved to prc_hicp_minr, session 150); a frozen dataset never shows
+//                     up as "behind" because nothing new arrives — so lateness of the DATA
+//                     itself is the only signal, and only a person can find the replacement.
+// Anything unreadable is 'unknown', never 'current' (principle (c)). Blind spot, accepted: an
+// update on the same UTC day as our sync is not seen (the catalogue date has no time of day).
+// ---------------------------------------------------------------------------
+
+/** Monthly data is published about 1-2 months after the period; 4 leaves room for a late release. */
+export const EUROSTAT_MONTHLY_MAX_LAG_MONTHS = 4;
+/** Quarterly national-accounts data lags 1-2 quarters; 3 leaves room for a late release. */
+export const EUROSTAT_QUARTERLY_MAX_LAG_QUARTERS = 3;
+/** Annual data can lag 12-18 months after the year ends; 30 leaves room for slow indicators. */
+export const EUROSTAT_ANNUAL_MAX_LAG_MONTHS = 30;
+
+export type EurostatFreshnessStatus = 'behind' | 'possibly_frozen' | 'unknown' | 'current';
+
+export interface EurostatFreshnessInput {
+  tableId: string;
+  /** cbs_tables.last_sync_at, ISO string, or null (never synced). */
+  lastSyncAt: string | null;
+  /** The table's row in Eurostat's catalogue file, or null when the dataset is not in it. */
+  entry: CbsCatalogEntry | null;
+}
+
+export interface EurostatFreshnessVerdict {
+  tableId: string;
+  status: EurostatFreshnessStatus;
+  /** Plain-language reasons; empty for 'current'. */
+  reasons: string[];
+  lastSyncAt: string | null;
+  /** Eurostat's 'last update of data' (ISO day), or null. */
+  eurostatModifiedAt: string | null;
+  /** Eurostat's 'data end' verbatim ('2025-12'), or null. */
+  dataEnd: string | null;
+}
+
+/** Whole months from `end` (the LAST month the period covers) to `now`; null for a spelling we do
+ * not recognise (weekly, semester, daily, month 13, ...). `unit` says what the threshold counts. */
+function lagOfDataEnd(dataEnd: string, now: Date): { unit: 'month' | 'quarter' | 'year'; lag: number } | null {
+  const nowMonths = now.getUTCFullYear() * 12 + now.getUTCMonth();
+  let m = /^(\d{4})$/.exec(dataEnd);
+  if (m) return { unit: 'year', lag: nowMonths - (Number(m[1]) * 12 + 11) };
+  m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(dataEnd);
+  if (m) return { unit: 'month', lag: nowMonths - (Number(m[1]) * 12 + Number(m[2]) - 1) };
+  m = /^(\d{4})-Q([1-4])$/.exec(dataEnd);
+  if (m) return { unit: 'quarter', lag: Math.floor(nowMonths / 3) - (Number(m[1]) * 4 + Number(m[2]) - 1) };
+  return null;
+}
+
+/** Pure. See the block comment above; 'possibly_frozen' outranks 'behind' because a sync cannot fix it. */
+export function assessEurostatFreshness(input: EurostatFreshnessInput, now: Date): EurostatFreshnessVerdict {
+  const { tableId, lastSyncAt, entry } = input;
+  const base = {
+    tableId,
+    lastSyncAt,
+    eurostatModifiedAt: entry?.modified ?? null,
+    dataEnd: entry?.dataEnd ?? null,
+  };
+  const unknown = (reason: string): EurostatFreshnessVerdict => ({ ...base, status: 'unknown', reasons: [reason] });
+  if (entry == null) return unknown("the dataset is not in Eurostat's catalogue any more (retired or renamed?)");
+  const synced = parse(lastSyncAt);
+  const modified = parse(entry.modified);
+  if (synced == null) return unknown('we have no last-sync time for this table');
+  if (modified == null) return unknown("Eurostat's catalogue gave no readable 'last update of data' date");
+
+  const reasons: string[] = [];
+  const behind = Math.floor(modified / MS_PER_DAY) > Math.floor(synced / MS_PER_DAY);
+  if (behind) reasons.push(`Eurostat updated the data on ${entry.modified!.slice(0, 10)}, after our last sync`);
+
+  const end = entry.dataEnd == null ? null : lagOfDataEnd(entry.dataEnd, now);
+  let frozen = false;
+  if (end != null) {
+    const limit = { month: EUROSTAT_MONTHLY_MAX_LAG_MONTHS, quarter: EUROSTAT_QUARTERLY_MAX_LAG_QUARTERS, year: EUROSTAT_ANNUAL_MAX_LAG_MONTHS }[end.unit];
+    frozen = end.lag > limit;
+    if (frozen) {
+      reasons.unshift(
+        `the newest period is ${entry.dataEnd}, older than a ${end.unit === 'year' ? 'annual' : end.unit + 'ly'} dataset should be — it may have been retired`,
+      );
+    }
+  }
+
+  if (frozen) return { ...base, status: 'possibly_frozen', reasons };
+  if (behind) return { ...base, status: 'behind', reasons };
+  if (end == null) return unknown(`could not read Eurostat's 'data end' (${entry.dataEnd ?? 'missing'}) to judge how recent the data is`);
+  return { ...base, status: 'current', reasons };
+}

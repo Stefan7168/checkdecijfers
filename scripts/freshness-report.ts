@@ -10,15 +10,18 @@
 //   npm run ingest:freshness            human-readable report + the exact sync commands
 //   npm run ingest:freshness -- --json  the same findings as JSON
 //
-// Not checked: slice-cache tables (fetched on demand, never bulk-synced) and non-CBS sources
-// (Eurostat refreshes twice a day and has its own adapter).
+// Eurostat tables (#357): one download of Eurostat's catalogue file, then per table "did Eurostat
+// update after our sync?" and "is the newest period older than its grain allows?" (a dataset that
+// stopped moving may have been retired — a person must look for its replacement).
+//
+// Not checked: slice-cache tables (fetched on demand, never bulk-synced).
 import { connectFromEnv } from '../src/db/client.ts';
 import { adapterFor } from '../src/sources/adapters.ts';
-import { CBS_SOURCE_KEY } from '../src/sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY } from '../src/sources/registry.ts';
 import { computeFingerprint } from '../src/ingestion/fingerprint.ts';
 import { allowListedMeasures } from '../src/ingestion/measure-allow-list.ts';
 import { fetchAllCodeLists } from '../src/ingestion/pipeline.ts';
-import { assessFreshness, classifyRelease, type ReleaseVerdict } from '../src/ingestion/freshness.ts';
+import { assessEurostatFreshness, assessFreshness, classifyRelease, type ReleaseVerdict } from '../src/ingestion/freshness.ts';
 import { scanFreshness } from '../src/ingestion/freshness-check.ts';
 
 const asJson = process.argv.includes('--json');
@@ -26,10 +29,20 @@ const { db, pool } = connectFromEnv();
 
 try {
   const source = adapterFor(CBS_SOURCE_KEY);
-  const { inputs, notChecked, registered } = await scanFreshness(db, source, (tableId, err) => {
-    console.error(`could not read CBS's date for ${tableId}: ${err instanceof Error ? err.message : String(err)}`);
-  });
+  const scanNow = new Date();
+  const { inputs, notChecked, registered, eurostatInputs, eurostatError } = await scanFreshness(
+    db,
+    source,
+    (tableId, err) => {
+      console.error(`could not read CBS's date for ${tableId}: ${err instanceof Error ? err.message : String(err)}`);
+    },
+    () => adapterFor(EUROSTAT_SOURCE_KEY).fetchCatalog(),
+  );
   const findings = assessFreshness(inputs);
+  const eurostatRank = { possibly_frozen: 0, behind: 1, unknown: 2, current: 3 } as const;
+  const eurostat = (eurostatInputs ?? [])
+    .map((i) => assessEurostatFreshness(i, scanNow))
+    .sort((a, b) => eurostatRank[a.status] - eurostatRank[b.status] || a.tableId.localeCompare(b.tableId));
 
   // Step 2, only for tables that are behind.
   const verdicts = new Map<string, ReleaseVerdict | { verdict: 'unknown'; reasons: string[] }>();
@@ -62,7 +75,13 @@ try {
   if (asJson) {
     console.log(
       JSON.stringify(
-        { checkedAt: new Date().toISOString(), findings: findings.map((f) => ({ ...f, release: verdicts.get(f.tableId) ?? null })), notChecked },
+        {
+          checkedAt: scanNow.toISOString(),
+          findings: findings.map((f) => ({ ...f, release: verdicts.get(f.tableId) ?? null })),
+          eurostat,
+          eurostatError: eurostatError ?? null,
+          notChecked,
+        },
         null,
         2,
       ),
@@ -82,6 +101,21 @@ try {
     }
     if (unknown.length > 0) {
       console.log(`\n${unknown.length} table(s) could not be compared (never guessed as up to date): ${unknown.map((f) => f.tableId).join(', ')}`);
+    }
+    if (eurostatError !== undefined) {
+      console.log(`\nEurostat tables could NOT be checked (the CBS part above is unaffected): ${eurostatError}`);
+    } else if (eurostat.length > 0) {
+      console.log(`\nEurostat tables (${eurostat.length}):`);
+      for (const v of eurostat) {
+        const tag = { possibly_frozen: 'FROZEN?', behind: 'BEHIND ', unknown: 'UNSURE ', current: 'OK     ' }[v.status];
+        console.log(
+          `  ${tag} ${v.tableId}  ours ${day(v.lastSyncAt)}  Eurostat updated ${day(v.eurostatModifiedAt)}  data end ${v.dataEnd ?? '—'}`,
+        );
+        for (const reason of v.reasons) console.log(`           - ${reason}`);
+        if (v.status === 'possibly_frozen') {
+          console.log('           - This dataset may have been retired by Eurostat: a person must check for a replacement dataset.');
+        }
+      }
     }
     console.log(`\nUp to date: ${findings.filter((f) => f.status === 'current').length}. Not checked: ${notChecked.length ? notChecked.join(', ') : 'none'}.`);
     const safe = behind.filter((f) => verdicts.get(f.tableId)?.verdict === 'safe').map((f) => f.tableId);

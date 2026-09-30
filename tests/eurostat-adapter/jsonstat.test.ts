@@ -179,6 +179,40 @@ describe('parseJsonStatDataset — per-unit measure synthesis (D6)', () => {
     expect(parsed.rows).toHaveLength(2);
     expect(parsed.rows.every((r) => r.measure === 'nrg_bal_c|GWH')).toBe(true);
   });
+
+  // #357: Eurostat silently ignores a filter value it does not know and returns the whole
+  // dimension; the client-side slice then matched nothing and the result was an EMPTY dataset
+  // (0 rows, 0 measures) with no error naming the cause. Now it is a specific refusal.
+  describe('a pinned dimensionEquals code that Eurostat did not return (#357)', () => {
+    const raw = () =>
+      dataset({
+        id: ['unit', 'geo', 'time'],
+        size: [2, 1, 2],
+        dimension: {
+          unit: { category: { index: { GWH: 0, KTOE: 1 } } },
+          geo: { category: { index: { NL: 0 } } },
+          time: { category: { index: { 2022: 0, 2023: 1 } } },
+        },
+        value: [1, 2, 3, 4],
+      });
+
+    it('throws, naming the dataset, the dimension and the code, when the code is not in the response', () => {
+      const slice: CbsSlice = { dimensionEquals: { unit: 'MTOE' } };
+      expect(() => parseJsonStatDataset(raw(), 'eurostat:nrg_bal_c', slice)).toThrow(
+        /eurostat:nrg_bal_c.*'unit'.*'MTOE'/,
+      );
+    });
+
+    it('throws when the pinned dimension itself is not in the response', () => {
+      const slice: CbsSlice = { dimensionEquals: { coicop18: 'TOTAL' } };
+      expect(() => parseJsonStatDataset(raw(), 'eurostat:nrg_bal_c', slice)).toThrow(/'coicop18'.*'TOTAL'/);
+    });
+
+    it('does not throw when every pinned code is present (the geo list is never checked: absent countries are normal)', () => {
+      const slice: CbsSlice = { dimensionEquals: { unit: 'KTOE' } };
+      expect(parseJsonStatDataset(raw(), 'eurostat:nrg_bal_c', slice).rows).toHaveLength(2);
+    });
+  });
 });
 
 describe('parseJsonStatDataset — flags ride verbatim into valueAttribute (Amendment B1)', () => {
@@ -447,8 +481,35 @@ describe('parseJsonStatCatalog — the real "table of contents" TSV shape (verif
         datasetType: 'dataset',
         language: 'en',
         modified: '2026-08-14',
+        dataStart: '1960',
+        dataEnd: '2025',
+        valueCount: 742730,
       },
     ]);
+  });
+
+  it('keeps data start / data end / value count from a REAL 2026-09-30 capture, verbatim, and null for a blank range', () => {
+    const { raw } = JSON.parse(readFileSync('tests/fixtures/eurostat-toc/toc-freshness-2026-09-30.json', 'utf8')) as { raw: string };
+    const byId = new Map(parseJsonStatCatalog(raw).map((e) => [e.tableId, e]));
+    const pick = (id: string) => {
+      const e = byId.get(`eurostat:${id}`)!;
+      return [e.modified, e.dataStart, e.dataEnd, e.valueCount];
+    };
+    expect(pick('prc_hicp_manr')).toEqual(['2026-02-06', '1997-01', '2025-12', 3511040]);
+    expect(pick('prc_hicp_minr')).toEqual(['2026-09-17', '1996-01', '2026-08', 22388456]);
+    expect(pick('une_rt_q')).toEqual(['2026-09-10', '2003-Q1', '2026-Q2', 485391]);
+    expect(pick('tipsbd30')).toEqual(['2026-06-29', '2007', '2025', 515]);
+    expect(pick('demo_r_mweek3')).toEqual(['2026-09-16', '2000-W01', '2026-W32', 84243409]);
+    expect(pick('env_wat_ltaa')).toEqual(['2026-07-03', null, null, 526]);
+  });
+
+  it('a non-numeric or missing value count is null, never a guess', () => {
+    const raw = [
+      HEADER,
+      '"    A"\t"a_one"\t"dataset"\t"01.01.2026"\t"01.01.2026"\t"2020"\t"2025"\tabc',
+      '"    B"\t"b_two"\t"dataset"\t"01.01.2026"\t"01.01.2026"\t"2020"\t"2025"',
+    ].join('\n');
+    expect(parseJsonStatCatalog(raw).map((e) => e.valueCount)).toEqual([null, null]);
   });
 
   it('drops folder rows (pure navigation, no data behind them)', () => {

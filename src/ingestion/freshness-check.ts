@@ -5,10 +5,11 @@
 //
 // Read-only on both sides: one SELECT on cbs_tables, and CBS Properties/Dimensions fetches
 // through the adapter. No write, no AI call, no schema change.
+import type { CbsCatalogEntry } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import type { SourceAdapter } from '../sources/adapters.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
-import type { FreshnessInputRow } from './freshness.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
+import type { EurostatFreshnessInput, FreshnessInputRow } from './freshness.ts';
 
 export interface RegisteredTableState {
   /** cbs_tables.slice, parsed (null = whole table). */
@@ -22,6 +23,11 @@ export interface FreshnessScan {
   /** Served tables this scan does not cover (non-CBS sources, e.g. Eurostat). */
   notChecked: string[];
   registered: Map<string, RegisteredTableState>;
+  /** Only when a Eurostat catalogue supplier was given and it worked: one row per served Eurostat
+   * table, for `assessEurostatFreshness`. Absent otherwise (those tables stay in `notChecked`). */
+  eurostatInputs?: EurostatFreshnessInput[];
+  /** Only when the supplier was given and failed: why. The CBS part of the scan is unaffected. */
+  eurostatError?: string;
 }
 
 /** `onReadError` fires when CBS's date for one table could not be read; that table still lands
@@ -31,6 +37,9 @@ export async function scanFreshness(
   db: Db,
   source: SourceAdapter,
   onReadError: (tableId: string, error: unknown) => void = () => {},
+  /** Optional: returns Eurostat's catalogue (called at most once per scan). The daily cron does
+   * not pass it — its e-mail alert stays CBS-only. */
+  fetchEurostatCatalog?: () => Promise<CbsCatalogEntry[]>,
 ): Promise<FreshnessScan> {
   const tables = await db.query(
     `select id, last_sync_at, slice, schema_fingerprint from cbs_tables
@@ -39,10 +48,12 @@ export async function scanFreshness(
   const inputs: FreshnessInputRow[] = [];
   const notChecked: string[] = [];
   const registered = new Map<string, RegisteredTableState>();
+  const otherSources: { tableId: string; lastSyncAt: string | null }[] = [];
   for (const t of tables.rows) {
     const tableId = t.id as string;
     if (sourceKeyForTableId(tableId) !== CBS_SOURCE_KEY) {
-      notChecked.push(tableId);
+      const lastSyncAt = t.last_sync_at == null ? null : new Date(t.last_sync_at as string | Date).toISOString();
+      otherSources.push({ tableId, lastSyncAt });
       continue;
     }
     registered.set(tableId, {
@@ -61,5 +72,21 @@ export async function scanFreshness(
       cbsModifiedAt,
     });
   }
-  return { inputs, notChecked, registered };
+  const scan: FreshnessScan = { inputs, notChecked, registered };
+  const eurostat = otherSources.filter((t) => sourceKeyForTableId(t.tableId) === EUROSTAT_SOURCE_KEY);
+  const covered = new Set<string>();
+  if (fetchEurostatCatalog !== undefined) {
+    try {
+      const byId = new Map<string, CbsCatalogEntry>();
+      if (eurostat.length > 0) {
+        for (const e of await fetchEurostatCatalog()) if (!byId.has(e.tableId)) byId.set(e.tableId, e);
+      }
+      scan.eurostatInputs = eurostat.map((t) => ({ ...t, entry: byId.get(t.tableId) ?? null }));
+      for (const t of eurostat) covered.add(t.tableId);
+    } catch (err) {
+      scan.eurostatError = err instanceof Error ? err.message : String(err);
+    }
+  }
+  for (const t of otherSources) if (!covered.has(t.tableId)) notChecked.push(t.tableId);
+  return scan;
 }

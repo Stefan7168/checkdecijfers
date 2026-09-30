@@ -442,6 +442,19 @@ export function parseJsonStatDataset(
     dimLabels[dimName] = dim.category.label ?? {};
   }
 
+  // Eurostat silently drops a filter value it does not know (and returns the whole dimension), so
+  // the slice below would match nothing and yield an empty dataset with no cause named (#357).
+  for (const [dim, code] of Object.entries(slice?.dimensionEquals ?? {})) {
+    const known = dim === 'time' ? dimCodes[dim]?.map(mapEurostatPeriod) : dimCodes[dim];
+    if (known === undefined || !known.includes(code)) {
+      throw new Error(
+        `Eurostat dataset '${tableId}': the request pinned '${dim}' = '${code}' but the response has no such ` +
+          (known === undefined ? `dimension (it has: ${ds.id.join(', ')})` : `code for '${dim}' — Eurostat ignored the filter`) +
+          ' — refusing an empty or unfiltered result.',
+      );
+    }
+  }
+
   const statusByOffset = normalizeStatus(ds.status, total);
   const coordinateDimNames = ds.id.filter((name) => name !== 'unit');
 
@@ -617,6 +630,12 @@ function parseEurostatTocDate(raw: string): string | null {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 }
 
+/** A toc cell kept verbatim; the file writes "no value" as a single space. */
+function tocText(cell: string | undefined): string | null {
+  const t = (cell ?? '').trim();
+  return t.length > 0 ? t : null;
+}
+
 /** Splits ONE tab-separated, double-quoted line into its raw cell strings
  * (quotes stripped, tabs are the only separator — no embedded-quote escaping
  * in the real file, verified against a live capture). */
@@ -658,7 +677,7 @@ export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
   const entries: CbsCatalogEntry[] = [];
   for (const line of rows) {
     const cells = splitTocLine(line);
-    const [rawTitle, code, type, lastUpdate] = cells;
+    const [rawTitle, code, type, lastUpdate, , dataStart, dataEnd, values] = cells;
     if (type !== 'dataset' && type !== 'table') continue;
     if (typeof code !== 'string' || code.length === 0) {
       throw new Error(`Eurostat catalogue row is missing a code: ${JSON.stringify(line)}`);
@@ -675,6 +694,9 @@ export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
       datasetType: type,
       language: 'en',
       modified: typeof lastUpdate === 'string' ? parseEurostatTocDate(lastUpdate) : null,
+      dataStart: tocText(dataStart),
+      dataEnd: tocText(dataEnd),
+      valueCount: /^\d+$/.test((values ?? '').trim()) ? Number((values ?? '').trim()) : null,
     });
   }
   return entries;
