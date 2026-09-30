@@ -56,8 +56,8 @@ describe('createIngestedDb hands out isolated databases', () => {
       const { rows: tables } = await db.query('select count(*)::int as n from cbs_tables');
       const { rows: batches } = await db.query('select count(*)::int as n from ingestion_batches');
       // One completed batch per whole-table sync, one per stored slice for a
-      // slice-stored table (INGEST_FIXTURE_MODE=slice) — so in the full build
-      // this is exactly one batch per table.
+      // slice-stored table (the default build, INGEST_FIXTURE_MODE=slice) — so
+      // in the full build this is exactly one batch per table.
       const { rows: expected } = await db.query(
         `select sum(case when t.ingest_mode = 'full' then 1
                          else (select count(*) from slice_fetches sf where sf.table_id = t.id) end)::int as n

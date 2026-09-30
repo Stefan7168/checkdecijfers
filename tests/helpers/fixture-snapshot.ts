@@ -63,21 +63,47 @@ const THIS_FILE = fileURLToPath(import.meta.url);
 
 /**
  * How the hermetic database stores the seed tables (ADR 065 step 6, design
- * D8). `full`: registerTables + one whole-scope syncTable per table — today's
- * default. `slice`: each table registered in slice mode with its seed
- * curation (pinned, cadence, declared scope, measure curation) and its scope
- * filled by the warm job through bounded, validated slice requests.
+ * D8; #358 item 2).
+ *
+ * - `slice` — THE DEFAULT since production converted its pinned CBS tables to
+ *   slice storage (2026-09-30). It mirrors production: every seed table is
+ *   registered in slice mode with its seed curation (pinned, cadence, declared
+ *   scope, measure curation) and its scope filled by the warm job through
+ *   bounded, validated slice requests — except the tables in
+ *   WHOLE_TABLE_IN_PRODUCTION, which production does not slice-store and this
+ *   build therefore keeps on the whole-table path.
+ * - `full` — every seed table registerTables + one whole-scope syncTable: the
+ *   whole-table storage path, kept selectable (`INGEST_FIXTURE_MODE=full`)
+ *   while production still runs it for some tables, and pinned by the suites
+ *   that test that path itself.
+ * - `slice-all` — every seed table slice-stored, WHOLE_TABLE_IN_PRODUCTION
+ *   included: the parity proof that those tables can be converted
+ *   (tests/ingestion/slice-build-parity.test.ts).
  */
-export type FixtureMode = 'full' | 'slice';
+export type FixtureMode = 'full' | 'slice' | 'slice-all';
 
 /** The one place the mode is read. An unknown value throws rather than falling
- * back to a default: a typo must never run the suite in the other mode. */
+ * back to a default: a typo must never run the suite in another mode. */
 export function fixtureMode(): FixtureMode {
   const raw = process.env.INGEST_FIXTURE_MODE;
-  if (raw === undefined || raw === '' || raw === 'full') return 'full';
-  if (raw === 'slice') return 'slice';
-  throw new Error(`INGEST_FIXTURE_MODE must be "full" or "slice", not "${raw}"`);
+  if (raw === undefined || raw === '' || raw === 'slice') return 'slice';
+  if (raw === 'full' || raw === 'slice-all') return raw;
+  throw new Error(`INGEST_FIXTURE_MODE must be "slice", "full" or "slice-all", not "${raw}"`);
 }
+
+/**
+ * Seed tables production does NOT slice-store, with the reason. The default
+ * (`slice`) build keeps exactly these on the whole-table path so the hermetic
+ * database mirrors production; every other seed table is one of the pinned CBS
+ * tables production converted (ADR 065 step 9, #358 item 1). When production
+ * slice-stores one of these, delete its entry in the same change — the parity
+ * test proves the slice build of it already (`slice-all`).
+ */
+export const WHOLE_TABLE_IN_PRODUCTION: Readonly<Record<string, string>> = {
+  '70072ned':
+    'not converted in production: the regional table is outside the 17 pinned CBS tables converted on 2026-09-30 ' +
+    '(its production load waits for the 1 October plan part B, ADR 065); its slice storage is proven by slice-all',
+};
 
 /**
  * Seed tables the slice-mode build keeps on the whole-table path, with the
@@ -148,7 +174,7 @@ export function fixtureInputsHash(): string {
 }
 
 /** The snapshot key for one build mode: the inputs hash, with the mode folded
- * in for the slice build so the two builds can never share a snapshot. Still a
+ * in for the slice builds so no two builds can ever share a snapshot. Still a
  * plain hex name, so pruneSnapshots bounds both kinds alike. */
 export function fixtureSnapshotKey(mode: FixtureMode = fixtureMode()): string {
   const inputs = fixtureInputsHash();
@@ -234,18 +260,29 @@ async function buildFullIngested(): Promise<PGlite> {
   return client;
 }
 
-/** The cold path, slice mode (ADR 065 step 6): the same seed tables, the same
+/** The cold path, slice modes (ADR 065 step 6): the same seed tables, the same
  * registry defaults, but each table registered in slice mode with its seed
  * curation and its declared scope filled by the warm job. Any outcome other
  * than `complete` fails the build — a half-filled scope would make every
  * dependent suite test something other than what production would hold.
- * SLICE_BUILD_FULL_FALLBACK tables are registered and synced the whole-table
- * way, and only when the slice store refuses them for exactly that reason. */
-async function buildSliceIngested(): Promise<PGlite> {
+ * `keepWhole` tables (WHOLE_TABLE_IN_PRODUCTION in the default build) are
+ * registered and synced the whole-table way without trying slice storage;
+ * SLICE_BUILD_FULL_FALLBACK tables likewise, but only when the slice store
+ * refuses them for exactly that reason. */
+async function buildSliceIngested(keepWhole: ReadonlySet<string>): Promise<PGlite> {
   const { client, db, source } = await freshDatabase();
+  for (const id of keepWhole) {
+    // A stale entry naming a table the seed no longer has must not pass silently.
+    if (!SEED_TABLES.some((t) => t.id === id)) throw new Error(`${id} is kept whole-table but is not a seed table`);
+  }
   const wholeTable = new Set<string>();
   // Seed order, as the full build registers them.
   for (const table of SEED_TABLES) {
+    if (keepWhole.has(table.id)) {
+      await registerTables(db, source, [table], { pinned: true });
+      wholeTable.add(table.id);
+      continue;
+    }
     const registered = await registerSchemaOnly(db, source, table.id, undefined, {
       pinned: true,
       updateCadence: table.updateCadence,
@@ -285,7 +322,8 @@ async function buildSliceIngested(): Promise<PGlite> {
 
 /** The cold path for a mode (default: the INGEST_FIXTURE_MODE one). */
 async function buildIngested(mode: FixtureMode = fixtureMode()): Promise<PGlite> {
-  return mode === 'slice' ? buildSliceIngested() : buildFullIngested();
+  if (mode === 'full') return buildFullIngested();
+  return buildSliceIngested(new Set(mode === 'slice' ? Object.keys(WHOLE_TABLE_IN_PRODUCTION) : []));
 }
 
 /**
