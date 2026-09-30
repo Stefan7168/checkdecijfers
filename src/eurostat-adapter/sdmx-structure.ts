@@ -16,7 +16,7 @@
 // Everything here is pure (no I/O). Unknown or malformed structure throws `EurostatStructureError`; a dataset
 // that reads cleanly but does not fit today's rules gets a typed refusal (`EurostatLayoutRefusal`) — never a
 // mapping by guesswork (principle c).
-import type { CbsCode, CbsDimension, CbsMeasure, CbsTableSchema } from '../cbs-adapter/types.ts';
+import type { CbsCode, CbsDimension, CbsMeasure, CbsSlice, CbsTableSchema } from '../cbs-adapter/types.ts';
 import {
   EU_EFTA_LICENSED_AGGREGATE_CODES,
   EU_EFTA_LICENSED_COUNTRY_CODES,
@@ -61,6 +61,10 @@ export interface StructureDimension {
   label: string;
   /** The codes that occur (content constraint), in the code list's order; time codes verbatim, no labels. */
   codes: StructureCode[];
+  /** The dimension's code list as Eurostat identifies it: its id (`GEO`, `CITIZEN`, `REP_MAR`, ...) and its
+   * `MASTER` annotation — the list it is derived from (verified: `CITIZEN` carries `MASTER` = `geo`); null for
+   * time. */
+  codelist: { id: string; master: string | null } | null;
 }
 
 export interface EurostatStructure {
@@ -142,7 +146,7 @@ interface DataflowMessage {
   annotations: EurostatStructure['annotations'];
   dataStructure: { id: string; version: string };
   dimensions: { id: string; position: number; isTime: boolean; label: string; codelist: { id: string; version: string } | null }[];
-  codelists: Map<string, Map<string, StructureCode>>;
+  codelists: Map<string, { master: string | null; codes: Map<string, StructureCode> }>;
 }
 
 function readDataflowMessage(xml: string, expectedCode: string): DataflowMessage {
@@ -227,7 +231,7 @@ function readDataflowMessage(xml: string, expectedCode: string): DataflowMessage
     throw new EurostatStructureError(`${ctx}: a dimension id appears twice`);
   }
 
-  const codelists = new Map<string, Map<string, StructureCode>>();
+  const codelists: DataflowMessage['codelists'] = new Map();
   const codelistsBlock = optionalChild(structures, NS_STRUCTURE, 'Codelists', ctx);
   for (const cl of codelistsBlock ? childrenOf(codelistsBlock, NS_STRUCTURE, 'Codelist') : []) {
     const key = `${requiredAttribute(cl, 'id', ctx)}(${requiredAttribute(cl, 'version', ctx)})`;
@@ -242,7 +246,7 @@ function readDataflowMessage(xml: string, expectedCode: string): DataflowMessage
         levelAnnotation: annotationTitle(annotationsOf(c, ctx), 'LEVEL', `${ctx} code ${code}`),
       });
     }
-    codelists.set(key, codes);
+    codelists.set(key, { master: annotationTitle(annotationsOf(cl, ctx), 'MASTER', `${ctx} code list ${key}`), codes });
   }
 
   return { id, title, annotations, dataStructure, dimensions, codelists };
@@ -319,9 +323,17 @@ export function readEurostatStructure(datasetCode: string, dataflowXml: string, 
         throw new EurostatStructureError(`${ctx}: the constraint lists no values for dimension '${d.id}'`);
       }
       if (d.isTime) {
-        return { name: 'time', position: d.position, isTime: true, label: d.label, codes: values.map((v) => ({ code: v, label: v, levelAnnotation: null })) };
+        return {
+          name: 'time',
+          position: d.position,
+          isTime: true,
+          label: d.label,
+          codes: values.map((v) => ({ code: v, label: v, levelAnnotation: null })),
+          codelist: null,
+        };
       }
-      const list = flow.codelists.get(`${d.codelist!.id}(${d.codelist!.version})`);
+      const listed = flow.codelists.get(`${d.codelist!.id}(${d.codelist!.version})`);
+      const list = listed?.codes;
       if (list === undefined) {
         throw new EurostatStructureError(`${ctx}: code list ${d.codelist!.id}(${d.codelist!.version}) of '${d.id}' is not in the message`);
       }
@@ -331,7 +343,14 @@ export function readEurostatStructure(datasetCode: string, dataflowXml: string, 
       }
       const occurs = new Set(values);
       const codes = [...list.values()].filter((c) => occurs.has(c.code));
-      return { name: d.id, position: d.position, isTime: false, label: d.label, codes };
+      return {
+        name: d.id,
+        position: d.position,
+        isTime: false,
+        label: d.label,
+        codes,
+        codelist: { id: d.codelist!.id, master: listed!.master },
+      };
     });
     if (dimensions.some((d) => d.name === 'time' && !d.isTime)) {
       throw new EurostatStructureError(`${ctx}: a non-time dimension is named 'time'`);
@@ -342,7 +361,7 @@ export function readEurostatStructure(datasetCode: string, dataflowXml: string, 
 }
 
 // ---------------------------------------------------------------------------
-// Geo levels + the licence rule
+// Geography (Eurostat's own marks) + the licence rule
 // ---------------------------------------------------------------------------
 
 /** Eurostat's own level for a geo code (the GEO code list's LEVEL annotation); null when absent or unknown. */
@@ -369,6 +388,32 @@ export function licensedGeo(code: string, level: GeoLevel | null): { ok: true } 
   return { ok: true };
 }
 
+export type GeographyMark = 'geo_code_list' | 'derived_from_geo';
+
+/**
+ * #357 (d): does this dimension carry places, by Eurostat's OWN marks in the structure message? Two marks, each
+ * verified on a real capture (2026-10-01): the dimension uses the `GEO` code list (`geo` in all four registered
+ * datasets), or its code list is derived from GEO (`CITIZEN` in migr_asyappctza carries the code-list
+ * annotation `MASTER` = `geo`). Checked and NOT usable: an SDMX concept role (no captured message states one on
+ * any dimension), and the `LEVEL` annotation alone (it also marks classification depth — `COICOP18` in
+ * prc_hicp_minr carries LEVEL 1–5 and AGG). The dimension's NAME is never looked at. `rep_mar`
+ * (mar_mg_aa_cwhd) and `airp_pr` (avia_par_nl) carry places in lists with neither mark, which is why a dataset
+ * with no marked dimension is refused rather than read as having no geography.
+ */
+export function geographyMark(d: StructureDimension): GeographyMark | null {
+  if (d.isTime || d.codelist === null) return null;
+  if (d.codelist.id.toUpperCase() === 'GEO') return 'geo_code_list';
+  if (d.codelist.master !== null && d.codelist.master.toUpperCase() === 'GEO') return 'derived_from_geo';
+  return null;
+}
+
+/** A code that names a place by Eurostat's level: a country or a NUTS region. Aggregates are left out — the
+ * level `AGG` is also on non-places in a marked list (`TOTAL` in CITIZEN). */
+function isPlace(c: StructureCode): boolean {
+  const level = geoLevelOf(c);
+  return level !== null && level !== 'aggregate';
+}
+
 // ---------------------------------------------------------------------------
 // Fit gate + layout (today's rules, generic)
 // ---------------------------------------------------------------------------
@@ -379,6 +424,8 @@ export type EurostatLayoutRefusalReason =
   | 'unsupported_grain'
   | 'time_span_mismatch'
   | 'no_update_date'
+  | 'no_identified_geography'
+  | 'unmarked_geography'
   | 'no_licensed_geo'
   | 'decimals_unknown';
 
@@ -388,17 +435,23 @@ export interface EurostatLayoutRefusal {
   summary: string;
 }
 
+/** One geography-bearing dimension and what the licence rule keeps of it. */
+export interface GeoDimensionFit {
+  dimension: string;
+  mark: GeographyMark;
+  /** Level of every code the dimension uses (null = no/unknown LEVEL annotation). */
+  levels: Record<string, GeoLevel | null>;
+  licensed: string[];
+  excluded: { code: string; why: GeoExclusion }[];
+}
+
 export interface EurostatFit {
   ok: true;
   unitCodes: string[];
   /** Every time code mapped into the internal grammar, native -> internal. */
   periods: Map<string, string>;
-  geo: {
-    /** Level of every geo code the dataset uses (null = no/unknown LEVEL annotation). */
-    levels: Record<string, GeoLevel | null>;
-    licensed: string[];
-    excluded: { code: string; why: GeoExclusion }[];
-  } | null;
+  /** EVERY geography-bearing dimension (geographyMark), in key order; never empty for a dataset that fits. */
+  geo: GeoDimensionFit[];
 }
 
 const SUPPORTED_FREQ = new Set(['A', 'Q', 'M']);
@@ -407,12 +460,16 @@ function refusal(reason: EurostatLayoutRefusalReason, summary: string): Eurostat
   return { ok: false, reason, summary };
 }
 
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 /**
  * Does this dataset fit today's rules? (ADR 048 D6.) One measure per `unit` code, so a `unit` dimension is
  * required; a time dimension whose every period maps to A/Q/M (and a `freq` dimension, when present, holding
  * only A/Q/M); the constraint's time span agreeing with Eurostat's own OBS_PERIOD_OVERALL_* annotations
- * (the study's Assumption A1: checked, not trusted); an update date; and, when there is a `geo` dimension,
- * at least one licensed geo code. Pure; no decimals needed — the crawl uses this directly.
+ * (the study's Assumption A1: checked, not trusted); an update date; and geography identified with certainty
+ * (#357 (d)): at least one dimension Eurostat marks as geography (`geographyMark`), no unmarked dimension that
+ * names one of the same places, and at least one licensed code in EVERY marked dimension — the licence rule
+ * restricts all of them, whatever they are called. Pure; no decimals needed — the crawl uses this directly.
  */
 export function fitEurostatStructure(tableId: string, structure: EurostatStructure): EurostatFit | EurostatLayoutRefusal {
   const dim = (name: string) => structure.dimensions.find((d) => d.name === name);
@@ -476,13 +533,43 @@ export function fitEurostatStructure(tableId: string, structure: EurostatStructu
     return refusal('no_update_date', `Eurostat dataset '${tableId}' states no UPDATE_DATA date — staleness could never be told.`);
   }
 
-  let geo: EurostatFit['geo'] = null;
-  const geoDim = dim('geo');
-  if (geoDim) {
+  // #357 (d): the licence rule (EU/EFTA places only, ADR 048 D6) restricts EVERY dimension that carries places.
+  const marked = structure.dimensions.flatMap((d) => {
+    const mark = geographyMark(d);
+    return mark === null ? [] : [{ d, mark }];
+  });
+  if (marked.length === 0) {
+    return refusal(
+      'no_identified_geography',
+      `Eurostat dataset '${tableId}' marks no dimension as geography (none uses the GEO code list or a list derived ` +
+        `from it). Its places, if it has any, sit in a list Eurostat does not mark (as in rep_mar or ` +
+        `airp_pr), so the EU/EFTA licence rule could not be applied with certainty — refused ` +
+        `(it has: ${structure.dimensions.map((d) => d.name).join(', ')}).`,
+    );
+  }
+  // An unmarked dimension that names one of the same places the same way (code and English name of a country
+  // or region in a marked list) carries places the licence rule could not restrict by Eurostat's own levels —
+  // refused, never passed through unrestricted.
+  const places = new Map<string, string>();
+  for (const { d } of marked) for (const c of d.codes) if (isPlace(c)) places.set(c.code, c.label);
+  for (const d of structure.dimensions) {
+    if (d.isTime || geographyMark(d) !== null) continue;
+    const named = d.codes.filter((c) => places.has(c.code) && sameName(places.get(c.code)!, c.label));
+    if (named.length > 0) {
+      return refusal(
+        'unmarked_geography',
+        `Eurostat dataset '${tableId}': dimension '${d.name}' (code list ${d.codelist?.id ?? '?'}) names places — ` +
+          `${named.slice(0, 5).map((c) => `${c.code} ${c.label}`).join(', ')} — without Eurostat's geography marks, so the ` +
+          'EU/EFTA licence rule could not be applied to it with certainty — refused.',
+      );
+    }
+  }
+  const geo: GeoDimensionFit[] = [];
+  for (const { d, mark } of marked) {
     const levels: Record<string, GeoLevel | null> = {};
     const licensed: string[] = [];
     const excluded: { code: string; why: GeoExclusion }[] = [];
-    for (const c of geoDim.codes) {
+    for (const c of d.codes) {
       const level = geoLevelOf(c);
       levels[c.code] = level;
       const verdict = licensedGeo(c.code, level);
@@ -490,16 +577,21 @@ export function fitEurostatStructure(tableId: string, structure: EurostatStructu
       else excluded.push({ code: c.code, why: verdict.why });
     }
     if (licensed.length === 0) {
-      return refusal('no_licensed_geo', `Eurostat dataset '${tableId}' has no licensed (EU/EFTA) geo code.`);
+      return refusal(
+        'no_licensed_geo',
+        `Eurostat dataset '${tableId}' has no licensed (EU/EFTA) code in its geography dimension '${d.name}'.`,
+      );
     }
-    geo = { levels, licensed, excluded };
+    geo.push({ dimension: d.name, mark, levels, licensed, excluded });
   }
 
   return { ok: true, unitCodes: unit.codes.map((c) => c.code), periods, geo };
 }
 
 /** Per unit code, the number of decimals to register. No Eurostat structure message states it (verified: the
- * primary measure is a bare `Double`), so it must come from observed data; `undefined` refuses. */
+ * primary measure is a bare `Double`), so it must come from observed data — at registration the adapter's
+ * bounded read (`decimalsProbeSlice`, `StatisticsApiSource` with `decimals: 'observed'`), afterwards the
+ * registered value; `undefined` refuses. */
 export type EurostatDecimalsFor = (unitCode: string) => number | undefined;
 
 export interface EurostatLayout {
@@ -519,7 +611,8 @@ function nativeIdFrom(tableId: string): string {
  * JSON-stat path (`parseJsonStatDataset`) builds from a download: dimension names and kinds, the concept
  * label as title, `<code>|<unit>` measures titled "dataset title — unit label", `modified` = UPDATE_DATA
  * (the JSON-stat `updated` field carries the same value), time codes mapped with the published status, and
- * only licensed geo codes. The code lists are the WHOLE dataset's (every code that occurs), not a scope's.
+ * only licensed codes in every geography-bearing dimension (#357 (d)). The code lists are the WHOLE dataset's
+ * (every code that occurs), not a scope's.
  */
 export function eurostatLayoutFromStructure(
   tableId: string,
@@ -541,7 +634,7 @@ export function eurostatLayoutFromStructure(
       return refusal(
         'decimals_unknown',
         `Eurostat dataset '${tableId}': no known number of decimals for unit '${u.code}' — Eurostat's structure does not ` +
-          'state it, and a guess could round a published figure.',
+          'state it and none was observed, and a guess could round a published figure.',
       );
     }
     measures.push({
@@ -562,7 +655,7 @@ export function eurostatLayoutFromStructure(
     title: d.label,
   }));
 
-  const licensedGeoCodes = new Set(fit.geo?.licensed ?? []);
+  const licensedByDimension = new Map(fit.geo.map((g) => [g.dimension, new Set(g.licensed)]));
   const codeLists: Record<string, CbsCode[]> = {};
   for (const d of coordinateDims) {
     if (d.isTime) {
@@ -575,7 +668,8 @@ export function eurostatLayoutFromStructure(
         index: i,
       }));
     } else {
-      const kept = d.name === 'geo' ? d.codes.filter((c) => licensedGeoCodes.has(c.code)) : d.codes;
+      const licensed = licensedByDimension.get(d.name);
+      const kept = licensed === undefined ? d.codes : d.codes.filter((c) => licensed.has(c.code));
       codeLists[d.name] = kept.map((c, i) => ({ code: c.code, title: c.label, dimensionGroup: null, status: null, index: i }));
     }
   }
@@ -590,7 +684,73 @@ export function eurostatLayoutFromStructure(
   return { ok: true, schema, codeLists, fit };
 }
 
-/** Thrown by the adapter's structure-layout mode when a dataset does not fit (the typed refusal, loud). */
+// ---------------------------------------------------------------------------
+// Decimals from a small observed read (#357 (a))
+// ---------------------------------------------------------------------------
+
+/** The most cells one decimals read may return: the per-question slice bound (`SLICE_MAX_CELLS`,
+ * src/ingestion/slice-cache.ts — not imported, the adapter sits below ingestion), so learning a dataset's
+ * decimals never costs more than answering one question. */
+export const DECIMALS_PROBE_MAX_CELLS = 2_000;
+/** At most this many reads: the latest period, then the latest two, then three — each only for the units the
+ * reads before it did not settle. */
+export const DECIMALS_PROBE_MAX_READS = 3;
+/** A unit is settled once a value with decimals was seen, or this many values (all whole numbers). Fewer whole
+ * numbers could be JSON dropping trailing zeros (2.0 arrives as 2): measured on the four registered datasets'
+ * captures, 9–10% of their one-decimal values arrive as whole numbers. */
+export const DECIMALS_PROBE_SETTLING_VALUES = 10;
+
+export interface DecimalsProbe {
+  /** A slice for the adapter's own request path (`buildRequestUrl`). */
+  slice: CbsSlice;
+  /** The most cells the request can return: units x kept codes per dimension x periods. */
+  cells: number;
+}
+
+/**
+ * The bounded read that observes each unit's decimals at registration: the given units, the latest
+ * `periodCount` periods, and — for every other dimension — its codes (licensed codes only in a geography
+ * dimension), cut to the first N in Eurostat's own order, largest dimension first, until
+ * units x codes x periods <= DECIMALS_PROBE_MAX_CELLS. A dimension is listed in the request only when it is
+ * geography or was cut; the others are requested whole (the same codes, a shorter URL). Pure. Null when the
+ * units alone, over these periods, exceed the bound (nothing to cut).
+ */
+export function decimalsProbeSlice(
+  tableId: string,
+  structure: EurostatStructure,
+  fit: EurostatFit,
+  units: string[],
+  periodCount: number,
+): DecimalsProbe | null {
+  const nativeCode = nativeIdFrom(tableId);
+  const periods = [...fit.periods.values()].sort().slice(-periodCount);
+  const perSeries = units.length * periods.length;
+  if (perSeries === 0 || perSeries > DECIMALS_PROBE_MAX_CELLS) return null;
+
+  const licensed = new Map(fit.geo.map((g) => [g.dimension, g.licensed]));
+  const dims = structure.dimensions
+    .filter((d) => !d.isTime && d.name !== 'unit')
+    .map((d) => ({ name: d.name, codes: licensed.get(d.name) ?? d.codes.map((c) => c.code), geography: licensed.has(d.name) }));
+  const counts = dims.map((d) => d.codes.length);
+  const cells = () => counts.reduce((a, b) => a * b, perSeries);
+  while (cells() > DECIMALS_PROBE_MAX_CELLS) {
+    // The largest dimension is cut first; it has more than one code (all at one would fit: perSeries <= bound).
+    let i = 0;
+    for (let j = 1; j < counts.length; j++) if (counts[j]! > counts[i]!) i = j;
+    const others = cells() / counts[i]!;
+    counts[i] = Math.max(1, Math.min(counts[i]! - 1, Math.floor(DECIMALS_PROBE_MAX_CELLS / others)));
+  }
+
+  const dimensionIn: Record<string, string[]> = {};
+  dims.forEach((d, i) => {
+    if (d.geography || counts[i]! < d.codes.length) dimensionIn[d.name] = d.codes.slice(0, counts[i]);
+  });
+  return {
+    slice: { measures: units.map((u) => `${nativeCode}|${u}`), dimensionIn, periodIn: { dimension: 'time', codes: periods } },
+    cells: cells(),
+  };
+}
+
 export class EurostatLayoutRefusalError extends Error {
   readonly reason: EurostatLayoutRefusalReason;
   constructor(refused: EurostatLayoutRefusal) {

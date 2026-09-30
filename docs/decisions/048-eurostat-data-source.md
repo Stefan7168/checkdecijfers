@@ -958,7 +958,8 @@ full unit list would read as a redesign and quarantine them; a switch needs a re
 `Double`), and decimals set how a figure is rounded on screen (`formatValueNl`), so a guess could change a published
 figure. The structure layout therefore takes decimals from a caller-supplied function and refuses a unit it cannot answer
 for (`decimals_unknown`). An honest source is observed data — for example a small read at registration plus a slice-time
-check that refuses any value carrying more decimals than registered.
+check that refuses any value carrying more decimals than registered. *(Built 2026-10-01 exactly so: see the addendum
+"structure registration: decimals from a small observed read…" below.)*
 
 **Measured (read-only crawl, not committed, 30 datasets drawn at random from the committed catalogue capture, structure
 requests only, sequential):** 30/30 read cleanly; 28/30 fit (1 without `unit` — A5 ≈ 3%; 1 whose only geos are outside the
@@ -966,7 +967,9 @@ licence); every geo code carried a `LEVEL`; datasets hold 13–839 non-time code
 cells and could never have been laid out by the old whole-dataset download. Total members (A4): of 75 classification
 dimensions, 42 use `TOTAL` or `T`, at least 5 use other codes (`TOT_FTE`, `C-O`, `TOT_IN`, `IND_TOTAL`, `0`), about 28 have
 none — a total must be read per dataset, never assumed. Also seen: 3/30 datasets have no `geo` dimension (geography in
-`rep_mar`, `airp_pr`, …), which the licence rule, as before, does not restrict; one dataset mixes A, Q and M.
+`rep_mar`, `airp_pr`, …), which the licence rule, as before, did not restrict *(closed 2026-10-01: such a dataset is now
+refused, and the rule restricts every dimension Eurostat marks as geography — see the addendum below)*; one dataset
+mixes A, Q and M.
 
 ## Addendum — adapter step 0, defects 1–3 of the connector study (2026-09-30, #357)
 
@@ -984,3 +987,58 @@ value, `valueAttribute` and status `c` (the registered reason "door Eurostat nie
 CBS `Confidential` cell keeps its reason), any number that arrives beside the marker is dropped, and an unknown
 confidentiality code fails the parse. The raw `"|C"` is never stored. Tests: `tests/eurostat-adapter/failure-classes.test.ts`,
 `confidential-status.test.ts`, fixtures `tests/fixtures/eurostat-errors/` (hand-built to the study's shapes).
+
+## Addendum — structure registration: decimals from a small observed read, and the licence rule on every geography dimension (2026-10-01, #357 items (a) and (d), dark)
+
+Two gaps kept the structure reader (addendum above) from registering a dataset generically. Both are closed in code;
+the reader stays opt-in (`structureLayout` on `StatisticsApiSource`), and no production caller uses it. The four
+registered datasets still go through the download path, so their decimals and cells are unchanged (proven by the
+existing whole-table vs slice-build parity tests; their registered unit's decimals are 1).
+
+**(a) Decimals.** Eurostat's structure never states them, so they are observed. With `decimals: 'observed'`, a
+registration makes ONE small read per dataset (`observeUnitDecimals`; `decimalsProbeSlice` in
+`src/eurostat-adapter/sdmx-structure.ts`): every unit at the latest period, licensed geography only, every other
+dimension cut to its first codes (largest first) until the request can return at most **2,000 cells**
+(`DECIMALS_PROBE_MAX_CELLS`, the per-question slice bound). A unit is settled by one value with decimals, or by 10
+whole numbers (JSON drops trailing zeros: 9–10% of the four datasets' one-decimal values arrive as whole numbers); an
+unsettled unit is read again over the latest two, then three periods (at most 3 reads). The read goes through the slice
+request path (`buildRequestUrl`, the `data` call limits, `parseJsonStatDataset`) with only the period filtered
+client-side, so a code Eurostat leaves out of a sparse answer is not an error there. A unit's decimals = the most any
+seen value carries (the download path's own rule; `decimalsOf` moved unchanged to `src/ingestion/decimals.ts`). A unit
+no read saw a value for is refused (`decimals_unknown`), never guessed. The result lands in the same registry field
+as CBS's stated `Decimals` (`cbs_tables.units[measure].decimals`, via `CbsMeasure.decimals`). Measured on Eurostat's
+real answer for `une_rt_q` (captured 2026-10-01): one read, 1,854 values, `PC_ACT` 1 and `PC_POP` 1 decimal,
+`THS_PER` 0 — `PC_ACT` equals today's registration.
+
+**When the small read saw fewer decimals than Eurostat later publishes.** The registered decimals are a lower bound.
+At slice time `fetchSlice` checks every fetched value of a source flagged `decimalsFromObservedValues` (Eurostat only,
+`src/sources/registry.ts`) against the registered decimals (`checkObservedDecimals`, `src/ingestion/validate.ts`): a
+value with MORE decimals fails `unit_consistency`, the whole slice is refused, nothing is stored and the table is
+quarantined (`needs_review`) with measure, value and both counts in the summary. The value is never rounded to fit and
+the registered decimals are never raised silently; recovery is a reviewed re-registration. Fewer decimals (a dropped
+trailing zero) pass and are stored unchanged. For the four download-path datasets the check can only fire where the
+existing schema unit check already does (their decimals are the maximum over the whole reviewed scope). CBS tables are
+not checked this way: CBS states decimals itself.
+
+**(d) The licence rule restricts every geography dimension, found by Eurostat's own marks — never by name.** Verified on
+real captures (`tests/fixtures/eurostat-structure/`, two added: `mar_mg_aa_cwhd`, `migr_asyappctza`): Eurostat marks
+geography with the `GEO` code list, or a code list derived from it (`CITIZEN` carries the code-list annotation
+`MASTER` = `geo`). Checked and not usable: an SDMX concept role (no captured message states one), and the `LEVEL`
+annotation alone (`COICOP18` in `prc_hicp_minr` carries LEVEL 1–5 and AGG — it would have marked the price
+classification as geography). `rep_mar` (`REP_MAR`: Belgium, Bulgaria, EU aggregates) and `airp_pr` (`AIRP_PR`: airport
+routes) carry places with neither mark. So (`fitEurostatStructure`): every marked dimension keeps only licensed codes
+and needs at least one (`no_licensed_geo`); a dataset with no marked dimension is refused (`no_identified_geography` —
+"no geography" and "unmarked geography" cannot be told apart); an unmarked dimension naming a marked country or region
+(same code, same English name) is refused (`unmarked_geography`). Kinds are unchanged: only a dimension named `geo` is
+the waist's GeoDimension; a marked `citizen` is a plain dimension with restricted codes. **Assumption:** the licence
+exceptions (Assumption 2) are read restrictively — a citizenship or partner breakdown by a non-EU country is also
+withheld, although it is EU-reported data; a legal review may relax this per dimension. Measured cost: in the
+30-dataset crawl the 3 datasets without `geo` are exactly the unmarked kind, now refused.
+
+**Open:** a dataset whose only marked dimension is not named `geo` would still get the adapter's `geo=` sweep on a data
+request (`buildRequestUrl`). Unverified what Eurostat does with it: if it rejects the parameter the call fails loudly (a
+permanent 400); if it ignores it, the marked dimension's listed licensed codes still restrict the request. Not seen in
+any capture.
+Mixed-grain datasets (#357 (e)) get their decimals read at whichever grain's latest code sorts last. Tests:
+`tests/eurostat-adapter/decimals-and-geography.test.ts`; fixtures `tests/fixtures/eurostat-decimals/` (refresh:
+`node scripts/capture-eurostat-fixtures.ts --decimals-probe <code>`).

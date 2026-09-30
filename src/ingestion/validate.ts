@@ -5,6 +5,7 @@
 // names, codes, measures, counts) so a non-developer owner can read what
 // went wrong without opening a database console.
 import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow } from '../cbs-adapter/types.ts';
+import { decimalsOf } from './decimals.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { parsePeriodCode } from './periods.ts';
 import type { FailureStage } from './types.ts';
@@ -443,4 +444,42 @@ export function checkUnitConsistency(fetchedMeasures: CbsMeasure[], registryUnit
   }
 
   return { ok: true };
+}
+
+/**
+ * #357 (a), for a source whose decimals are learned from observed values, never stated (Eurostat;
+ * `SourceInfo.decimalsFromObservedValues`): every fetched value must carry AT MOST the registered number of
+ * decimals. A value with more means the registration saw fewer decimals than the source now publishes — a real
+ * change in how the unit is published. It fails `unit_consistency` (the caller quarantines the table for review)
+ * and nothing is stored: the value is never rounded to fit, and the registered decimals are never raised
+ * silently. Fewer decimals than registered is normal (JSON drops trailing zeros: 2.50 arrives as 2.5) and passes.
+ * A null value (not published, confidential) carries nothing to check.
+ */
+export function checkObservedDecimals(rows: CbsObservationRow[], registryUnits: RegistryUnits): StageResult {
+  const problems: string[] = [];
+  let count = 0;
+  for (const row of rows) {
+    if (row.value === null) continue;
+    // An unregistered measure is not this check's to judge (the request validation refuses it first).
+    if (!Object.hasOwn(registryUnits, row.measure)) continue;
+    const registered = registryUnits[row.measure]!;
+    const carried = decimalsOf(row.value);
+    if (carried <= registered.decimals) continue;
+    count++;
+    if (problems.length < 3) {
+      problems.push(
+        `measure ${row.measure} at ${JSON.stringify(row.coordinates)}: ${row.value} carries ${carried} decimals, ` +
+          `registered with ${registered.decimals}`,
+      );
+    }
+  }
+  if (count === 0) return { ok: true };
+  return {
+    ok: false,
+    stage: 'unit_consistency',
+    summary:
+      `${count} fetched value(s) carry more decimals than the table was registered with — the source now publishes ` +
+      'more precision than the registration observed, so nothing is stored or rounded until the table is reviewed ' +
+      `and re-registered. Examples: ${problems.join('; ')}.`,
+  };
 }

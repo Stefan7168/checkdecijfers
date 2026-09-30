@@ -163,14 +163,16 @@ describe('geo levels (the LEVEL annotation) and the licence rule on top', () => 
   it('reads country, aggregate and the not-licensed codes of une_rt_q', () => {
     const fit = fitEurostatStructure('eurostat:une_rt_q', structureOf('une_rt_q'));
     if (!fit.ok) throw new Error(fit.summary);
-    expect(fit.geo!.levels).toMatchObject({ NL: 'country', DE: 'country', BA: 'country', TR: 'country', EU27_2020: 'aggregate', EA21: 'aggregate' });
-    expect(fit.geo!.licensed).toContain('NL');
-    expect(fit.geo!.licensed).toContain('EU27_2020');
+    expect(fit.geo.map((g) => [g.dimension, g.mark])).toEqual([['geo', 'geo_code_list']]);
+    const geo = fit.geo[0]!;
+    expect(geo.levels).toMatchObject({ NL: 'country', DE: 'country', BA: 'country', TR: 'country', EU27_2020: 'aggregate', EA21: 'aggregate' });
+    expect(geo.licensed).toContain('NL');
+    expect(geo.licensed).toContain('EU27_2020');
     // Candidate countries are countries by level, but outside the EU/EFTA licence scope.
-    expect(fit.geo!.excluded).toContainEqual({ code: 'BA', why: 'not_licensed' });
-    expect(fit.geo!.excluded).toContainEqual({ code: 'TR', why: 'not_licensed' });
+    expect(geo.excluded).toContainEqual({ code: 'BA', why: 'not_licensed' });
+    expect(geo.excluded).toContainEqual({ code: 'TR', why: 'not_licensed' });
     // A real finding: the euro area's 2026 composition is not (yet) a reviewed aggregate.
-    expect(fit.geo!.excluded).toContainEqual({ code: 'EA21', why: 'not_licensed' });
+    expect(geo.excluded).toContainEqual({ code: 'EA21', why: 'not_licensed' });
   });
 
   it('every geo code of the four datasets carries a level Eurostat stated', () => {

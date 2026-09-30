@@ -22,6 +22,7 @@ import type {
   CbsSlice,
   CbsTableSchema,
 } from '../cbs-adapter/types.ts';
+import { decimalsOf } from '../ingestion/decimals.ts';
 import { encodePeriodCode } from '../ingestion/periods.ts';
 import { parseFactorUnit } from '../query/derivations.ts';
 import { AsyncApiRequiredError, UnsupportedGrainError, type JsonStatCategory, type JsonStatDataset } from './types.ts';
@@ -340,26 +341,9 @@ function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice 
   return true;
 }
 
-/** LOW-effort code-review finding, fixed: `v.toString()` can render a small
- * magnitude in exponential notation (e.g. 1e-7), which has no '.' in the
- * position a plain-decimal count expects — `decimalsOf` expands that case
- * explicitly instead of assuming `toString()` never switches notation. */
-function decimalsOf(v: number): number {
-  if (!Number.isFinite(v) || Number.isInteger(v)) return 0;
-  const s = v.toString();
-  const eIndex = s.search(/[eE]/);
-  if (eIndex === -1) {
-    const dot = s.indexOf('.');
-    return dot === -1 ? 0 : s.length - dot - 1;
-  }
-  const mantissa = s.slice(0, eIndex);
-  const exponent = Number(s.slice(eIndex + 1));
-  const dot = mantissa.indexOf('.');
-  const mantissaDecimals = dot === -1 ? 0 : mantissa.length - dot - 1;
-  return Math.max(0, mantissaDecimals - exponent);
-}
-
-function maxDecimals(values: number[]): number {
+/** A unit's decimals = the most any of its observed values carries (`decimalsOf`, src/ingestion/decimals.ts —
+ * shared with the registration read and the slice-time check, #357 (a)). */
+export function maxDecimals(values: number[]): number {
   let max = 0;
   for (const v of values) max = Math.max(max, decimalsOf(v));
   return max;

@@ -17,6 +17,18 @@
   "namq_10_gdp": {
    "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/NAMQ_10_GDP/1.0?references=descendants&detail=referencepartial",
    "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/NAMQ_10_GDP/1.0"
+  },
+  "mar_mg_aa_cwhd": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/MAR_MG_AA_CWHD/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/MAR_MG_AA_CWHD/1.0"
+  },
+  "migr_asyappctza": {
+   "dataflow": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/dataflow/ESTAT/MIGR_ASYAPPCTZA/1.0?references=descendants&detail=referencepartial",
+   "constraint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/contentconstraint/ESTAT/MIGR_ASYAPPCTZA/1.0"
   }
+ },
+ "capturedAtByDataset": {
+  "mar_mg_aa_cwhd": "2026-09-30T17:36:12.282Z",
+  "migr_asyappctza": "2026-09-30T17:36:13.854Z"
  }
 }

@@ -26,8 +26,9 @@
 //          node scripts/capture-eurostat-fixtures.ts --siblings   (the three E2a sibling slices)
 //          (network required; not CI; no args = every code below)
 //          node scripts/capture-eurostat-fixtures.ts --catalog
-//          node scripts/capture-eurostat-fixtures.ts --structure  (SDMX structure messages of the four registered datasets)
-import { mkdirSync, writeFileSync } from 'node:fs';
+//          node scripts/capture-eurostat-fixtures.ts --structure [code ...]  (SDMX structure messages; no codes = all six)
+//          node scripts/capture-eurostat-fixtures.ts --decimals-probe <code ...>  (the first decimals read, #357 (a))
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -127,23 +128,67 @@ if (process.argv.includes('--siblings')) {
   process.exit(0);
 }
 
+// `--decimals-probe <code...>` (#357 (a), 2026-10-01): captures Eurostat's REAL answer to the first decimals read
+// (`decimalsProbeSlice`, read 1: every unit, the latest period, bounded) for a dataset whose structure is already
+// captured under tests/fixtures/eurostat-structure/, built from that committed structure so the URL is exactly the
+// one a hermetic test's adapter will request. Into tests/fixtures/eurostat-decimals/<code>.json (+ .index.json).
+if (process.argv.includes('--decimals-probe')) {
+  const { buildRequestUrl } = await import('../src/eurostat-adapter/statistics-api.ts');
+  const { decimalsProbeSlice, fitEurostatStructure, readEurostatStructure } = await import('../src/eurostat-adapter/sdmx-structure.ts');
+  const structureDir = join(OUT, '..', 'eurostat-structure');
+  const dir = join(OUT, '..', 'eurostat-decimals');
+  mkdirSync(dir, { recursive: true });
+  const codes = process.argv.slice(process.argv.indexOf('--decimals-probe') + 1).filter((a) => !a.startsWith('--'));
+  for (const code of codes) {
+    const structure = readEurostatStructure(
+      code,
+      readFileSync(join(structureDir, `${code}.dataflow.xml`), 'utf8'),
+      readFileSync(join(structureDir, `${code}.constraint.xml`), 'utf8'),
+    );
+    const fit = fitEurostatStructure(`eurostat:${code}`, structure);
+    if (!fit.ok) throw new Error(`${code}: ${fit.summary}`);
+    const probe = decimalsProbeSlice(`eurostat:${code}`, structure, fit, fit.unitCodes, 1);
+    if (probe === null) throw new Error(`${code}: no bounded decimals read exists`);
+    const url = buildRequestUrl(code, probe.slice);
+    writeFileSync(join(dir, `${code}.json`), JSON.stringify(await fetchJson(url)) + '\n');
+    writeFileSync(
+      join(dir, `${code}.index.json`),
+      JSON.stringify({ synthetic: false, tableId: `eurostat:${code}`, capturedAt: new Date().toISOString(), source: url, cells: probe.cells }, null, 1) + '\n',
+    );
+    console.log(`${code}: captured -> tests/fixtures/eurostat-decimals/${code}.json (at most ${probe.cells} cells)`);
+  }
+  process.exit(0);
+}
+
 // `--structure` (#357 study step 1, 2026-09-30): captures the two SDMX structure messages (dataflow with its
 // partial code lists, and the content constraint — no observations) for the four registered datasets into
 // tests/fixtures/eurostat-structure/<code>.{dataflow,constraint}.xml, verbatim, from the URLs the adapter
 // itself builds (`structureUrls`). Sequential, one request at a time.
+// With codes after the flag (`--structure mar_mg_aa_cwhd`), only those are (re)captured and merged into the
+// existing index (#357 (d): the geography examples below); without, every code in STRUCTURE_CODES.
 if (process.argv.includes('--structure')) {
   const { structureUrls } = await import('../src/eurostat-adapter/statistics-api.ts');
   const dir = join(OUT, '..', 'eurostat-structure');
   mkdirSync(dir, { recursive: true });
-  const index: Record<string, unknown> = { synthetic: false, capturedAt: new Date().toISOString(), datasets: {} };
-  for (const code of ['tipsbd30', 'une_rt_q', 'prc_hicp_minr', 'namq_10_gdp']) {
+  // The four registered datasets, plus two geography examples (#357 (d), captured 2026-10-01): mar_mg_aa_cwhd keeps
+  // its places in `rep_mar`, a list Eurostat does not mark as geography; migr_asyappctza's `citizen` list is
+  // marked (derived from GEO, codes with LEVEL).
+  const STRUCTURE_CODES = ['tipsbd30', 'une_rt_q', 'prc_hicp_minr', 'namq_10_gdp', 'mar_mg_aa_cwhd', 'migr_asyappctza'];
+  const named = process.argv.slice(process.argv.indexOf('--structure') + 1).filter((a) => !a.startsWith('--'));
+  const indexPath = join(dir, 'index.json');
+  const index: { synthetic: false; capturedAt: string; datasets: Record<string, unknown>; capturedAtByDataset?: Record<string, string> } =
+    named.length > 0 && existsSync(indexPath)
+      ? JSON.parse(readFileSync(indexPath, 'utf8'))
+      : { synthetic: false, capturedAt: new Date().toISOString(), datasets: {} };
+  for (const code of named.length > 0 ? named : STRUCTURE_CODES) {
     const urls = structureUrls(code);
     writeFileSync(join(dir, `${code}.dataflow.xml`), await fetchText(urls.dataflow));
     writeFileSync(join(dir, `${code}.constraint.xml`), await fetchText(urls.constraint));
-    (index.datasets as Record<string, unknown>)[code] = urls;
+    index.datasets[code] = urls;
+    if (named.length > 0) (index.capturedAtByDataset ??= {})[code] = new Date().toISOString();
     console.log(`${code}: captured -> tests/fixtures/eurostat-structure/${code}.{dataflow,constraint}.xml`);
   }
-  writeFileSync(join(dir, 'index.json'), JSON.stringify(index, null, 1) + '\n');
+  writeFileSync(indexPath, JSON.stringify(index, null, 1) + '\n');
   console.log('Structure capture complete.');
   process.exit(0);
 }
