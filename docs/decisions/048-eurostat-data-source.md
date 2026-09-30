@@ -909,3 +909,5 @@ prod load.
 reviewed registration and checks the reviewed measure code, every pinned coordinate and the period grammar against them.
 **Revisit:** Eurostat retires/renames datasets without notice — a future freshness check for Eurostat tables (the CBS
 `ingest:freshness` reports them as "not checked") would catch the next frozen one; tracked in [#313](../open-questions.md).
+*(Built: the freshness report's "possibly frozen" verdict (#357), and — for a slice-stored dataset — the warm job, which
+quarantines a dataset whose newest period is too old for its grain; ADR 065's #358 item 4 as-built note.)*

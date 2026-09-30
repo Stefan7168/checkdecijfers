@@ -229,38 +229,32 @@ describe('the conversion under a time budget', () => {
 });
 
 describe('ingest warm / convert-to-slices (command line)', () => {
-  it('hand the run a source built for the budget: stopAt is the run start plus --budget-seconds', async () => {
+  it('hand the run a source built for the budget: stopAt is the run start plus --budget-seconds, per source', async () => {
     const serve = docs();
     const fixture = new FixtureSource(serve);
     await registerPinned(fixture);
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const stops: number[] = [];
+    const calls: [string, number | undefined][] = [];
+    const sourceFor = (key: string, stopAt?: number) => {
+      calls.push([key, stopAt]);
+      return fixture;
+    };
     try {
       const before = Date.now();
-      const code = await runCli(['warm', POP, '--budget-seconds', '120'], {
-        db,
-        source: fixture,
-        sourceForBudget: (stopAt) => {
-          stops.push(stopAt);
-          return fixture;
-        },
-      });
+      const code = await runCli(['warm', POP, '--budget-seconds', '120'], { db, source: fixture, sourceFor });
       const after = Date.now();
       expect(code).toBe(0);
-      expect(stops).toHaveLength(1);
-      expect(stops[0]!).toBeGreaterThanOrEqual(before + 120_000);
-      expect(stops[0]!).toBeLessThanOrEqual(after + 120_000);
+      // One adapter per source the job serves (CBS, and Eurostat since #358 item 4), all under the one budget.
+      expect(calls.map(([key]) => key).sort()).toEqual(['cbs', 'eurostat']);
+      for (const [, stopAt] of calls) {
+        expect(stopAt!).toBeGreaterThanOrEqual(before + 120_000);
+        expect(stopAt!).toBeLessThanOrEqual(after + 120_000);
+      }
 
-      await runCli(['convert-to-slices', POP, '--budget-seconds', '30'], {
-        db,
-        source: fixture,
-        sourceForBudget: (stopAt) => {
-          stops.push(stopAt);
-          return fixture;
-        },
-      });
-      expect(stops).toHaveLength(2);
-      expect(stops[1]! - Date.now()).toBeLessThanOrEqual(30_000);
+      await runCli(['convert-to-slices', POP, '--budget-seconds', '30'], { db, source: fixture, sourceFor });
+      expect(calls).toHaveLength(3);
+      expect(calls[2]![0]).toBe('cbs');
+      expect(calls[2]![1]! - Date.now()).toBeLessThanOrEqual(30_000);
     } finally {
       log.mockRestore();
     }

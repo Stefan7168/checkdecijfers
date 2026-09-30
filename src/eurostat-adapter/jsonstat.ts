@@ -266,8 +266,17 @@ function matchesGeoRestriction(geoCode: string): boolean {
  * caller may pin `dimensionEquals: { unit: 'GWH' }` per D6's "unit pinned in
  * the slice" onboarding practice) even though 'unit' never appears on the
  * stored CbsObservationRow.coordinates (it is absorbed into `measure`). */
-function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice | undefined): boolean {
+function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice | undefined, nativeCode: string): boolean {
   if (!slice) return true;
+  // ADR 065 (#358 item 4): a slice-store request's lists. An empty list restricts nothing (the CBS rule).
+  if (slice.measures && slice.measures.length > 0 && !slice.measures.includes(`${nativeCode}|${sliceCoordinates['unit']}`)) {
+    return false;
+  }
+  for (const [dim, codes] of Object.entries(slice.dimensionIn ?? {})) {
+    if (codes.length > 0 && !codes.includes(sliceCoordinates[dim] ?? '')) return false;
+  }
+  const periodCodes = slice.periodIn?.codes ?? [];
+  if (periodCodes.length > 0 && !periodCodes.includes(sliceCoordinates['time'] ?? '')) return false;
   if (slice.dimensionEquals) {
     for (const [dim, code] of Object.entries(slice.dimensionEquals)) {
       if (sliceCoordinates[dim] !== code) return false;
@@ -455,6 +464,24 @@ export function parseJsonStatDataset(
     }
   }
 
+  // The same for a slice-store request's lists (ADR 065, #358 item 4): every listed member and every
+  // listed measure's unit must be in the response, or the request is refused rather than stored with holes.
+  const mustHave: [string, string[]][] = Object.entries(slice?.dimensionIn ?? {});
+  if (slice?.measures && slice.measures.length > 0) {
+    mustHave.push(['unit', slice.measures.map((m) => (m.startsWith(`${nativeCode}|`) ? m.slice(nativeCode.length + 1) : m))]);
+  }
+  for (const [dim, codes] of mustHave) {
+    const known = dimCodes[dim];
+    const absent = codes.filter((code) => known === undefined || !known.includes(code));
+    if (absent.length > 0) {
+      throw new Error(
+        `Eurostat dataset '${tableId}': the request listed ${dim} code(s) ${absent.slice(0, 5).join(', ')} but the ` +
+          `response has ${known === undefined ? `no such dimension (it has: ${ds.id.join(', ')})` : 'no such code'} — ` +
+          'refusing a result with holes Eurostat did not explain.',
+      );
+    }
+  }
+
   const statusByOffset = normalizeStatus(ds.status, total);
   const coordinateDimNames = ds.id.filter((name) => name !== 'unit');
 
@@ -485,7 +512,7 @@ export function parseJsonStatDataset(
 
     const geoCode = coordinates['geo'];
     if (geoCode !== undefined && !matchesGeoRestriction(geoCode)) continue;
-    if (!matchesSlice(sliceCoordinates, slice)) continue;
+    if (!matchesSlice(sliceCoordinates, slice, nativeCode)) continue;
 
     const value = valueAt(ds.value, offset);
     const flag = statusByOffset.get(offset) ?? null;

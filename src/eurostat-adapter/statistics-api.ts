@@ -22,7 +22,7 @@ import type {
   CbsTableSchema,
 } from '../cbs-adapter/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
-import { fetchAndRead } from '../sources/fetch-with-timeout.ts';
+import { BUDGET_ENDED_PHRASE, fetchAndRead, shortUrl } from '../sources/fetch-with-timeout.ts';
 import {
   EU_EFTA_STAND_IN_GEO_CODES,
   parseJsonStatCatalog,
@@ -49,6 +49,12 @@ export interface StatisticsApiSourceOptions {
   timeoutMs?: number;
   /** Base of the linear retry backoff (attempt n waits n x this). */
   retryBackoffMs?: number;
+  /** Epoch ms: the end of the run's time budget (the command line's --budget-seconds), the same contract as
+   * `ODataV4SourceOptions.stopAt`: every attempt is limited to the smaller of its own limit and the time left,
+   * no attempt or retry wait starts once it has passed, and a request cut that way fails with
+   * BUDGET_ENDED_PHRASE in its message (the warm job then counts it as remaining, not failed). Absent: no
+   * budget. */
+  stopAt?: number;
 }
 
 /** D4: strips the '<key>:' prefix internally (never the caller's job) —
@@ -137,6 +143,18 @@ function sinceTimePeriodFor(periodFloor: string): string {
   }
 }
 
+/** The unit codes behind this dataset's measure codes (`<native-code>|<unit>`, jsonstat.ts); throws for a
+ * code of another dataset or another shape — never sent as something it is not. */
+function unitsOfMeasures(nativeCode: string, measures: string[]): string[] {
+  const prefix = `${nativeCode}|`;
+  return [...new Set(measures)].map((m) => {
+    if (!m.startsWith(prefix) || m.length === prefix.length) {
+      throw new Error(`Eurostat adapter: measure '${m}' is not a measure of dataset '${nativeCode}'.`);
+    }
+    return m.slice(prefix.length);
+  });
+}
+
 /**
  * Builds the Statistics API request URL for `nativeCode`, applying the
  * `CbsSlice` SERVER-SIDE (ADR 048 D6's "Fetch shape: ... server-side
@@ -188,22 +206,35 @@ export function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined)
     );
   }
 
-  if (slice.measures && slice.measures.length > 0) {
-    throw new Error(
-      'Eurostat adapter: CbsSlice.measures is a CBS-only allow-list and is not supported for Eurostat datasets.',
-    );
+  // ADR 065 (#358 item 4): the three lists a slice-store request carries (fetchSlice, the parity report).
+  // `measures` are this adapter's own `<native-code>|<unit>` codes, sent as `unit=`; `dimensionIn` lists
+  // codes per dimension, sent as repeated params (a `geo` list replaces the structural sweep but must stay
+  // inside it); `periodIn` is sent as a `sinceTimePeriod` floor at its earliest code, and the exact list is
+  // applied client-side (parseJsonStatDataset), like every other clause.
+  const measureUnits = unitsOfMeasures(nativeCode, slice.measures ?? []);
+  if (measureUnits.length > 0 && slice.dimensionEquals && 'unit' in slice.dimensionEquals) {
+    throw new Error('Eurostat adapter: a slice cannot pin the unit and list measures at the same time.');
   }
-
-  if (slice.dimensionIn && Object.keys(slice.dimensionIn).length > 0) {
-    throw new Error(
-      'Eurostat adapter: CbsSlice.dimensionIn is a CBS-only member list and is not supported for Eurostat datasets.',
-    );
+  const listed = Object.entries(slice.dimensionIn ?? {}).filter(([, codes]) => codes.length > 0);
+  for (const [dim, codes] of listed) {
+    if (dim === 'unit' || dim === 'time') {
+      throw new Error(`Eurostat adapter: CbsSlice.dimensionIn cannot list '${dim}' (use measures / periodIn).`);
+    }
+    if (slice.dimensionEquals && dim in slice.dimensionEquals) {
+      throw new Error(`Eurostat adapter: a slice cannot both pin and list dimension '${dim}'.`);
+    }
+    if (dim === 'geo') {
+      const outside = codes.filter((c) => !EU_EFTA_STAND_IN_GEO_CODES.has(c));
+      if (outside.length > 0) {
+        throw new Error(
+          `Eurostat adapter: geo code(s) ${outside.join(', ')} are outside the EU/EFTA restriction this adapter applies.`,
+        );
+      }
+    }
   }
-
-  if (slice.periodIn && slice.periodIn.codes.length > 0) {
-    throw new Error(
-      'Eurostat adapter: CbsSlice.periodIn is a CBS-only period list and is not supported for Eurostat datasets.',
-    );
+  const periodCodes = slice.periodIn?.codes ?? [];
+  if (periodCodes.length > 0 && slice.periodIn!.dimension !== 'time') {
+    throw new Error(`Eurostat adapter: periodIn must name the 'time' dimension, not '${slice.periodIn!.dimension}'.`);
   }
 
   const params: Array<[string, string]> = [];
@@ -212,11 +243,20 @@ export function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined)
       params.push([dim, code]);
     }
   }
-  for (const code of EU_EFTA_STAND_IN_GEO_CODES) {
+  for (const unit of measureUnits) params.push(['unit', unit]);
+  const geoList = listed.find(([dim]) => dim === 'geo')?.[1];
+  for (const [dim, codes] of listed) {
+    if (dim !== 'geo') for (const code of codes) params.push([dim, code]);
+  }
+  for (const code of geoList ?? EU_EFTA_STAND_IN_GEO_CODES) {
     params.push(['geo', code]);
   }
-  if (slice.periodFloor) {
-    params.push(['sinceTimePeriod', sinceTimePeriodFor(slice.periodFloor)]);
+  // The later of the scope's floor and the request's earliest period (both CBS period codes; one table
+  // has one grain, so string order is period order).
+  const earliestListed = [...periodCodes].sort()[0];
+  const floor = [slice.periodFloor, earliestListed].filter((p): p is string => p !== undefined).sort().at(-1);
+  if (floor !== undefined) {
+    params.push(['sinceTimePeriod', sinceTimePeriodFor(floor)]);
   }
 
   params.sort(([keyA, valA], [keyB, valB]) => (keyA === keyB ? valA.localeCompare(valB) : keyA.localeCompare(keyB)));
@@ -237,23 +277,33 @@ export class StatisticsApiSource implements CbsSource {
 
   private readonly timeoutMs: number;
   private readonly retryBackoffMs: number;
+  private readonly stopAt: number | undefined;
 
   constructor(fetchFn: FetchFn = fetch, options: StatisticsApiSourceOptions = {}) {
     this.fetchFn = fetchFn;
     this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
     this.retryBackoffMs = options.retryBackoffMs ?? RETRY_BACKOFF_MS;
+    this.stopAt = options.stopAt;
+  }
+
+  private budgetEnded(url: string): Error {
+    return new Error(`Eurostat request stopped: ${BUDGET_ENDED_PHRASE} for ${shortUrl(url)}`);
   }
 
   private async fetchWith<T>(url: string, headers: Record<string, string>, read: (res: Response) => Promise<T>): Promise<T> {
     type Outcome = { body: T } | { failure: string };
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      // The attempt's limit: its own, or what is left of the run's budget when that is less.
+      const left = this.stopAt === undefined ? Number.POSITIVE_INFINITY : this.stopAt - Date.now();
+      if (left <= 0) throw this.budgetEnded(url);
+      const capped = left < this.timeoutMs;
       try {
         // One time limit per attempt, covering the body read too; a timeout is a failed attempt.
         const outcome = await fetchAndRead<Outcome>(
           url,
           { headers },
-          this.timeoutMs,
+          capped ? left : this.timeoutMs,
           async (res) =>
             res.ok
               ? { body: await read(res) }
@@ -265,8 +315,15 @@ export class StatisticsApiSource implements CbsSource {
       } catch (err) {
         lastError = err;
       }
+      if (this.stopAt !== undefined) {
+        const timedOut = lastError instanceof Error && /timed out after/.test(lastError.message);
+        if ((capped && timedOut) || this.stopAt - Date.now() <= 0) throw this.budgetEnded(url);
+      }
       if (attempt < FETCH_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, this.retryBackoffMs * attempt));
+        const wait = this.retryBackoffMs * attempt;
+        // A wait that would reach the end of the budget is not started (ODataV4Source's rule).
+        if (this.stopAt !== undefined && wait >= this.stopAt - Date.now()) throw this.budgetEnded(url);
+        await new Promise((resolve) => setTimeout(resolve, wait));
       }
     }
     throw new Error(

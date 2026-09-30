@@ -1322,11 +1322,19 @@ running when the budget ends is cut; it shows as `partial` with that request cou
   refuses, naming the code, if a pinned definition points at a code CBS no longer has: fix the definition in
   `src/registry/defaults.ts` first.
 
-**Not supported yet:** Eurostat datasets. (`70072ned`, whose periods carry no machine status, is supported since #358
+**Eurostat datasets** (supported since #358 item 4, 2026-09-30): the same commands work for `eurostat:tipsbd30`,
+`eurostat:une_rt_q`, `eurostat:prc_hicp_minr` and `eurostat:namq_10_gdp` — the command line and `ingest:parity` pick
+each table's own adapter from its id. Once converted, `ingest:freshness`'s "possibly frozen" check is done by the warm
+job itself: a dataset whose newest period is too old for its grain (monthly 4 months, quarterly 3 quarters, annual 30 months) is
+quarantined with a `period_parsing` summary naming the period. Fix: find Eurostat's replacement dataset (as
+`prc_hicp_manr` → `prc_hicp_minr`), update `src/sources/eurostat-siblings.ts`, then re-register — a re-baseline alone
+would quarantine it again. The way back for a Eurostat dataset is also `convert-to-full` then `ingest sync <id>`.
+
+**Period-note tables:** `70072ned`, whose periods carry no machine status, is supported since #358
 item 3: the warm job and the parity proof read its statuses from CBS's period notes with the same reviewed, fail-closed
 reader the whole-table sync uses. An unrecognised note quarantines the table in either storage — add the heading to its
 `periodNoteStatus` map in `src/ingestion/registry-seed.ts` after review, then `rebaseline-slices`. It is not in
-production yet, so there is nothing to convert until it is loaded.)
+production yet, so there is nothing to convert until it is loaded.
 
 ### New-CBS-data alert (#355, built session 149, 2026-09-29/30)
 
