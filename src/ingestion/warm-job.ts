@@ -10,7 +10,9 @@
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { BUDGET_ENDED_PHRASE } from '../sources/fetch-with-timeout.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
+import { lagOfPeriodCode } from './data-end-lag.ts';
+import { failBatch } from './pipeline.ts';
 import { ensureSlice, precheckSliceSchema, sliceFilterKey, type SliceRequest } from './slice-cache.ts';
 import { loadWarmScope, planWarmSlices, type WarmPlan } from './warm-plan.ts';
 
@@ -244,6 +246,32 @@ export async function warmTable(
   const prechecked = pre.prechecked;
 
   const scope = await loadWarmScope(db, tableId);
+
+  // ADR 048's 2026-09-30 addendum: Eurostat retires a dataset without notice, and a frozen one never looks
+  // changed — this job would re-confirm it as current every day. Its newest period (after the schema
+  // refresh above) must be recent enough for its grain, or the table is quarantined before any slice is
+  // confirmed, so its figures are refused rather than served as the latest (principle c). Only a person
+  // can find the replacement dataset. CBS tables are not judged this way (their cadences vary too much).
+  if (sourceKeyForTableId(tableId) === EUROSTAT_SOURCE_KEY) {
+    const timeDim = scope.dimensions.find((d) => d.kind === 'TimeDimension')?.name;
+    const newest = [...(timeDim ? (scope.codes[timeDim] ?? []) : [])].sort().at(-1);
+    const lag = newest === undefined ? null : lagOfPeriodCode(newest, new Date(now()));
+    if (lag === null || lag.frozen) {
+      const summary =
+        lag === null
+          ? `Table "${tableId}" has no stored period this job can date (newest: ${newest ?? 'none'}); refusing ` +
+            `to confirm it as current.`
+          : `Table "${tableId}"'s newest period is ${newest}, ${lag.lag} ${lag.unit}(s) ago — older than a ` +
+            `${lag.unit === 'year' ? 'annual' : `${lag.unit}ly`} dataset should be. Eurostat may have retired it ` +
+            `(as it did prc_hicp_manr); find the replacement before re-baselining.`;
+      const batch = await db.query(`insert into ingestion_batches (table_id, outcome) values ($1, 'running') returning id`, [
+        tableId,
+      ]);
+      await failBatch(db, Number(batch.rows[0]!.id), tableId, 'period_parsing', summary, null, null, true);
+      return failed({ planned: 0, fetched: 0, confirmed: 0 }, 'period_parsing', summary, true);
+    }
+  }
+
   let plan: WarmPlan;
   try {
     plan = planWarmSlices(scope, { maxCells: WARM_MAX_CELLS });
@@ -288,7 +316,7 @@ export async function warmTable(
 }
 
 /**
- * Warms every pinned, active slice-cache CBS table (or the given ids), one at a
+ * Warms every pinned, active slice-cache table of a source it has an adapter for (or the given ids), one at a
  * time: never-warmed first, then the oldest `last_sync_at`, ties by id. No new
  * table starts once the deadline has passed (those are skipped: 'deadline').
  * One table's failure never stops the others.
@@ -296,8 +324,17 @@ export async function warmTable(
 export async function warmPinnedTables(
   db: Db,
   source: CbsSource,
-  opts: WarmOptions & { tableIds?: string[] },
+  opts: WarmOptions & {
+    tableIds?: string[];
+    /** Adapters for the other sources, by source key (ADR 065, #358 item 4: `eurostat`). `source` is the
+     * CBS adapter; a table whose source has no adapter here is skipped ('not a CBS table'), as before. */
+    sources?: Readonly<Record<string, CbsSource>>;
+  },
 ): Promise<WarmTableResult[]> {
+  const sourceFor = (tableId: string): CbsSource | null => {
+    const key = sourceKeyForTableId(tableId);
+    return key === CBS_SOURCE_KEY ? source : (opts.sources?.[key] ?? null);
+  };
   const now = opts.now ?? Date.now;
   const rows = opts.tableIds
     ? (await db.query('select id, last_sync_at from cbs_tables where id = any($1::text[])', [opts.tableIds])).rows
@@ -310,7 +347,7 @@ export async function warmPinnedTables(
   const lastSync = new Map(rows.map((r) => [String(r.id), toTime(r.last_sync_at)]));
   const ids = opts.tableIds
     ? [...new Set(opts.tableIds)]
-    : [...lastSync.keys()].filter((id) => sourceKeyForTableId(id) === CBS_SOURCE_KEY);
+    : [...lastSync.keys()].filter((id) => sourceFor(id) !== null);
   ids.sort((a, b) => {
     const ta = lastSync.get(a) ?? null;
     const tb = lastSync.get(b) ?? null;
@@ -322,7 +359,8 @@ export async function warmPinnedTables(
 
   const results: WarmTableResult[] = [];
   for (const tableId of ids) {
-    if (sourceKeyForTableId(tableId) !== CBS_SOURCE_KEY) {
+    const tableSource = sourceFor(tableId);
+    if (tableSource === null) {
       results.push(skipped(tableId, 'not a CBS table'));
       continue;
     }
@@ -331,7 +369,7 @@ export async function warmPinnedTables(
       continue;
     }
     try {
-      results.push(await warmTable(db, source, tableId, { deadline: opts.deadline, now }));
+      results.push(await warmTable(db, tableSource, tableId, { deadline: opts.deadline, now }));
     } catch (err) {
       results.push({
         tableId,

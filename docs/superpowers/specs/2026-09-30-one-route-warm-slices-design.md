@@ -154,3 +154,56 @@ to CBS), principle (c) (a cell outside every fetched slice refuses; it is never 
 - The per-cell date can differ between cells of one chart when slices were confirmed on different days; the chart shows
   the oldest (existing behaviour of the slice store).
 - Eurostat's four datasets are whole-dataset copies too; they follow the same pattern after CBS, in their own step.
+  *(Designed and built 2026-09-30: section 7.)*
+
+## 7. Eurostat on the one route (#358 item 4, 2026-09-30) — designed and built
+
+**The smallest design:** a Eurostat dataset is stored, warmed, proven and converted by the SAME code and commands as a
+CBS table (`ingest warm`, `ingest:parity`, `ingest convert-to-slices`, `convert-to-full`, `rebaseline-slices`). No
+second planner, no second store, no schema change. What changes is only where Eurostat differed:
+
+- **The adapter speaks the slice store's request.** `fetchSlice` asks every source for `measures` × `dimensionIn` ×
+  `periodIn`. The Eurostat adapter used to refuse those three fields; it now sends them (`unit=` from the
+  `<dataset>|<unit>` measure code, one parameter per listed member, a `geo` list inside the EU/EFTA restriction instead
+  of the whole sweep, `sinceTimePeriod` at the earliest listed period) and applies the exact lists client-side, as it
+  already did for every other clause. A listed member or unit missing from the response refuses (no result with holes).
+- **The registered scope reaches every schema read.** `registerSchemaOnly`, `checkSliceSchema` (so the warm job and
+  every reader fetch), the parity report, the conversion and the re-baseline pass the table's own `cbs_tables.slice` to
+  `fetchTableSchema` / `fetchCodeList`, exactly as the whole-table sync always did. A Eurostat schema — its measure set
+  and the decimals the unit check compares — comes from that one scoped request (a full dataset can be over the 500k
+  synchronous cap). CBS's adapters ignore the argument, so CBS is unchanged.
+- **The planner knows Eurostat's shape:** the period floor applies to `time` (not `Perioden`), and a scope pinning `unit`
+  is checked against the measure codes (Eurostat folds the unit into the measure). The four datasets plan to one or two
+  requests each.
+- **Frozen-dataset detection (ADR 048's 2026-09-30 addendum) moves into the job.** A frozen dataset never looks changed,
+  so the job would re-confirm it every day. After its one schema check the warm job judges a Eurostat table's newest
+  stored period by the freshness report's limits (monthly 4 months, quarterly 3 quarters, annual 30 months — now shared
+  in `src/ingestion/data-end-lag.ts`) and, past the limit, quarantines it (stage `period_parsing`, before any slice is
+  confirmed): its figures refuse and the owner is mailed. CBS tables are not judged this way.
+- **Routing:** `warmPinnedTables` takes adapters for other sources (`sources: { eurostat }`); the command line builds each
+  table's adapter from its id prefix (under the run budget — the Eurostat adapter gained the same `stopAt` as CBS's), the
+  parity report likewise, and the daily `/api/warm-job` passes a Eurostat adapter under the same hard stop and limits.
+- **Conversion curation:** a Eurostat dataset has no seed entry; its own stored scope and cadence (the reviewed
+  registration) are carried over. The conversion rewrites the row in place, so the DOI stays.
+
+**What stays:** the fail-closed checks are the existing ones — fingerprint over dimensions and measures, unit and
+decimals (quarantine), Eurostat's per-cell statuses through `buildStagedRows`, a source date never moving backwards, the
+"rows outside the request" guard. Nothing changes in production until a dataset is converted (the job only touches
+slice-stored tables). The whole-table sync of a Eurostat dataset (now routed by the command line) stays as the way back
+until the D10 deletion.
+
+**Invariants:** R1/R2 (cells stored and checked before any answer), R4 (dated by the covering slice's confirmation), R11
+(Eurostat's flags stored verbatim per cell; `Published` only for an unflagged value), principle (c) (a frozen dataset or
+a changed unit takes the table out of service). No LLM prompt bytes change.
+
+**Tests (hermetic, real captured responses):** `tests/ingestion/eurostat-slices.test.ts` — for all four datasets a
+slice-mode build equals the whole-table build (every cell with value, status and value attribute; the registry row; the
+labels); a second warm run confirms every slice; the parity report is identical; a dry-run and a real conversion keep
+every cell and the DOI; `convert-to-full` plus a sync works; a frozen monthly dataset and a changed unit quarantine.
+Adapter URL, refusal and budget tests in `tests/eurostat-adapter/statistics-api.test.ts`; parser list tests in
+`tests/eurostat-adapter/jsonstat.test.ts`.
+
+**Open:** (1) **Assumption:** the Statistics API accepts repeated values for any dimension (verified live for `geo`
+only); the four datasets send one value per non-geo dimension, so only a future multi-unit request depends on it.
+(2) A fresh slice registration of a NEW Eurostat table (not a conversion) does not verify a DOI; the four existing rows
+keep theirs. (3) Converting production's four datasets is an owner-present step, as for CBS (RUNBOOK).

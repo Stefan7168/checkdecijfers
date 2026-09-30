@@ -14,6 +14,7 @@
 // AUTOMATE the refresh is a separate decision (#355), made on evidence from
 // this report.
 import type { CbsCatalogEntry } from '../cbs-adapter/types.ts';
+import { lagOfDataEnd } from './data-end-lag.ts';
 
 export interface FreshnessInputRow {
   tableId: string;
@@ -205,12 +206,12 @@ export function classifyRelease(input: ReleaseDiffInput): ReleaseVerdict {
 // update on the same UTC day as our sync is not seen (the catalogue date has no time of day).
 // ---------------------------------------------------------------------------
 
-/** Monthly data is published about 1-2 months after the period; 4 leaves room for a late release. */
-export const EUROSTAT_MONTHLY_MAX_LAG_MONTHS = 4;
-/** Quarterly national-accounts data lags 1-2 quarters; 3 leaves room for a late release. */
-export const EUROSTAT_QUARTERLY_MAX_LAG_QUARTERS = 3;
-/** Annual data can lag 12-18 months after the year ends; 30 leaves room for slow indicators. */
-export const EUROSTAT_ANNUAL_MAX_LAG_MONTHS = 30;
+// The limits and the lag arithmetic live in data-end-lag.ts, shared with the warm job's frozen check.
+export {
+  EUROSTAT_ANNUAL_MAX_LAG_MONTHS,
+  EUROSTAT_MONTHLY_MAX_LAG_MONTHS,
+  EUROSTAT_QUARTERLY_MAX_LAG_QUARTERS,
+} from './data-end-lag.ts';
 
 export type EurostatFreshnessStatus = 'behind' | 'possibly_frozen' | 'unknown' | 'current';
 
@@ -234,19 +235,6 @@ export interface EurostatFreshnessVerdict {
   dataEnd: string | null;
 }
 
-/** Whole months from `end` (the LAST month the period covers) to `now`; null for a spelling we do
- * not recognise (weekly, semester, daily, month 13, ...). `unit` says what the threshold counts. */
-function lagOfDataEnd(dataEnd: string, now: Date): { unit: 'month' | 'quarter' | 'year'; lag: number } | null {
-  const nowMonths = now.getUTCFullYear() * 12 + now.getUTCMonth();
-  let m = /^(\d{4})$/.exec(dataEnd);
-  if (m) return { unit: 'year', lag: nowMonths - (Number(m[1]) * 12 + 11) };
-  m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(dataEnd);
-  if (m) return { unit: 'month', lag: nowMonths - (Number(m[1]) * 12 + Number(m[2]) - 1) };
-  m = /^(\d{4})-Q([1-4])$/.exec(dataEnd);
-  if (m) return { unit: 'quarter', lag: Math.floor(nowMonths / 3) - (Number(m[1]) * 4 + Number(m[2]) - 1) };
-  return null;
-}
-
 /** Pure. See the block comment above; 'possibly_frozen' outranks 'behind' because a sync cannot fix it. */
 export function assessEurostatFreshness(input: EurostatFreshnessInput, now: Date): EurostatFreshnessVerdict {
   const { tableId, lastSyncAt, entry } = input;
@@ -268,15 +256,11 @@ export function assessEurostatFreshness(input: EurostatFreshnessInput, now: Date
   if (behind) reasons.push(`Eurostat updated the data on ${entry.modified!.slice(0, 10)}, after our last sync`);
 
   const end = entry.dataEnd == null ? null : lagOfDataEnd(entry.dataEnd, now);
-  let frozen = false;
-  if (end != null) {
-    const limit = { month: EUROSTAT_MONTHLY_MAX_LAG_MONTHS, quarter: EUROSTAT_QUARTERLY_MAX_LAG_QUARTERS, year: EUROSTAT_ANNUAL_MAX_LAG_MONTHS }[end.unit];
-    frozen = end.lag > limit;
-    if (frozen) {
-      reasons.unshift(
-        `the newest period is ${entry.dataEnd}, older than a ${end.unit === 'year' ? 'annual' : end.unit + 'ly'} dataset should be — it may have been retired`,
-      );
-    }
+  const frozen = end?.frozen === true;
+  if (end != null && frozen) {
+    reasons.unshift(
+      `the newest period is ${entry.dataEnd}, older than a ${end.unit === 'year' ? 'annual' : end.unit + 'ly'} dataset should be — it may have been retired`,
+    );
   }
 
   if (frozen) return { ...base, status: 'possibly_frozen', reasons };

@@ -313,15 +313,58 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('buildRequestUrl refuses a measures allow-list (CBS-only slice field) instead of silently ignoring it', () => {
-    expect(() => buildRequestUrl('une_rt_m', { measures: ['X'] })).toThrow(/measures/);
+  // ADR 065 (#358 item 4): the slice store's own request shape — measures, dimensionIn, periodIn — is
+  // translated, not refused, so a pinned dataset can be warmed like a CBS table.
+  it('buildRequestUrl sends a slice-store request: unit from the measure, listed members, geo list, earliest period', () => {
+    const url = buildRequestUrl('une_rt_q', {
+      measures: ['une_rt_q|PC_ACT'],
+      dimensionIn: { age: ['Y15-74'], freq: ['Q'], geo: ['NL', 'DE'], s_adj: ['SA'], sex: ['T'] },
+      periodIn: { dimension: 'time', codes: ['2026KW02', '2025KW04', '2026KW01'] },
+    });
+    const params = [...new URL(url).searchParams.entries()];
+    expect(params.filter(([k]) => k === 'geo').map(([, v]) => v)).toEqual(['DE', 'NL']);
+    expect(params).toEqual(
+      expect.arrayContaining([
+        ['unit', 'PC_ACT'],
+        ['age', 'Y15-74'],
+        ['freq', 'Q'],
+        ['s_adj', 'SA'],
+        ['sex', 'T'],
+        ['sinceTimePeriod', '2025-Q4'],
+      ]),
+    );
+    // The later of the scope's floor and the earliest listed period.
+    expect(
+      new URL(buildRequestUrl('x', { periodFloor: '2026KW01', periodIn: { dimension: 'time', codes: ['2025KW04'] } }))
+        .searchParams.get('sinceTimePeriod'),
+    ).toBe('2026-Q1');
+    // Empty lists restrict nothing: the URL is the plain sliced one.
+    expect(buildRequestUrl('x', { measures: [], dimensionIn: {}, periodIn: { dimension: 'time', codes: [] } })).toBe(
+      buildRequestUrl('x', {}),
+    );
   });
 
-  it('buildRequestUrl refuses dimensionIn and periodIn (CBS-only slice fields) instead of silently ignoring them', () => {
-    expect(() => buildRequestUrl('une_rt_m', { dimensionIn: { geo: ['NL'] } })).toThrow(/dimensionIn/);
+  it('buildRequestUrl refuses a slice-store request it cannot send faithfully', () => {
+    expect(() => buildRequestUrl('une_rt_m', { measures: ['X'] })).toThrow(/not a measure of dataset/);
+    expect(() => buildRequestUrl('une_rt_m', { measures: ['une_rt_q|PC_ACT'] })).toThrow(/not a measure of dataset/);
+    expect(() => buildRequestUrl('une_rt_m', { dimensionIn: { geo: ['US'] } })).toThrow(/outside the EU\/EFTA/);
+    expect(() => buildRequestUrl('une_rt_m', { dimensionIn: { unit: ['PC_ACT'] } })).toThrow(/cannot list 'unit'/);
     expect(() =>
-      buildRequestUrl('une_rt_m', { periodIn: { dimension: 'time', codes: ['2020'] } }),
-    ).toThrow(/periodIn/);
+      buildRequestUrl('une_rt_m', { dimensionEquals: { sex: 'T' }, dimensionIn: { sex: ['F'] } }),
+    ).toThrow(/both pin and list/);
+    expect(() =>
+      buildRequestUrl('une_rt_m', { dimensionEquals: { unit: 'PC_ACT' }, measures: ['une_rt_m|PC_ACT'] }),
+    ).toThrow(/pin the unit and list measures/);
+    expect(() => buildRequestUrl('une_rt_m', { periodIn: { dimension: 'Perioden', codes: ['2020JJ00'] } })).toThrow(
+      /'time' dimension/,
+    );
+  });
+
+  it('a spent run budget (stopAt) stops a request before any fetch, with the phrase the warm job reads', async () => {
+    const fetchFn = vi.fn();
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch, { stopAt: Date.now() - 1 });
+    await expect(source.fetchTableSchema('eurostat:demo_pjan')).rejects.toThrow(/the run's time budget ran out/);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it('a stubbed unfiltered ("no slice") request over the cap throws, but the SAME table with a slice — whose URL the ' +
