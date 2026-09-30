@@ -21,7 +21,7 @@ import {
   parseObservationsPage,
   type CbsMeasureGroup,
 } from './parse-v4.ts';
-import { fetchAndRead, summarizeErrorBody } from '../sources/fetch-with-timeout.ts';
+import { fetchAndRead, shortUrl, summarizeErrorBody } from '../sources/fetch-with-timeout.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
 const FETCH_ATTEMPTS = 3;
@@ -127,7 +127,7 @@ export interface ODataV4SourceOptions {
  * body when it can be read. Never throws — an unreadable body gives the plain
  * status line. (A stalled body is cut off by the caller's deadline.) */
 async function failureMessage(label: string, res: Response, url: string): Promise<string> {
-  const base = `${label} failed: ${res.status} ${res.statusText} for ${url}`;
+  const base = `${label} failed: ${res.status} ${res.statusText} for ${shortUrl(url)}`;
   try {
     const summary = summarizeErrorBody(await res.text());
     return summary ? `${base}: ${summary}` : base;
@@ -195,7 +195,7 @@ export class ODataV4Source implements CbsSource {
       }
     }
     throw new Error(
-      `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+      `CBS OData request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${
         lastError instanceof Error ? lastError.message : String(lastError)
       }`,
     );
@@ -303,7 +303,7 @@ export class ODataV4Source implements CbsSource {
       }
     }
     throw new Error(
-      `CBS OData $count request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+      `CBS OData $count request failed after ${FETCH_ATTEMPTS} attempts for ${shortUrl(url)}: ${
         lastError instanceof Error ? lastError.message : String(lastError)
       }`,
     );

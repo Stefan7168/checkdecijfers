@@ -111,9 +111,25 @@ Steps 2, 3 and 4 touch different files and can be built in parallel; 5 needs all
 - **The separate change detector (step 4) is dropped for now** (cheapest mechanism first): one schema check per pinned
   table per run (about 80 small requests a day for 20 tables) already tells whether CBS changed the table. The slim
   catalogue call stays a recorded option if the daily job ever needs to get cheaper.
-- **Built and merged locally:** the planner (step 2, `src/ingestion/warm-plan.ts`, 51 tests), pinned slice registration
-  (step 3; units, scope, cadence, pinned flag and fingerprint equal the whole-table path for all 17 fixture-backed seed
-  tables, 25 tests). **In progress:** the warm job (step 5) and the read-only parity report (first half of step 7).
+- **Built (session 151):** the planner (step 2, `src/ingestion/warm-plan.ts`); pinned slice registration (step 3;
+  units, scope, cadence, pinned flag and fingerprint equal the whole-table path for all 17 fixture-backed seed tables);
+  the warm job (step 5, `src/ingestion/warm-job.ts`: one schema check per table per run, one confirmation time per run,
+  safe clean-up of outdated slice records, `ingest warm`); the parity report and the supervised conversion, the way
+  back and the re-baseline for a quarantined slice table (step 7, `parity.ts`, `convert.ts`, `rebaseline-slices.ts`);
+  the daily wiring and the failure e-mail (step 8, `/api/warm-job`).
+- **Step 6, the gate — PASSED hermetically:** a slice-mode test build (`INGEST_FIXTURE_MODE=slice`) is identical to the
+  whole-table build in every reader-relevant column for the 17 convertible seed tables; on it the 20-task benchmark
+  scores 14/14, 6/6, 0 invented numbers, and the query, answer, chart, audit, registry, invariants, benchmark, db and
+  ingestion suites pass. Against a whole-table run of the same commit the benchmark's answers, charts and refusals are
+  the same; only the dates differ (they come from the slice records). Two product gaps found and fixed on the way: a
+  period CBS has not published yet now refuses as "not available yet" on a slice table too, and a pinned slice table's
+  missing cell is the same data gap as in whole-table storage.
+- **Dry runs against production (read-only):** the parity report found three small tables identical; the conversion
+  dry run then showed the first version's registration check was stricter than the ingestion rules (it refused on
+  descriptive measure text); relaxed to unit and decimals.
+- **Not done:** step 9 (converting production, owner present; then the deletions of D10). The test default stays
+  whole-table until production is converted, because production still runs that path. `70072ned` needs period-note
+  status in the slice store before the whole-table sync can be deleted.
 
 ## 5. Invariants at stake
 

@@ -346,12 +346,25 @@ describe('the read-only proof: refused, nothing written', () => {
     await refusedAfterProof(/units of measure M000352/);
   });
 
-  it('a stored label that differs from CBS’s current code list', async () => {
+  it('a stored period status that differs from CBS’s current code list', async () => {
+    // The status of a period decides the status of its cells: the ordinary sync must bring it in first.
     await wholeTable(POP, new FixtureSource(docsFor(POP)));
-    await db.query(`update dimension_labels set label = 'Renamed' where table_id = $1 and dimension = 'RegioS' and code = 'NL01'`, [
-      POP,
-    ]);
-    await refusedAfterProof(/RegioS/);
+    await db.query(
+      `update dimension_labels set status = case when status = 'Definitief' then 'Voorlopig' else 'Definitief' end
+        where table_id = $1 and dimension = 'Perioden' and code = '2024JJ00'`,
+      [POP],
+    );
+    // Caught by the proof already: the cells staged under that status no longer equal the stored ones.
+    await refusedAfterProof(/different status/);
+  });
+
+  it('a stored code CBS no longer publishes', async () => {
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `insert into dimension_labels (table_id, dimension, code, label, sort_index) values ($1, 'RegioS', 'GM9999', 'Verdwenen', 99999)`,
+      [POP],
+    );
+    await refusedAfterProof(/GM9999 is no longer published/);
   });
 
   it('a sync of the table still running (its batch row open), checked under the lock', async () => {
@@ -388,6 +401,20 @@ describe('the dry run (no --yes)', () => {
     const result = await convertTableToSlices(db, new FixtureSource(docsFor(POP)), POP, { deadline: FAR(), apply: false });
     expect(result.outcome).toBe('dry_run');
     expect(result.notes.join(' ')).toMatch(/measure text/);
+  });
+
+  it('label text CBS has since reworded does not block; it is reported as a note', async () => {
+    // CBS rewords labels routinely ("2026 januari-april" becomes "2026 januari-juni") and the ordinary
+    // sync never refreshes them; the conversion takes CBS's current text, as a re-registration would.
+    await wholeTable(POP, new FixtureSource(docsFor(POP)));
+    await db.query(
+      `update dimension_labels set label = 'Renamed', sort_index = sort_index + 5
+        where table_id = $1 and dimension = 'RegioS' and code = 'NL01'`,
+      [POP],
+    );
+    const result = await convertTableToSlices(db, new FixtureSource(docsFor(POP)), POP, { deadline: FAR(), apply: false });
+    expect(result.outcome).toBe('dry_run');
+    expect(result.notes.join(' ')).toMatch(/1 label\(s\)/);
   });
 
   it('runs the checks and the proof, reports what it would do, and writes nothing', async () => {

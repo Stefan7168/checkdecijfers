@@ -349,6 +349,24 @@ describe('planWarmSlices: every request obeys both caps', () => {
     for (const req of plan.requests) expect(filterOf(input, req).length).toBeLessThanOrEqual(6000);
   });
 
+  it('no request names more than 150 codes in total (CBS refuses a filter of about 170 terms or more)', () => {
+    // Measured 2026-09-30: CBS answers 400 "The node count limit of '1000' has been exceeded" at
+    // 180 ORed terms and accepts 165. Short codes keep the character cap out of the way here.
+    const periods = Array.from({ length: 400 }, (_, i) => `${1600 + i}JJ00`);
+    const input = baseInput({ measures: ['M1'], codes: { Geslacht: ['T'], Regio: ['NL01'], Perioden: periods } });
+    const plan = planWarmSlices(input, { maxCells: 1_000_000 });
+    expect(plan.requests.length).toBeGreaterThan(1);
+    for (const req of plan.requests) {
+      const terms = req.measures.length + req.periods.length + Object.values(req.members).reduce((n, c) => n + c.length, 0);
+      expect(terms).toBeLessThanOrEqual(150);
+    }
+    const capped = planWarmSlices(input, { maxCells: 1_000_000, maxFilterTerms: 40 });
+    for (const req of capped.requests) {
+      const terms = req.measures.length + req.periods.length + Object.values(req.members).reduce((n, c) => n + c.length, 0);
+      expect(terms).toBeLessThanOrEqual(40);
+    }
+  });
+
   it('throws when even a single-cell request exceeds the filter cap', () => {
     expect(() => planWarmSlices(baseInput(), { maxFilterChars: 10 })).toThrow(/TESTNED.*single-cell/);
   });

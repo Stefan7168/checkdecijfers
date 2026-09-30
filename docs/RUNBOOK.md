@@ -1251,6 +1251,60 @@ delivery end-to-end.
 quarantines (above), the *missed-sync* trigger (below) and the `/api/health` probe (the "Health-probe
 alert" section above). Nothing of #23 remains open.
 
+### Slice storage for the pinned tables (ADR 065, built session 151, 2026-09-30) — conversion is owner-supervised
+
+**What this is.** The pinned tables are moving from "one hand-run sync per table" to slice storage: the same declared
+scope (`cbs_tables.slice`), filled and refreshed by a job in bounded, checked requests. Design:
+[superpowers/specs/2026-09-30-one-route-warm-slices-design.md](superpowers/specs/2026-09-30-one-route-warm-slices-design.md).
+Until a table is converted nothing changes for it: `ingest sync`, the freshness report and the new-data e-mail below
+still apply to every whole-table table.
+
+**Read-only tools (safe at any time, no AI, no write):**
+
+- `npm run ingest:warm-plan` — per pinned table: how many requests and cells its scope needs.
+- `npm run ingest:parity -- <tableId> [...]` — fetches the planned requests from CBS and compares every cell with what
+  is stored. Verdict per table: `IDENTICAL`, `DIFFERENT (n cells)` or `INCOMPLETE (reason)`.
+- `npm run ingest -- convert-to-slices <tableId>` **without `--yes`** — a dry run: preconditions, the parity proof and
+  the registration check, then what it would do. Writes nothing.
+
+**Converting one table (owner present; one table at a time, least-shown first):**
+
+1. `npm run ingest:freshness` — if the table is behind, run the ordinary `ingest sync <id> --accept-new-codes` first.
+   The conversion refuses a table whose stored cells or statuses differ from CBS.
+2. Dry run (above). `REFUSED` names the reason; the usual ones and their fix:
+   - a value or status differs → sync first (step 1);
+   - a label, unit or layout differs → `ingest sync <id> --rebaseline` (a reviewed hand refresh), then retry;
+   - a stored cell outside the declared scope, or a sync still marked running → read the message, do not force it.
+3. `npm run ingest -- convert-to-slices <tableId> --yes [--budget-seconds N]` (default budget 900 s, shared by the proof
+   and the refill). Outcomes:
+   - `converted` — done; the after-check found the cells equal to before.
+   - `converted_incomplete` — the switch happened, the refill ran out of time: run `npm run ingest -- warm <tableId>`
+     until it reports `complete`. Until then the table answers only for cells already refilled.
+   - `after_check_failed` — printed loudly with the first differing cells. Nothing is rolled back automatically; the
+     message names the two ways out (`ingest warm <id>` to retry, or `convert-to-full` below).
+   During the switch and refill the table can refuse for a few minutes (accepted: no outside readers yet).
+4. Afterwards: `npm run ingest:parity -- <tableId>` again (it reads the stored cells whatever the storage mode) —
+   expect `IDENTICAL`; check that a chart of that table loads on the homepage/gallery, and that
+   `npm run ingest -- warm <tableId>` reports `complete` with every request `confirmed`.
+
+**The way back:** `npm run ingest -- convert-to-full <tableId> --yes`, then `npm run ingest -- sync <tableId>`.
+
+**After conversion, refreshing is automatic.** The daily job kicks `/api/warm-job`, which refreshes every pinned
+slice table (one CBS schema check per table; only a table CBS changed is re-fetched) and keeps kicking itself, at most
+20 times, while it makes progress. By hand: `npm run ingest -- warm [tableId ...] [--budget-seconds N]`.
+
+**If the e-mail "a table could not be refreshed" arrives:**
+
+- *Not quarantined* (CBS unreachable, a timeout): nothing to do; the next daily run retries. A table that keeps failing
+  is mailed again after a week.
+- *Quarantined* (CBS changed the table's layout or a unit): the table refuses to answer until a person looks. Read the
+  summary, compare with CBS, then `npm run ingest -- rebaseline-slices <tableId> --yes` — it takes CBS's current
+  layout, deletes the table's stored cells (they may no longer mean the same thing) and refills a pinned table. It
+  refuses, naming the code, if a pinned definition points at a code CBS no longer has: fix the definition in
+  `src/registry/defaults.ts` first.
+
+**Not supported yet:** `70072ned` (its periods carry no machine status) stays whole-table; Eurostat datasets.
+
 ### New-CBS-data alert (#355, built session 149, 2026-09-29/30)
 
 **What it is.** The daily cron (`/api/onboarding-cron`, 06:00, the same run as the missed-sync alert) also compares CBS's own

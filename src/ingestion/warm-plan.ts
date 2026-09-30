@@ -30,6 +30,8 @@ export interface WarmPlanOptions {
   maxCells?: number;
   /** Most characters in the $filter string CBS receives; default 6000. */
   maxFilterChars?: number;
+  /** Most codes one request may name across all its axes; default 150. */
+  maxFilterTerms?: number;
 }
 
 export interface WarmPlan {
@@ -42,6 +44,10 @@ export interface WarmPlan {
 }
 
 export const DEFAULT_MAX_FILTER_CHARS = 6000;
+/** CBS refuses a $filter whose expression tree is over 1,000 nodes ("The node count limit of
+ * '1000' has been exceeded"). Measured 2026-09-30: 165 ORed `Dim eq 'code'` terms are accepted,
+ * 180 are refused — about six nodes a term. 150 leaves a margin. */
+export const DEFAULT_MAX_FILTER_TERMS = 150;
 /** sliceToFilter joins the clauses of a filter with ' and '. */
 const CLAUSE_JOIN_CHARS = ' and '.length;
 
@@ -118,6 +124,7 @@ export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions =
   const { tableId, slice } = input;
   const maxCells = options.maxCells ?? SLICE_MAX_CELLS;
   const maxFilterChars = options.maxFilterChars ?? DEFAULT_MAX_FILTER_CHARS;
+  const maxFilterTerms = options.maxFilterTerms ?? DEFAULT_MAX_FILTER_TERMS;
   const fail = (why: string): never => {
     throw new Error(`Warm plan for "${tableId}": ${why}`);
   };
@@ -196,24 +203,27 @@ export function planWarmSlices(input: WarmScopeInput, options: WarmPlanOptions =
     { kind: 'measures', name: 'Measure', codes: measures },
   ];
 
-  // Start from whole lists and halve the largest axis until both caps hold.
+  // Start from whole lists and halve the largest axis until every cap holds.
   const sizes = axes.map((a) => a.codes.length);
   const filterBound = (): number =>
     axes.reduce((sum, axis, i) => sum + longestClause(axis, sizes[i]!), 0) + CLAUSE_JOIN_CHARS * (axes.length - 1);
   for (;;) {
     const cells = sizes.reduce((n, s) => n * s, 1);
     const filterChars = filterBound();
-    if (cells <= maxCells && filterChars <= maxFilterChars) break;
+    const terms = sizes.reduce((n, size) => n + size, 0);
+    if (cells <= maxCells && filterChars <= maxFilterChars && terms <= maxFilterTerms) break;
     const splittable = axes.map((_, i) => i).filter((i) => sizes[i]! > 1);
     if (splittable.length === 0) {
       fail(
         `even a single-cell request is too big (${cells} cell(s) against a cap of ${maxCells}, ` +
-          `a ${filterChars}-character filter against a cap of ${maxFilterChars}).`,
+          `a ${filterChars}-character filter against a cap of ${maxFilterChars}, ` +
+          `${terms} filter term(s) against a cap of ${maxFilterTerms}).`,
       );
     }
-    // Cells too many: split the axis with the most codes per chunk. Only the
-    // filter too long: split the axis whose longest clause is the longest.
-    const weight = (i: number): number => (cells > maxCells ? sizes[i]! : longestClause(axes[i]!, sizes[i]!));
+    // Cells or terms too many: split the axis with the most codes per chunk. Only
+    // the filter too long: split the axis whose longest clause is the longest.
+    const weight = (i: number): number =>
+      cells > maxCells || terms > maxFilterTerms ? sizes[i]! : longestClause(axes[i]!, sizes[i]!);
     let pick = splittable[0]!;
     for (const i of splittable) if (weight(i) > weight(pick)) pick = i;
     sizes[pick] = Math.ceil(sizes[pick]! / 2);

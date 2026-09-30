@@ -862,6 +862,21 @@ describe('ODataV4Source — time limit, retries and readable errors (#357)', () 
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
+  it('a very long request address is shortened in the error message', async () => {
+    // A warm request can carry a filter of several thousand characters; the message named it twice.
+    const fetchFn = vi.fn(async () => ({ ok: false, status: 400, statusText: 'Bad Request', text: async () => 'node count limit' }));
+    const source = new ODataV4Source({ fetchFn: fetchFn as unknown as typeof fetch, ...fast });
+    const codes = Array.from({ length: 400 }, (_, i) => `GM${String(i).padStart(4, '0')}`);
+    const run = async () => {
+      for await (const page of source.fetchObservations('T', { dimensionIn: { RegioS: codes } }, ['RegioS', 'Perioden'])) void page;
+    };
+    const err = await run().catch((e: Error) => e);
+    const message = (err as Error).message;
+    expect(message).toContain('https://datasets.cbs.nl/odata/v1/CBS/T/Observations?');
+    expect(message).toContain('node count limit');
+    expect(message.length).toBeLessThan(1200);
+  });
+
   it('the catalogue download has its own (longer) limit than metadata calls', async () => {
     // Measured 2026-09-30: the full catalogue is 6.8 MB and took 21 s — too close to the 30 s
     // metadata limit. Here it takes 60 ms: over the 20 ms metadata limit, inside its own 2 s.

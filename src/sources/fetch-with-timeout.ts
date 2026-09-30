@@ -20,7 +20,7 @@ export async function fetchAndRead<T>(
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const signal = init?.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
   const timeoutError = () =>
-    new Error(`Request timed out after ${timeoutMs / 1000} seconds for ${url}`);
+    new Error(`Request timed out after ${timeoutMs / 1000} seconds for ${shortUrl(url)}`);
 
   let onAbort: (() => void) | undefined;
   const aborted = new Promise<never>((_resolve, reject) => {
@@ -53,6 +53,14 @@ export function fetchWithTimeout(
   fetchFn: typeof fetch = fetch,
 ): Promise<Response> {
   return fetchAndRead(url, init, timeoutMs, async (res) => res, fetchFn);
+}
+
+const URL_MAX_CHARS = 300;
+
+/** A request address for an error message: whole when short, otherwise its start plus how much
+ * was cut (a filter can run to thousands of characters, and a message may name it twice). */
+export function shortUrl(url: string): string {
+  return url.length <= URL_MAX_CHARS ? url : `${url.slice(0, URL_MAX_CHARS)}… (+${url.length - URL_MAX_CHARS} characters)`;
 }
 
 const SUMMARY_MAX_CHARS = 200;

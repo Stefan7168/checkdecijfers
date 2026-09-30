@@ -81,6 +81,22 @@ path and the benchmark's frozen key is pinned to them.
 - The two CBS tables that were behind on 2026-09-30 were refreshed the same day on the owner's go (`37789ksz` batch 62,
   `85770NED` batch 63, no quarantine); the copies stay refreshed while they are live, because readers see them.
 
+## As built (session 151, 2026-09-30) — everything except the production conversion
+
+Design, measurements and the step list: [the one-route design](../superpowers/specs/2026-09-30-one-route-warm-slices-design.md).
+Operating procedure: RUNBOOK "Slice storage for the pinned tables".
+
+- **Finding that shaped the design:** the "whole-table copies" are already narrow declared scopes (1.1 million cells over
+  20 CBS tables). The scope stays; what is retired is the hand-run sync that fills it.
+- **Built:** planner, pinned slice registration, warm job, parity report, supervised conversion with a way back,
+  re-baseline for a quarantined slice table, a job route the daily run kicks, a failure e-mail.
+- **The gate above is met hermetically:** on a slice-stored test database the 20-task benchmark scores 14/14, 6/6 and
+  0 invented numbers, identical in answers, charts and refusals to the whole-table run; only dates differ.
+- **Nothing in production storage has changed.** Every table is still whole-table; the daily kick finds no slice table
+  and does nothing. Converting is step 9, owner present, one table at a time, each behind its own read-only proof.
+- **Still whole-table by necessity:** `70072ned` (no machine period status; not in production) and the four Eurostat
+  datasets.
+
 ## Alternatives considered
 
 - **Keep two lanes** (ADR 062 decision 1). Rejected by the owner: it keeps a hand-maintained set that covers 1.6% of CBS

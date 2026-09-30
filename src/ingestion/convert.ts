@@ -275,29 +275,19 @@ async function registrationDifferences(
     }
   }
 
-  // Every label, every column: the planner and the answer path read these.
-  const labelKey = (dimension: unknown, code: unknown) => `${String(dimension)} ${String(code)}`;
-  const storedLabels = new Map<string, string>();
-  for (const l of (
-    await db.query(
-      'select dimension, code, label, dimension_group, status, sort_index from dimension_labels where table_id = $1',
-      [reg.tableId],
-    )
-  ).rows) {
-    storedLabels.set(
-      labelKey(l.dimension, l.code),
-      canonical([l.label, l.dimension_group ?? null, l.status ?? null, l.sort_index == null ? null : Number(l.sort_index)]),
-    );
-  }
+  // The code lists: which codes exist, a period's status (it decides its cells' status) and a
+  // code's group (region classes are answered from it) must be equal. A label's wording and its
+  // position are descriptive — see labelTextChanges.
   const labelDiffs: string[] = [];
+  const storedLabels = await readStoredLabels(db, reg.tableId);
   const seen = new Set<string>();
   for (const l of reg.labelRows) {
     const key = labelKey(l.dimension, l.code);
     seen.add(key);
-    const now = canonical([l.label, l.dimension_group, l.status, l.sort_index]);
+    const now = canonical([l.dimension_group ?? null, l.status ?? null]);
     const before = storedLabels.get(key);
     if (before === undefined) labelDiffs.push(`${key} is new at CBS`);
-    else if (before !== now) labelDiffs.push(`${key} changed (stored ${before}, CBS now ${now})`);
+    else if (before.meaning !== now) labelDiffs.push(`${key} changed (stored ${before.meaning}, CBS now ${now})`);
   }
   for (const key of storedLabels.keys()) if (!seen.has(key)) labelDiffs.push(`${key} is no longer published by CBS`);
   if (labelDiffs.length > 0) {
@@ -307,6 +297,39 @@ async function registrationDifferences(
     );
   }
   return out;
+}
+
+const labelKey = (dimension: unknown, code: unknown) => `${String(dimension)} ${String(code)}`;
+
+/** Per stored label: what it means (group, status) and how it reads (wording, position). */
+async function readStoredLabels(db: Db, tableId: string): Promise<Map<string, { meaning: string; text: string }>> {
+  const stored = new Map<string, { meaning: string; text: string }>();
+  for (const l of (
+    await db.query(
+      'select dimension, code, label, dimension_group, status, sort_index from dimension_labels where table_id = $1',
+      [tableId],
+    )
+  ).rows) {
+    stored.set(labelKey(l.dimension, l.code), {
+      meaning: canonical([l.dimension_group ?? null, l.status ?? null]),
+      text: canonical([l.label, l.sort_index == null ? null : Number(l.sort_index)]),
+    });
+  }
+  return stored;
+}
+
+/** How many labels' wording or position the conversion refreshes to CBS's current code lists
+ * (CBS rewords labels routinely and the ordinary sync never refreshes them). Not a reason to refuse. */
+async function labelTextChanges(db: Db, reg: SliceRegistration): Promise<number> {
+  const storedLabels = await readStoredLabels(db, reg.tableId);
+  let changed = 0;
+  for (const l of reg.labelRows) {
+    const before = storedLabels.get(labelKey(l.dimension, l.code));
+    if (before !== undefined && before.text !== canonical([l.label, l.sort_index == null ? null : Number(l.sort_index)])) {
+      changed += 1;
+    }
+  }
+  return changed;
 }
 
 // ---------------------------------------------------------------------------
@@ -442,6 +465,10 @@ export async function convertTableToSlices(
   const textChanges = measureTextChanges(row, registration);
   if (textChanges > 0) {
     notes.push(`The measure text (title or description) of ${textChanges} measure(s) becomes CBS's current text.`);
+  }
+  const labelChanges = await labelTextChanges(db, registration);
+  if (labelChanges > 0) {
+    notes.push(`The wording or position of ${labelChanges} label(s) becomes CBS's current code list.`);
   }
   if (row.title !== registration.title) {
     notes.push(`The table title becomes CBS's current title "${registration.title}" (stored: "${String(row.title)}").`);
