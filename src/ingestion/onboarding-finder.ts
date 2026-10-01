@@ -15,7 +15,7 @@ import type { OnboardingRouting, TableFinder } from '../answer/intent/policy.ts'
 import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
 import { candidateWalk } from '../catalog/walk.ts';
-import type { RerankFn } from '../catalog/types.ts';
+import type { FindTableConfig, RerankFn } from '../catalog/types.ts';
 import type { RecallOptions } from '../catalog/recall.ts';
 import type { Db } from '../db/types.ts';
 import { alreadyIngestedSet } from './onboarding.ts';
@@ -40,6 +40,9 @@ export interface OnboardingFinderDeps {
    * out_of_scope finder, which searches the whole question. Absent → the
    * original search (byte-identical). */
   recall?: RecallOptions;
+  /** Session 153: the confidence bar for this finder (QUESTION_FINDER_CONFIG
+   * for the question finder). Absent → DEFAULT_FIND_TABLE_CONFIG. */
+  findConfig?: FindTableConfig;
 }
 
 /** Produces the TableFinder the answer pipeline injects. Absent injection →
@@ -68,7 +71,7 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
     try {
       // Recall runs on the TERM; the rerank prompt additionally sees the full
       // QUESTION (WP27 stage A — the stock-vs-flow signal, ADR 027 D3a).
-      const outcome = await findTable(deps.db, { topic: term, question }, { rerank, ...(deps.recall ? { recall: deps.recall } : {}) });
+      const outcome = await findTable(deps.db, { topic: term, question }, { rerank, ...(deps.recall ? { recall: deps.recall } : {}), ...(deps.findConfig ? { config: deps.findConfig } : {}) });
       if (outcome.kind !== 'confident') return null;
 
       // Confident pick → does this user already have an active fetch for this

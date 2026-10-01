@@ -73,6 +73,20 @@ export const DEFAULT_FIND_TABLE_CONFIG: FindTableConfig = {
   highConfidence: 0.8,
 };
 
+/** Session 153 (the front door): the whole-question finder's bar
+ * (askQuestion's questionFinder, routing to the TABLE LANE — not the 100-credit
+ * fetch DEFAULT_FIND_TABLE_CONFIG guards). Measured on the 38-question
+ * front-door set (benchmark/frontdoor-labelled-set.json, rerank over the
+ * 'any'-mode shortlist): every right pick scored >= 0.75, every wrong pick and
+ * every non-question <= 0.35, nothing between. 0.7 sits in that gap. Lower
+ * than 0.8 because the lane re-checks the table itself (the table parser's
+ * own measure/period checks refuse a table that cannot answer); the typical
+ * 0.75 is the rerank docking itself because a summary does not literally name
+ * the asked year. */
+export const QUESTION_FINDER_CONFIG: FindTableConfig = {
+  highConfidence: 0.7,
+};
+
 /**
  * The routing decision the finder returns. Sub-part 2 consumes it:
  *   confident → fetch → verify → store → answer (costs credits, #24).

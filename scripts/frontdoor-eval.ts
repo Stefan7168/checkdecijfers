@@ -28,6 +28,7 @@ import { AnthropicLlmClient } from '../src/answer/llm/client.ts';
 import { parseQuestion } from '../src/answer/intent/index.ts';
 import { buildOnboardingFinder } from '../src/ingestion/onboarding-finder.ts';
 import { loadOnboardedVocabulary } from '../src/ingestion/onboarding-vocab.ts';
+import { QUESTION_FINDER_CONFIG } from '../src/catalog/types.ts';
 
 const SET_PATH = fileURLToPath(new URL('../benchmark/frontdoor-labelled-set.json', import.meta.url));
 const REPORT_PATH = fileURLToPath(new URL('../benchmark/frontdoor-report.json', import.meta.url));
@@ -60,7 +61,13 @@ try {
   const extraCanonicalMeasures = live ? await loadOnboardedVocabulary(db) : [];
   const termFinder = live ? buildOnboardingFinder({ db, userId: MEASUREMENT_USER, rerankClient: client! }) : null;
   const anyFinder = live
-    ? buildOnboardingFinder({ db, userId: MEASUREMENT_USER, rerankClient: client!, recall: { mode: 'any' } })
+    ? buildOnboardingFinder({
+        db,
+        userId: MEASUREMENT_USER,
+        rerankClient: client!,
+        recall: { mode: 'any' },
+        findConfig: QUESTION_FINDER_CONFIG,
+      })
     : null;
 
   for (const c of cases) {

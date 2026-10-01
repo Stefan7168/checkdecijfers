@@ -46,7 +46,7 @@
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated
   question reader turned the topic away before any table search. Built (code only, no prompt change): a whole-question
   table search (any word, prefix, Dutch participle base) used for out-of-scope questions and as the fallback for unplaced
-  topics, behind the table-lane switch. Measured on 38 real questions: **6 → 20 of 32 reach a right table, 0 of 6
+  topics, behind the table-lane switch. Measured on 38 real questions: **5 → 22 of 32 reach a right table, 0 of 6
   non-questions routed.** `37789ksz` eviction HELD (welfare questions do not reliably reach their table yet). Next: the
   meaning-gap step (#362).
 
@@ -115,7 +115,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
 The CBS any-table route is LIVE (`TABLE_LANE_ENABLED=1`, CI gate enforced). Single priority: widen the front door —
 the meaning-gap step ([#362](open-questions.md): an AI step proposing CBS's formal search words; measure with
-`npm run frontdoor:eval`, today 20/32), then a live re-check by the owner, then evict `37789ksz`. Then the Eurostat route.
+`npm run frontdoor:eval`, today 22/32), then a live re-check by the owner, then evict `37789ksz`. Then the Eurostat route.
 The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables

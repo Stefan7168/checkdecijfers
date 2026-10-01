@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generatedAt": "2026-10-01T05:28:47.066Z",
+    "generatedAt": "2026-10-01T07:22:37.782Z",
     "live": true,
     "cases": 38,
     "positives": 32,
     "recallOnShortlist": "22/32",
-    "beforeReachesRightTable": "6/32",
-    "afterReachesRightTable": "20/32",
+    "beforeReachesRightTable": "5/32",
+    "afterReachesRightTable": "22/32",
     "negativesRoutedToATable": "0/6"
   },
   "rows": [
@@ -95,7 +95,7 @@
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "84545NED",
-      "viaOutOfScope": false,
+      "viaOutOfScope": true,
       "hit": true
     },
     {
@@ -112,7 +112,7 @@
     {
       "id": "new-companies-2024",
       "positive": true,
-      "recallRank": 12,
+      "recallRank": 1,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -123,7 +123,7 @@
     {
       "id": "divorces-2023",
       "positive": true,
-      "recallRank": 11,
+      "recallRank": 7,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -278,7 +278,7 @@
       "id": "potato-harvest-2023",
       "positive": true,
       "recallRank": 0,
-      "shortlist": 24,
+      "shortlist": 20,
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "7100oogs",
@@ -313,10 +313,10 @@
       "recallRank": 10,
       "shortlist": 24,
       "parseKind": "data_query",
-      "outcome": "clarification",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "85714NED",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "people-on-social-assistance",
@@ -332,13 +332,13 @@
     {
       "id": "hospital-admissions-2022",
       "positive": true,
-      "recallRank": 10,
+      "recallRank": 9,
       "shortlist": 24,
       "parseKind": "data_query",
-      "outcome": "clarification",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "84067NED",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "holidays-abroad-2023",

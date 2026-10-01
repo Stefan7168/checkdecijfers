@@ -113,6 +113,13 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(routing!.candidateIds).not.toContain('37470abu');
   });
 
+  it('session 153: a findConfig lowers the bar for THIS finder only (0.75 routes at 0.7, not at the default 0.8)', async () => {
+    const lowered = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.75), findConfig: { highConfidence: 0.7 } });
+    expect(await lowered(CONFIDENT_TOPIC, QUESTION)).not.toBeNull();
+    const standard = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.75) });
+    expect(await standard(CONFIDENT_TOPIC, QUESTION)).toBeNull();
+  });
+
   it('threads the FULL question into the rerank query (WP27 stage A, ADR 027 D3a)', async () => {
     let seen: FindTableQuery | null = null;
     const capturing: RerankFn = (query, shortlist) => {

@@ -59,6 +59,7 @@ import { AnthropicWebSearchClient } from '../backend/websearch/index.ts';
 import type { SourceSelection } from '../backend/websearch/index.ts';
 import { SOURCES } from '../backend/sources/registry.ts';
 import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
+import { QUESTION_FINDER_CONFIG } from '../backend/catalog/types.ts';
 // #148: the 'started' branch below still uses the amount triggerOnboarding
 // actually debited (result.credits) for netCost, never a second independent
 // price read — that fix is unchanged. onboardingPrice IS imported again as of
@@ -697,6 +698,7 @@ export async function askQuestion(
                 userId,
                 rerankClient: new AnthropicLlmClient(),
                 recall: { mode: 'any' },
+                findConfig: QUESTION_FINDER_CONFIG,
               }),
             }
           : {}),

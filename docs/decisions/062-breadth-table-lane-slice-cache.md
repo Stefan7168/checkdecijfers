@@ -398,12 +398,15 @@ whole question finds nothing and word forms miss ("gesloopt" vs the title's "slo
   `ONBOARDING_ENABLED` are on, thread-aware callers only): an `out_of_scope` parse, or an unmatched topic the term
   finder could not place, is searched with the question itself; a confident pick routes to the table lane, otherwise the
   original refusal / B15 clarification stands byte-identical. Reply turns never get it. No prompt changed, no fixture moved.
+- **Its own confidence bar** (`QUESTION_FINDER_CONFIG`, 0.7; the 100-credit fetch path keeps 0.8). Measured on the 38
+  questions: every right rerank pick scored ≥ 0.75, every wrong pick and non-question ≤ 0.35, nothing between. The owner's
+  vans question sat at 0.75 (the rerank docks itself when a summary does not name the asked year) — the second live
+  refusal (audit row 338) was this bar, found by reproducing the finder on the live catalogue.
 - **Measured** (`npm run frontdoor:eval`, 38 questions drafted by an agent from the live catalogue: 32 about
   non-curated tables, 6 that must not route; four expected-table lists extended after review): **before 6/32 reach a
-  right table, after 20/32; 0/6 negatives routed.** Two live runs, ~$1.20.
-- **Open ([#362](../open-questions.md)):** 9 of the 12 misses are meaning gaps word search cannot bridge ("getrouwd" vs
-  "huwelijkssluitingen", "te zwaar" vs "overgewicht", "huisvuil" vs "huishoudelijk afval"); 3 reach the shortlist but the
-  rerank is not confident. Candidate fix: a small AI step that proposes CBS's formal search words (a new LLM role).
+  right table, after 22/32 (with the 0.7 bar); 0/6 negatives routed.** Three live runs + one rerank sweep, ~$2.10.
+- **Open ([#362](../open-questions.md)):** the 10 misses are meaning gaps word search cannot bridge ("getrouwd" vs
+  "huwelijkssluitingen", "te zwaar" vs "overgewicht", "huisvuil" vs "huishoudelijk afval"). Candidate fix: a small AI step that proposes CBS's formal search words (a new LLM role).
 
 ## Trade-offs and open points (after step 5)
 

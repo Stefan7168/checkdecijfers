@@ -1242,7 +1242,7 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
   `benchmark/tablelane-tasks.json` → flip `TABLE_LANE_ENABLED` (owner-supervised env flip; RUNBOOK "Table lane (breadth
   step 5)") → evict `37789ksz` (`npm run tables:evict -- --table 37789ksz`, dry run then `--apply`).
 - **✅ 2026-10-01 (session 153, owner GO): CI gate enforced, `TABLE_LANE_ENABLED=1` LIVE.** The owner's live check found the
-  front door closed (out-of-scope refusals); the question finder was built (6 → 20 of 32, ADR 062 "As built — the front
+  front door closed (out-of-scope refusals); the question finder was built (5 → 22 of 32, ADR 062 "As built — the front
   door"). **Eviction of `37789ksz` HELD.** Next: the meaning-gap step ([#362](open-questions.md)), then a live re-check,
   then the eviction.
 
