@@ -24,6 +24,7 @@ import type { EnglishRendering, NonAnswerEnglish } from '../backend/answer/trans
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
+import type { TableLaneFoundTable } from './table-lane.ts';
 // open-questions #324 gap 1: only the TYPE, so this pure leaf gains no
 // runtime i18n dependency — `Lang` is a two-value string union, not a
 // component or a message table.
@@ -235,7 +236,7 @@ export interface ChatMessage {
    * done. `phase` turns 'slow' after 60 s (the over-budget line). Optional so
    * every other message literal stays byte-identical; never set on replay (a
    * resumed thread shows the job's landed outcome, not a live bubble). */
-  tableLane?: { rowId: number; phase: 'fetching' | 'slow' } | null;
+  tableLane?: { rowId: number; phase: 'fetching' | 'slow'; table?: TableLaneFoundTable } | null;
   /** Breadth step 5 (Task 6): the table lane's open breakdown question - the
    * buttons under a clarification. Live only, like `carrier`: a resumed thread
    * shows the question text with no buttons (ADR 033 A6). */
@@ -313,8 +314,8 @@ export function infoChatMessage(text: string): ChatMessage {
 }
 
 /** The progress bubble a table-lane job shows until its outcome lands. */
-export function tableLaneProgressMessage(rowId: number, text: string): ChatMessage {
-  return { ...infoChatMessage(text), tableLane: { rowId, phase: 'fetching' } };
+export function tableLaneProgressMessage(rowId: number, text: string, table?: TableLaneFoundTable): ChatMessage {
+  return { ...infoChatMessage(text), tableLane: { rowId, phase: 'fetching', ...(table !== undefined ? { table } : {}) } };
 }
 
 /** open-questions #324 gap 1: a reloaded thread's user bubble, for an

@@ -19,6 +19,13 @@ export function tableLaneEnabled(): boolean {
   return process.env.TABLE_LANE_ENABLED === '1';
 }
 
+/** Session 153 (#363): the CBS table the finder picked, shown in the waiting
+ * bubble. `title` is null when our catalogue mirror could not be read. */
+export interface TableLaneFoundTable {
+  id: string;
+  title: string | null;
+}
+
 /** pollTableLane's result. `done` carries the audited response of the row's
  * outcome (answer, button question or refusal — a failed row's refusal too)
  * as a gated-ok envelope whose netCost is what the row's debit settled to.

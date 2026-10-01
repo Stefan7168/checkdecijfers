@@ -144,8 +144,8 @@ import { buildTableLaneRefusal } from '../backend/answer/table-lane/templates.ts
 import type { OnboardingRouting, TableFinder } from '../backend/answer/intent/policy.ts';
 import { kickTableLaneJob } from '../lib/table-lane-kick.ts';
 import { matchBreakdownReply, tableLaneEnabled } from '../lib/table-lane.ts';
-import type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
-export type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome } from '../lib/table-lane.ts';
+import type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome, TableLaneFoundTable } from '../lib/table-lane.ts';
+export type { PollTableLaneOutcome, ReplyTableLaneChoice, ReplyTableLaneOutcome, TableLaneFoundTable } from '../lib/table-lane.ts';
 import { referenceDate, semanticCheckOptions } from '../lib/turn-options.ts';
 import { createClient } from '../lib/supabase-server.ts';
 // #149 (session-47 hunt): the SAME UUID-shape check the trial action already
@@ -446,7 +446,9 @@ export interface AskOutcome {
    * matched to a CBS table): the queued table_lane_requests row the client
    * polls (pollTableLane) while it shows a progress bubble instead of this
    * turn's routing refusal. Null on every other outcome. */
-  tableLane: { rowId: number } | null;
+  /** Session 153 (#363): the found CBS table travels with the row id so the
+   * waiting bubble can say what it found while the job runs. */
+  tableLane: { rowId: number; table?: TableLaneFoundTable } | null;
 }
 
 // WP135 ⟨A1⟩: the ONLY thread write from the request path — a post-hoc UPDATE
@@ -753,13 +755,14 @@ export async function askQuestion(
           };
         }
         after(() => kickTableLaneJob());
+        const found = await foundTableFor(tableLaneRoutable(gated)?.tableId ?? null);
         return {
           gated: laneGated,
           context: null,
           threadId: validatedThreadId,
           onboardingOffer: null,
           proofRequestUrls: null,
-          tableLane: { rowId: routed.rowId },
+          tableLane: { rowId: routed.rowId, ...(found !== null ? { table: found } : {}) },
         };
       }
     }
@@ -998,6 +1001,20 @@ async function routeToTableLane(
 /** The onboarding envelope of a turn the table lane can take — a gated-ok
  * 'onboarding_pending' / 'onboarding_already_pending' refusal that names a
  * table — else null (see routeToTableLane). */
+/** Session 153 (#363): the found table's id and CBS title for the waiting
+ * bubble — read from our own catalogue mirror (never CBS); any failure is
+ * just no title (the bubble then says only what it did before). */
+async function foundTableFor(tableId: string | null): Promise<TableLaneFoundTable | null> {
+  if (tableId === null) return null;
+  try {
+    const { rows } = await getDb().query('select title from cbs_catalog where table_id = $1', [tableId]);
+    const title = rows[0]?.title;
+    return { id: tableId, title: typeof title === 'string' ? title : null };
+  } catch {
+    return { id: tableId, title: null };
+  }
+}
+
 function tableLaneRoutable(gated: GatedResponse): { tableId: string; confidence: number } | null {
   if (gated.kind !== 'ok') return null;
   const response = gated.response;

@@ -278,7 +278,10 @@ describe('askQuestion — flag on: routed to the table lane', () => {
       // final review I2/I3: the free routing turn's audit row, linked
       routingAuditId: 11,
     });
-    expect(outcome.tableLane).toEqual({ rowId: 42 });
+    expect(outcome.tableLane).toMatchObject({ rowId: 42 });
+    // Session 153 (#363): the found table travels with the row for the waiting
+    // bubble; the title read is fail-soft (this test db has no catalogue → null).
+    expect(outcome.tableLane?.table).toEqual({ id: '85000NED', title: null });
     expect(outcome.onboardingOffer).toBeNull();
     expect(offerToken.signOnboardingOffer).not.toHaveBeenCalled();
     expect(onboarding.onboardingPrice).not.toHaveBeenCalled();
@@ -313,7 +316,7 @@ describe('askQuestion — flag on: routed to the table lane', () => {
     drive(routingRefusal(), 11);
     store.createTableLaneRequest.mockResolvedValue({ kind: 'duplicate', row: laneRow({ id: 40 }) });
     const outcome = await askQuestion('Hoeveel woningen?', RID, null, undefined, null);
-    expect(outcome.tableLane).toEqual({ rowId: 40 });
+    expect(outcome.tableLane).toMatchObject({ rowId: 40 });
     expect(after).toHaveBeenCalledTimes(1);
   });
 
@@ -398,7 +401,7 @@ describe('askQuestion — flag on: routed to the table lane', () => {
     }
     expect(order).toEqual(['web-refund', 'lane-row']);
     expect(billing.compensateSplit).toHaveBeenCalledTimes(1); // never refunded twice
-    expect(outcome.tableLane).toEqual({ rowId: 42 });
+    expect(outcome.tableLane).toMatchObject({ rowId: 42 });
 
     // a throwing settlement: no lane row, no lane debit, no kick
     vi.clearAllMocks();
@@ -515,7 +518,7 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
       routingAuditId: 11,
     });
     // Same money path and shape as a finder-routed question (Task 5).
-    expect(outcome.tableLane).toEqual({ rowId: 51 });
+    expect(outcome.tableLane).toMatchObject({ rowId: 51 });
     expect(outcome.threadId).toBe(3);
     expect(outcome.onboardingOffer).toBeNull();
     expect(offerToken.signOnboardingOffer).not.toHaveBeenCalled();
@@ -635,7 +638,7 @@ describe('askQuestion — follow-ups reuse the previous table (Task 7)', () => {
       finderConfidence: 0.93,
       routingAuditId: 11,
     });
-    expect(outcome.tableLane).toEqual({ rowId: 52 });
+    expect(outcome.tableLane).toMatchObject({ rowId: 52 });
   });
 
   it('R14: the real finder confidently picks the SAME table → the link, with previousQuestion', async () => {

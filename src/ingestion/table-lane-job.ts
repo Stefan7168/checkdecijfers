@@ -43,7 +43,6 @@ import type { TableLaneTable } from '../answer/table-lane/types.ts';
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { attachOrCreateThread } from '../threads/index.ts';
-import { fetchAllCodeLists } from './pipeline.ts';
 import { ensureSlice, registerSchemaOnly, sliceFilterKey, type SliceRequest } from './slice-cache.ts';
 import {
   claimExhaustedTableLaneRequest,
@@ -243,7 +242,14 @@ async function produce(
     // (an already-registered table: never), the plan reuses the same lists.
     let codeLists: TableLaneTable['codeLists'] | null = null;
     const loadCodeLists = async () =>
-      (codeLists ??= await cbsLoad(ctx, 'code lists', () => fetchAllCodeLists(source, row.tableId, schema.dimensions)));
+      // Session 153 (#363): the lists are fetched in PARALLEL here (one small
+      // request per dimension, a handful per table) — the bulk sync keeps
+      // fetchAllCodeLists' one-at-a-time pace for CBS's sake.
+      (codeLists ??= await cbsLoad(ctx, 'code lists', async () =>
+        Object.fromEntries(
+          await Promise.all(schema.dimensions.map(async (d) => [d.name, await source.fetchCodeList(row.tableId, d.name)] as const)),
+        ),
+      ));
     const registered = await registerSchemaOnly(db, source, row.tableId, { schema, codeLists: loadCodeLists });
     if (!registered.ok) {
       // registered_as_full cannot occur (the finder never routes a held

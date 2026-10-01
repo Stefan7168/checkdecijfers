@@ -38,27 +38,29 @@ async function advance(ms: number) {
 }
 
 describe('TableLaneProgress', () => {
-  it('shows the progress text with an AnswerSkeleton look and does not poll before 2 s', async () => {
+  it('shows the progress text with an AnswerSkeleton look and does not poll before 1 s (session 153)', async () => {
     const { container } = setup();
     expect(screen.getByText('CBS-tabel ophalen…')).toBeTruthy();
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(3);
-    await advance(1999);
+    await advance(999);
     expect(pollTableLane).not.toHaveBeenCalled();
     await advance(1);
     expect(pollTableLane).toHaveBeenCalledTimes(1);
     expect(pollTableLane).toHaveBeenCalledWith(41);
   });
 
-  it('polls every 2 s for the first 60 s, then every 15 s', async () => {
+  it('polls every 1 s for the first 20 s, every 2 s until 60 s, then every 15 s (session 153)', async () => {
     setup();
-    await advance(60_000);
-    expect(pollTableLane).toHaveBeenCalledTimes(30);
+    await advance(20_000);
+    expect(pollTableLane).toHaveBeenCalledTimes(20);
+    await advance(40_000);
+    expect(pollTableLane).toHaveBeenCalledTimes(40);
     await advance(14_999);
-    expect(pollTableLane).toHaveBeenCalledTimes(30);
+    expect(pollTableLane).toHaveBeenCalledTimes(40);
     await advance(1);
-    expect(pollTableLane).toHaveBeenCalledTimes(31);
+    expect(pollTableLane).toHaveBeenCalledTimes(41);
     await advance(30_000);
-    expect(pollTableLane).toHaveBeenCalledTimes(33);
+    expect(pollTableLane).toHaveBeenCalledTimes(43);
   });
 
   it('asks its parent to switch to the slow phase after 60 s, once', async () => {
@@ -129,7 +131,7 @@ describe('TableLaneProgress', () => {
   it('keeps polling through a failed poll', async () => {
     pollTableLane.mockRejectedValueOnce(new Error('network'));
     const { props } = setup();
-    await advance(6_000);
+    await advance(3_000);
     expect(pollTableLane).toHaveBeenCalledTimes(3);
     expect(props.onGone).not.toHaveBeenCalled();
   });
@@ -149,3 +151,30 @@ describe('TableLaneProgress', () => {
     expect(pollTableLane).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('TableLaneProgress — what it found and what it is doing (session 153, #363)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    pollTableLane.mockReset();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('names the found CBS table right away, then shows the job\'s real state', async () => {
+    pollTableLane.mockResolvedValueOnce({ status: 'pending' }).mockResolvedValueOnce({ status: 'running' });
+    setup({ table: { id: '84952NED', title: 'Omvang veestapel op agrarische bedrijven' } });
+    expect(screen.getByTestId('table-lane-found').textContent).toBe('Gevonden: CBS-tabel 84952NED — Omvang veestapel op agrarische bedrijven');
+    expect(screen.getByText('CBS-tabel ophalen…')).toBeTruthy();
+    await advance(1_000);
+    expect(screen.getByText('Even wachten, je vraag staat in de rij…')).toBeTruthy();
+    await advance(1_000);
+    expect(screen.getByText('Cijfers ophalen bij het CBS en controleren…')).toBeTruthy();
+  });
+
+  it('without a title names just the table id; without a table shows no found line', () => {
+    setup({ table: { id: '84952NED', title: null } });
+    expect(screen.getByTestId('table-lane-found').textContent).toBe('Gevonden: CBS-tabel 84952NED');
+  });
+});
+

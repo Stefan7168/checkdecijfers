@@ -78,6 +78,10 @@ const nl = {
   // over-budget and gave-up lines, and the breakdown question's hint/no-match
   // lines. The over-budget wording is fixed by the plan's Global Constraints.
   'tableLane.progress': 'CBS-tabel ophalen…',
+  'tableLane.found': 'Gevonden: CBS-tabel {id} — {title}',
+  'tableLane.foundNoTitle': 'Gevonden: CBS-tabel {id}',
+  'tableLane.queued': 'Even wachten, je vraag staat in de rij…',
+  'tableLane.running': 'Cijfers ophalen bij het CBS en controleren…',
   'tableLane.slow': 'Dit duurt langer dan normaal. Het antwoord verschijnt in dit gesprek zodra het klaar is.',
   'tableLane.notReady': 'Het antwoord is nog niet klaar. Het verschijnt in dit gesprek zodra het er is.',
   'tableLane.moreOptionsHint': 'Staat je keuze er niet bij? Typ de naam.',
@@ -1695,6 +1699,10 @@ const en: Messages = {
   'chat.costCredits': '{n} credits',
   'chat.onboardingOfferButton': 'Fetch for {n} credits',
   'tableLane.progress': 'Fetching the CBS table…',
+  'tableLane.found': 'Found: CBS table {id} — {title}',
+  'tableLane.foundNoTitle': 'Found: CBS table {id}',
+  'tableLane.queued': 'One moment, your question is in the queue…',
+  'tableLane.running': 'Fetching the figures from CBS and checking them…',
   'tableLane.slow':
     'This is taking longer than usual. The answer will appear in this conversation as soon as it is ready.',
   'tableLane.notReady': 'The answer is not ready yet. It will appear in this conversation as soon as it is.',

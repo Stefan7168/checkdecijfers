@@ -593,7 +593,7 @@ export function Chat({
   function markTableLaneSlow(rowId: number): void {
     setMessages((m) =>
       m.map((message) =>
-        message.tableLane?.rowId === rowId ? { ...message, tableLane: { rowId, phase: 'slow' as const } } : message,
+        message.tableLane?.rowId === rowId ? { ...message, tableLane: { ...message.tableLane, rowId, phase: 'slow' as const } } : message,
       ),
     );
   }
@@ -630,7 +630,7 @@ export function Chat({
         onThreadId?.(outcome.threadId);
       }
       onOutcome?.(outcome.gated);
-      setMessages((m) => [...m, tableLaneProgressMessage(outcome.tableLane!.rowId, t('tableLane.progress'))]);
+      setMessages((m) => [...m, tableLaneProgressMessage(outcome.tableLane!.rowId, t('tableLane.progress'), outcome.tableLane!.table)]);
       setPending(null);
       setOpenTableLane(null);
       return;
@@ -1648,6 +1648,7 @@ export function Chat({
               <TableLaneProgress
                 rowId={message.tableLane.rowId}
                 phase={message.tableLane.phase}
+                table={message.tableLane.table}
                 onSlow={() => markTableLaneSlow(message.tableLane!.rowId)}
                 onGone={() => replaceTableLaneBubble(message.tableLane!.rowId, infoChatMessage(t('tableLane.notReady')))}
                 onDone={({ gated, threadId }) =>
