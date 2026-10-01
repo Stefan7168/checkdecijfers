@@ -416,6 +416,8 @@ whole question finds nothing and word forms miss ("gesloopt" vs the title's "slo
 - **Rarity weighting (#362):** 'any' mode leaves out words that match more than 6 % of the catalogue (and over 50 tables),
   measured per word from the catalogue — never a list; the rarest word stays when all are common. Live: 28/32 (welfare
   tables now on the shortlist), 0/6 negatives routed. Plus Dutch plural spelling (`dutchSingularStems`): live **31/32**.
+- **Held-out measurement (the honest number):** a frozen second set on 30 new topics, never used for tuning:
+  **27/30 reach a right table (old path 1/30), 0/5 non-questions routed** (`frontdoor:eval -- --live --holdout`).
 - **Read-only end-to-end proof (no owner login needed):** reader → question finder → 85245NED → table parser on live CBS
   metadata → slice {A047215, vans A018935, 2024JJ00}; CBS returns 9,517 for that cell, the answer-key value.
 - **Still open:** traffic deaths, gas use and welfare questions find no confident table; rent increase and welfare are read

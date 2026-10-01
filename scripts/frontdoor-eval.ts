@@ -7,7 +7,7 @@
 //                                         over the whole question; reports
 //                                         whether an expected table is on the
 //                                         shortlist the rerank would see.
-//   FRONTDOOR_LIVE_OK=1 npm run frontdoor:eval -- --live
+//   FRONTDOOR_LIVE_OK=1 npm run frontdoor:eval -- --live [--holdout]
 //                                       — real AI: the intent parse (cheap
 //                                         tier) then the finder exactly as
 //                                         askQuestion wires it (unmatched →
@@ -30,8 +30,15 @@ import { buildOnboardingFinder } from '../src/ingestion/onboarding-finder.ts';
 import { loadOnboardedVocabulary } from '../src/ingestion/onboarding-vocab.ts';
 import { QUESTION_FINDER_CONFIG } from '../src/catalog/types.ts';
 
-const SET_PATH = fileURLToPath(new URL('../benchmark/frontdoor-labelled-set.json', import.meta.url));
-const REPORT_PATH = fileURLToPath(new URL('../benchmark/frontdoor-report.json', import.meta.url));
+// `--holdout` (session 153): the held-out set, never used for tuning
+// (benchmark/frontdoor-holdout-set.json) — its own report file.
+const HOLDOUT = process.argv.includes('--holdout');
+const SET_PATH = fileURLToPath(
+  new URL(HOLDOUT ? '../benchmark/frontdoor-holdout-set.json' : '../benchmark/frontdoor-labelled-set.json', import.meta.url),
+);
+const REPORT_PATH = fileURLToPath(
+  new URL(HOLDOUT ? '../benchmark/frontdoor-holdout-report.json' : '../benchmark/frontdoor-report.json', import.meta.url),
+);
 /** A fixed, never-real user id for the finder's per-user "already pending" lookup (read-only). */
 const MEASUREMENT_USER = '00000000-0000-4000-8000-000000000153';
 

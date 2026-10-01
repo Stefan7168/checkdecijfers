@@ -51,7 +51,8 @@
   the latest value, and a series with period gaps (pigs: April/December) is drawn as bars instead of no chart. Speed (#363):
   measured per step; the waiting bubble now names the found table and the job's real state, polls every 1 s at first, and
   the lane fetches code lists in parallel. Search ranking: catalogue-common words no longer drown the topic word,
-  Dutch plurals reach singular titles (front door 31/32, 0/6 non-questions routed).
+  Dutch plurals reach singular titles (front door 31/32 on the tuning set; **27/30 on a frozen held-out set of new topics**
+  — old path 1/30; 0 non-questions routed).
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated

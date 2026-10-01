@@ -1,0 +1,309 @@
+{
+  "note": "Held-out set for measuring the front door (question reader -> table finder -> table reader): does a realistic Dutch question end at a current CBS table that can answer it? Drafted 2026-10-02 by an agent from the live cbs_catalog mirror, read-only (SELECT only, no LLM calls), on topics that are NOT in benchmark/frontdoor-labelled-set.json, which was used to tune the finder. This set was never used for tuning and must stay that way: do not extend an expectTables list or reword a question after seeing a run; if a case turns out to be wrong, record the correction in the case's 'why' and say so in the measurement report. 30 answerable cases on 30 different topics, each listing every current table (status Regulier, dataset_type Numeric/Mixed, language nl, not eurostat:) that clearly covers the topic; a hit on any listed table counts as correct. 5 negative cases (ids prefixed neg-) have an empty expectTables and must not lead to a table. Word forms were varied on purpose (plurals, past participles, everyday words vs. formal CBS terms, compounds that differ from the CBS title) and about half of the questions carry a year or 'vorig jaar'. The held tables and curated topics (population totals, inflation, unemployment, housing stock, house prices, bankruptcies, solar, consumer confidence, income, GDP, prices, retail, consumption, trade) were excluded.",
+  "cases": [
+    {
+      "id": "wind-power-onshore",
+      "question": "Hoeveel stroom wekten de windmolens op land vorig jaar op?",
+      "expectTables": [
+        "70960ned",
+        "71227ned",
+        "85004NED"
+      ],
+      "why": "'Windenergie op land; productie en capaciteit per provincie', '...naar ashoogte' and 'Hernieuwbare energie; zonnestroom, windenergie, RES-regio' give the electricity produced by onshore wind turbines per year."
+    },
+    {
+      "id": "diesel-price-2023",
+      "question": "Wat betaalden automobilisten in 2023 gemiddeld voor een liter diesel?",
+      "expectTables": [
+        "80416ned",
+        "81567NED",
+        "84991NED"
+      ],
+      "why": "'Pompprijzen motorbrandstoffen; brandstofsoort, per dag', '...locatie tankstation, brandstofsoort' (monthly) and '...per kwartaal' give weighted average diesel prices."
+    },
+    {
+      "id": "train-passengers",
+      "question": "Hoeveel mensen stapten er vorig jaar in de trein?",
+      "expectTables": [
+        "86172NED"
+      ],
+      "why": "'Passagiersvervoer per spoor; reizigers, reizigerskilometers' gives the number of rail travellers per year."
+    },
+    {
+      "id": "museum-visits-2019",
+      "question": "Hoeveel mensen bezochten in 2019 een museum?",
+      "expectTables": [
+        "83533NED"
+      ],
+      "why": "'Musea; collectie, bezoeken, tarieven, tentoonstellingen, werkgelegenheid' counts museum visits per year."
+    },
+    {
+      "id": "library-members",
+      "question": "Hoeveel Nederlanders hebben een bibliotheekpas?",
+      "expectTables": [
+        "82469NED",
+        "70763ned"
+      ],
+      "why": "'Openbare bibliotheken; leden, collectie, uitleningen vanaf 1900' and 'Openbare bibliotheken' give the number of library members and users."
+    },
+    {
+      "id": "sports-club-members",
+      "question": "Hoeveel mensen zijn lid van een voetbalclub of andere sportvereniging?",
+      "expectTables": [
+        "70256NED"
+      ],
+      "why": "'Sportclubs; personeel, exploitatie, ledental, gebruik accommodaties' gives the membership of sports clubs (excluding water sports and professional clubs)."
+    },
+    {
+      "id": "working-from-home-hours",
+      "question": "Hoeveel uur per week werken Nederlanders gemiddeld vanuit huis?",
+      "expectTables": [
+        "85786NED"
+      ],
+      "why": "'Werkzame beroepsbevolking, thuiswerkuren' gives the average number of hours worked at home per week."
+    },
+    {
+      "id": "freelancers-no-staff",
+      "question": "Hoeveel zzp'ers zijn er in Nederland?",
+      "expectTables": [
+        "85077NED"
+      ],
+      "why": "'Zelfstandigen; persoonskenmerken en bedrijfstak (SBI 2008)' counts self-employed people, split into those with (zmp) and without (zzp) personnel."
+    },
+    {
+      "id": "government-debt",
+      "question": "Hoe hoog is de staatsschuld van Nederland?",
+      "expectTables": [
+        "84118NED",
+        "84119NED"
+      ],
+      "why": "'Saldo en schuld; overheidssectoren' (EMU-schuld) and 'Overheidsschuld; schuldtitel, geldgever, waarderingsgrondslag, sectoren' give the size of general-government debt."
+    },
+    {
+      "id": "municipal-levies",
+      "question": "Hoeveel geld krijgen gemeenten binnen via lokale belastingen zoals de OZB en de afvalstoffenheffing?",
+      "expectTables": [
+        "84415NED"
+      ],
+      "why": "'Gemeenterekeningen; gemeentelijke heffingen, gemeentegrootteklasse, regio' gives the realised revenue of municipal levies in millions of euros and euros per inhabitant."
+    },
+    {
+      "id": "online-fraud-victims-2023",
+      "question": "Hoeveel mensen zijn in 2023 slachtoffer geworden van oplichting via internet?",
+      "expectTables": [
+        "85472NED",
+        "85846NED"
+      ],
+      "why": "'Slachtofferschap online criminaliteit; regio' and '...persoonskenmerken' give victimisation by online fraud, hacking and threats in the twelve months before the survey."
+    },
+    {
+      "id": "prisoners-2022",
+      "question": "Hoeveel mensen zaten er in 2022 in de gevangenis?",
+      "expectTables": [
+        "85836NED",
+        "85841NED"
+      ],
+      "why": "'Gedetineerden; persoonskenmerken' (all persons detained in a year) and 'Gedetineerden op 30 september; verblijfstitel, strafduur, misdrijf' count detainees."
+    },
+    {
+      "id": "early-school-leavers",
+      "question": "Hoeveel jongeren stoppen met school zonder diploma?",
+      "expectTables": [
+        "84780NED",
+        "85298NED",
+        "85367NED",
+        "85368NED"
+      ],
+      "why": "'Voortijdig schoolverlaters; geslacht, woonregio', '...geslacht, leeftijd en herkomst', '...geslacht, onderwijssoort en herkomst' and 'Jongeren; voortijdig schoolverlaters, geslacht, herkomst' count early school leavers."
+    },
+    {
+      "id": "life-expectancy-newborn-boy",
+      "question": "Hoe oud wordt een pasgeboren jongetje gemiddeld in Nederland?",
+      "expectTables": [
+        "37360ned",
+        "80333ned"
+      ],
+      "why": "'Levensverwachting; geslacht, leeftijd (per jaar en periode van vijf jaren)' and 'Levensverwachting; geslacht, geboortegeneratie' give life expectancy at birth by sex."
+    },
+    {
+      "id": "prescription-medicine-users-2021",
+      "question": "Hoeveel mensen slikten in 2021 medicijnen op recept?",
+      "expectTables": [
+        "81071ned",
+        "83250NED",
+        "83251NED",
+        "85418NED",
+        "81074NED"
+      ],
+      "why": "'Personen met verstrekte geneesmiddelen; leeftijd en geslacht' (and the regio, herkomst and inkomen editions) give the number and percentage of people who were dispensed reimbursed medicines in a year."
+    },
+    {
+      "id": "daily-internet-users",
+      "question": "Hoeveel procent van de Nederlanders is elke dag online?",
+      "expectTables": [
+        "84888NED"
+      ],
+      "why": "'Internettoegang en internetactiviteiten; persoonskenmerken' gives internet access and use by people aged 12 and over."
+    },
+    {
+      "id": "innovating-companies",
+      "question": "Hoeveel Nederlandse bedrijven kwamen met een nieuw product of een nieuwe dienst?",
+      "expectTables": [
+        "80066ned",
+        "85011NED"
+      ],
+      "why": "'Bedrijven met innovaties; kerncijfers' and 'Innovatie bij bedrijven; type innovatie en ontwikkeling van innovaties' count companies with product innovations."
+    },
+    {
+      "id": "organic-farms",
+      "question": "Hoeveel boeren telen hun gewassen biologisch?",
+      "expectTables": [
+        "85853NED"
+      ],
+      "why": "'Biologische landbouw; gewassen, dieren, grondgebruik en arbeid' gives area and number of farms per crop and animal type for organically certified holdings."
+    },
+    {
+      "id": "built-up-land",
+      "question": "Hoeveel procent van Nederland is bebouwd gebied?",
+      "expectTables": [
+        "37105",
+        "70262ned"
+      ],
+      "why": "'Bodemgebruik; verkorte gebruiksvorm, per provincie, vanaf 1900' and 'Bodemgebruik; uitgebreide gebruiksvorm, per gemeente' give the area of built-up land against the total land area."
+    },
+    {
+      "id": "sick-leave-rate",
+      "question": "Hoeveel procent van de werknemers meldde zich vorig jaar ziek?",
+      "expectTables": [
+        "80072ned",
+        "85998NED",
+        "86009NED",
+        "86010NED",
+        "86011NED"
+      ],
+      "why": "'Ziekteverzuimpercentage; bedrijfstakken (SBI 2008) en bedrijfsgrootte' and the 'Ziekteverzuim volgens werknemers' tables give the sick-leave rate."
+    },
+    {
+      "id": "loneliness",
+      "question": "Hoeveel mensen voelen zich eenzaam?",
+      "expectTables": [
+        "85766NED"
+      ],
+      "why": "'Eenzaamheid; persoonskenmerken' gives loneliness among people aged 15 and over."
+    },
+    {
+      "id": "people-who-moved-2022",
+      "question": "Hoeveel mensen zijn er in 2022 verhuisd?",
+      "expectTables": [
+        "60048ned",
+        "84547NED",
+        "81734NED"
+      ],
+      "why": "'Verhuisde personen; binnen gemeenten, tussen gemeenten, regio', 'Verhuisde personen; geslacht, leeftijd en regio per maand' and 'Tussen gemeenten verhuisde personen' count people who moved house."
+    },
+    {
+      "id": "child-poverty-2023",
+      "question": "Hoeveel kinderen groeiden in 2023 op in armoede?",
+      "expectTables": [
+        "86132NED",
+        "86127NED",
+        "86131NED",
+        "83842NED"
+      ],
+      "why": "'Armoede van kinderen; persoons- en huishoudenskenmerken, regio (2025)', 'Armoede van personen; persoons- en huishoudenskenmerken' (and its regio edition) and 'Laag en langdurig laag inkomen van personen; huishoudenskenmerken' (all persons and minor children) count people and children in poverty."
+    },
+    {
+      "id": "household-wealth",
+      "question": "Hoeveel bezit een gemiddeld huishouden in Nederland aan spaargeld en andere bezittingen?",
+      "expectTables": [
+        "83834NED",
+        "83835NED",
+        "86160NED"
+      ],
+      "why": "'Vermogen van huishoudens; huishoudenskenmerken, vermogensbestanddelen', '...vermogensklassen' and '...regio (indeling 2025)' give the average net wealth and its components per household."
+    },
+    {
+      "id": "sea-containers-handled",
+      "question": "Hoeveel containers kwamen er vorig jaar via de Nederlandse zeehavens binnen?",
+      "expectTables": [
+        "85601NED"
+      ],
+      "why": "'Zeevaart; overgeslagen containers, gewicht, containergrootte en stromen' gives the number of containers handled in Dutch seaports per flow (inward and outward)."
+    },
+    {
+      "id": "electricity-generated",
+      "question": "Hoeveel elektriciteit wordt er jaarlijks in Nederland opgewekt?",
+      "expectTables": [
+        "37823wkk",
+        "86266NED",
+        "84575NED"
+      ],
+      "why": "'Elektriciteit; productie en productiemiddelen', 'Elektriciteit en warmte; productie, inzet en vermogen naar energiedrager' and 'Elektriciteitsbalans; aanbod en verbruik' give the electricity produced in the Netherlands."
+    },
+    {
+      "id": "theatre-visitors-2019",
+      "question": "Hoeveel bezoekers trokken de theaters en schouwburgen in 2019?",
+      "expectTables": [
+        "70077NED"
+      ],
+      "why": "'Podia voor professionele podiumkunsten; voorstellingen, bezoek, regio' gives performances and visitors of venues for professional performing arts."
+    },
+    {
+      "id": "eggs-produced",
+      "question": "Hoeveel eieren leggen de Nederlandse kippen per jaar?",
+      "expectTables": [
+        "86338NED"
+      ],
+      "why": "'Pluimveehouderijen; consumptie-eieren' gives the number of consumption eggs produced per year on farms with more than 250 poultry."
+    },
+    {
+      "id": "new-dutch-citizens-2022",
+      "question": "Hoeveel mensen hebben in 2022 de Nederlandse nationaliteit gekregen?",
+      "expectTables": [
+        "85630NED",
+        "37199ned"
+      ],
+      "why": "'Nationaliteitswijzigingen; geslacht, nationaliteit en regeling' and 'Nationaliteitswijziging; geslacht, leeftijd, soort regeling, verblijfsduur' count people who acquired Dutch nationality other than by birth."
+    },
+    {
+      "id": "strike-days-lost-2023",
+      "question": "Hoeveel werkdagen gingen er in 2023 verloren door stakingen?",
+      "expectTables": [
+        "60061ned",
+        "84376NED",
+        "71097ned"
+      ],
+      "why": "'Werkstakingen: geschillen, verloren arbeidsdagen, werknemers; kenmerken' (and the bedrijfstak edition) and 'Historie werkstakingen' give the number of working days lost to strikes per year."
+    },
+    {
+      "id": "neg-forecast",
+      "question": "Wat is de gemiddelde dieselprijs in de zomer van volgend jaar?",
+      "expectTables": [],
+      "why": "Forecast of a future price; CBS publishes only realised pump prices, so the product must refuse instead of extrapolating."
+    },
+    {
+      "id": "neg-causal",
+      "question": "Waarom voelen jongeren zich tegenwoordig eenzamer?",
+      "expectTables": [],
+      "why": "Causal 'why' question; CBS tables give shares, not reasons."
+    },
+    {
+      "id": "neg-smalltalk",
+      "question": "Goedemorgen! Hoe gaat het met je vandaag?",
+      "expectTables": [],
+      "why": "Smalltalk, not a statistics question."
+    },
+    {
+      "id": "neg-opinion",
+      "question": "Vind jij dat de btw op boeken omlaag moet?",
+      "expectTables": [],
+      "why": "Asks for a political opinion, not for a number."
+    },
+    {
+      "id": "neg-non-statistics",
+      "question": "Schrijf een sollicitatiebrief voor een baan als verpleegkundige.",
+      "expectTables": [],
+      "why": "A writing task, not a statistics question."
+    }
+  ]
+}
