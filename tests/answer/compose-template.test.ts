@@ -421,3 +421,41 @@ describe('renderTrendHeadline (#197 idea 4)', () => {
     expect(renderTrendHeadline(result, derivation)).toBeUndefined();
   });
 });
+
+describe('series template — latest first (session 153, owner: "a 13-value list is a mess")', () => {
+  const values: [string, string, number, string][] = [
+    ['2020MM04', '2020 april', 11860, 'Definitief'], ['2020MM12', '2020 december', 11541, 'Definitief'],
+    ['2021MM04', '2021 april', 11372, 'Definitief'], ['2021MM12', '2021 december', 10872, 'Definitief'],
+    ['2022MM04', '2022 april', 11235, 'Definitief'], ['2022MM12', '2022 december', 10706, 'Definitief'],
+    ['2023MM04', '2023 april', 10770, 'Definitief'], ['2023MM12', '2023 december', 10375, 'Definitief'],
+    ['2024MM04', '2024 april', 10418, 'Definitief'], ['2024MM12', '2024 december', 10192, 'Definitief'],
+    ['2025MM04', '2025 april', 9658, 'Definitief'], ['2025MM12', '2025 december', 9482, 'Voorlopig'],
+    ['2026MM04', '2026 april', 9188, 'Voorlopig'],
+  ];
+  const pigs = makeResult({
+    shape: 'series',
+    cells: values.map(([periodCode, periodLabel, value, status]) =>
+      makeCell({ table: '84952NED', measure: 'T001264', measureTitle: 'Veestapel', region: null, periodCode, periodLabel, value, unit: 'x 1000', status }),
+    ),
+  });
+
+  it('leads with the latest value, then a year earlier and the start — each with its own period and marking', () => {
+    const body = renderTemplateBody(pigs);
+    const sentences = body.split('. ');
+    expect(sentences[0]).toContain('2026 april');
+    expect(sentences[0]).toContain('9.188');
+    expect(sentences[0]).toContain('voorlopig cijfer');
+    expect(body).toContain('Een jaar eerder, in 2025 april');
+    expect(body).toContain('9.658');
+    expect(body).toContain('Aan het begin van deze reeks, in 2020 april');
+    expect(body).not.toContain('per periode');
+    expect(body).not.toContain('10.192'); // the middle of the series is the chart's job
+    expect(validateAnswerBody(body, pigs).problems).toEqual([]);
+  });
+
+  it('a short series keeps the full per-period list', () => {
+    const short = makeResult({ ...pigs, shape: 'series', cells: pigs.cells.slice(-3) });
+    expect(renderTemplateBody(short)).toContain('per periode');
+  });
+});
+

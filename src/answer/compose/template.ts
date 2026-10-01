@@ -111,10 +111,44 @@ function renderSingle(result: ValidatedResult): string {
   return `${subjectSentenceStart(result)}${regionPhrase(cell)} was in ${cell.periodLabel} ${displayValueUnit(cell.value, cell.decimals, cell.unit)}${provisionalSuffix(cell)}.`;
 }
 
+/** Session 153: from this many cells on, the series template leads with the
+ * latest value instead of listing every period (owner: a 13-value list "is a
+ * mess"). Shorter series keep the full list. */
+export const SERIES_LATEST_FIRST_MIN_CELLS = 4;
+
+/** The cell at the same period one year before `cell` (same grain, same
+ * month/quarter), when the series holds it. */
+function yearEarlierCell(cells: ResultCell[], cell: ResultCell): ResultCell | undefined {
+  const m = /^(\d{4})(.*)$/.exec(cell.periodCode);
+  if (!m) return undefined;
+  const code = `${Number(m[1]) - 1}${m[2]}`;
+  return cells.find((c) => c.periodCode === code);
+}
+
 function renderSeries(result: ValidatedResult): string {
   // Claims-free: the values per period, nothing more. Trend prose is the
   // LLM path's job (bound to the direction derivation); the template only
   // states what the cells state.
+  const latest = result.cells[result.cells.length - 1];
+  // Only a plain one-place series: region_series' claim-free floor also lands
+  // here, and its body is re-derived byte for byte by the audit (reconstruct.ts).
+  const onePlace = result.shape === 'series' && new Set(result.cells.map((c) => c.regionCode)).size === 1;
+  if (onePlace && result.cells.length >= SERIES_LATEST_FIRST_MIN_CELLS && latest !== undefined && latest.value !== null) {
+    // Latest first (session 153): the newest value, the same period a year
+    // earlier, and the start of the series — each in its own sentence with
+    // its own period and provisional marking (R9/R11); still no trend word.
+    const valueOf = (cell: ResultCell) => `${displayValueUnit(cell.value!, cell.decimals, cell.unit)}${provisionalSuffix(cell)}`;
+    const sentences = [`${subjectSentenceStart(result)}${regionPhrase(latest)} was in ${latest.periodLabel} ${valueOf(latest)}.`];
+    const yearEarlier = yearEarlierCell(result.cells, latest);
+    if (yearEarlier !== undefined && yearEarlier.value !== null) {
+      sentences.push(`Een jaar eerder, in ${yearEarlier.periodLabel}, was dat ${valueOf(yearEarlier)}.`);
+    }
+    const first = result.cells[0]!;
+    if (first !== yearEarlier && first.value !== null) {
+      sentences.push(`Aan het begin van deze reeks, in ${first.periodLabel}, was dat ${valueOf(first)}.`);
+    }
+    return sentences.join(' ');
+  }
   const lines = result.cells.map((cell) => cellLine(cell)).join('; ');
   return `${subjectSentenceStart(result)} per periode: ${lines}.`;
 }
