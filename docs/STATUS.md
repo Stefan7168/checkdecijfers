@@ -44,11 +44,13 @@
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated
-  question reader turned the topic away before any table search. Built (code only, no prompt change): a whole-question
+  question reader turned the topic away before any table search. Built (no existing prompt changed): a whole-question
   table search (any word, prefix, Dutch participle base) used for out-of-scope questions and as the fallback for unplaced
   topics, behind the table-lane switch. Measured on 38 real questions: **5 → 22 of 32 reach a right table, 0 of 6
-  non-questions routed.** `37789ksz` eviction HELD (welfare questions do not reliably reach their table yet). Next: the
-  meaning-gap step (#362).
+  non-questions routed;** then the meaning step (the cheap model proposes CBS-style search words on a no-pick): **27 of 32**.
+  Read-only end-to-end proof: the vans question lands on the CBS cell 9,517. `37789ksz` eviction HELD (welfare questions
+  do not reliably reach their table yet). AI spend this session ~$7. Next: a live re-check by the owner, then the
+  `37789ksz` decision.
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,
@@ -114,8 +116,8 @@
 
 **▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
 The CBS any-table route is LIVE (`TABLE_LANE_ENABLED=1`, CI gate enforced). Single priority: widen the front door —
-the meaning-gap step ([#362](open-questions.md): an AI step proposing CBS's formal search words; measure with
-`npm run frontdoor:eval`, today 22/32), then a live re-check by the owner, then evict `37789ksz`. Then the Eurostat route.
+the front door is at 27/32 (`npm run frontdoor:eval`, [#362](open-questions.md)); the owner's live re-check of the vans
+question (expected 9,517) is pending; then the remaining misses (welfare!) before evicting `37789ksz`. Then the Eurostat route.
 The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables

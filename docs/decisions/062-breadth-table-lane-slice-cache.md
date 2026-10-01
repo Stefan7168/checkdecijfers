@@ -404,9 +404,19 @@ whole question finds nothing and word forms miss ("gesloopt" vs the title's "slo
   refusal (audit row 338) was this bar, found by reproducing the finder on the live catalogue.
 - **Measured** (`npm run frontdoor:eval`, 38 questions drafted by an agent from the live catalogue: 32 about
   non-curated tables, 6 that must not route; four expected-table lists extended after review): **before 6/32 reach a
-  right table, after 22/32 (with the 0.7 bar); 0/6 negatives routed.** Three live runs + one rerank sweep, ~$2.10.
-- **Open ([#362](../open-questions.md)):** the 10 misses are meaning gaps word search cannot bridge ("getrouwd" vs
-  "huwelijkssluitingen", "te zwaar" vs "overgewicht", "huisvuil" vs "huishoudelijk afval"). Candidate fix: a small AI step that proposes CBS's formal search words (a new LLM role).
+  right table, after 22/32 with the 0.7 bar, 27/32 with the meaning step below; 0/6 negatives routed.** Four live runs +
+  one rerank sweep, ~$2.75.
+- **The meaning step ([#362](../open-questions.md), `src/catalog/search-terms.ts`):** the 10 misses were meaning gaps word
+  search cannot bridge ("getrouwd" vs "huwelijkssluitingen", "te zwaar" vs "overgewicht"). When the question finder finds
+  no confident table, the cheap model proposes up to 6 CBS-style search words (validated: plain words only, no codes or
+  numbers; any failure = no retry) and the finder searches ONCE more with them; the rerank still judges against the
+  reader's own question. The model proposes search words only — never a table, code or number (principle a). Like the
+  rerank, the call lives inside the finder and is not written to `audit_answers.llm_calls` (pre-existing: no finder call
+  is). **Measured: 26/32 (27/32 after one more expected-table gap was fixed), 0/6 negatives routed.**
+- **Read-only end-to-end proof (no owner login needed):** reader → question finder → 85245NED → table parser on live CBS
+  metadata → slice {A047215, vans A018935, 2024JJ00}; CBS returns 9,517 for that cell, the answer-key value.
+- **Still open:** traffic deaths, gas use and welfare questions find no confident table; rent increase and welfare are read
+  as curated-like and end in a clarification; household waste per person picks a sector total (not per person).
 
 ## Trade-offs and open points (after step 5)
 

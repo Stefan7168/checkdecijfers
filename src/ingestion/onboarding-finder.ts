@@ -14,6 +14,7 @@ import type { LlmClient } from '../answer/llm/client.ts';
 import type { OnboardingRouting, TableFinder } from '../answer/intent/policy.ts';
 import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
+import { suggestSearchTerms } from '../catalog/search-terms.ts';
 import { candidateWalk } from '../catalog/walk.ts';
 import type { FindTableConfig, RerankFn } from '../catalog/types.ts';
 import type { RecallOptions } from '../catalog/recall.ts';
@@ -43,6 +44,11 @@ export interface OnboardingFinderDeps {
   /** Session 153: the confidence bar for this finder (QUESTION_FINDER_CONFIG
    * for the question finder). Absent → DEFAULT_FIND_TABLE_CONFIG. */
   findConfig?: FindTableConfig;
+  /** Session 153 (#362, the meaning step): when set, a search that finds no
+   * confident table gets ONE retry on CBS-style search words the cheap model
+   * proposes for the question (src/catalog/search-terms.ts). Set only for the
+   * question finder; absent → no extra call, byte-identical. */
+  searchTermsClient?: LlmClient;
 }
 
 /** Produces the TableFinder the answer pipeline injects. Absent injection →
@@ -71,7 +77,15 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
     try {
       // Recall runs on the TERM; the rerank prompt additionally sees the full
       // QUESTION (WP27 stage A — the stock-vs-flow signal, ADR 027 D3a).
-      const outcome = await findTable(deps.db, { topic: term, question }, { rerank, ...(deps.recall ? { recall: deps.recall } : {}), ...(deps.findConfig ? { config: deps.findConfig } : {}) });
+      const findOptions = { rerank, ...(deps.recall ? { recall: deps.recall } : {}), ...(deps.findConfig ? { config: deps.findConfig } : {}) };
+      let outcome = await findTable(deps.db, { topic: term, question }, findOptions);
+      if (outcome.kind !== 'confident' && deps.searchTermsClient) {
+        const terms = await suggestSearchTerms(question, deps.searchTermsClient);
+        if (terms.length > 0) {
+          const retry = await findTable(deps.db, { topic: terms.join(' '), question }, findOptions);
+          if (retry.kind === 'confident') outcome = retry;
+        }
+      }
       if (outcome.kind !== 'confident') return null;
 
       // Confident pick → does this user already have an active fetch for this

@@ -699,6 +699,7 @@ export async function askQuestion(
                 rerankClient: new AnthropicLlmClient(),
                 recall: { mode: 'any' },
                 findConfig: QUESTION_FINDER_CONFIG,
+                searchTermsClient: new AnthropicLlmClient(),
               }),
             }
           : {}),

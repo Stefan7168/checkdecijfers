@@ -67,6 +67,7 @@ try {
         rerankClient: client!,
         recall: { mode: 'any' },
         findConfig: QUESTION_FINDER_CONFIG,
+        searchTermsClient: client!,
       })
     : null;
 

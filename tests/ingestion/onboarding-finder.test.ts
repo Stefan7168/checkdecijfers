@@ -120,6 +120,41 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(await standard(CONFIDENT_TOPIC, QUESTION)).toBeNull();
   });
 
+  it('session 153 (#362): no confident pick → ONE retry on the suggested search words; a confident retry routes', async () => {
+    const topics: string[] = [];
+    const rerank: RerankFn = (query, shortlist) => {
+      topics.push(query.topic);
+      return Promise.resolve({
+        tableId: shortlist[0]!.tableId,
+        confidence: query.topic === 'koopwoningen prijsindex' ? 0.95 : 0.5,
+        reading: 'stub',
+        alternativeIds: [],
+      });
+    };
+    const termsClient = {
+      calls: 0,
+      async complete() {
+        this.calls++;
+        return { outputText: '{"terms":["koopwoningen","prijsindex"]}', model: 'stub', stopReason: 'end_turn', usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    };
+    const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank, recall: { mode: 'any' }, searchTermsClient: termsClient });
+    const routing = await finder(QUESTION, QUESTION);
+    expect(routing).not.toBeNull();
+    expect(topics).toEqual([QUESTION, 'koopwoningen prijsindex']);
+    expect(routing!.topicTerm).toBe(QUESTION);
+    expect(termsClient.calls).toBe(1);
+  });
+
+  it('session 153 (#362): a confident first search never calls the meaning step; no client → no retry', async () => {
+    const termsClient = { calls: 0, async complete() { this.calls++; throw new Error('must not be called'); } };
+    const confident = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95), recall: { mode: 'any' }, searchTermsClient: termsClient });
+    expect(await confident(QUESTION, QUESTION)).not.toBeNull();
+    expect(termsClient.calls).toBe(0);
+    const plain = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.5), recall: { mode: 'any' } });
+    expect(await plain(QUESTION, QUESTION)).toBeNull();
+  });
+
   it('threads the FULL question into the rerank query (WP27 stage A, ADR 027 D3a)', async () => {
     let seen: FindTableQuery | null = null;
     const capturing: RerankFn = (query, shortlist) => {

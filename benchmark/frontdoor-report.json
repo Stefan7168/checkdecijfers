@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generatedAt": "2026-10-01T07:22:37.782Z",
+    "generatedAt": "2026-10-01T08:07:21.340Z",
     "live": true,
     "cases": 38,
     "positives": 32,
     "recallOnShortlist": "22/32",
-    "beforeReachesRightTable": "5/32",
-    "afterReachesRightTable": "22/32",
+    "beforeReachesRightTable": "6/32",
+    "afterReachesRightTable": "26/32",
     "negativesRoutedToATable": "0/6"
   },
   "rows": [
@@ -95,7 +95,7 @@
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "84545NED",
-      "viaOutOfScope": true,
+      "viaOutOfScope": false,
       "hit": true
     },
     {
@@ -137,10 +137,10 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "60036ned",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "overweight-share",
@@ -148,10 +148,10 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "81565NED",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "rent-increase-2024",
@@ -170,9 +170,9 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
+      "outcome": "onboarding",
+      "picked": "83554NED",
+      "viaOutOfScope": true,
       "hit": false
     },
     {
@@ -225,10 +225,10 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "7052_95",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "co2-emissions-2023",
@@ -247,9 +247,9 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
+      "outcome": "onboarding",
+      "picked": "85484NED",
+      "viaOutOfScope": true,
       "hit": false
     },
     {
@@ -258,10 +258,10 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "82472NED",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "cycle-path-length",

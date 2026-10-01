@@ -212,9 +212,10 @@
       "expectTables": [
         "85468NED",
         "83474NED",
-        "37259ned"
+        "37259ned",
+        "85484NED"
       ],
-      "why": "'Immigratie en emigratie; geslacht, leeftijd, geboorteland, regio' counts emigrants; the 'Bevolkingsontwikkeling' tables also list immigration and emigration."
+      "why": "'Immigratie en emigratie; geslacht, leeftijd, geboorteland, regio' counts emigrants; the 'Bevolkingsontwikkeling' tables also list immigration and emigration. 85484NED (Immi- en emigratie; per maand, ... — monthly AND yearly) added after the meaning-step run picked it."
     },
     {
       "id": "cars-on-the-road",
