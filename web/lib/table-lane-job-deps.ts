@@ -11,6 +11,9 @@
 import type { AuditedRespondOptions } from '../backend/answer/audit/respond-audited.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import { ODataV4Source } from '../backend/cbs-adapter/odata-v4.ts';
+import { StatisticsApiSource } from '../backend/eurostat-adapter/statistics-api.ts';
+import { eurostatFinderEnabled } from '../backend/catalog/recall.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../backend/sources/registry.ts';
 import type { Db } from '../backend/db/types.ts';
 import type { TableLaneJobDeps } from '../backend/ingestion/table-lane-job.ts';
 import { englishAnswerOptions } from './english-answers.ts';
@@ -18,9 +21,18 @@ import { referenceDate, semanticCheckOptions } from './turn-options.ts';
 
 export function tableLaneJobDeps(db: Db): TableLaneJobDeps {
   const today = referenceDate();
+  const cbs = new ODataV4Source();
+  let eurostatSource: StatisticsApiSource | null = null;
+  const eurostat = () => (eurostatSource ??= new StatisticsApiSource(fetch, { structureLayout: { decimals: 'observed' } }));
   return {
     db,
-    source: new ODataV4Source(),
+    source: cbs,
+    // Session 153 (Eurostat study step 4, DARK): a `eurostat:` table is read from
+    // Eurostat — its structure, decimals from a small read of real values — but
+    // ONLY while the Eurostat finder is switched on; otherwise every row keeps
+    // the CBS source exactly as before (a stray eurostat id then fails closed).
+    sourceFor: (tableId: string) =>
+      sourceKeyForTableId(tableId) === EUROSTAT_SOURCE_KEY && eurostatFinderEnabled() ? eurostat() : cbs,
     // The parser's own model constant lives inside tableParse.
     parseClient: new AnthropicLlmClient(),
     referenceDate: today,

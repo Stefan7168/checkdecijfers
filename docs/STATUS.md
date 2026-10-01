@@ -54,8 +54,8 @@
   Dutch plurals reach singular titles (front door 31/32 on the tuning set; **27/30 on a frozen held-out set of new topics**
   — old path 1/30; 0 non-questions routed). Eurostat (dark): the Dutch → English search bridge takes Dutch Eurostat
   questions from 0/12 to 10/12 in the shortlist (#357), and the lane now PLANS a Eurostat dataset correctly in a hermetic
-  test (totals, freq, Dutch country names); next: the source-aware job, then the table-reader recording and the
-  public-claim sweep (owner).
+  test (totals, freq, Dutch country names); the source-aware job is built too (dark); next: the table-reader
+  recording and the public-claim sweep (owner), then switching the Eurostat finder on.
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated

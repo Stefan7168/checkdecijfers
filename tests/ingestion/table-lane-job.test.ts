@@ -599,6 +599,31 @@ describe('runTableLaneJob — question and refusals', () => {
   });
 });
 
+describe('runTableLaneJob — the per-table source (session 153, Eurostat study step 4)', () => {
+  it('sourceFor picks the source for the row\'s table; the default source is never touched', async () => {
+    const userId = await seedUser();
+    await queue(userId);
+    const real = await makeSource();
+    const untouchable = new Proxy({} as CbsSource, {
+      get() {
+        throw new Error('the default source must not be used when sourceFor is given');
+      },
+    });
+    const asked: string[] = [];
+    const summary = await runTableLaneJob(
+      deps(untouchable, new ScriptedParseClient([amsterdam()]), {
+        sourceFor: (tableId) => {
+          asked.push(tableId);
+          return real;
+        },
+      }),
+    );
+    expect(summary.answered).toBe(1);
+    expect(asked.length).toBeGreaterThan(0);
+    expect(new Set(asked).size).toBe(1);
+  });
+});
+
 describe('runTableLaneJob — CBS unreachable (settled choices 1 + 2)', () => {
   it('a fetch failure twice with a fresh (< 24 h) cached slice answers from it (fromCachedSlice)', async () => {
     const userId = await seedUser();

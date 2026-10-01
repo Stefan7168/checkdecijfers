@@ -73,6 +73,12 @@ export const TABLE_LANE_CACHED_SLICE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export interface TableLaneJobDeps {
   db: Db;
   source: CbsSource;
+  /** Session 153 (Eurostat study step 4): the source for ONE table id, when the
+   * route serves more than one source. Absent → `source` for every row
+   * (today's behaviour). The web wiring returns the Eurostat adapter only for
+   * a `eurostat:` id AND only while EUROSTAT_FINDER_ENABLED is on (D3: never
+   * named publicly before it answers), else `source`. */
+  sourceFor?: (tableId: string) => CbsSource;
   /** The table-parse client (the parser's own model constant lives in tableParse). */
   parseClient: LlmClient;
   /** Compose / semantic-check / translate clients for one row's language —
@@ -159,7 +165,8 @@ type SliceOutcome =
 /** Step 4. Never called under a lock: ensureSlice takes the EXCLUSIVE
  * per-table lock itself, and this job holds no transaction around it. */
 async function ensureWithFallback(ctx: Ctx, tableId: string, slice: SliceRequest): Promise<SliceOutcome> {
-  const { db, source } = ctx.deps;
+  const { db } = ctx.deps;
+  const source = ctx.deps.sourceFor?.(tableId) ?? ctx.deps.source;
   let result = await ensureSlice(db, source, tableId, slice);
   if (!result.ok && result.stage === 'fetch') {
     // Settled choice 2: a transient outage, or CBS briefly serving an older
@@ -224,7 +231,8 @@ async function produce(
   row: TableLaneRow,
   seen: { title: string | null; plan: TableLanePlan | null },
 ): Promise<AuditedResponse> {
-  const { db, source, parseClient, referenceDate } = ctx.deps;
+  const { db, parseClient, referenceDate } = ctx.deps;
+  const source = ctx.deps.sourceFor?.(row.tableId) ?? ctx.deps.source;
   const respond = (extra: Pick<RespondTableLaneInput, 'plan' | 'fetch' | 'refusalOverride' | 'startedAt'>) =>
     respondTableLane(db, {
       row,
