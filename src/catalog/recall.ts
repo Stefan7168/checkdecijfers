@@ -194,6 +194,27 @@ const QUESTION_FUNCTION_WORDS = new Set([
   'vorig', 'vorige', 'afgelopen', 'laatste', 'eerste', 'tussen', 'sinds', 'vanaf', 'meeste', 'minste',
 ]);
 
+/** Session 153 (#362): Dutch plural spelling, so a plural in a question
+ * reaches the singular a CBS title is indexed under ("verkeersongevallen" →
+ * "verkeersongeval", "huren" → "huur", "huizen" → "huis"). Spelling rules
+ * only — an undoubled final consonant, a lengthened vowel in an open
+ * syllable, final z/v → s/f — never a list of topics. Words not ending in
+ * "-en", or too short to have a stem of 3+ letters, give nothing. */
+export function dutchSingularStems(word: string): string[] {
+  const m = /^([a-z\u00e0-\u00ff]{3,})en$/.exec(word);
+  if (!m) return [];
+  let stem = m[1]!;
+  const out = new Set<string>();
+  if (/([bcdfghjklmnpqrstvwxz])\1$/.test(stem)) stem = stem.slice(0, -1);
+  else if (/[bcdfghjklmnpqrstvwxz][aeou][bcdfghjklmnpqrstvwxz]$/.test(stem)) {
+    stem = `${stem.slice(0, -1)}${stem.at(-2)}${stem.at(-1)}`;
+  }
+  out.add(stem);
+  if (stem.endsWith('z')) out.add(`${stem.slice(0, -1)}s`);
+  if (stem.endsWith('v')) out.add(`${stem.slice(0, -1)}f`);
+  return [...out].filter((s) => s.length >= 3);
+}
+
 /** Content words of free text, lower case, letters/digits only (so they are
  * safe inside to_tsquery), at least 4 characters, no numbers, no function
  * words. A Dutch past participle "ge…t"/"ge…d" ("gesloopt", "geregistreerd")
@@ -206,6 +227,7 @@ export function contentWords(text: string): string[] {
     out.add(raw);
     const participle = /^ge([a-z\u00e0-\u00ff]{3,})[td]$/.exec(raw);
     if (participle) out.add(participle[1]!);
+    for (const singular of dutchSingularStems(raw)) out.add(singular);
   }
   return [...out];
 }

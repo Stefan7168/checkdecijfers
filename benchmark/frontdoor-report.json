@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generatedAt": "2026-10-01T18:07:05.011Z",
+    "generatedAt": "2026-10-01T18:25:13.572Z",
     "live": true,
     "cases": 38,
     "positives": 32,
-    "recallOnShortlist": "23/32",
-    "beforeReachesRightTable": "6/32",
-    "afterReachesRightTable": "27/32",
+    "recallOnShortlist": "24/32",
+    "beforeReachesRightTable": "7/32",
+    "afterReachesRightTable": "30/32",
     "negativesRoutedToATable": "0/6"
   },
   "rows": [
@@ -24,11 +24,11 @@
     {
       "id": "asylum-applications-2022",
       "positive": true,
-      "recallRank": 3,
+      "recallRank": 12,
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
-      "picked": "80059ned",
+      "picked": "83102NED",
       "viaOutOfScope": true,
       "hit": true
     },
@@ -38,15 +38,15 @@
       "recallRank": -1,
       "shortlist": 2,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "71426ned",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "police-registered-crime",
       "positive": true,
-      "recallRank": 8,
+      "recallRank": 4,
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
@@ -79,7 +79,7 @@
     {
       "id": "airport-passengers-2023",
       "positive": true,
-      "recallRank": 4,
+      "recallRank": 9,
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
@@ -95,13 +95,13 @@
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "84545NED",
-      "viaOutOfScope": false,
+      "viaOutOfScope": true,
       "hit": true
     },
     {
       "id": "collective-wage-increase",
       "positive": true,
-      "recallRank": 7,
+      "recallRank": 3,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -123,7 +123,7 @@
     {
       "id": "divorces-2023",
       "positive": true,
-      "recallRank": 7,
+      "recallRank": 14,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -156,13 +156,13 @@
     {
       "id": "rent-increase-2024",
       "positive": true,
-      "recallRank": -1,
+      "recallRank": 1,
       "shortlist": 24,
       "parseKind": "data_query",
-      "outcome": "clarification",
-      "picked": null,
-      "viaOutOfScope": false,
-      "hit": false
+      "outcome": "onboarding",
+      "picked": "70675ned",
+      "viaOutOfScope": true,
+      "hit": true
     },
     {
       "id": "household-waste-per-person",
@@ -183,7 +183,7 @@
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "82883NED",
-      "viaOutOfScope": true,
+      "viaOutOfScope": false,
       "hit": true
     },
     {
@@ -211,9 +211,9 @@
     {
       "id": "births-2023",
       "positive": true,
-      "recallRank": 0,
+      "recallRank": 7,
       "shortlist": 24,
-      "parseKind": "out_of_scope",
+      "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "85722NED",
       "viaOutOfScope": true,
@@ -250,7 +250,7 @@
       "outcome": "onboarding",
       "picked": "85848NED",
       "viaOutOfScope": true,
-      "hit": false
+      "hit": true
     },
     {
       "id": "cars-on-the-road",
@@ -268,10 +268,10 @@
       "positive": true,
       "recallRank": 14,
       "shortlist": 24,
-      "parseKind": "out_of_scope",
+      "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "85020NED",
-      "viaOutOfScope": true,
+      "viaOutOfScope": false,
       "hit": true
     },
     {
@@ -310,7 +310,7 @@
     {
       "id": "pension-build-up",
       "positive": true,
-      "recallRank": 10,
+      "recallRank": 6,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -321,18 +321,18 @@
     {
       "id": "people-on-social-assistance",
       "positive": true,
-      "recallRank": 4,
+      "recallRank": 9,
       "shortlist": 24,
       "parseKind": "data_query",
-      "outcome": "clarification",
-      "picked": null,
+      "outcome": "onboarding",
+      "picked": "37789ksz",
       "viaOutOfScope": false,
       "hit": false
     },
     {
       "id": "hospital-admissions-2022",
       "positive": true,
-      "recallRank": 8,
+      "recallRank": 10,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",

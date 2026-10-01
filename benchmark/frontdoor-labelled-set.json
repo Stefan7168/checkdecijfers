@@ -136,9 +136,10 @@
       "expectTables": [
         "83162NED",
         "83163NED",
-        "84822NED"
+        "84822NED",
+        "70675ned"
       ],
-      "why": "'Huurverhoging woningen; regio', '...soort verhuur' and 'Reële huurverhoging woningen; sociale- en overige verhuurders' give the average rent increase."
+      "why": "'Huurverhoging woningen; regio', '...soort verhuur' and 'Reële huurverhoging woningen; sociale- en overige verhuurders' give the average rent increase. 70675ned (Consumentenprijzen; huurverhoging woningen vanaf 1959) added after the plural-spelling run picked it — it is the yearly average rent increase."
     },
     {
       "id": "household-waste-per-person",
@@ -282,9 +283,10 @@
         "85692NED",
         "80794ned",
         "86113NED",
-        "86003NED"
+        "86003NED",
+        "37789ksz"
       ],
-      "why": "'Bijstandsuitkeringen; uitkeringsgrondslag, regio's' and the 'Personen met een uitkering' tables (kenmerken, per regio, soort uitkering) count social assistance recipients."
+      "why": "'Bijstandsuitkeringen; uitkeringsgrondslag, regio's' and the 'Personen met een uitkering' tables (kenmerken, per regio, soort uitkering) count social assistance recipients. 37789ksz (Sociale zekerheid; kerncijfers — 'Totaal bijstandsuitkeringen') added 2026-10-02: it was left out only because we still held it when the set was drafted; it was evicted the same day and now routes through the lane."
     },
     {
       "id": "hospital-admissions-2022",

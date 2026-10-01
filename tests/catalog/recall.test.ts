@@ -6,6 +6,7 @@ import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
 import {
   contentWords,
+  dutchSingularStems,
   recallCandidates,
   RECALL_HISTORIC_SLOTS,
   RECALL_LIMIT,
@@ -347,8 +348,10 @@ describe("recallCandidates — 'any' mode for a whole question (session 153, the
   });
 
   it("'any' mode drops a catalogue-common word when a rarer one is present (#362: 'leven' drowned 'bijstand')", async () => {
-    // 60 'leven…' titles make "leven" common (> 6 % and > 50 tables); "bijstand" stays rare.
+    // 60 'leven…' titles make "leven" common (> 6 % and > 50 tables); "bijstand" stays rare. Its singular
+    // stem "leef" (dutchSingularStems) prefix-matches "leeftijd", which — as in the real catalogue — is common too.
     for (let i = 0; i < 60; i++) await insertRow(db, { id: `LEV${i}`, title: `Levensverwachting; reeks ${i}` });
+    for (let i = 0; i < 60; i++) await insertRow(db, { id: `AGE${i}`, title: `Bevolking; leeftijd, reeks ${i}` });
     await insertRow(db, { id: 'BIJ1', title: 'Bijstandsuitkeringen; kerncijfers' });
     const got = (await recallCandidates(db, 'Hoeveel mensen leven van de bijstand?', { mode: 'any', limit: 5 })).map((c) => c.tableId);
     expect(got[0]).toBe('BIJ1');
@@ -363,6 +366,25 @@ describe("recallCandidates — 'any' mode for a whole question (session 153, the
 
   it("'any' mode with no content words returns nothing (no query at all)", async () => {
     expect(await recallCandidates(db, 'Hoeveel waren er in 2024?', { mode: 'any' })).toEqual([]);
+  });
+});
+
+describe('dutchSingularStems (session 153, #362 — plural spelling, never a topic list)', () => {
+  it('undoubles a final consonant, lengthens an open-syllable vowel, turns final z/v into s/f', () => {
+    expect(dutchSingularStems('verkeersongevallen')).toEqual(['verkeersongeval']);
+    expect(dutchSingularStems('huren')).toEqual(['huur']);
+    expect(dutchSingularStems('lonen')).toEqual(['loon']);
+    expect(dutchSingularStems('huizen')).toContain('huis');
+    expect(dutchSingularStems('studenten')).toEqual(['student']);
+  });
+
+  it('gives nothing for words that are not "-en" plurals or are too short', () => {
+    expect(dutchSingularStems('varkens')).toEqual([]);
+    expect(dutchSingularStems('zien')).toEqual([]);
+  });
+
+  it("feeds the 'any' search: a plural question reaches a singular title", () => {
+    expect(contentWords('Hoeveel verkeersongevallen waren er?')).toEqual(['verkeersongevallen', 'verkeersongeval']);
   });
 });
 
