@@ -1280,6 +1280,25 @@ export function wordFormProblems(body: string, registeredUnits: readonly string[
   return problems;
 }
 
+/** Forecast framing in the answer text (R11, session 153). */
+const FORECAST_FRAMING = /\b(naar verwachting|verwacht(?:e|en|te|ten)?|voorspel\w*|prognose\w*|geraamd\w*|raming\w*)\b/i;
+/** The data itself is about expectations or forecasts — then the words describe it. */
+const FORECAST_DATA = /prognos|raming|geraamd|verwacht|voorspel/i;
+
+export function forecastFramingProblems(body: string, result: ValidatedResult): string[] {
+  const match = FORECAST_FRAMING.exec(body);
+  if (match === null) return [];
+  const dataTexts = [
+    result.attribution.tableTitle,
+    ...result.cells.flatMap((c) => [c.measureTitle, ...Object.values(c.dimLabels)]),
+  ];
+  if (dataTexts.some((t) => FORECAST_DATA.test(t))) return [];
+  return [
+    `R11: de tekst spreekt van een verwachting of voorspelling ('${match[0]}') terwijl de cijfers metingen zijn — ` +
+      `een voorlopig CBS-cijfer is een eerste meting, geen verwachting`,
+  ];
+}
+
 export function validateAnswerBody(rawBody: string, result: ValidatedResult): AnswerValidationReport {
   const problems: string[] = [];
   // One canonical text for every check below: NFKC-folded, zero-width
@@ -1326,6 +1345,15 @@ export function validateAnswerBody(rawBody: string, result: ValidatedResult): An
       problems.push(`R9: gelijkheidsclaim terwijl de waarden verschillen: "${sentence.text.trim()}"`);
     }
   }
+
+  // R11 (session 153): forecast framing. A CBS cell is a measurement — a
+  // provisional one is a first measurement, not an expectation. Live audit
+  // row 342 ("In april 2026 bedraagt het aantal naar verwachting 9.188 x 1000
+  // (voorlopig cijfer)") turned CBS's 'Voorlopig' into a forecast, and the
+  // semantic check let it through. Forecast words are allowed only when the
+  // data itself is about expectations or forecasts (a prognosis table, an
+  // expectations measure such as consumer confidence's sub-questions).
+  problems.push(...forecastFramingProblems(body, result));
 
   // R11: every shown provisional value needs the marking IN ITS OWN SENTENCE
   // — a stray 'voorlopig' elsewhere in the body marks nothing (adversarial-

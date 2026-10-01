@@ -8,6 +8,9 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+000. **Editing docs while the verification block runs makes the doc-conventions test flaky.** Two "failures" of
+   `tests/docs/doc-conventions.test.ts` this session happened exactly when docs were being edited mid-run, and passed on a
+   rerun. Write docs before or after a verification run, never during.
 00. **Adding a domain to the hosting project silently changed a system variable the code depended on.** Session 144
    added graphmaker.studio to Vercel (DNS still missing by design); `VERCEL_PROJECT_PRODUCTION_URL` flipped to it, and the
    job kick — which builds its URL from that variable — started failing with ENOTFOUND. Nothing showed it until the first

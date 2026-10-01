@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../src/cbs-adapter/types.ts';
-import { resolveTablePeriod } from '../../src/answer/table-lane/periods.ts';
+import { trailingPeriods, TREND_CONTEXT_PERIODS, resolveTablePeriod } from '../../src/answer/table-lane/periods.ts';
 
 function loadFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
   const path = fileURLToPath(new URL(`../fixtures/tableparse/schemas/${tableId}.json`, import.meta.url));
@@ -399,3 +399,26 @@ describe('resolveTablePeriod — relative (curated rule: calendar step from the 
     });
   });
 });
+
+describe('trailingPeriods (session 153, trend by default)', () => {
+  const c = (code: string) => ({ code, title: code, dimensionGroup: null, status: 'Definitief', index: null });
+  const yearly = ['2015JJ00', '2016JJ00', '2017JJ00', '2018JJ00', '2019JJ00', '2020JJ00', '2021JJ00', '2022JJ00'].map(c);
+
+  it('ends at the given code, same grain only, at most the grain\'s context length', () => {
+    const mixed = [...yearly, c('2022KW01'), c('2022KW02')];
+    expect(trailingPeriods(mixed, '2022JJ00')).toEqual(['2017JJ00', '2018JJ00', '2019JJ00', '2020JJ00', '2021JJ00', '2022JJ00']);
+    expect(trailingPeriods(mixed, '2022JJ00')).toHaveLength(TREND_CONTEXT_PERIODS.JJ);
+    expect(trailingPeriods(mixed, '2022KW02')).toEqual(['2022KW01', '2022KW02']);
+  });
+
+  it('a short table gives what it has; an unknown code gives []', () => {
+    expect(trailingPeriods(yearly.slice(0, 2), '2016JJ00')).toEqual(['2015JJ00', '2016JJ00']);
+    expect(trailingPeriods(yearly, '2030JJ00')).toEqual([]);
+  });
+
+  it('irregular months (CBS publishes only April and December) keep CBS\'s own gaps', () => {
+    const codes = ['2024MM04', '2024MM12', '2025MM04', '2025MM12', '2026MM04'].map(c);
+    expect(trailingPeriods(codes, '2026MM04')).toEqual(['2024MM04', '2024MM12', '2025MM04', '2025MM12', '2026MM04']);
+  });
+});
+

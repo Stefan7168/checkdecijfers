@@ -358,20 +358,35 @@ describe('planTableLane — fetch', () => {
     expect(p.intent.period).toEqual({ kind: 'codes', codes: ['2013JJ00', '2017JJ00', '2021JJ00'] });
   });
 
-  it('no period named → the latest yearly period, stated as a default', async () => {
+  it('no period named → the latest yearly period WITH the five before it, a series stated as a default (session 153)', async () => {
     const { plan: p } = await plan(emissions, 'Hoeveel broeikasgas wordt er uitgestoten?', {
       measureCode: 'D003040',
       period: { kind: 'none' },
     });
     expect(p.kind).toBe('fetch');
     if (p.kind !== 'fetch') return;
-    expect(p.slice.periods).toEqual(['2025JJ00']);
+    const yearly = emissions.codeLists['Perioden']!.map((c) => c.code).filter((c) => /JJ00$/.test(c)).sort();
+    const expected = yearly.slice(yearly.indexOf('2025JJ00') - 5, yearly.indexOf('2025JJ00') + 1);
+    expect(p.slice.periods).toEqual(expected);
+    expect(p.intent.derivation).toBe('series');
+    const title = (code: string) => emissions.codeLists['Perioden']!.find((c) => c.code === code)!.title;
     expect(p.selection.defaults).toContainEqual({
       dimension: 'Perioden',
       dimensionTitle: 'Perioden',
       code: '2025JJ00',
-      memberTitle: '2025',
+      memberTitle: `${title(expected[0]!)} t/m 2025`,
     });
+  });
+
+  it('a NAMED period keeps exactly that period — no trend is added (session 153)', async () => {
+    const { plan: p } = await plan(emissions, 'Hoeveel broeikasgas werd er in 2022 uitgestoten?', {
+      measureCode: 'D003040',
+      period: { kind: 'year', year: 2022 },
+    });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.slice.periods).toEqual(['2022JJ00']);
+    expect(p.intent.derivation).toBe('none');
   });
 
   it('a named place on a geo table → its region code in intent.regions and the slice', async () => {

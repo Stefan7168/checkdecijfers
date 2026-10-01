@@ -1,6 +1,212 @@
 {
   "history": [
     {
+      "ranAt": "2026-10-01T12:30:38.857Z",
+      "mode": "record",
+      "repeat": 1,
+      "model": "claude-haiku-4-5",
+      "promptVersion": 2,
+      "cases": 9,
+      "passed": 9,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "verdictFlips": 0,
+      "results": [
+        {
+          "id": "F1-year-as-count",
+          "expected": "fabricated",
+          "reject": true,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "2024:period"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": true,
+              "reason": "2024 wordt hier gebruikt als aantal pogingen, niet als tijdsaanduiding; dit is een eigen hoeveelheid die niet in validatedValues voorkomt."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "F2-bracket-as-duration",
+          "expected": "fabricated",
+          "reject": true,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "45:metadata",
+            "65:metadata",
+            "65:metadata"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "45 is de ondergrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt in dezelfde rol als omschrijving."
+            },
+            {
+              "id": 1,
+              "fabricated": false,
+              "reason": "65 is de bovengrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt in dezelfde rol als omschrijving."
+            },
+            {
+              "id": 2,
+              "fabricated": true,
+              "reason": "65 wordt hier gebruikt als een duur (aantal jaren), een eigen hoeveelheid, niet als omschrijving of periode."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "F3-year-as-count-sessions",
+          "expected": "fabricated",
+          "reject": true,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "2024:period"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": true,
+              "reason": "2024 wordt hier gebruikt als aantal sessies, niet als jaartal of periode."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "F4-month-compound-count",
+          "expected": "fabricated",
+          "reject": true,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "31:metadata"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": true,
+              "reason": "Het getal 31 telt hier de samenstelling 'januari-meldingen' (een soort melding), niet een datum; het is een eigen hoeveelheid."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "C5-date-echo-without-year",
+          "expected": "clear",
+          "reject": false,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "1:metadata"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "Het getal 1 verwijst naar de peildatum '1 januari' uit descriptors, gebruikt als datum in dezelfde rol."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "C1-unscreened-verb",
+          "expected": "clear",
+          "reject": false,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "2024:period"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "Het getal 2024 verwijst naar een periode uit 'periods' en wordt gebruikt als tijdsaanduiding ('na 2024'), niet als hoeveelheid."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "C2-legit-bracket-echo",
+          "expected": "clear",
+          "reject": false,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "45:metadata",
+            "65:metadata"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "45 is de ondergrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt als omschrijving van de groep, niet als eigen hoeveelheid."
+            },
+            {
+              "id": 1,
+              "fabricated": false,
+              "reason": "65 is de bovengrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt als omschrijving van de groep, niet als eigen hoeveelheid."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "C3-heel-year-unscreened-verb",
+          "expected": "clear",
+          "reject": false,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "2025:period"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "2025 is een jaartal uit 'periods' en wordt gebruikt als tijdsaanduiding in de zin."
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "C4-mixed-suspects-all-legit",
+          "expected": "clear",
+          "reject": false,
+          "status": "ok",
+          "pass": true,
+          "suspects": [
+            "45:metadata",
+            "65:metadata",
+            "2024:period"
+          ],
+          "verdicts": [
+            {
+              "id": 0,
+              "fabricated": false,
+              "reason": "45 is de ondergrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt in dezelfde rol als omschrijving."
+            },
+            {
+              "id": 1,
+              "fabricated": false,
+              "reason": "65 is de bovengrens van de leeftijdsgroep '45 tot 65 jaar' uit descriptors, gebruikt in dezelfde rol als omschrijving."
+            },
+            {
+              "id": 2,
+              "fabricated": false,
+              "reason": "2024 is een jaartal uit periods, gebruikt als tijdsaanduiding in de zin."
+            }
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
       "ranAt": "2026-07-16T15:44:13.469Z",
       "mode": "live",
       "repeat": 3,

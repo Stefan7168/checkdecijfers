@@ -1275,3 +1275,30 @@ describe('#339 item 14: a scale word inside the cell\'s OWN registered unit is t
     expect(wordFormProblems(normalizeForScan('Het was CO2 miljard kg CO2-equivalent.'), [EMISSION_UNIT])).not.toEqual([]);
   });
 });
+
+describe('R11 forecast framing (session 153, live audit row 342)', () => {
+  it('rejects "naar verwachting" on a provisional measurement, accepts the plain sentence', () => {
+    const bad = validateAnswerBody('In 2024 werd naar verwachting 21.822 mln kWh zonnestroom opgewekt (voorlopig cijfer).', solarSingle);
+    expect(bad.ok).toBe(false);
+    expect(bad.problems.some((p) => p.includes('naar verwachting'))).toBe(true);
+    const good = validateAnswerBody('In 2024 werd 21.822 mln kWh zonnestroom opgewekt (voorlopig cijfer).', solarSingle);
+    expect(good.problems).toEqual([]);
+  });
+
+  it('rejects the other forecast words too ("voorspeld", "prognose", "verwachte")', () => {
+    for (const body of [
+      'In 2024 werd voorspeld 21.822 mln kWh zonnestroom opgewekt (voorlopig cijfer).',
+      'De prognose: in 2024 werd 21.822 mln kWh zonnestroom opgewekt (voorlopig cijfer).',
+    ]) {
+      expect(validateAnswerBody(body, solarSingle).ok).toBe(false);
+    }
+  });
+
+  it('allows the words when the data itself is about expectations or forecasts', () => {
+    const cell = makeCell({ measureTitle: 'Bevolkingsprognose', periodCode: '2035JJ00', periodLabel: '2035', value: 19000000, unit: 'aantal', region: null });
+    const prognosis = makeResult({ shape: 'single', cells: [cell] });
+    const report = validateAnswerBody('In 2035 telt Nederland naar verwachting 19.000.000 inwoners.', prognosis);
+    expect(report.problems.some((p) => p.includes('verwachting'))).toBe(false);
+  });
+});
+

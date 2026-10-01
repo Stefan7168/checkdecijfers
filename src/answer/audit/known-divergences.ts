@@ -77,6 +77,17 @@ export interface KnownDivergence {
 // classification here rather than a silent miss.
 export const KNOWN_DIVERGENCES: KnownDivergence[] = [
   {
+    id: 342,
+    kind: 'answer',
+    expectProblemsContaining: ["R11: de tekst spreekt van een verwachting of voorspelling ('naar verwachting')"],
+    cause:
+      'row stored before the R11 forecast-framing check existed (added the same day, session 153, BECAUSE of this ' +
+      'row): the phrasing model wrote "naar verwachting" for a provisional CBS measurement and the semantic check ' +
+      'let it through. The row shows exactly the text the reader saw; today the check rejects that wording and the ' +
+      'answer falls back to the template.',
+    recordedDate: '2026-10-01',
+  },
+  {
     id: 76,
     kind: 'answer',
     expectProblemsContaining: ['chart spec does not re-derive from the stored result'],

@@ -418,6 +418,25 @@ whole question finds nothing and word forms miss ("gesloopt" vs the title's "slo
 - **Still open:** traffic deaths, gas use and welfare questions find no confident table; rent increase and welfare are read
   as curated-like and end in a clarification; household waste per person picks a sector total (not per person).
 
+## As built — answers like a reader expects (2026-10-01, session 153, owner request after comparing with ChatGPT)
+
+The owner asked the same two questions here and in ChatGPT. ChatGPT answered in about a second with an older figure
+(9.96 million pigs, 1 April 2025 — CBS's own table 84952NED says 9.658 million for April 2025) plus a trend table and
+context; we answered 9.188 million (April 2026, provisional — exactly the CBS cell) as one bare number, phrased
+"naar verwachting". Owner decision: fix the wording first, then show a trend by default.
+
+- **Forecast framing rejected (R11, `forecastFramingProblems` in `src/answer/compose/validate.ts`):** the phrasing model
+  turned CBS's "Voorlopig" into "naar verwachting" and the semantic check passed it (audit row 342, now a pinned known
+  divergence). Forecast words are rejected unless the data itself is about forecasts or expectations; a rejected body
+  falls back to the template. One semantic-check labelled case used "volgens de prognose" as filler — reworded and its
+  one fixture re-recorded (9/9, 0 FP, 0 FN).
+- **Trend by default (`trailingPeriods`, `TREND_CONTEXT_PERIODS` in `periods.ts`; plan step 11b):** a question that names
+  no period (the period was defaulted to the latest) now plans a series ending at the latest: 6 years, 8 quarters or 13
+  months of the table's own published periods (CBS's gaps stay gaps). It is answered through the existing series path —
+  the composed trend sentence under the same validators, a line chart with the latest value — and the stated default
+  reads "Perioden: <first> t/m <latest>". A named period, a comparison of several places and a region class are
+  unchanged. Table-lane benchmark unchanged (every task names its period): 12/14, 9/9, 0 invented.
+
 ## Trade-offs and open points (after step 5)
 
 - A quarantined slice-cache table has no rebaseline path yet (syncTable refuses it) — recovery = eviction or a supervised

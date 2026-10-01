@@ -135,7 +135,9 @@ export const SEMANTIC_CHECK_CASES: SemanticCheckCase[] = [
     id: 'C4-mixed-suspects-all-legit',
     note: 'two legit suspects in one body (bracket echo + temporal year) — must clear both',
     expected: 'clear',
-    body: 'In 2024 telde de groep personen van 45 tot 65 jaar 3.618 personen. Dat aantal was na 2024 volgens de prognose anders.',
+    // Session 153: reworded — 'volgens de prognose anders' is a forecast claim no cell backs, which R11's
+    // forecast-framing check now rejects; the two suspects this case exists for (bracket echo + 'na 2024') stay.
+    body: 'In 2024 telde de groep personen van 45 tot 65 jaar 3.618 personen. Over de jaren na 2024 zijn er nog geen cijfers.',
     result: bracket,
   },
 ];

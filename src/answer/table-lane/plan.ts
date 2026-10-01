@@ -84,7 +84,7 @@ import {
 import { namedFromParse } from '../table-parse/bridge.ts';
 import { REGION_MEMBER_CODE } from '../table-parse/places.ts';
 import { normalizeDerivation } from '../intent/period-rules.ts';
-import { resolveTablePeriod } from './periods.ts';
+import { resolveTablePeriod, trailingPeriods } from './periods.ts';
 import {
   isNationalTerm,
   resolveTableRegionClass,
@@ -313,7 +313,7 @@ export async function planTableLane(input: {
   // way 'geen' does — "CBS has no 2030 figure" says why, "not sure what you
   // mean" does not. resolveTablePeriod reads only the parsed period and the
   // table's own time codes, so it can run here; step 11 reuses its result.
-  const period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
+  let period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
   if (!period.ok) return refuse(period.reason, period.detail, result, parseAudit, period.latestPeriodCode);
 
   // --- 5c. Confidence ---------------------------------------------------------------------
@@ -448,6 +448,25 @@ export async function planTableLane(input: {
   let derivation = normalizeDerivation(result.period, result.derivation);
   if (result.period.kind === 'date_range' && derivation !== result.derivation && period.codes.length < 2) {
     derivation = result.derivation;
+  }
+  // Session 153 (owner, comparing with ChatGPT's trend table): a plain
+  // "how many" that names NO period (the period was defaulted to the latest)
+  // shows the latest figure WITH the periods before it — a series ending at
+  // the latest (TREND_CONTEXT_PERIODS), drawn as a line chart, every value a
+  // CBS cell. A question that names a period keeps exactly that period; a
+  // comparison of several places or a region class stays one period.
+  const oneCoordinateEach = Object.values(regions.coordinates).every((c) => c.length <= 1);
+  if (derivation === 'none' && period.defaulted !== null && period.codes.length === 1 && regionClass === null && oneCoordinateEach) {
+    const trend = trailingPeriods(codeLists[timeDim.name]!, period.codes[0]!);
+    if (trend.length >= 2) {
+      const titleOf = (code: string) => codeLists[timeDim.name]!.find((c) => c.code === code)?.title ?? code;
+      period = {
+        ...period,
+        codes: trend,
+        defaulted: { code: period.defaulted.code, label: `${titleOf(trend[0]!)} t/m ${titleOf(trend[trend.length - 1]!)}` },
+      };
+      derivation = 'series';
+    }
   }
   if ((derivation === 'series' || derivation === 'difference') && period.codes.length < 2) {
     return refuse(

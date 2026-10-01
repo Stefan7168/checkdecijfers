@@ -42,6 +42,12 @@
   **Owner GO the same session: `gate.enforcedInCi` = true, `TABLE_LANE_ENABLED=1` LIVE in Vercel Production** (the live
   check found the closed front door — part 2 below; the `37789ksz` eviction is held).
 
+**▶ SESSION 153, part 3 — LIVE FIXES AFTER THE OWNER'S SIDE-BY-SIDE WITH CHATGPT ([#363](open-questions.md), [#364](open-questions.md)):**
+  the first live lane question hung — the job kick went to graphmaker.studio (no DNS yet); fixed with a fallback to
+  checkdecijfers.vercel.app (`5f103506`); both live questions then answered (vans 9,517 ✓, pigs 9.188 million ✓ = the CBS
+  cells). Then, owner's pick: "naar verwachting" for a provisional figure is now rejected (R11), and a question naming no
+  period shows a short trend (6 years / 8 quarters / 13 months) ending at the latest. Speed (#363) is next.
+
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated
   question reader turned the topic away before any table search. Built (no existing prompt changed): a whole-question

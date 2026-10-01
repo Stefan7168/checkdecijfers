@@ -50,6 +50,27 @@ export type TablePeriodResolution =
 /** Coarsest first. */
 const GRAIN_ORDER: PeriodGrain[] = ['JJ', 'KW', 'MM'];
 
+/** Session 153 (owner: "ChatGPT gave a trend table, we gave one number"):
+ * how many periods a no-period question shows, ending at the latest — six
+ * years, two years of quarters, a year and a month of months. */
+export const TREND_CONTEXT_PERIODS: Record<PeriodGrain, number> = { JJ: 6, KW: 8, MM: 13 };
+
+/** The table's own periods of `endCode`'s grain, oldest first, ending at
+ * `endCode`: at most TREND_CONTEXT_PERIODS[grain]. Only published codes — a
+ * gap in CBS's list stays a gap. [] when `endCode` is not a readable code of
+ * this table. */
+export function trailingPeriods(timeCodes: CbsCode[], endCode: string): string[] {
+  const end = parsePeriodCode(endCode);
+  if (!end) return [];
+  const same = timeCodes
+    .map((c) => ({ code: c.code, parsed: parsePeriodCode(c.code) }))
+    .filter((p): p is { code: string; parsed: ParsedPeriod } => p.parsed !== null && p.parsed.grain === end.grain)
+    .sort((a, b) => sortKey(a.parsed) - sortKey(b.parsed));
+  const at = same.findIndex((p) => p.code === endCode);
+  if (at < 0) return [];
+  return same.slice(Math.max(0, at + 1 - TREND_CONTEXT_PERIODS[end.grain]), at + 1).map((p) => p.code);
+}
+
 const MIN_YEAR = 1800;
 const MAX_YEAR = 2100;
 
