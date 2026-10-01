@@ -1148,17 +1148,20 @@ down to the small clarification price).
    auto-enabled (migration 003's mechanism), all 8 expected indexes present, the `failure_stage` check now includes
    `ingest_mode`, `cbs_tables.ingest_mode` defaults to `'full'` on all 21 rows; prod still answered 200. `db:migrate` is
    idempotent — running it again reports "up to date".
-2. **Recording + calibration run of the table parser** — only after 2026-10-01 (the monthly $50 Anthropic spend limit starts over), see
+2. ✅ **DONE 2026-10-01 (session 153)** — recording + calibration (mid tier, threshold 0.6; ADR 062 "As built — recording +
+   calibration"). Original text: **Recording + calibration run of the table parser** — only after 2026-10-01 (the monthly $50 Anthropic spend limit starts over), see
    "Table-parser recording run" below. Now 39 cases + the 23 table-lane benchmark requests, prompt version 3. Nothing
    about the lane is trustworthy before this.
-3. **Step 6: the table-lane benchmark** (harness built 2026-09-30, ADR 062 "As built — step 6 (harness)") on the recorded
+3. ✅ **DONE 2026-10-01 (session 153): GATE PASS 12/14, 9/9, 0 invented on both recordings; `gate.enforcedInCi` = true.**
+   Original text: **Step 6: the table-lane benchmark** (harness built 2026-09-30, ADR 062 "As built — step 6 (harness)") on the recorded
    parser, zero spend: `npm run tablelane:bench:run` then `npm run tablelane:bench:score` — must print `GATE VERDICT: PASS`
    (answer tasks ≥ 12 of 14, refuse + ask 9 of 9, invented numbers 0). Known blocker to fix first: the "miljard" unit
    finding ([#339](open-questions.md) item 14). After a passing score set `gate.enforcedInCi` to true in
    `benchmark/tablelane-tasks.json` so CI holds the gate from then on. `npm run tablelane:bench:run -- --canned` is the
    harness self-check (no model output involved); `npm run tablelane:bench:capture -- --verify-key` re-reads every key
    value from CBS (read-only, network).
-4. **Only then** set `TABLE_LANE_ENABLED=1` (row in the secrets register above) and redeploy. `ONBOARDING_ENABLED=1` and
+4. ✅ **DONE 2026-10-01 (session 153, owner GO): `TABLE_LANE_ENABLED=1` added to Vercel Production (`vercel env add`),
+   deployed with the next push.** Original text: **Only then** set `TABLE_LANE_ENABLED=1` (row in the secrets register above) and redeploy. `ONBOARDING_ENABLED=1` and
    `CRON_SECRET` must still be set (they are).
 5. Smoke test as the owner in the workspace chat (a question about a table we do not hold); watch `vercel logs` right
    away for `table-lane-job:` lines (the retention is short). Rollback: remove `TABLE_LANE_ENABLED` and redeploy — that

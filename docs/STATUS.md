@@ -39,7 +39,8 @@
   birth-country hazard). Threshold calibrated to 0.6. **Measured on both recordings: labelled 44/50
   (all six misses refuse or ask), table-lane benchmark 12/14 answers (the floor), 9/9 refuse/ask, 0 invented — GATE PASS.** AI spend
   ~$4.24 (estimate undercounts billed tokens 2.5×; fixed in the dry-run print). Per table-lane question ~1.8 cents.
-  `gate.enforcedInCi` false and `TABLE_LANE_ENABLED` unset — both wait for the owner's GO.
+  **Owner GO the same session: `gate.enforcedInCi` = true, `TABLE_LANE_ENABLED=1` set in Vercel Production** (live check and
+  the `37789ksz` eviction follow — see the archive entry / next block).
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,

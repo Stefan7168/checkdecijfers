@@ -6,7 +6,7 @@
   "gate": {
     "answerableMin": 12,
     "answerableMinReason": "12 of the 14 answer tasks (85.7%) — exactly the curated benchmark's floor (12 of 14, docs/03). ADR 062's revisit trigger is the table lane scoring below the curated lane's quality floor, so the lane must meet the same share. The 9 refuse/ask tasks must ALL pass (an ask task passes only when the button question is right AND the answer after the click matches the key — the curated clarify-task rule), and invented numbers must be 0, exactly like the curated gate.",
-    "enforcedInCi": false
+    "enforcedInCi": true
   },
   "tasks": [
     {
