@@ -15,7 +15,7 @@
 //
 //   node scripts/eurostat-finder-recall.ts           print the report
 //   node scripts/eurostat-finder-recall.ts --write   also (re)write benchmark/eurostat-finder-recall-report.json
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FixtureSource, loadCatalogFixture } from '../src/cbs-adapter/fixture-source.ts';
@@ -141,10 +141,38 @@ export async function shortlistFor(db: Db, topic: string, variant: RecallVariant
   return replicaRecall(db, topic, variant);
 }
 
-export async function measure(db: Db, cases: FinderCase[], variant: RecallVariant): Promise<CaseResult[]> {
+/** Session 153: the recorded English bridge words per Dutch Eurostat case
+ * (benchmark/eurostat-bridge-terms.json, scripts/eurostat-bridge-terms.ts). */
+function bridgeTerms(): Record<string, string[]> {
+  const path = fileURLToPath(new URL('../benchmark/eurostat-bridge-terms.json', import.meta.url));
+  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { terms: Record<string, string[]> }).terms : {};
+}
+
+/** 'bridged' = production with the Dutch → English bridge: a Dutch Eurostat
+ * case searches its recorded English words (any-word mode); every other case
+ * is exactly 'production'. */
+async function bridgedShortlist(db: Db, c: FinderCase, terms: Record<string, string[]>): Promise<CatalogCandidate[]> {
+  const words = terms[c.id];
+  if (c.lang === 'nl' && c.expectSource === 'eurostat' && words !== undefined && words.length > 0) {
+    // Each suggested term as its own phrase search (the finder's default mode), merged by rank —
+    // a phrase like "unemployment rate" is sharper than its words searched one by one.
+    const best = new Map<string, CatalogCandidate>();
+    for (const term of words) {
+      for (const cand of await recallCandidates(db, term, { includeEurostat: true })) {
+        const seen = best.get(cand.tableId);
+        if (seen === undefined || cand.rank > seen.rank) best.set(cand.tableId, cand);
+      }
+    }
+    return [...best.values()].sort((a, b) => b.rank - a.rank || (a.tableId < b.tableId ? -1 : 1)).slice(0, RECALL_LIMIT);
+  }
+  return recallCandidates(db, c.topic, { includeEurostat: true });
+}
+
+export async function measure(db: Db, cases: FinderCase[], variant: RecallVariant | 'bridged'): Promise<CaseResult[]> {
   const results: CaseResult[] = [];
+  const terms = variant === 'bridged' ? bridgeTerms() : {};
   for (const c of cases) {
-    const shortlist = await shortlistFor(db, c.topic, variant);
+    const shortlist = variant === 'bridged' ? await bridgedShortlist(db, c, terms) : await shortlistFor(db, c.topic, variant);
     const index = shortlist.findIndex((s) => c.accept.includes(s.tableId));
     results.push({
       id: c.id,
@@ -178,7 +206,7 @@ export function summarize(results: CaseResult[]): Record<string, GroupSummary> {
   return out;
 }
 
-export const REPORT_VARIANTS: RecallVariant[] = ['flag-off', 'production', 'dutch-title-only', 'english', 'simple'];
+export const REPORT_VARIANTS: (RecallVariant | 'bridged')[] = ['flag-off', 'production', 'dutch-title-only', 'english', 'simple', 'bridged'];
 
 async function main(): Promise<void> {
   const cases = loadCases();

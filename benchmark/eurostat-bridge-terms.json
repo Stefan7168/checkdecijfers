@@ -1,0 +1,49 @@
+{
+  "note": "Recorded live once by scripts/eurostat-bridge-terms.ts (session 153): English search words per Dutch Eurostat question, replayed by eurostat-finder-recall.ts variant \"bridged\".",
+  "recordedAt": "2026-10-01T19:53:17.098Z",
+  "terms": {
+    "unemployment-nl": [
+      "unemployment",
+      "unemployment rate"
+    ],
+    "inflation-nl": [
+      "inflation",
+      "belgium"
+    ],
+    "gdp-nl": [
+      "gross domestic product",
+      "gdp"
+    ],
+    "population-nl": [],
+    "asylum-nl": [
+      "asylum applications"
+    ],
+    "renewables-nl": [
+      "renewable energy",
+      "energy share",
+      "spain"
+    ],
+    "ghg-nl": [
+      "greenhouse gas emissions"
+    ],
+    "house-prices-nl": [
+      "house prices",
+      "housing prices"
+    ],
+    "minimum-wage-nl": [
+      "minimum wage"
+    ],
+    "life-expectancy-nl": [
+      "life expectancy"
+    ],
+    "government-debt-nl": [
+      "government debt",
+      "italy"
+    ],
+    "electricity-prices-nl": [
+      "electricity prices",
+      "household expenditure",
+      "energy expenditure"
+    ]
+  }
+}

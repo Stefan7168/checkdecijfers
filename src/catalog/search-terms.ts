@@ -77,3 +77,31 @@ export async function suggestSearchTerms(question: string, client: LlmClient): P
     return [];
   }
 }
+
+/** Session 153 (#357 step 3, the Dutch → English bridge): Eurostat's
+ * catalogue is English, so a Dutch question shares no word with it (measured:
+ * 0/12 Dutch Eurostat questions in the shortlist, 10/12 for the same
+ * questions asked in English). This English variant proposes the words a
+ * Eurostat dataset title would use. A SEPARATE prompt — the Dutch one above
+ * stays byte-identical. Used only where Eurostat rows can be found
+ * (EUROSTAT_FINDER_ENABLED, dark); proposes search words only, never a dataset. */
+const SYSTEM_PROMPT_EN = `You help a search over the titles of Eurostat datasets (official European statistics). You receive one user question, often in Dutch. Give 2 to ${SEARCH_TERMS_MAX} English search terms as they appear in Eurostat dataset titles: the formal statistical nouns Eurostat uses, not the user's words. For example "zzp'ers" → "self-employed persons", "fijnstof" → "particulate matter", "uitgaven aan onderwijs" → "education expenditure".
+- Topic only: no years, no country or place names, no question words, no numbers.
+- Never invent dataset names or codes.
+- If the question is not a statistics question, give an empty list.
+Answer only with JSON following the given schema.`;
+
+export function buildEnglishSearchTermsRequest(question: string, model: string = SEARCH_TERMS_MODEL): LlmRequest {
+  return { ...buildSearchTermsRequest(question, model), system: SYSTEM_PROMPT_EN };
+}
+
+/** English search words for one question; [] on any failure (never a pick). */
+export async function suggestEnglishSearchTerms(question: string, client: LlmClient): Promise<string[]> {
+  try {
+    const response = await client.complete(buildEnglishSearchTermsRequest(question));
+    return validateSearchTerms(response.outputText);
+  } catch {
+    return [];
+  }
+}
+

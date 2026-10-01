@@ -3,7 +3,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   SEARCH_TERMS_MAX,
+  buildEnglishSearchTermsRequest,
   buildSearchTermsRequest,
+  suggestEnglishSearchTerms,
   suggestSearchTerms,
   validateSearchTerms,
 } from '../../src/catalog/search-terms.ts';
@@ -55,3 +57,26 @@ describe('suggestSearchTerms', () => {
     expect(await suggestSearchTerms('vraag', stub(new Error('network down')))).toEqual([]);
   });
 });
+
+describe('the Dutch → English bridge for Eurostat (session 153, #357 step 3)', () => {
+  it('is a SEPARATE prompt: the Dutch request is unchanged, the English one differs only in its system prompt', () => {
+    const nl = buildSearchTermsRequest('Hoe hoog is de staatsschuld?');
+    const en = buildEnglishSearchTermsRequest('Hoe hoog is de staatsschuld?');
+    expect(en.system).not.toBe(nl.system);
+    expect({ ...en, system: nl.system }).toEqual(nl);
+    expect(en.system).toContain('Eurostat');
+  });
+
+  it("never teaches to the labelled set: none of its Dutch topics appear as an example", () => {
+    const system = buildEnglishSearchTermsRequest('x').system;
+    for (const topic of ['werkloosheid', 'inflatie', 'bbp', 'asielaanvragen', 'huizenprijzen', 'minimumloon', 'levensverwachting', 'staatsschuld', 'broeikasgassen']) {
+      expect(system.toLowerCase()).not.toContain(topic);
+    }
+  });
+
+  it('returns validated English terms; a failing call is []', async () => {
+    expect(await suggestEnglishSearchTerms('vraag', stub('{"terms":["Government debt"]}'))).toEqual(['government debt']);
+    expect(await suggestEnglishSearchTerms('vraag', stub(new Error('down')))).toEqual([]);
+  });
+});
+

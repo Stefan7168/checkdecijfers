@@ -52,7 +52,9 @@
   measured per step; the waiting bubble now names the found table and the job's real state, polls every 1 s at first, and
   the lane fetches code lists in parallel. Search ranking: catalogue-common words no longer drown the topic word,
   Dutch plurals reach singular titles (front door 31/32 on the tuning set; **27/30 on a frozen held-out set of new topics**
-  — old path 1/30; 0 non-questions routed).
+  — old path 1/30; 0 non-questions routed). Eurostat (dark): the Dutch → English search bridge takes Dutch Eurostat
+  questions from 0/12 to 10/12 in the shortlist (#357); next Eurostat steps (table reader recording, the public-claim
+  sweep) wait for the owner.
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated
