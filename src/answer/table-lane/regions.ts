@@ -24,6 +24,8 @@
 //     below (2026-10-01, #340) BEFORE this resolver runs; resolveTableRegions
 //     itself still refuses a non-null class (`table_lane_region_class`), so a
 //     caller that skips the class step can never answer a class as places.
+import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import { regionRoster } from '../../query/region-set.ts';
 import type { RegionScope } from '../../query/types.ts';
@@ -79,6 +81,23 @@ function refuse(
   detail: string,
 ): TableRegionResolution {
   return { ok: false, reason, detail };
+}
+
+/**
+ * Session 153 (Eurostat study step 4): a named place on a EUROSTAT table — the
+ * same rule as the curated Eurostat answers (src/answer/intent/resolve.ts):
+ * a Dutch country name ("Duitsland") through the reviewed Dutch name list
+ * first, else the member's own English label ("Germany"); a place kind other
+ * than "land" can never match (Eurostat answers countries and aggregates only).
+ */
+function eurostatPlaceMatches(dim: BreakdownDimension, term: RegionTerm, kind: string | null): BreakdownMember[] {
+  const code = eurostatGeoCodeForDutchName(term.name);
+  let matches =
+    code !== null && dim.members.some((m) => m.code === code)
+      ? dim.members.filter((m) => m.code === code)
+      : dim.members.filter((m) => memberPlaceKey(m.title) === readerPlaceKey(term.name));
+  if (kind !== null) matches = kind === 'land' ? matches.filter((m) => isEurostatCountryOrAggregateCode(m.code)) : [];
+  return matches;
 }
 
 export function resolveTableRegions(input: {
@@ -198,6 +217,7 @@ export function resolveTableRegions(input: {
 
   const dim = regionDims[0]!;
   const isGeo = classifyDimension(dim) === 'geo';
+  const isEurostatTable = sourceKeyForTableId(table.schema.tableId) === EUROSTAT_SOURCE_KEY;
   const codes: string[] = [];
   for (const term of terms) {
     const kinds = readerPlaceKinds(term.name, term.kind);
@@ -209,14 +229,16 @@ export function resolveTableRegions(input: {
     }
     const kind = kinds[0] ?? null;
     const key = isNationalTerm(term) ? 'nederland' : readerPlaceKey(term.name);
-    const matches = dim.members.filter(
-      (m) =>
-        memberPlaceKey(m.title) === key &&
-        // A geo-like dimension may carry a few non-region members; only its
-        // region-coded members can be the place (places.ts's rule).
-        (isGeo || REGION_MEMBER_CODE.test(m.code)) &&
-        (kind === null || placeKindAllowsCode(kind, m.code)),
-    );
+    const matches = isEurostatTable
+      ? eurostatPlaceMatches(dim, term, kind)
+      : dim.members.filter(
+          (m) =>
+            memberPlaceKey(m.title) === key &&
+            // A geo-like dimension may carry a few non-region members; only its
+            // region-coded members can be the place (places.ts's rule).
+            (isGeo || REGION_MEMBER_CODE.test(m.code)) &&
+            (kind === null || placeKindAllowsCode(kind, m.code)),
+        );
     let picked: BreakdownMember;
     if (matches.length === 0) {
       return refuse('region_unknown', `no member of '${dim.name}' matches the named place '${term.name}'`);

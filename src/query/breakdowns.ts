@@ -30,6 +30,41 @@ export interface BreakdownDimension {
   title: string;
   kind: 'TimeDimension' | 'GeoDimension' | 'Dimension' | string;
   members: BreakdownMember[];
+  /** Session 153 (Eurostat study step 4): which convention marks this
+   * dimension's total. Absent = CBS (byte-identical to before); 'eurostat' =
+   * eurostatGrandTotal below. Set from the table id's source, never guessed. */
+  totalRule?: TotalRule;
+}
+
+/** Which source convention marks a dimension's grand total. */
+export type TotalRule = 'cbs' | 'eurostat';
+
+/** A Eurostat total: code TOTAL or T, or a title starting with the word
+ * "Total" (case-insensitive). Assumption A4 measured on 75 sampled Eurostat
+ * dimensions: totals use TOTAL/T or other codes (TOT_FTE, C-O, 0) — labels,
+ * not codes, are the reliable signal — and ~28 of 75 have no total at all. */
+function isEurostatTotalLike(m: BreakdownMember): boolean {
+  const code = m.code.toUpperCase();
+  return code === 'TOTAL' || code === 'T' || /^\s*total\b/i.test(m.title);
+}
+
+/** Eurostat's grand total for a dimension: EXACTLY one total-like member,
+ * wherever it sits (Eurostat code lists are not total-first). None, or more
+ * than one ("Total" next to "Total excluding …"), is null — the caller then
+ * asks (principle c), exactly as for CBS. */
+export function eurostatGrandTotal(members: BreakdownMember[]): BreakdownMember | null {
+  const candidates = members.filter(isEurostatTotalLike);
+  return candidates.length === 1 ? candidates[0]! : null;
+}
+
+/** The grand total under a dimension's own convention. */
+export function grandTotalFor(members: BreakdownMember[], rule: TotalRule | undefined): BreakdownMember | null {
+  if (rule !== 'eurostat') return findGrandTotal(members);
+  // A Eurostat dimension with ONE member (measured: `freq` in every sampled
+  // single-frequency dataset) leaves no choice — that member is the
+  // coordinate, stated as a default like a total. CBS keeps its own rule.
+  if (members.length === 1) return members[0]!;
+  return eurostatGrandTotal(members);
 }
 
 export type DimensionClass = 'time' | 'geo' | 'geo_like' | 'margins' | 'breakdown';
@@ -249,7 +284,7 @@ export function resolveBreakdowns(
       continue;
     }
 
-    const resolved = cls === 'margins' ? marginsValueMember(d.members) : findGrandTotal(d.members);
+    const resolved = cls === 'margins' ? marginsValueMember(d.members) : grandTotalFor(d.members, d.totalRule);
     if (resolved) {
       coordinates[d.name] = resolved.code;
       defaults.push({

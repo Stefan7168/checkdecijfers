@@ -52,7 +52,14 @@
 // not reader ambiguity" treatment as its other invariant violations — a
 // caller that reaches here with a 'geen' parse has a bug, not a design
 // question to route through step 3.
-import { findGrandTotal, firstMemberTotalLike, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
+import {
+  eurostatGrandTotal,
+  findGrandTotal,
+  firstMemberTotalLike,
+  type BreakdownDimension,
+  type BreakdownMember,
+  type TotalRule,
+} from '../../query/breakdowns.ts';
 import type { TableParseSchema } from './input.ts';
 import type { TableParseResult } from './parse.ts';
 
@@ -70,8 +77,10 @@ import type { TableParseResult } from './parse.ts';
  *     later "Totaal …" member is a sub-total a reader can name on purpose
  *     ("Totaal bedrijfsmotorvoertuigen") and stays named.
  */
-export function isTotalPick(members: BreakdownMember[], code: string): boolean {
-  const total = findGrandTotal(members) ?? firstMemberTotalLike(members);
+export function isTotalPick(members: BreakdownMember[], code: string, rule?: TotalRule): boolean {
+  // Session 153: a Eurostat dimension has no first-member convention — only its
+  // own unique total (eurostatGrandTotal) is a total pick.
+  const total = rule === 'eurostat' ? eurostatGrandTotal(members) : (findGrandTotal(members) ?? firstMemberTotalLike(members));
   return total !== null && total.code === code;
 }
 
@@ -135,7 +144,7 @@ export function namedFromParse(
     }
     // F5: an explicit total pick goes through the resolver's own default
     // path, so it is disclosed as a stated default (see module doc).
-    if (isTotalPick(fullDim!.members, choice.code)) continue;
+    if (isTotalPick(fullDim!.members, choice.code, fullDim!.totalRule)) continue;
     named[breakdown.name] = choice.code;
   }
 

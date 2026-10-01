@@ -70,7 +70,14 @@ import { INTENT_SCHEMA_VERSION, type IntentPeriod, type StructuredIntent } from 
 import type { LlmClient, LlmRequest, LlmResponse } from '../llm/client.ts';
 import { requestHash } from '../llm/client.ts';
 import type { RegionTerm } from '../intent/types.ts';
-import { buildTableParseSchema, TableParseIneligibleTableError, type TableParseSchema } from '../table-parse/input.ts';
+import {
+  buildTableParseSchema,
+  EUROSTAT_FREQ_BY_GRAIN,
+  EUROSTAT_FREQ_DIMENSION,
+  TableParseIneligibleTableError,
+  totalRuleFor,
+  type TableParseSchema,
+} from '../table-parse/input.ts';
 import {
   DEFAULT_TABLE_PARSE_CONFIG,
   TableParseRegionUnavailableError,
@@ -85,6 +92,7 @@ import { namedFromParse } from '../table-parse/bridge.ts';
 import { REGION_MEMBER_CODE } from '../table-parse/places.ts';
 import { normalizeDerivation } from '../intent/period-rules.ts';
 import { resolveTablePeriod, trailingPeriods } from './periods.ts';
+import { parsePeriodCode } from '../../ingestion/periods.ts';
 import {
   isNationalTerm,
   resolveTableRegionClass,
@@ -247,11 +255,15 @@ export async function planTableLane(input: {
 
   // Full (never pre-filtered) dimensions — every code list exists (step 1
   // refuses a missing one).
+  // Session 153 (Eurostat study step 4): a Eurostat table's totals follow
+  // Eurostat's convention; a CBS table carries no marker (byte-identical).
+  const totalRule = totalRuleFor(schema.tableId);
   const fullDims: BreakdownDimension[] = schema.dimensions.map((d) => ({
     name: d.name,
     title: d.title,
     kind: d.kind,
     members: codeLists[d.name]!.map((c) => ({ code: c.code, title: c.title })),
+    ...(totalRule !== undefined ? { totalRule } : {}),
   }));
   const classOf = new Map<string, DimensionClass>(fullDims.map((d) => [d.name, classifyDimension(d)]));
   const timeDim = fullDims.find((d) => classOf.get(d.name) === 'time')!;
@@ -374,7 +386,24 @@ export async function planTableLane(input: {
     const dim = fullDims.find((d) => d.name === bridged.askDimension)!;
     return { kind: 'ask', question: toQuestion(dim), parse: result, parseAudit, offered };
   }
-  const named = { ...bridged.named, ...extraNamed, ...readerNamed };
+  const named: Record<string, string> = { ...bridged.named, ...extraNamed, ...readerNamed };
+  // Session 153 (Eurostat study step 4): a Eurostat `freq` follows the resolved
+  // period's grain; a table that does not publish that frequency is refused,
+  // never answered from a different one.
+  const freqDim = totalRule === 'eurostat' ? fullDims.find((d) => d.name === EUROSTAT_FREQ_DIMENSION) : undefined;
+  if (freqDim !== undefined) {
+    const grain = parsePeriodCode(period.codes[0]!)?.grain;
+    const wanted = grain !== undefined ? EUROSTAT_FREQ_BY_GRAIN[grain] : undefined;
+    if (wanted === undefined || !freqDim.members.some((m) => m.code === wanted)) {
+      return refuse(
+        'table_lane_period_grain',
+        `the question's period grain (${grain ?? 'unknown'}) has no '${EUROSTAT_FREQ_DIMENSION}' code in this Eurostat table`,
+        result,
+        parseAudit,
+      );
+    }
+    named[freqDim.name] = wanted;
+  }
 
   // --- 9. Breakdown resolver: CBS's own unique total, or ask ----------------------------
   const resolved = resolveBreakdowns(fullDims, named);

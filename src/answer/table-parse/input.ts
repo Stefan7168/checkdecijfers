@@ -31,7 +31,19 @@
 // TimeDimension, or a dimension whose code list is missing — a missing code
 // list must never become a zero-member breakdown or empty period grains).
 import type { CbsCode, CbsDimension, CbsTableSchema } from '../../cbs-adapter/types.ts';
-import { classifyDimension, findGrandTotal, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
+import { classifyDimension, grandTotalFor, type BreakdownDimension, type BreakdownMember, type TotalRule } from '../../query/breakdowns.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+
+/** Eurostat's frequency dimension (SDMX `freq`: A / Q / M …). */
+export const EUROSTAT_FREQ_DIMENSION = 'freq';
+
+/** Session 153: the `freq` code for a resolved period grain. */
+export const EUROSTAT_FREQ_BY_GRAIN = { JJ: 'A', KW: 'Q', MM: 'M' } as const;
+
+/** Session 153 (Eurostat study step 4): the total convention of a table, from its id's source. */
+export function totalRuleFor(tableId: string): TotalRule | undefined {
+  return sourceKeyForTableId(tableId) === EUROSTAT_SOURCE_KEY ? 'eurostat' : undefined;
+}
 import { parsePeriodCode } from '../../ingestion/periods.ts';
 import type { PeriodGrain } from '../../query/types.ts';
 import {
@@ -175,7 +187,7 @@ function sharesWord(title: string, qWords: Set<string>): boolean {
  * with zero members) — the model then has only `niet_genoemd` / `anders` for
  * it, never a silently guessed member.
  */
-function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): TableParseBreakdown {
+function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string, totalRule?: TotalRule): TableParseBreakdown {
   const allMembers: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
   const title = dimensionLabel(dim);
 
@@ -189,7 +201,7 @@ function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): 
     };
   }
 
-  const total = findGrandTotal(allMembers);
+  const total = grandTotalFor(allMembers, totalRule);
   const qWords = questionWords(question);
   const normalizedQuestionForPlaces = normalizeQuestionForPlaceMatch(question);
 
@@ -279,6 +291,10 @@ export function buildTableParseSchema(
   const breakdowns: TableParseBreakdown[] = [];
 
   for (const dim of schema.dimensions) {
+    // Session 153 (Eurostat study step 4): a Eurostat table's `freq` follows the
+    // period the question asks for (planTableLane sets it from the resolved
+    // grain) — never a choice offered to the model.
+    if (dim.name === EUROSTAT_FREQ_DIMENSION && totalRuleFor(schema.tableId) === 'eurostat') continue;
     const codes = codeLists[dim.name]!;
     const members: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
     const asBreakdownDimension: BreakdownDimension = {
@@ -297,7 +313,7 @@ export function buildTableParseSchema(
       continue;
     }
     // cls === 'breakdown'
-    breakdowns.push(buildBreakdown(dim, codes, question));
+    breakdowns.push(buildBreakdown(dim, codes, question, totalRuleFor(schema.tableId)));
   }
 
   const timeCodes = codeLists[timeDim.name]!;
