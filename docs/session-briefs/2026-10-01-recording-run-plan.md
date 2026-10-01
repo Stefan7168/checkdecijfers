@@ -5,6 +5,12 @@
 > (`70072ned`) and part C builds on whole Eurostat datasets. Owner decision 2026-09-30: run part A ONLY; B and C are on
 > hold until ADR 065 step 2's design says how they fit.** Everything below is unchanged and was written before that decision.
 
+> **✅ PART A RAN 2026-10-01 (session 153, owner present).** Outcome differs from this plan in three ways: the cheap
+> tier failed the calibration (26/50) and the parser moved to `claude-sonnet-5` (a measured escalation); the real cost was
+> ~$4.24 in total (two Haiku runs, a Sonnet probe, two Sonnet runs) because billed tokens are ~2.5× the dry-run estimate;
+> and five structural code fixes landed alongside. Gate PASSED on both Sonnet runs (12/14, 9/9, 0 invented), threshold 0.6.
+> Details: ADR 062 "As built — recording + calibration". Parts B and C stay on hold. The flip waits for the owner's GO.
+
 **Why this exists.** Three queued work items each need the AI once, to turn labelled questions into replayable
 fixtures. All three waited for the monthly spend roof to start over (2026-10-01 00:00 UTC, $50 organisation
 limit — RUNBOOK "Bill-shock protection", resolved 2026-09-26). This is the plan for running them back to back in

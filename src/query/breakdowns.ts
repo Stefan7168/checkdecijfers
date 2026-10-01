@@ -66,6 +66,17 @@ function isTotalCandidate(m: BreakdownMember): boolean {
   return false;
 }
 
+/** Session 153: the dimension's FIRST member when it qualifies on its own
+ * as a total (rule (0) of findGrandTotal: titled "Totaal …" or a T00 code),
+ * whether or not findGrandTotal can confirm it as the unique grand total.
+ * Used by the table-parse bridge to leave a model's "total" pick to the
+ * resolver; never used to pick a total itself. */
+export function firstMemberTotalLike(members: BreakdownMember[]): BreakdownMember | null {
+  const first = members[0];
+  if (first === undefined) return null;
+  return hasTotalTitle(first) || hasTotalCode(first) ? first : null;
+}
+
 /**
  * CBS's own grand total for a breakdown dimension, or null when the rule
  * cannot conservatively pick one (the caller must then ask, per principle c).

@@ -2793,13 +2793,22 @@ Only `select` statements; any DDL or write stays an owner-supervised, migration-
 
 ## Table-parser recording run (breadth step 4 — owner-supervised, after 2026-10-01; added session 139, 2026-09-29)
 
+**✅ RAN 2026-10-01 (session 153). What changed for every future run:** the parser now uses the mid tier
+(`claude-sonnet-5`), so one record run (50 labelled cases + 23 benchmark requests, 73 calls) costs **~$1.35** (603,679
+billed input tokens) — NOT the dry run's estimate: billed input is ~2.5× the `--dry-run` number (the structured-output
+schema is not in the estimate; the dry run now prints the measured figure). A record run REWRITES every fixture: before a
+stability re-run, copy `tests/fixtures/llm/tableparse/` and the report aside, then diff the two sets of picks. After any
+re-record, run `npm run tablelane:bench:run && npm run tablelane:bench:score` and update the pinned misses in
+`tests/answer/table-parse/calibration-replay.test.ts`. Measured results and the threshold: ADR 062 "As built — recording
++ calibration", [#338](open-questions.md).
+
 **Session 145 (2026-09-29): the one-session plan for THIS run plus the regional Part 2 and Eurostat step 0 recordings — order, commands, measured cost basis (~$4.35 budget), pass/fail gates, owner decisions — is [session-briefs/2026-10-01-recording-run-plan.md](session-briefs/2026-10-01-recording-run-plan.md). Follow that on the day; this section stays the reference for the table-parser piece.**
 
 The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") has never called the AI. Its first
 recording turns the 39 labelled questions (`benchmark/tableparse-labelled-set.json`, now including the follow-up cases;
 prompt version 3 since breadth step 5) into replayable fixtures and a calibration report, and in the same run records the
 23 table-lane benchmark requests (ADR 062 step 6; labelled `bench:L1`…`bench:L23`, not scored by the calibration).
-Measured cost estimate: ~189k input tokens on the cheap tier (dry run 2026-09-30: 114,136 + 74,991; about $0.19 per
+(Superseded by the 2026-10-01 note above: mid tier, ~$1.35 per record run.) Original estimate: ~189k input tokens on the cheap tier (dry run 2026-09-30: 114,136 + 74,991; about $0.19 per
 record run). Steps, owner present:
 
 1. `npm run tableparse:eval -- --dry-run` — zero spend; confirms 39 cases + 23 benchmark requests and prints the prompt sizes.

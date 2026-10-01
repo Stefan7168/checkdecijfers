@@ -216,6 +216,15 @@ describe('planTableLane — refusals, in order', () => {
     expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_no_measure' });
   });
 
+  it("3b. a low-confidence 'geen' → table_lane_no_measure, not table_lane_unsure (geen is checked first, session 153)", async () => {
+    const { plan: p } = await plan(emissions, 'Wat was de gemiddelde leeftijd?', {
+      measureCode: 'geen',
+      period: { kind: 'year', year: 2020 },
+      confidence: 0.05,
+    });
+    expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_no_measure' });
+  });
+
   it('5. a period grain the table does not publish → table_lane_period_grain', async () => {
     const { plan: p } = await plan(emissions, 'Uitstoot in maart 2020?', {
       measureCode: 'D003040',
@@ -929,3 +938,26 @@ describe('planTableLane — period shapes and derivations', () => {
     expect(p).toMatchObject({ kind: 'refuse', reason: 'table_lane_single_period' });
   });
 });
+
+describe("session 153: a model total pick on a dimension with two totals is asked; the reader's click stands", () => {
+  const hospital = loadFixture('84521NED');
+  const q = 'Hoeveel ziekenhuisopnamen waren er in 2022?';
+  const spec: OutputSpec = {
+    measureCode: 'M006162_1',
+    period: { kind: 'year', year: 2022 },
+    breakdowns: { Leeftijd: '10000' }, // "Totaal leeftijd" — next to "Totaal, gestandaardiseerd"
+  };
+
+  it("the model's 'Totaal leeftijd' pick becomes the resolver's question, never a silent pick", async () => {
+    const { plan: p } = await plan(hospital, q, spec);
+    expect(p.kind).toBe('ask');
+    if (p.kind !== 'ask') return;
+    expect(p.question.dimension).toBe('Leeftijd');
+  });
+
+  it("the reader's own click on 'Totaal leeftijd' is used, not asked again", async () => {
+    const { plan: p } = await plan(hospital, q, spec, [{ dimension: 'Leeftijd', code: '10000' }]);
+    if (p.kind === 'ask') expect(p.question.dimension).not.toBe('Leeftijd');
+  });
+});
+

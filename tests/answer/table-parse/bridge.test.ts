@@ -18,7 +18,7 @@ import {
   TABLE_PARSE_SCHEMA_VERSION,
   type TableParseResult,
 } from '../../../src/answer/table-parse/parse.ts';
-import { namedFromParse } from '../../../src/answer/table-parse/bridge.ts';
+import { isTotalPick, namedFromParse } from '../../../src/answer/table-parse/bridge.ts';
 
 function loadFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
   const path = fileURLToPath(new URL(`../../fixtures/tableparse/schemas/${tableId}.json`, import.meta.url));
@@ -269,3 +269,31 @@ describe('full chain: builder → validator → bridge → resolveBreakdowns (re
     expect(resolution.defaults.map((d) => d.dimension)).toEqual(['Klimaatsectoren']);
   });
 });
+
+describe('isTotalPick (session 153)', () => {
+  function members(tableId: string, dim: string) {
+    return loadFixture(tableId).codeLists[dim]!.map((c) => ({ code: c.code, title: c.title }));
+  }
+
+  it('the unique grand total counts; any other member does not', () => {
+    const m = members('85669NED', 'EmissiesNaarLucht');
+    expect(isTotalPick(m, 'T001372')).toBe(true);
+    expect(isTotalPick(m, 'A044109')).toBe(false);
+  });
+
+  it('without a unique total, only the FIRST "Totaal …" member counts', () => {
+    const age = members('84521NED', 'Leeftijd'); // Totaal leeftijd, Totaal gestandaardiseerd, …
+    expect(findGrandTotal(age)).toBeNull();
+    expect(isTotalPick(age, '10000')).toBe(true);
+    expect(isTotalPick(age, 'T001249')).toBe(false);
+    const vehicles = members('85245NED', 'VoertuigType'); // Totaal motorvoertuigen, …, Totaal bedrijfsmotorvoertuigen
+    expect(isTotalPick(vehicles, 'A018928')).toBe(true);
+    expect(isTotalPick(vehicles, 'A018930')).toBe(false); // a sub-total a reader names on purpose
+  });
+
+  it('a dimension whose first member is not total-like has no total pick at all', () => {
+    const age = members('80590ned', 'Leeftijd'); // 15 tot 75 jaar, 15 tot 25 jaar, …
+    expect(isTotalPick(age, '52052')).toBe(false);
+  });
+});
+

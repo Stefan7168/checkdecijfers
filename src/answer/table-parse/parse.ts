@@ -59,12 +59,23 @@ import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
 import { REGION_MEMBER_CODE, memberPlaceKey, placeKindAllowsCode, readerPlaceKey, readerPlaceKinds } from './places.ts';
 import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from './input.ts';
 
-/** Cheap tier (same reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL): a
- * closed choice over a supplied menu is the easy shape; the principle-(c)
- * risk is contained structurally (the hard allowlist below), not by model
- * size. Escalation ladder Haiku → Sonnet is a one-line change, triggered
- * only by a measured accuracy miss — never speculative. */
-export const TABLE_PARSE_MODEL = 'claude-haiku-4-5';
+/** Mid tier since session 153 (2026-10-01). Started on the cheap tier (same
+ * reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL: a closed choice over a
+ * supplied menu), with the escalation Haiku → Sonnet reserved for a measured
+ * accuracy miss. The first live recording WAS that miss: Haiku matched 26 of
+ * 50 labelled cases and read "CO2-uitstoot" as all greenhouse gases and
+ * "nu vergeleken met 2015" as one year ago; two prompt rounds did not move
+ * it. A probe of claude-sonnet-5 on the 24 failed cases fixed 15, including
+ * both of those. Same request shape as MEANING_CHECK_MODEL (no sampling
+ * params, thinking disabled — see tableParseSampling). */
+export const TABLE_PARSE_MODEL = 'claude-sonnet-5';
+
+/** Haiku takes temperature 0; Sonnet 5 rejects sampling params and would
+ * otherwise run adaptive thinking (client.ts's LlmRequest contract) — the
+ * same switch as meaning-check.ts. */
+function tableParseSampling(model: string): Pick<LlmRequest, 'temperature' | 'thinking'> {
+  return model.startsWith('claude-haiku') ? { temperature: 0 } : { thinking: 'disabled' };
+}
 
 /** Documentation constant — the re-record is forced by the prompt BYTES
  * being hashed, not by this number (mirrors MEASURE_FIT_PROMPT_VERSION).
@@ -74,8 +85,14 @@ export const TABLE_PARSE_MODEL = 'claude-haiku-4-5';
  * gains TABLE_PARSE_PREVIOUS_QUESTION_RULE and the user turn an optional
  * "Vorige vraag in dit gesprek" line; without a previous question the user
  * turn is byte-identical to version 2's (pinned against
- * tests/fixtures/tableparse/prompt-v2/). */
-export const TABLE_PARSE_PROMPT_VERSION = 3;
+ * tests/fixtures/tableparse/prompt-v2/). Bumped to 4 (session 153, #360 —
+ * before the first recorded run): three PERIODE lines — a bare year range
+ * ("van 2015 tot 2020") is year_range, "nu vergeleken met 2015" is since,
+ * and "gestegen sinds vorig jaar" is now_vs_ago (1 unit) — plus, after the
+ * first live calibration (15/50), three lines the model visibly needed:
+ * never pick a default member for an unmentioned dimension, a place-member
+ * dimension still gets a choice, and "Nederland" is a named place. */
+export const TABLE_PARSE_PROMPT_VERSION = 4;
 
 /** Breadth step 5, Task 7: the one system-prompt rule for a follow-up in the
  * same conversation (the only change to the system prompt in version 3). */
@@ -110,12 +127,18 @@ export const TABLE_PARSE_NOT_NAMED = 'niet_genoemd';
  * (principle c). */
 export const TABLE_PARSE_OTHER = 'anders';
 
-/** Acceptance threshold. **Assumption:** uncalibrated until the recording
- * run (mirrored in docs/open-questions.md) — kept at 0.8, the same starting
- * point as DEFAULT_MEASURE_FIT_CONFIG, for consistency across the two
- * closed-choice gates until a real measured run says otherwise. */
+/** Acceptance threshold — calibrated session 153 (2026-10-01) on two
+ * claude-sonnet-5 recordings of the 50 labelled cases + 23 table-lane
+ * benchmark requests (was an uncalibrated 0.8). Measured: confidence does
+ * NOT separate right from wrong readings (wrong ones reached 0.84–0.95,
+ * right ones went as low as 0.5) — the structural checks carry principle
+ * (c), this gate only screens self-declared doubt. 0.6 is the value with
+ * zero number-producing wrong accepts in BOTH runs (the gross/net
+ * labour-participation flip sat at 0.55) while the benchmark gate passes on
+ * both (12/14, 9/9, 0 invented). L16 (an 'anders' that becomes a question)
+ * sits exactly on 0.6 — a dip below refuses, which is safe. */
 export const DEFAULT_TABLE_PARSE_CONFIG = {
-  acceptThreshold: 0.8,
+  acceptThreshold: 0.6,
 };
 
 export class TableParseValidationError extends Error {
@@ -390,6 +413,12 @@ export function validateTableParseOutput(
 
   for (const entry of data.breakdowns) {
     const offered = breakdownsByName.get(entry.dimension);
+    // Session 153: an extra 'niet_genoemd' entry for a dimension that is not
+    // offered says nothing at all (first live recording: the model added a
+    // 'Brandstofsoort: niet_genoemd' line to a table without one), so it is
+    // dropped instead of refusing the whole question. A member code or
+    // 'anders' for a dimension that is not offered is still a refusal below.
+    if (!offered && entry.choice === TABLE_PARSE_NOT_NAMED) continue;
     if (!offered) {
       throw new TableParseValidationError(
         `table-parse named dimension '${entry.dimension}' which is not one of table ` +
@@ -593,15 +622,18 @@ UITSPLITSINGEN
 Voor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:
 - Een ledencode, LETTERLIJK overgenomen uit de ledenlijst van DIE dimensie, wanneer de vraag precies dat ene lid noemt of er overduidelijk naar verwijst.
 - 'niet_genoemd' wanneer de vraag helemaal niets zegt over deze dimensie.
+- Noemt de vraag een dimensie niet, kies dan NOOIT zelf een lid als standaard — ook geen 'Totaal …'-lid en geen brede groep zoals '15 tot 75 jaar'. Antwoord 'niet_genoemd': de code kiest zelf het totaal, of stelt de gebruiker een vraag.
 - 'anders' wanneer de vraag wél iets zegt over deze dimensie, maar dat niet precies één aangeboden lid is:
   - het genoemde staat niet in de aangeboden ledenlijst. Let op: lange ledenlijsten zijn voor je ingekort (dit staat erbij als "ingekort: N van M") — het genoemde lid kan dus bestaan maar simpelweg niet in jouw lijst staan;
   - MEERDERE leden passen bij wat de vraag noemt (bijvoorbeeld "ouderen" over meerdere leeftijdsklassen);
   - de vraag vergelijkt of zoekt over de leden heen ("welke leeftijdsgroep had de meeste …", "per geslacht").
   Kies in al die gevallen 'anders' — nooit het totaal en nooit één lid dat er toevallig op lijkt.
 Elke aangeboden dimensie komt precies één keer voor in je antwoord.
+Dat geldt ook voor een dimensie met plaatsen als leden (zoals RegioS): ook die krijgt altijd een keuze, naast het veld regions.
 
 REGIO'S
 Noem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een CBS-code — codes horen alleen bij maten en leden.
+Ook "Nederland" zelf is een genoemde plaats (soort land) wanneer de vraag het noemt.
 Staat een genoemde plaats zelf als lid in een aangeboden uitsplitsing (bijvoorbeeld een dimensie met provincies, regio's of gemeenten), dan noem je haar hier ÉN kies je voor die dimensie dat lid. Passen meerdere leden bij de genoemde plaats (bijvoorbeeld "Groningen (PV)", "Groningen (ES)" en "Groningen (ET)"), of noemt de vraag meerdere plaatsen uit dezelfde dimensie, kies dan voor die dimensie 'anders'.
 
 REGIOKLASSE
@@ -611,10 +643,13 @@ PERIODE
 Geef de periode ALTIJD exact met de precisie die de vraag zelf noemt — OOK wanneer die precisie niet voorkomt in de lijst "Beschikbare periode-precisies". Pas de gevraagde periode nooit aan naar een precisie die wel beschikbaar is (bijvoorbeeld een genoemd kwartaal afronden op een jaar, omdat alleen jaren beschikbaar zijn) — de code bepaalt zelf of en hoe die precisie beantwoord kan worden. Voorbeelden van het format:
 - Genoemd jaar → {"kind":"year","year":JJJJ}; genoemd kwartaal → {"kind":"quarter","year":JJJJ,"quarter":1..4}; genoemde maand → {"kind":"month","year":JJJJ,"month":1..12}.
 - "van JJJJ tot en met JJJJ" (hele jaren) → {"kind":"year_range","fromYear":...,"toYear":...}.
+- "van JJJJ tot JJJJ", "tussen JJJJ en JJJJ" of "JJJJ-JJJJ" met alleen jaartallen → {"kind":"year_range",...}, beide jaren inbegrepen.
 - Expliciete dag- of maandgrenzen ("van 1 januari 2022 tot en met 31 december 2022") → {"kind":"date_range","from":{...},"to":{...},"toInclusive":...}: kopieer dag, maand en jaar precies zoals geschreven (dag null wanneer er geen dag genoemd wordt); toInclusive is true bij "tot en met"/"t/m"; bij een kale "tot" is toInclusive true wanneer de grens alleen een maand noemt, en false wanneer de grens een dag noemt.
 - "sinds JJJJ"/"vanaf JJJJ" zonder genoemd einde → {"kind":"since","year":JJJJ,"quarter":null,"month":null}; een genoemde startmaand of -kwartaal vult month/quarter in plaats van null.
 - "de afgelopen/laatste N jaar/kwartalen/maanden" met N van 2 of meer → {"kind":"last_n","unit":"year"|"quarter"|"month","n":N}; het enkelvoud ("het afgelopen jaar", "de afgelopen maand") is juist {"kind":"relative","unit":...,"offset":-1}.
 - "nu vergeleken met N {eenheid} geleden" → {"kind":"now_vs_ago","unit":...,"amount":N}.
+- "gestegen/gedaald/veranderd sinds vorig jaar" (of vorige maand, vorig kwartaal), "ten opzichte van vorig jaar" → {"kind":"now_vs_ago","unit":"year","amount":1}: een vergelijking van nu met de periode ervoor. Alleen "vorig jaar" zonder vergelijking blijft {"kind":"relative",...}.
+- "nu vergeleken met JJJJ", "ten opzichte van JJJJ" met een genoemd jaartal → {"kind":"since","year":JJJJ,"quarter":null,"month":null}: het genoemde jaar is het beginpunt. Dit is NOOIT now_vs_ago — now_vs_ago is alleen voor "N jaar/kwartalen/maanden geleden" en "sinds vorig jaar/vorige maand/vorig kwartaal".
 - "groeide/steeg/daalde ... in JJJJ, met hoeveel" → {"kind":"change_over_year","year":JJJJ}.
 - "vorige maand"/"vorig kwartaal"/"vorig jaar" → {"kind":"relative","unit":...,"offset":-1}: offset is een negatief getal, -1 is de vorige periode.
 - 'latest' alleen bij een expliciet heden-signaal ("nu", "op dit moment", tegenwoordige tijd); 'none' wanneer de vraag helemaal geen periodesignaal bevat.
@@ -725,13 +760,14 @@ export function buildTableParseRequest(
   input: TableParseSchema,
   options: Pick<TableParseOptions, 'model' | 'maxTokens' | 'previousQuestion'> = {},
 ): LlmRequest {
+  const model = options.model ?? TABLE_PARSE_MODEL;
   return {
-    model: options.model ?? TABLE_PARSE_MODEL,
+    model,
     // Small JSON output (a handful of codes/choices + confidence + one Dutch
     // sentence); 1024 mirrors measureFit's headroom reasoning — a max_tokens
     // stop throws in the harness, never a fabrication.
     maxTokens: options.maxTokens ?? 1024,
-    temperature: 0,
+    ...tableParseSampling(model),
     system: buildTableParseSystemPrompt(),
     question: serializeTableParseInput(question, input, options.previousQuestion),
     jsonSchema: tableParseJsonSchema(),
@@ -754,6 +790,77 @@ export interface TableParseOutcome {
   audit: TableParseAudit;
 }
 
+/** A four-digit year from 1900 to 2099 written in the question itself. */
+const NAMED_YEAR = /(?<![0-9])(19|20)[0-9]{2}(?![0-9])/;
+
+/** Period kinds that count back from "now" and carry no year of their own. */
+const NOW_RELATIVE_KINDS = new Set(['now_vs_ago', 'relative', 'last_n', 'latest']);
+
+/**
+ * Session 153 (first live recording): "Hoeveel broeikasgas werd er nu
+ * uitgestoten vergeleken met 2015?" came back as now_vs_ago 1 year — a real
+ * CBS number for the wrong comparison, and a prompt line did not stop it.
+ * When the question names a year but the reading only counts back from now,
+ * the year the reader named is lost; refuse (principle c) instead. Only the
+ * CURRENT question is checked — a follow-up inherits its year through the
+ * parse, never through this test.
+ */
+export function assertPeriodFitsNamedYear(question: string, result: TableParseResult, outputText: string): void {
+  if (!NOW_RELATIVE_KINDS.has(result.period.kind)) return;
+  const year = NAMED_YEAR.exec(question);
+  if (year === null) return;
+  throw new TableParseValidationError(
+    `the question names the year ${year[0]}, but the parse reads the period as '${result.period.kind}' ` +
+      `(counted back from now) — the named year would be lost, so the reading is not trusted`,
+    outputText,
+  );
+}
+
+const SEASONAL_TITLE = 'seizoengecorrigeerd';
+const NOT_SEASONAL_TITLE = 'niet-seizoengecorrigeerd';
+const ASKS_NOT_SEASONAL = /niet[\s-]*seizoen|ongecorrigeerd|zonder seizoencorrectie/i;
+const ASKS_SEASONAL = /seizoengecorrigeerd|seizoencorrectie/i;
+
+/**
+ * Session 153: the MAAT rule on seasonal adjustment, enforced in code. CBS
+ * publishes some figures twice in one measure group — "Seizoengecorrigeerd"
+ * and "Niet-seizoengecorrigeerd" (80590ned). The prompt states which one a
+ * question means; the first recordings showed both models ignoring it (one
+ * even picking the unadjusted figure for a question that SAYS
+ * "seizoengecorrigeerd"). Which of the two is meant is decided here from
+ * the question's own words, else from the period: a month or quarter
+ * question takes the adjusted figure (CBS's headline practice, the curated
+ * pipeline's default), a year question the unadjusted one (adjustment only
+ * exists below a year). The swap only ever moves to the twin in the SAME
+ * group, so the topic the model chose is kept. No twin, no change.
+ */
+export function applySeasonalAdjustmentRule(
+  question: string,
+  result: TableParseResult,
+  input: TableParseSchema,
+): TableParseResult {
+  if (result.measureCode === null) return result;
+  const chosen = input.measures.find((m) => m.code === result.measureCode)!;
+  const title = chosen.title.trim().toLowerCase();
+  if (title !== SEASONAL_TITLE && title !== NOT_SEASONAL_TITLE) return result;
+  const twinTitle = title === SEASONAL_TITLE ? NOT_SEASONAL_TITLE : SEASONAL_TITLE;
+  const group = JSON.stringify(chosen.groupPath);
+  const twins = input.measures.filter(
+    (m) => m.title.trim().toLowerCase() === twinTitle && JSON.stringify(m.groupPath) === group,
+  );
+  if (twins.length !== 1) return result;
+
+  let wantSeasonal: boolean | null;
+  if (ASKS_NOT_SEASONAL.test(question)) wantSeasonal = false;
+  else if (ASKS_SEASONAL.test(question)) wantSeasonal = true;
+  else {
+    const grain = result.period.kind === 'date_range' ? null : requiredGrain(result.period);
+    wantSeasonal = grain === 'MM' || grain === 'KW' ? true : grain === 'JJ' ? false : null;
+  }
+  if (wantSeasonal === null || wantSeasonal === (title === SEASONAL_TITLE)) return result;
+  return { ...result, measureCode: twins[0]!.code };
+}
+
 /**
  * The table-scoped parse: turns a reader's question, read against ONE
  * table's own closed menu, into a validated TableParseResult plus the
@@ -768,7 +875,9 @@ export async function tableParse(
 ): Promise<TableParseOutcome> {
   const request = buildTableParseRequest(question, input, options);
   const response = await options.client.complete(request);
-  const result = validateTableParseOutput(response.outputText, input);
+  const validated = validateTableParseOutput(response.outputText, input);
+  assertPeriodFitsNamedYear(question, validated, response.outputText);
+  const result = applySeasonalAdjustmentRule(question, validated, input);
   return {
     result,
     audit: {

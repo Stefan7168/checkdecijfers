@@ -41,10 +41,10 @@
       "id": "geen-voertuigen-verkoop",
       "table": "85245NED",
       "question": "Hoeveel nieuwe personenauto's werden er verkocht in 2021?",
-      "note": "Every measure in this table counts SLOOP (scrapped) vehicles — new-car sales is a different statistic the table cannot answer. geen.",
+      "note": "Every measure in this table counts SLOOP (scrapped) vehicles — new-car sales is a different statistic the table cannot answer. geen. Session 153 label correction: the question names \"personenauto's\", so VoertuigType is that member (A018943) by this set's own rule (a named member gets its code) — both recorded models agreed; the case still scores the 'geen' refusal.",
       "expect": {
         "measureCode": "geen",
-        "breakdowns": { "VoertuigType": "niet_genoemd" },
+        "breakdowns": { "VoertuigType": "A018943" },
         "periodKind": "year",
         "regions": []
       }
@@ -472,6 +472,141 @@
         "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
         "periodKind": "year",
         "regions": ["Amsterdam"]
+      }
+    },
+    {
+      "id": "period-klimaat-gestegen-sinds-vorigjaar",
+      "table": "85669NED",
+      "question": "Is de uitstoot van broeikasgassen gestegen sinds vorig jaar?",
+      "note": "Session 153, #360. B1 (prompt v4): \"gestegen sinds vorig jaar\" compares now with the year before → now_vs_ago (unit year, amount 1), not relative. Same dimension reading as total-emissies-elektriciteit: neither dimension is named.",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "now_vs_ago",
+        "regions": []
+      }
+    },
+    {
+      "id": "period-arbeid-werkloosheid-tov-vorigemaand",
+      "table": "80590ned",
+      "question": "Is het seizoengecorrigeerde werkloosheidspercentage gestegen ten opzichte van vorige maand?",
+      "note": "Session 153, #360. B1 (prompt v4): \"ten opzichte van vorige maand\" → now_vs_ago (unit month, amount 1). The question says seasonally adjusted and names the Werkloosheidspercentage group → M004210. Geslacht/Leeftijd not mentioned.",
+      "expect": {
+        "measureCode": "M004210",
+        "breakdowns": { "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "now_vs_ago",
+        "regions": []
+      }
+    },
+    {
+      "id": "period-klimaat-vorigjaar-control",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas werd er vorig jaar uitgestoten?",
+      "note": "Session 153, #360. B1 control: a bare \"vorig jaar\" with no comparison stays relative (offset -1) — the v4 line must not turn every \"vorig jaar\" into now_vs_ago.",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "relative",
+        "regions": []
+      }
+    },
+    {
+      "id": "period-klimaat-nu-vs-2015",
+      "table": "85669NED",
+      "question": "Hoeveel broeikasgas werd er nu uitgestoten vergeleken met 2015?",
+      "note": "Session 153, #360. B2 (prompt v4): \"nu vergeleken met 2015\" → since (year 2015).",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "since",
+        "regions": []
+      }
+    },
+    {
+      "id": "period-klimaat-2015-tot-2020",
+      "table": "85669NED",
+      "question": "Hoe ontwikkelde de uitstoot zich van 2015 tot 2020?",
+      "note": "Session 153, #360. B3 (prompt v4): a bare \"van 2015 tot 2020\" with only years → year_range, both years included. The table has one measure (greenhouse-gas emission).",
+      "expect": {
+        "measureCode": "D003040",
+        "breakdowns": { "EmissiesNaarLucht": "niet_genoemd", "Klimaatsectoren": "niet_genoemd" },
+        "periodKind": "year_range",
+        "regions": []
+      }
+    },
+    {
+      "id": "regionclass-bevolking-elke-provincie",
+      "table": "03759ned",
+      "question": "Hoeveel inwoners had elke provincie op 1 januari 2024?",
+      "note": "Session 153, #360. B4: a whole region class (\"elke provincie\") → regionScope all_provincies, no named place. \"op 1 januari\" = M000352 (Bevolking op 1 januari), same as region-amsterdam-bevolking.",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": [],
+        "regionScope": "all_provincies"
+      }
+    },
+    {
+      "id": "regionclass-bevolking-gemeente-in-utrecht",
+      "table": "03759ned",
+      "question": "Welke gemeente in Utrecht had op 1 januari 2023 de meeste inwoners?",
+      "note": "Session 153, #360. B4: \"welke gemeente in {provincie}\" → regionScope gemeenten_in_provincie with that province as the only region.",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": ["Utrecht"],
+        "regionScope": "gemeenten_in_provincie"
+      }
+    },
+    {
+      "id": "regionclass-ziekenhuis-welke-provincie",
+      "table": "84521NED",
+      "question": "In welke provincie waren er in 2022 de meeste ziekenhuisopnamen?",
+      "note": "Session 153, #360. B4: \"welke provincie …\" → regionScope all_provincies. The table has a region dimension; the code decides whether it carries provinces. The four breakdowns are not mentioned.",
+      "expect": {
+        "measureCode": "M006162_1",
+        "breakdowns": { "Diagnose": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd", "SoortOpname": "niet_genoemd" },
+        "periodKind": "year",
+        "regions": [],
+        "regionScope": "all_provincies"
+      }
+    },
+    {
+      "id": "period-bevolking-5jaar-geleden",
+      "table": "03759ned",
+      "question": "Hoeveel inwoners heeft Nederland nu vergeleken met 5 jaar geleden?",
+      "note": "Session 153, #360. B4: \"nu vergeleken met 5 jaar geleden\" → now_vs_ago (unit year, amount 5) — the existing v3 line. \"Nederland\" is a named land-level place.",
+      "expect": {
+        "measureCode": "M000352",
+        "breakdowns": { "BurgerlijkeStaat": "niet_genoemd", "Geslacht": "niet_genoemd", "Leeftijd": "niet_genoemd" },
+        "periodKind": "now_vs_ago",
+        "regions": ["Nederland"]
+      }
+    },
+    {
+      "id": "period-water-datumbereik",
+      "table": "82883NED",
+      "question": "Hoeveel leidingwater gebruikte de landbouw van 1 januari 2015 tot en met 31 december 2017?",
+      "note": "Session 153, #360. B4: explicit day bounds → date_range (the existing v3 line). \"De landbouw\" → Watergebruikers 301000 and the measure as in grain-water-maand.",
+      "expect": {
+        "measureCode": "M005248_2",
+        "breakdowns": { "Watergebruikers": "301000" },
+        "periodKind": "date_range",
+        "regions": []
+      }
+    },
+    {
+      "id": "period-voertuigen-vorigjaar",
+      "table": "85245NED",
+      "question": "Hoeveel personenauto's werden er vorig jaar gesloopt?",
+      "note": "Session 153, #360. B4: bare \"vorig jaar\" → relative (offset -1). Measure and VoertuigType as in general-voertuigen-personenauto.",
+      "expect": {
+        "measureCode": "A047215",
+        "breakdowns": { "VoertuigType": "A018943" },
+        "periodKind": "relative",
+        "regions": []
       }
     }
   ]

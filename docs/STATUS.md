@@ -20,14 +20,26 @@
 **▶ THE PLOT (owner, 2026-09-30, session 152 — read this before anything else):** the product is a LAYER. A question comes in; the
   layer finds the right table anywhere in CBS or Eurostat, fetches only what it needs, checks it, and answers. It is NOT a set of curated
   copies kept fresh. Work, in order, and nothing else:
-  1. **CBS: switch on the any-table route** (ADR 062 table lane) — record + calibrate its table reader (1 October plan part A, owner
-     present, ~$0.25), the table-lane benchmark (step 6), then the flag flip; then evict `37789ksz`.
+  1. **CBS: switch on the any-table route** (ADR 062 table lane) — reader recorded + calibrated and the table-lane benchmark
+     PASSED (session 153); left: owner GO → the flag flip; then evict `37789ksz`.
   2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way (built,
      dark), fetch only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5).
   3. **Stop:** converting, refreshing, curating or polishing specific tables/datasets. The four Eurostat datasets are NOT converted or
      refreshed by hand any more; they go when the Eurostat route answers. Storage work only as far as the two routes need it.
   The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
   mistake as pinning one welfare table (CLAUDE.md "Breadth comes from the layer").
+
+**▶ SESSION 153 (2026-10-01, owner present) — THE ANY-TABLE ROUTE PASSES ITS GATE; THE FLIP WAITS FOR THE OWNER'S GO
+  ([#338](open-questions.md), [#360](open-questions.md), [#361](open-questions.md), ADR 062 "As built — recording + calibration"):**
+  owner decided #360 "add all" and approved the spend. The table reader was recorded live for the first time. The cheap
+  model failed (26/50 labelled; it read "CO2" as all greenhouse gases and "nu vergeleken met 2015" as one year ago), so the
+  reader moved to the mid tier (`claude-sonnet-5`), with the owner's OK. Five code fixes (no AI): named-year guard, harmless
+  extra entries dropped, facts-before-doubt refusal order, total picks left to the resolver, the seasonal-adjustment rule
+  in code (a sixth, "place served by the chosen row", was withdrawn: the verification block showed a
+  birth-country hazard). Threshold calibrated to 0.6. **Measured on both recordings: labelled 44/50
+  (all six misses refuse or ask), table-lane benchmark 12/14 answers (the floor), 9/9 refuse/ask, 0 invented — GATE PASS.** AI spend
+  ~$4.24 (estimate undercounts billed tokens 2.5×; fixed in the dry-run print). Per table-lane question ~1.8 cents.
+  `gate.enforcedInCi` false and `TABLE_LANE_ENABLED` unset — both wait for the owner's GO.
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,
@@ -91,10 +103,10 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 152 — verify against `git log` / Actions runs before trusting this).
-Kickoff: [session-briefs/2026-10-01-session-153-kickoff.md](session-briefs/2026-10-01-session-153-kickoff.md). Single priority: switch on the
-CBS any-table route — decide #360 (prompt additions) FIRST, then recording plan part A (owner present, after 00:00 UTC), table-lane benchmark,
-flag flip, evict `37789ksz`. The older bullets below are history.**
+**▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
+Single priority: switch on the CBS any-table route — the gate PASSED (12/14, 9/9, 0 invented). With the owner's GO: set
+`gate.enforcedInCi` true → flip `TABLE_LANE_ENABLED` (owner-supervised) → evict `37789ksz`. Then the Eurostat route (THE PLOT 2).
+The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables
   behind. Nothing REFRESHES them automatically, but since session 149 the daily cron e-mails the owner when CBS has newer data — still

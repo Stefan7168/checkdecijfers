@@ -1212,7 +1212,7 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
-## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), MIGRATIONS 037+038 ✅ APPLIED LIVE (session 145), NEXT = recording run after 2026-10-01 then STEP 6 (the look gate passed session 144)
+## Breadth — any current CBS table answerable in the same chat ([#335](open-questions.md), owner pick session 138) — STEP 1 ✅ MEASURED, STEPS 2–5 ✅ BUILT (4 hermetic, 5 wired DARK), MIGRATIONS 037+038 ✅ APPLIED LIVE (session 145), RECORDING + STEP 6 ✅ MEASURED, GATE PASS (session 153), NEXT = owner GO → flip
 
 Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.md)) chose breadth over depth. Design:
 [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
@@ -1234,10 +1234,13 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
   non-curated tables, key verified against CBS, hermetic runner + scorer, CI test that switches on with the fixtures.
 - **Also built session 152 (dark):** region classes, now-vs-then, date ranges and "vorig jaar" answered in the lane; the "miljard"
   unit finding ([#339](open-questions.md) item 14) FIXED (`b388a14c`, canned run 14/14 + 9/9 + 0 invented).
-- **Next (owner-supervised, in order) — THE single priority (STATUS "THE PLOT"):** decide the parser prompt additions B1–B4
-  ([#360](open-questions.md)) → the recording + calibration run (after 2026-10-01 00:00 UTC, ~189k input tokens incl. the
-  23 benchmark requests, cheap tier; [#338](open-questions.md)) → **step 6** measured run (`npm run tablelane:bench:run` + `:score`: answer tasks ≥ 12 of 14, refuse + ask 9 of 9,
-  0 invented numbers) → flip `TABLE_LANE_ENABLED` (RUNBOOK "Table lane (breadth step 5)").
+- **✅ 2026-10-01 (session 153):** B1–B4 decided + built ([#360](open-questions.md)); recording + calibration RAN — the
+  parser moved to the mid tier (`claude-sonnet-5`) on a measured cheap-tier miss, five structural fixes, threshold 0.6
+  ([#338](open-questions.md)); **step 6 measured: 12/14 answers, 9/9 refuse/ask, 0 invented — GATE PASS on both recordings**
+  (ADR 062 "As built — recording + calibration").
+- **Next (owner GO, in order) — THE single priority (STATUS "THE PLOT"):** set `gate.enforcedInCi` true in
+  `benchmark/tablelane-tasks.json` → flip `TABLE_LANE_ENABLED` (owner-supervised env flip; RUNBOOK "Table lane (breadth
+  step 5)") → evict `37789ksz` (`npm run tables:evict -- --table 37789ksz`, dry run then `--apply`).
 
 ## SEO landing pages ([#353](open-questions.md), owner pick session 145, 2026-09-29) — NETHERLANDS PAGE ✅ BUILT DARK; EUROSTAT PAGE WAITS FOR CURATED EUROSTAT SERIES; SWITCH-ON WAITS FOR THE DOMAIN
 

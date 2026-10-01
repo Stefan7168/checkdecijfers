@@ -286,20 +286,15 @@ export async function planTableLane(input: {
     }
   }
 
-  // --- 3. Confidence --------------------------------------------------------------
-  if (result.confidence < DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold) {
-    return refuse(
-      'table_lane_unsure',
-      `parse confidence ${result.confidence} is below ${DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold}`,
-      result,
-      parseAudit,
-    );
-  }
-
-  // --- 4. 'geen' — BEFORE namedFromParse ------------------------------------------
+  // --- 3. 'geen' — BEFORE the confidence check and namedFromParse ------------------
+  // Session 153: a 'geen' parse reports a LOW confidence (it is the model's
+  // confidence in a match, and there is none), so checking confidence first
+  // turned every honest "this table has no such figure" into the vaguer
+  // "not sure which figure you mean". Both refuse; this one says why.
   if (result.measureCode === null) {
     return refuse('table_lane_no_measure', 'no measure in this table answers the question', result, parseAudit);
   }
+
   const measureCode = result.measureCode;
 
   // --- 5. Period grain: a refusal, not a warning ------------------------------------
@@ -307,6 +302,25 @@ export async function planTableLane(input: {
     return refuse(
       'table_lane_period_grain',
       `the question's period precision is not published by this table (has: ${offered.periodGrains.join(', ') || 'none'})`,
+      result,
+      parseAudit,
+    );
+  }
+
+  // --- 5b. Period availability, then confidence --------------------------------------
+  // Session 153: the deterministic period refusals (period not in the table,
+  // a period shape it cannot serve) win over the confidence gate, the same
+  // way 'geen' does — "CBS has no 2030 figure" says why, "not sure what you
+  // mean" does not. resolveTablePeriod reads only the parsed period and the
+  // table's own time codes, so it can run here; step 11 reuses its result.
+  const period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
+  if (!period.ok) return refuse(period.reason, period.detail, result, parseAudit, period.latestPeriodCode);
+
+  // --- 5c. Confidence ---------------------------------------------------------------------
+  if (result.confidence < DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold) {
+    return refuse(
+      'table_lane_unsure',
+      `parse confidence ${result.confidence} is below ${DEFAULT_TABLE_PARSE_CONFIG.acceptThreshold}`,
       result,
       parseAudit,
     );
@@ -321,6 +335,7 @@ export async function planTableLane(input: {
   const offeredNames = new Set(offered.breakdowns.map((b) => b.name));
   const breakdowns = { ...result.breakdowns };
   const extraNamed: Record<string, string> = {};
+  const readerNamed: Record<string, string> = {};
   const regionChoices: TableLaneChoice[] = [];
   for (const choice of choices) {
     const dim = fullDims.find((d) => d.name === choice.dimension);
@@ -341,6 +356,11 @@ export async function planTableLane(input: {
       regionChoices.push(choice);
     } else if (offeredNames.has(dim.name)) {
       breakdowns[dim.name] = { kind: 'member', code: choice.code };
+      // Session 153: the reader's own click is named as-is — the bridge's
+      // "a total pick is left to the resolver" rule is for the MODEL's
+      // picks only; applying it to a clicked "Totaal leeftijd" asked the
+      // same question again.
+      readerNamed[dim.name] = choice.code;
     } else {
       // A non-offered plain dimension (margins) the resolver asked about.
       extraNamed[dim.name] = choice.code;
@@ -354,7 +374,7 @@ export async function planTableLane(input: {
     const dim = fullDims.find((d) => d.name === bridged.askDimension)!;
     return { kind: 'ask', question: toQuestion(dim), parse: result, parseAudit, offered };
   }
-  const named = { ...bridged.named, ...extraNamed };
+  const named = { ...bridged.named, ...extraNamed, ...readerNamed };
 
   // --- 9. Breakdown resolver: CBS's own unique total, or ask ----------------------------
   const resolved = resolveBreakdowns(fullDims, named);
@@ -407,9 +427,7 @@ export async function planTableLane(input: {
     return refuse('region_unavailable', `table '${schema.tableId}' has ${geoDims.length} GeoDimensions`, result, parseAudit);
   }
 
-  // --- 11. Period -------------------------------------------------------------------------
-  const period = resolveTablePeriod(result.period, codeLists[timeDim.name]!, referenceDate);
-  if (!period.ok) return refuse(period.reason, period.detail, result, parseAudit, period.latestPeriodCode);
+  // --- 11. Period (resolved at step 5b) ---------------------------------------------------
   if (regionClass !== null && period.codes.length !== 1) {
     // The query layer answers a class for ONE period (ADR 054's one varying
     // axis); refused here, before any fetch, rather than after one.

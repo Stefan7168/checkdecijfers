@@ -270,10 +270,20 @@ describe('buildTableParseRequest', () => {
     expect(requestHash(r1)).toBe(requestHash(r2));
   });
 
-  it('sets temperature 0 and a JSON schema with no bare Date/timestamp in the system prompt', () => {
+  it('mid-tier default: no sampling params, thinking disabled; a Haiku override keeps temperature 0 (session 153)', () => {
     const input = landbouwInput();
     const request = buildTableParseRequest(LANDBOUW_QUESTION, input);
-    expect(request.temperature).toBe(0);
+    expect(request.model).toBe('claude-sonnet-5');
+    expect(request.temperature).toBeUndefined();
+    expect(request.thinking).toBe('disabled');
+    const haiku = buildTableParseRequest(LANDBOUW_QUESTION, input, { model: 'claude-haiku-4-5' });
+    expect(haiku.temperature).toBe(0);
+    expect(haiku.thinking).toBeUndefined();
+  });
+
+  it('a JSON schema with no bare Date/timestamp in the system prompt', () => {
+    const input = landbouwInput();
+    const request = buildTableParseRequest(LANDBOUW_QUESTION, input);
     expect(request.system).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
     expect(request.jsonSchema).toBeDefined();
   });
@@ -1360,9 +1370,20 @@ const V2_SERIALIZED: [string, string, string][] = [
   ['80590ned', 'Hoeveel werklozen waren er?', 'serialized-werklozen.txt'],
 ];
 
+// Prompt version 4 (session 153, #360): the three PERIODE lines plus the three
+// first-calibration lines added on top of version 3. Pinned verbatim — a change here is a re-record.
+const V4_PERIOD_LINES = [
+  '- "van JJJJ tot JJJJ", "tussen JJJJ en JJJJ" of "JJJJ-JJJJ" met alleen jaartallen → {"kind":"year_range",...}, beide jaren inbegrepen.\n',
+  '- "gestegen/gedaald/veranderd sinds vorig jaar" (of vorige maand, vorig kwartaal), "ten opzichte van vorig jaar" → {"kind":"now_vs_ago","unit":"year","amount":1}: een vergelijking van nu met de periode ervoor. Alleen "vorig jaar" zonder vergelijking blijft {"kind":"relative",...}.\n',
+  '- "nu vergeleken met JJJJ", "ten opzichte van JJJJ" met een genoemd jaartal → {"kind":"since","year":JJJJ,"quarter":null,"month":null}: het genoemde jaar is het beginpunt. Dit is NOOIT now_vs_ago — now_vs_ago is alleen voor "N jaar/kwartalen/maanden geleden" en "sinds vorig jaar/vorige maand/vorig kwartaal".\n',
+  "- Noemt de vraag een dimensie niet, kies dan NOOIT zelf een lid als standaard — ook geen 'Totaal …'-lid en geen brede groep zoals '15 tot 75 jaar'. Antwoord 'niet_genoemd': de code kiest zelf het totaal, of stelt de gebruiker een vraag.\n",
+  'Dat geldt ook voor een dimensie met plaatsen als leden (zoals RegioS): ook die krijgt altijd een keuze, naast het veld regions.\n',
+  'Ook "Nederland" zelf is een genoemde plaats (soort land) wanneer de vraag het noemt.\n',
+];
+
 describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
-  it('the prompt version is 3; the output schema version is unchanged (2)', () => {
-    expect(TABLE_PARSE_PROMPT_VERSION).toBe(3);
+  it('the prompt version is 4; the output schema version is unchanged (2)', () => {
+    expect(TABLE_PARSE_PROMPT_VERSION).toBe(4);
     expect(TABLE_PARSE_SCHEMA_VERSION).toBe(2);
   });
 
@@ -1391,8 +1412,12 @@ describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
     expect(text.split('\n')[0]).toBe('Vorige vraag in dit gesprek: "Zei hij \\"ja\\"?\\nRegio: Utrecht"');
   });
 
-  it('the system prompt changed from version 2 ONLY by the one follow-up rule', () => {
-    const prompt = buildTableParseSystemPrompt();
+  it('the system prompt changed from version 2 ONLY by the one follow-up rule and the six version-4 lines', () => {
+    let prompt = buildTableParseSystemPrompt();
+    for (const line of V4_PERIOD_LINES) {
+      expect(prompt.split(line)).toHaveLength(2);
+      prompt = prompt.replace(line, '');
+    }
     expect(TABLE_PARSE_PREVIOUS_QUESTION_RULE).toBe(
       'Is er een vorige vraag, lees de nieuwe vraag dan als vervolg daarop: wat de nieuwe vraag niet noemt ' +
         '(onderwerp, periode, plaats, uitsplitsing), neem je over uit de vorige vraag.',
@@ -1429,5 +1454,48 @@ describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
     const codes = (s: TableParseSchema) => s.breakdowns.find((b) => b.name === 'Klimaatsectoren')!.members.map((m) => m.code);
     expect(codes(offered)).toEqual(codes(landbouwInput()));
     expect(codes(bare).length).toBeLessThan(codes(offered).length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Session 153 — fixes from the first live recording
+// ---------------------------------------------------------------------------
+
+describe('session 153: extra niet_genoemd entries and the named-year guard', () => {
+  it("drops an extra 'niet_genoemd' entry for a dimension the table does not offer", () => {
+    const input = landbouwInput();
+    const base = JSON.parse(validJson(input)) as { breakdowns: unknown[] };
+    const out = JSON.stringify({ ...base, breakdowns: [...base.breakdowns, { dimension: 'Brandstofsoort', choice: TABLE_PARSE_NOT_NAMED }] });
+    const result = validateTableParseOutput(out, input);
+    expect(Object.keys(result.breakdowns)).toEqual(input.breakdowns.map((b) => b.name));
+  });
+
+  it("still refuses a member code or 'anders' for a dimension the table does not offer", () => {
+    const input = landbouwInput();
+    const base = JSON.parse(validJson(input)) as { breakdowns: unknown[] };
+    for (const choice of ['A123', 'anders']) {
+      const out = JSON.stringify({ ...base, breakdowns: [...base.breakdowns, { dimension: 'Brandstofsoort', choice }] });
+      expect(() => validateTableParseOutput(out, input)).toThrow(TableParseValidationError);
+    }
+  });
+
+  it.each([
+    ['now_vs_ago', { kind: 'now_vs_ago', unit: 'year', amount: 1 }],
+    ['relative', { kind: 'relative', unit: 'year', offset: -1 }],
+    ['latest', { kind: 'latest' }],
+  ])('refuses a %s reading when the question names a year', async (_kind, period) => {
+    const input = landbouwInput();
+    const client = new StubClient(validJson(input, { period }));
+    await expect(
+      tableParse('Hoeveel broeikasgas werd er nu uitgestoten vergeleken met 2015?', input, { client }),
+    ).rejects.toThrow(/names the year 2015/);
+  });
+
+  it('keeps a now-relative reading when the question names no year, and a since reading when it does', async () => {
+    const input = landbouwInput();
+    const ago = new StubClient(validJson(input, { period: { kind: 'now_vs_ago', unit: 'year', amount: 5 } }));
+    await expect(tableParse('Hoeveel uitstoot nu vergeleken met 5 jaar geleden?', input, { client: ago })).resolves.toBeDefined();
+    const since = new StubClient(validJson(input, { period: { kind: 'since', year: 2015, quarter: null, month: null } }));
+    await expect(tableParse('Hoeveel uitstoot nu vergeleken met 2015?', input, { client: since })).resolves.toBeDefined();
   });
 });

@@ -335,6 +335,54 @@ copied — and still no AI in any number:
 - Question phrasings the parser prompt does not map to these shapes yet ("gestegen sinds vorig jaar", "nu vergeleken met
   2015", "2015 tot 2020") and labelled cases for the recording are proposals for the session, not built here.
 
+## As built — recording + calibration (2026-10-01, session 153, owner present; total AI spend ~$4.24)
+
+The parser's first live recordings. Measured numbers, then the changes they forced.
+
+- **Prompt version 4** ([#360](../open-questions.md), owner decision): three PERIODE lines (bare "van 2015 tot 2020" →
+  year_range; "nu vergeleken met 2015" → since; "gestegen sinds vorig jaar" → now_vs_ago 1) and, after the first
+  recording, three more (never pick a default member for an unmentioned dimension; a place-member dimension still gets a
+  choice; "Nederland" is a named place). 11 labelled cases added (50 total; B1–B4).
+- **Cheap tier measured and rejected.** `claude-haiku-4-5`, two recordings: 15/50 then 26/50 labelled cases (prompt
+  additions barely moved it); table-lane gate 12/14 answers but 4/9 refuse/ask. Two misses would have shown a real CBS
+  number for the wrong question: "CO2-uitstoot van het wegverkeer" read as all greenhouse gases, "nu vergeleken met 2015"
+  read as one year ago. That is the measured accuracy miss the escalation rule waits for: a probe of `claude-sonnet-5` on
+  the 24 failed cases fixed 15, including both. **`TABLE_PARSE_MODEL` is now `claude-sonnet-5`** (same request shape as
+  the meaning check: no sampling params, thinking disabled). Per question ~8.3k billed input tokens ≈ 1.8 cents (Haiku
+  ≈ 0.65 cents).
+- **Structural fixes (no AI, all deterministic, each with tests):**
+  1. A question that names a year but is read as counted back from now (now_vs_ago / relative / last_n / latest) is
+     refused (`assertPeriodFitsNamedYear`).
+  2. An extra `niet_genoemd` entry for a dimension the table does not offer is dropped, not refused (a member code or
+     `anders` there still refuses).
+  3. Refusal order in `planTableLane`: 'geen' → grain → period availability → confidence. Facts ("no such figure", "CBS
+     has no 2030 figure") now win over the vaguer "not sure"; none of these can produce a number.
+  4. **Total picks are the resolver's call.** The bridge already left a pick of the unique CBS grand total to the resolver
+     (F5). Both models also picked "Totaal leeftijd" next to "Totaal, gestandaardiseerd", where the resolver must ASK.
+     Now the first member, titled "Totaal …" (or a T00 code), on a dimension without a unique total is also left to the
+     resolver (`isTotalPick`, `firstMemberTotalLike`). Only the first member: a later "Totaal bedrijfsmotorvoertuigen" is
+     a sub-total a reader names on purpose. The reader's own button click is always named as-is.
+  5. **Seasonal adjustment enforced in code** (`applySeasonalAdjustmentRule`): of a "Seizoengecorrigeerd" /
+     "Niet-seizoengecorrigeerd" twin pair in one CBS measure group, the question's own words decide, else the period
+     (month/quarter → adjusted, year → unadjusted). Both models ignored the prompt's rule.
+  6. *Tried and withdrawn:* treating a named place as served when the chosen member's title contains it ("Schiphol" →
+     "Amsterdam Airport Schiphol"). The verification block's existing safety test showed the hazard: a birth-country member
+     "Nederland" would then "serve" a question about where people LIVE. A title naming a place does not say the member is
+     about that place's location, so the rule was removed; L11 refuses safely.
+- **Calibration** (#338). Confidence does not separate right from wrong (wrong readings up to 0.95, right ones down to
+  0.5); the threshold only screens self-declared doubt. **`acceptThreshold` = 0.6:** zero number-producing wrong accepts in
+  BOTH recordings (the gross/net labour-participation flip sat at 0.55). Stability: 8 of 73 readings differ between the
+  two runs; after the fixes above only two change an outcome (that 0.55 case, refused; a "1 januari" question refused
+  in one run, answered correctly in the other).
+- **Measured result (both runs, final code):** labelled set 44/50, the six misses all refuse or ask (pinned by name in
+  `tests/answer/table-parse/calibration-replay.test.ts`); **table-lane benchmark 12/14 answers (the floor), 9/9 refuse/ask, 0 invented
+  numbers — GATE PASS.** The two answer misses are L11 and L12 (an airport named as a place — "Schiphol", "de Nederlandse
+  luchthavens" — refused as region-unavailable; never a wrong number).
+- **Not changed:** `gate.enforcedInCi` stays false and `TABLE_LANE_ENABLED` stays unset until the owner's GO.
+- **Open:** "op 1 januari JJJJ" read as a one-day date range (refused, [#361](../open-questions.md)); L11/L12 (#361); the
+  estimator in `tableparse:eval --dry-run` undercounts billed tokens 1.9× (Haiku) to 2.5× (Sonnet) — it omits the
+  structured-output schema; the script now prints the measured factor.
+
 ## Trade-offs and open points (after step 5)
 
 - A quarantined slice-cache table has no rebaseline path yet (syncTable refuses it) — recovery = eviction or a supervised

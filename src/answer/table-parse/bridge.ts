@@ -52,9 +52,28 @@
 // not reader ambiguity" treatment as its other invariant violations — a
 // caller that reaches here with a 'geen' parse has a bug, not a design
 // question to route through step 3.
-import { findGrandTotal, type BreakdownDimension } from '../../query/breakdowns.ts';
+import { findGrandTotal, firstMemberTotalLike, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
 import type { TableParseSchema } from './input.ts';
 import type { TableParseResult } from './parse.ts';
+
+/**
+ * A parser pick that means "this dimension is not restricted" and is
+ * therefore left to the resolver instead of being named:
+ *   - the dimension's own unique CBS grand total (final-review F5) — the
+ *     resolver lands on that same total and discloses it; or
+ *   - session 153: the dimension's FIRST member, titled "Totaal …" (or a
+ *     T00 code), on a dimension WITHOUT a unique grand total. The first live
+ *     recording showed both the cheap and the mid-tier model picking
+ *     "Totaal leeftijd" over "Totaal, gestandaardiseerd" for a question that
+ *     never mentions age; choosing between two totals is the resolver's call
+ *     (it asks), never the model's (principle c). Only the first member: a
+ *     later "Totaal …" member is a sub-total a reader can name on purpose
+ *     ("Totaal bedrijfsmotorvoertuigen") and stays named.
+ */
+export function isTotalPick(members: BreakdownMember[], code: string): boolean {
+  const total = findGrandTotal(members) ?? firstMemberTotalLike(members);
+  return total !== null && total.code === code;
+}
 
 export type NamedFromParseResult =
   | { ok: true; named: Record<string, string> }
@@ -116,7 +135,7 @@ export function namedFromParse(
     }
     // F5: an explicit total pick goes through the resolver's own default
     // path, so it is disclosed as a stated default (see module doc).
-    if (findGrandTotal(fullDim!.members)?.code === choice.code) continue;
+    if (isTotalPick(fullDim!.members, choice.code)) continue;
     named[breakdown.name] = choice.code;
   }
 

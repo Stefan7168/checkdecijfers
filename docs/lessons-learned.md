@@ -6,6 +6,32 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 153 — the table reader's first live recording
+
+1. **A token estimate is not a cost basis until it has been checked against one billed run.** The dry run said ~243k input
+   tokens; the API billed 465k (Haiku) and 604k (Sonnet). The `chars / 3.5` estimate leaves out the structured-output JSON
+   schema the API adds to every call. The owner was quoted $0.45 and the two cheap runs alone cost ~$1.00. Rule: quote
+   spend from a measured billed run (sum `usage.inputTokens` over the fixtures), never from a pre-flight estimate; the dry
+   run now prints the measured factor.
+2. **Two prompt rounds that don't move = change the mechanism (confirmed again).** Six added prompt lines moved Haiku from
+   15 to 26 of 50; both models ignored "never pick a default member" and the seasonal-adjustment rule. What converged was
+   code: the bridge leaves total picks to the resolver, the seasonal rule runs in code, a named-year guard. When BOTH model
+   tiers make the same "mistake", suspect the rule or the label, not the model (the "Totaal leeftijd" picks).
+3. **Probe the escalation on the failures only before paying for a full run.** Sending just the 24 failed cases to the mid
+   tier ($0.54) proved the switch worth it (15 fixed, both dangerous misreadings included) before the $1.35 full recording.
+4. **Model confidence did not separate right from wrong readings** (wrong ones up to 0.95, right ones down to 0.5). The
+   threshold only screens self-declared doubt; safety has to come from the structural checks. The stability re-run is what
+   exposed the one wrong reading a 0.5 threshold would have let through (a gross/net flip at 0.55); one run alone looked fine.
+5. **A rule applied to the model's picks can catch the reader's own click.** The new "total picks go to the resolver"
+   rule also dropped the reader's button choice, and the route asked the same question again (benchmark L15 caught it).
+   Reader choices now bypass model-pick rules.
+6. **The verification block's old safety tests are the backstop for new "helpful" rules.** A rule that let a place count as
+   served when the chosen row's title contains it fixed the Schiphol question, and broke a session-139 test: a
+   birth-country row "Nederland" would then answer a where-do-people-live question. Withdrawn; the benchmark still passes at
+   its floor. Run the full suite before calling a structural fix done, not just the suites the fix touches.
+7. **Refusal reasons: facts before doubt.** Three benchmark failures were correct refusals with the vaguer "not sure" reason,
+   because the confidence check ran before the deterministic checks. The order is now 'geen' → grain → period → confidence.
+
 ## Session 152 — the production conversion, the layer correction, and the Eurostat portal study
 
 1. **"Stop at the first problem" earned its keep twice, and both were false alarms in our own code.** The conversion loop

@@ -44,6 +44,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../src/cbs-adapter/types.ts';
 import { buildTableParseSchema } from '../src/answer/table-parse/input.ts';
+import { isTotalPick } from '../src/answer/table-parse/bridge.ts';
 import type { TableParseSchema } from '../src/answer/table-parse/input.ts';
 import {
   buildTableParseRequest,
@@ -298,6 +299,14 @@ function runDryRun(): void {
     `\nrecording run total (labelled cases + benchmark requests): ${summary.rows.length + bench.rows.length} calls, ` +
       `~${summary.totalEstimatedTokens + bench.totalEstimatedTokens} estimated input tokens`,
   );
+  // Session 153: the chars/3.5 estimate leaves out the structured-output
+  // JSON schema the API adds to every call. Measured on the real recordings:
+  // billed input was 1.9x this estimate on claude-haiku-4-5 and 2.5x on
+  // claude-sonnet-5. Quote spend from the measured factor, never the raw estimate.
+  console.log(
+    `budget with the measured factor: ~${Math.round((summary.totalEstimatedTokens + bench.totalEstimatedTokens) * 2.5)} ` +
+      `billed input tokens on the mid tier (2.5x, measured 2026-10-01)`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +329,18 @@ interface ScoredCase {
   requestHash: string;
 }
 
+/** Session 153: a pick the bridge treats as "not restricted"
+ * (src/answer/table-parse/bridge.ts isTotalPick — the unique CBS grand total,
+ * or any total-like member when the dimension has no unique total) is the
+ * same reading as 'niet_genoemd': the bridge leaves it to the resolver,
+ * which lands on the same total or asks. Scored as equal for that reason
+ * only, through the bridge's own function so the two cannot drift. */
+export function isExplicitGrandTotalPick(table: string, dim: string, expected: string, got: string): boolean {
+  if (expected !== 'niet_genoemd') return false;
+  const codes = loadTableFixture(table).codeLists[dim] ?? [];
+  return isTotalPick(codes.map((m) => ({ code: m.code, title: m.title })), got);
+}
+
 function choiceLabel(choice: { kind: 'member' | 'not_named' | 'other'; code?: string } | undefined): string {
   if (!choice) return '<missing>';
   if (choice.kind === 'member') return choice.code ?? '<no code>';
@@ -327,7 +348,7 @@ function choiceLabel(choice: { kind: 'member' | 'not_named' | 'other'; code?: st
   return 'anders';
 }
 
-async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase> {
+export async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase> {
   const { input, request } = caseParseInput(c);
   const problems: string[] = [];
   const expectedError = expectedErrorClass(c);
@@ -357,7 +378,7 @@ async function scoreCase(client: LlmClient, c: LabelledCase): Promise<ScoredCase
     }
     for (const [dim, expected] of Object.entries(c.expect.breakdowns)) {
       const got = choiceLabel(result.breakdowns[dim]);
-      if (got !== expected) {
+      if (got !== expected && !isExplicitGrandTotalPick(c.table, dim, expected, got)) {
         problems.push(`breakdown ${dim}: expected ${expected}, got ${got}`);
       }
     }
