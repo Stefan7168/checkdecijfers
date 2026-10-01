@@ -1243,8 +1243,8 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
   step 5)") → evict `37789ksz` (`npm run tables:evict -- --table 37789ksz`, dry run then `--apply`).
 - **✅ 2026-10-01 (session 153, owner GO): CI gate enforced, `TABLE_LANE_ENABLED=1` LIVE.** The owner's live check found the
   front door closed (out-of-scope refusals); the question finder was built (5 → 27 of 32 incl. the meaning step, ADR 062 "As built — the front
-  door"). **Eviction of `37789ksz` HELD.** Next: the owner's live re-check, the remaining misses ([#362](open-questions.md)),
-  then the eviction.
+  door"). **`37789ksz` evicted 2026-10-02** (after a rehearsal showed welfare questions route through the lane). Next: the
+  remaining front-door misses ([#362](open-questions.md)), then the Eurostat route.
 
 ## SEO landing pages ([#353](open-questions.md), owner pick session 145, 2026-09-29) — NETHERLANDS PAGE ✅ BUILT DARK; EUROSTAT PAGE WAITS FOR CURATED EUROSTAT SERIES; SWITCH-ON WAITS FOR THE DOMAIN
 

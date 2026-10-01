@@ -1148,7 +1148,8 @@ session 153 that includes questions the curated reader calls out of scope (searc
 how many realistic questions get through: `npm run frontdoor:eval` (free, search only) and
 `FRONTDOOR_LIVE_OK=1 npm run frontdoor:eval -- --live` (~$0.60, real reader + finder; writes
 `benchmark/frontdoor-report.json`). Last measured 2026-10-02: 28 of 32 reach a right table, 0 of 6 non-questions routed.
-`37789ksz` stays loaded until welfare questions reliably reach their table ([#362](open-questions.md)).
+`37789ksz` was evicted on 2026-10-02 (`tables:evict --table 37789ksz --apply`: 6,521 cells, 371 labels, 18 vocabulary rows,
+4 sync batches) after a read-only rehearsal showed welfare questions routing through the lane.
 
 
 What it is: in the workspace chat, a question the curated figures cannot place, but the table finder matches to a CBS
@@ -1289,8 +1290,8 @@ alert" section above). Nothing of #23 remains open.
 ### Slice storage for the pinned tables (ADR 065, built session 151, 2026-09-30) — conversion is owner-supervised
 
 **State (2026-09-30, session 152):** all 17 pinned CBS tables are CONVERTED in production and refreshed by the warm job.
-Still whole-table: the three unpinned CBS tables `37789ksz`, `83694NED`, `85615NED` (open-questions #358 item 12), `70072ned`
-when it is loaded, and the four Eurostat datasets (#358 item 4). For a big table give the parity report bigger requests:
+Still whole-table: `70072ned` when it is loaded, and the four Eurostat datasets (#358 item 4). The three unpinned CBS tables
+are gone: `83694NED` + `85615NED` evicted 2026-09-30, `37789ksz` evicted 2026-10-02 (#358 item 12). For a big table give the parity report bigger requests:
 `npm run ingest:parity -- 86141NED --max-cells 25000` (the default 2,000-cell requests run out of time on its 512 requests).
 
 **What this is.** The pinned tables are moving from "one hand-run sync per table" to slice storage: the same declared

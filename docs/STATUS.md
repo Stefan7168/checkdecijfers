@@ -21,7 +21,7 @@
   layer finds the right table anywhere in CBS or Eurostat, fetches only what it needs, checks it, and answers. It is NOT a set of curated
   copies kept fresh. Work, in order, and nothing else:
   1. **CBS: switch on the any-table route** (ADR 062 table lane) — reader recorded + calibrated and the table-lane benchmark
-     PASSED (session 153); left: owner GO → the flag flip; then evict `37789ksz`.
+     PASSED and the route is LIVE (session 153); `37789ksz` evicted 2026-10-02 — no CBS table is a whole copy any more.
   2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way (built,
      dark), fetch only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5).
   3. **Stop:** converting, refreshing, curating or polishing specific tables/datasets. The four Eurostat datasets are NOT converted or
@@ -40,7 +40,8 @@
   (all six misses refuse or ask), table-lane benchmark 12/14 answers (the floor), 9/9 refuse/ask, 0 invented — GATE PASS.** AI spend
   ~$4.24 (estimate undercounts billed tokens 2.5×; fixed in the dry-run print). Per table-lane question ~1.8 cents.
   **Owner GO the same session: `gate.enforcedInCi` = true, `TABLE_LANE_ENABLED=1` LIVE in Vercel Production** (the live
-  check found the closed front door — part 2 below; the `37789ksz` eviction is held).
+  check found the closed front door — part 2 below; `37789ksz` was evicted on 2026-10-02 once welfare questions were
+  shown to reach a welfare table through the route).
 
 **▶ SESSION 153, part 3 — LIVE FIXES AFTER THE OWNER'S SIDE-BY-SIDE WITH CHATGPT ([#363](open-questions.md), [#364](open-questions.md)):**
   the first live lane question hung — the job kick went to graphmaker.studio (no DNS yet); fixed with a fallback to
@@ -58,8 +59,8 @@
   table search (any word, prefix, Dutch participle base) used for out-of-scope questions and as the fallback for unplaced
   topics, behind the table-lane switch. Measured on 38 real questions: **5 → 22 of 32 reach a right table, 0 of 6
   non-questions routed;** then the meaning step (the cheap model proposes CBS-style search words on a no-pick): **27 of 32**.
-  Read-only end-to-end proof: the vans question lands on the CBS cell 9,517. `37789ksz` eviction HELD (welfare questions
-  do not reliably reach their table yet). AI spend this session ~$7. Next: a live re-check by the owner, then the
+  Read-only end-to-end proof: the vans question lands on the CBS cell 9,517. `37789ksz` eviction held at first, then DONE
+  2026-10-02 (rehearsal: welfare questions route to 37789ksz / 85585NED; read-only e2e plans 'Totaal bijstandsuitkeringen'). AI spend this session ~$7. Next: a live re-check by the owner, then the
   `37789ksz` decision.
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
@@ -127,7 +128,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
 The CBS any-table route is LIVE (`TABLE_LANE_ENABLED=1`, CI gate enforced). Single priority: widen the front door —
 the front door is at 27/32 (`npm run frontdoor:eval`, [#362](open-questions.md)); the owner's live re-check of the vans
-question (expected 9,517) is pending; then the remaining misses (welfare!) before evicting `37789ksz`. Then the Eurostat route.
+question (expected 9,517) is pending; `37789ksz` is evicted. Next: the remaining front-door misses (#362), then the Eurostat route.
 The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables
