@@ -35,6 +35,11 @@
  * outcome is always logged rather than silently platform-killed. */
 const KICK_TIMEOUT_MS = 10_000;
 
+/** Session 153: the project's own vercel.app address — always resolvable, the
+ * same production deployment (memory/RUNBOOK "Production URLs"). Tried only when
+ * the production host cannot be reached at all. */
+export const KICK_FALLBACK_HOST = 'checkdecijfers.vercel.app';
+
 /** Injectable dependencies so the hermetic suite can drive every branch with no
  * real network and no ambient env. Defaults read the production values:
  * fetchImpl = global fetch, secret = CRON_SECRET, host =
@@ -86,33 +91,47 @@ export async function kickCronRoute(target: CronKickTarget, deps: KickDeps = {})
     return;
   }
 
-  try {
-    const res = await fetchImpl(`https://${host}${target.path}`, {
-      headers: { authorization: `Bearer ${secret}` },
-      cache: 'no-store',
-      // Stop WAITING after timeoutMs — not stop the JOB (see the header note:
-      // cancellation is opt-in and off for this path, so the route runs on).
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) {
-      // A non-OK response is not fatal: the row is queued, the backstop sweeps.
-      console.error(`${target.label} returned non-OK status ${res.status}`);
-    } else {
-      console.info(`${target.label} dispatched (${target.routeLabel} responded ok)`);
-    }
-  } catch (error) {
-    // A timeout abort is the EXPECTED long-job path, not a failure: the request
-    // was dispatched, the job runs server-side, we simply stopped waiting for
-    // its response. Log it as benign; reserve console.error for real failures
-    // (network, DNS). Either way we never throw — the row is committed and the
-    // daily backstop cron will pick it up if the kick genuinely failed.
-    // AbortSignal.timeout() rejects with a DOMException named 'TimeoutError' —
-    // and a DOMException is NOT an instanceof Error in Node, so match on .name
-    // directly rather than narrowing to Error first.
-    if (isTimeoutAbort(error)) {
-      console.info(`${target.label} dispatched (not awaiting job completion)`);
-    } else {
-      console.error(`${target.label} failed (fetch threw):`, error);
+  // Session 153: VERCEL_PROJECT_PRODUCTION_URL became graphmaker.studio when
+  // the domain was added to the project, before its DNS existed — every kick
+  // then threw ENOTFOUND and a reader's table-lane question waited for the
+  // 06:00 sweep. A host that cannot be REACHED (the fetch throws, not a
+  // timeout, not a non-OK reply) is followed by the project's own vercel.app
+  // address, which always resolves to the same production deployment.
+  const hosts = [host, ...(host === KICK_FALLBACK_HOST ? [] : [KICK_FALLBACK_HOST])];
+  for (const [i, h] of hosts.entries()) {
+    try {
+      const res = await fetchImpl(`https://${h}${target.path}`, {
+        headers: { authorization: `Bearer ${secret}` },
+        cache: 'no-store',
+        // Stop WAITING after timeoutMs — not stop the JOB (see the header note:
+        // cancellation is opt-in and off for this path, so the route runs on).
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) {
+        // A non-OK response is not fatal: the row is queued, the backstop sweeps.
+        console.error(`${target.label} returned non-OK status ${res.status}`);
+      } else {
+        console.info(`${target.label} dispatched (${target.routeLabel} responded ok)`);
+      }
+      return;
+    } catch (error) {
+      // A timeout abort is the EXPECTED long-job path, not a failure: the request
+      // was dispatched, the job runs server-side, we simply stopped waiting for
+      // its response. Log it as benign; reserve console.error for real failures
+      // (network, DNS). Either way we never throw — the row is committed and the
+      // daily backstop cron will pick it up if the kick genuinely failed.
+      // AbortSignal.timeout() rejects with a DOMException named 'TimeoutError' —
+      // and a DOMException is NOT an instanceof Error in Node, so match on .name
+      // directly rather than narrowing to Error first.
+      if (isTimeoutAbort(error)) {
+        console.info(`${target.label} dispatched (not awaiting job completion)`);
+        return;
+      }
+      const next = hosts[i + 1];
+      console.error(
+        `${target.label} failed (fetch threw) on ${h}${next ? `, retrying on ${next}` : ''}:`,
+        error,
+      );
     }
   }
 }

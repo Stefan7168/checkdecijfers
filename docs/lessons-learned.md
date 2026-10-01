@@ -8,6 +8,10 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+00. **Adding a domain to the hosting project silently changed a system variable the code depended on.** Session 144
+   added graphmaker.studio to Vercel (DNS still missing by design); `VERCEL_PROJECT_PRODUCTION_URL` flipped to it, and the
+   job kick — which builds its URL from that variable — started failing with ENOTFOUND. Nothing showed it until the first
+   real table-lane question hung. When a platform setting changes, grep the code for the platform variables it feeds.
 0. **A benchmark that hands the component its input cannot see the door in front of it.** The table-lane benchmark passed
    (12/14, 9/9, 0 invented) because each task is given its table; the owner's first live question never reached the lane
    (the curated reader refused it as out of scope). Before a switch-on, one live end-to-end question through the real

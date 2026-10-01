@@ -1136,6 +1136,13 @@ demand (`src/ingestion/slice-cache.ts`). Operational facts:
 
 ## Table lane (breadth step 5, ADR 062, built session 140, 2026-09-29 — LIVE since 2026-10-01, session 153)
 
+**The kick and the domain (session 153).** The kick that starts the job right after a question is queued goes to
+Vercel's production host (`VERCEL_PROJECT_PRODUCTION_URL`). Since graphmaker.studio was added to the project (session
+144) that host is graphmaker.studio, which has no DNS yet: every kick failed with `ENOTFOUND` and the owner's first real
+lane question sat `pending` (row 1) until the 06:00 sweep. Since `cron-kick.ts` retries an UNREACHABLE host on
+`checkdecijfers.vercel.app` (not on a timeout or a non-OK reply). The onboarding kick shares the code and had the same
+fault. Symptom in `vercel logs`: `table-lane kick failed (fetch threw) ... ENOTFOUND graphmaker.studio`.
+
 **The front door (session 153).** A question reaches the lane only when the table finder confidently picks a table. Since
 session 153 that includes questions the curated reader calls out of scope (searched with the question itself). Measure
 how many realistic questions get through: `npm run frontdoor:eval` (free, search only) and

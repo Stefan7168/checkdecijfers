@@ -43,4 +43,25 @@ describe('kickTableLaneJob (wrapper over the shared cron kick)', () => {
     await expect(kickTableLaneJob({ fetchImpl: unused as unknown as typeof fetch, secret: '', host: HOST })).resolves.toBeUndefined();
     expect(unused).not.toHaveBeenCalled();
   });
+
+  it('session 153: an unreachable production host (DNS) is followed by the vercel.app address; a non-OK reply or timeout is not retried', async () => {
+    const dns = Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } });
+    const fetchImpl = vi.fn().mockRejectedValueOnce(dns).mockResolvedValueOnce({ ok: true, status: 200 });
+    await kickTableLaneJob({ fetchImpl: fetchImpl as unknown as typeof fetch, secret: SECRET, host: 'graphmaker.studio' });
+    expect(fetchImpl.mock.calls.map((c) => c[0])).toEqual([
+      'https://graphmaker.studio/api/table-lane-job',
+      'https://checkdecijfers.vercel.app/api/table-lane-job',
+    ]);
+    expect(console.info).toHaveBeenCalledWith('table-lane kick dispatched (job route responded ok)');
+
+    const notOk = vi.fn().mockResolvedValue({ ok: false, status: 401 });
+    await kickTableLaneJob({ fetchImpl: notOk as unknown as typeof fetch, secret: SECRET, host: 'graphmaker.studio' });
+    expect(notOk).toHaveBeenCalledTimes(1);
+
+    const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
+    const slow = vi.fn().mockRejectedValue(timeout);
+    await kickTableLaneJob({ fetchImpl: slow as unknown as typeof fetch, secret: SECRET, host: 'graphmaker.studio' });
+    expect(slow).toHaveBeenCalledTimes(1);
+  });
 });
+
