@@ -346,6 +346,21 @@ describe("recallCandidates — 'any' mode for a whole question (session 153, the
     expect(got).not.toContain('NOISE1');
   });
 
+  it("'any' mode drops a catalogue-common word when a rarer one is present (#362: 'leven' drowned 'bijstand')", async () => {
+    // 60 'leven…' titles make "leven" common (> 6 % and > 50 tables); "bijstand" stays rare.
+    for (let i = 0; i < 60; i++) await insertRow(db, { id: `LEV${i}`, title: `Levensverwachting; reeks ${i}` });
+    await insertRow(db, { id: 'BIJ1', title: 'Bijstandsuitkeringen; kerncijfers' });
+    const got = (await recallCandidates(db, 'Hoeveel mensen leven van de bijstand?', { mode: 'any', limit: 5 })).map((c) => c.tableId);
+    expect(got[0]).toBe('BIJ1');
+    expect(got.some((id) => id.startsWith('LEV'))).toBe(false);
+  });
+
+  it("'any' mode keeps the rarest word when EVERY word is common (never an empty search)", async () => {
+    for (let i = 0; i < 60; i++) await insertRow(db, { id: `LEV${i}`, title: `Levensverwachting; reeks ${i}` });
+    const got = await recallCandidates(db, 'Hoeveel leven er?', { mode: 'any' });
+    expect(got.length).toBeGreaterThan(0);
+  });
+
   it("'any' mode with no content words returns nothing (no query at all)", async () => {
     expect(await recallCandidates(db, 'Hoeveel waren er in 2024?', { mode: 'any' })).toEqual([]);
   });

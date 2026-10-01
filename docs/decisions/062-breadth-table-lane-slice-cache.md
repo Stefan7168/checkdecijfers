@@ -413,6 +413,9 @@ whole question finds nothing and word forms miss ("gesloopt" vs the title's "slo
   reader's own question. The model proposes search words only — never a table, code or number (principle a). Like the
   rerank, the call lives inside the finder and is not written to `audit_answers.llm_calls` (pre-existing: no finder call
   is). **Measured: 26/32 (27/32 after one more expected-table gap was fixed), 0/6 negatives routed.**
+- **Rarity weighting (#362):** 'any' mode leaves out words that match more than 6 % of the catalogue (and over 50 tables),
+  measured per word from the catalogue — never a list; the rarest word stays when all are common. Live: 28/32 (welfare
+  tables now on the shortlist), 0/6 negatives routed.
 - **Read-only end-to-end proof (no owner login needed):** reader → question finder → 85245NED → table parser on live CBS
   metadata → slice {A047215, vans A018935, 2024JJ00}; CBS returns 9,517 for that cell, the answer-key value.
 - **Still open:** traffic deaths, gas use and welfare questions find no confident table; rent increase and welfare are read

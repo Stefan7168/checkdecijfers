@@ -1147,7 +1147,7 @@ fault. Symptom in `vercel logs`: `table-lane kick failed (fetch threw) ... ENOTF
 session 153 that includes questions the curated reader calls out of scope (searched with the question itself). Measure
 how many realistic questions get through: `npm run frontdoor:eval` (free, search only) and
 `FRONTDOOR_LIVE_OK=1 npm run frontdoor:eval -- --live` (~$0.60, real reader + finder; writes
-`benchmark/frontdoor-report.json`). Last measured 2026-10-01: 27 of 32 reach a right table, 0 of 6 non-questions routed.
+`benchmark/frontdoor-report.json`). Last measured 2026-10-02: 28 of 32 reach a right table, 0 of 6 non-questions routed.
 `37789ksz` stays loaded until welfare questions reliably reach their table ([#362](open-questions.md)).
 
 

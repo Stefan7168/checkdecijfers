@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generatedAt": "2026-10-01T08:07:21.340Z",
+    "generatedAt": "2026-10-01T18:07:05.011Z",
     "live": true,
     "cases": 38,
     "positives": 32,
-    "recallOnShortlist": "22/32",
+    "recallOnShortlist": "23/32",
     "beforeReachesRightTable": "6/32",
-    "afterReachesRightTable": "26/32",
+    "afterReachesRightTable": "27/32",
     "negativesRoutedToATable": "0/6"
   },
   "rows": [
@@ -101,7 +101,7 @@
     {
       "id": "collective-wage-increase",
       "positive": true,
-      "recallRank": 12,
+      "recallRank": 7,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -112,8 +112,8 @@
     {
       "id": "new-companies-2024",
       "positive": true,
-      "recallRank": 1,
-      "shortlist": 24,
+      "recallRank": 6,
+      "shortlist": 9,
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "85206NED",
@@ -171,15 +171,15 @@
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
-      "picked": "83554NED",
+      "picked": "83452NED",
       "viaOutOfScope": true,
-      "hit": false
+      "hit": true
     },
     {
       "id": "tap-water-use",
       "positive": true,
       "recallRank": 0,
-      "shortlist": 24,
+      "shortlist": 14,
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "82883NED",
@@ -192,9 +192,9 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
-      "outcome": "refusal:out_of_scope",
-      "picked": null,
-      "viaOutOfScope": false,
+      "outcome": "onboarding",
+      "picked": "85849NED",
+      "viaOutOfScope": true,
       "hit": false
     },
     {
@@ -248,7 +248,7 @@
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
-      "picked": "85484NED",
+      "picked": "85848NED",
       "viaOutOfScope": true,
       "hit": false
     },
@@ -321,7 +321,7 @@
     {
       "id": "people-on-social-assistance",
       "positive": true,
-      "recallRank": -1,
+      "recallRank": 4,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "clarification",
@@ -332,7 +332,7 @@
     {
       "id": "hospital-admissions-2022",
       "positive": true,
-      "recallRank": 9,
+      "recallRank": 8,
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
@@ -343,7 +343,7 @@
     {
       "id": "holidays-abroad-2023",
       "positive": true,
-      "recallRank": 0,
+      "recallRank": 1,
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
@@ -399,7 +399,7 @@
       "id": "neg-opinion",
       "positive": false,
       "recallRank": -1,
-      "shortlist": 24,
+      "shortlist": 16,
       "parseKind": "smalltalk_or_other",
       "outcome": "refusal:smalltalk",
       "picked": null,

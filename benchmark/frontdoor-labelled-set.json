@@ -213,9 +213,10 @@
         "85468NED",
         "83474NED",
         "37259ned",
-        "85484NED"
+        "85484NED",
+        "85848NED"
       ],
-      "why": "'Immigratie en emigratie; geslacht, leeftijd, geboorteland, regio' counts emigrants; the 'Bevolkingsontwikkeling' tables also list immigration and emigration. 85484NED (Immi- en emigratie; per maand, ... — monthly AND yearly) added after the meaning-step run picked it."
+      "why": "'Immigratie en emigratie; geslacht, leeftijd, geboorteland, regio' counts emigrants; the 'Bevolkingsontwikkeling' tables also list immigration and emigration. 85484NED (Immi- en emigratie; per maand, ... — monthly AND yearly) added after the meaning-step run picked it. 85848NED (Immi- en emigratie; nationaliteit, leeftijd en geslacht — yearly) added after the rarity-weighting run picked it."
     },
     {
       "id": "cars-on-the-road",

@@ -210,6 +210,42 @@ export function contentWords(text: string): string[] {
   return [...out];
 }
 
+/** Session 153 (#362): a word matching more than this share of the catalogue
+ * says little about WHICH table is meant ("nieuwe", "voor", "werk", "leven"
+ * each match hundreds to thousands of tables, "bijstand" 76). Measured on the
+ * 38 front-door questions (benchmark/frontdoor-labelled-set.json). */
+export const COMMON_WORD_MAX_SHARE = 0.06;
+/** ...and at least this many tables: in a small catalogue (tests, a fresh
+ * mirror) a share says nothing — a topic word matching 1 of 4 rows is not common. */
+export const COMMON_WORD_MIN_TABLES = 50;
+
+/** The content words minus the catalogue-common ones — measured from the
+ * catalogue itself (document frequency per word, same matching as the
+ * search), never a list. When every word is common, the rarest one stays, so
+ * a question is never left without a search. */
+async function withoutCommonWords(db: Db, words: string[]): Promise<string[]> {
+  const { rows } = await db.query(
+    `with n as (
+       select count(*)::int as total from cbs_catalog
+        where (dataset_type is null or dataset_type <> 'Text') and (language is null or language = 'nl')
+     )
+     select w, count(c.table_id)::int as df, (select total from n) as total
+       from unnest($1::text[]) as w
+       left join cbs_catalog c
+         on c.tsv @@ (to_tsquery('simple', w || ':*') || to_tsquery('dutch', w || ':*'))
+        and (c.dataset_type is null or c.dataset_type <> 'Text') and (c.language is null or c.language = 'nl')
+      group by w`,
+    [words],
+  );
+  const df = new Map(rows.map((r) => [r.w as string, Number(r.df)]));
+  const total = Number(rows[0]?.total ?? 0);
+  if (total === 0) return words;
+  const limit = Math.max(COMMON_WORD_MAX_SHARE * total, COMMON_WORD_MIN_TABLES);
+  const kept = words.filter((w) => (df.get(w) ?? 0) <= limit);
+  if (kept.length > 0) return kept;
+  return [words.reduce((a, b) => ((df.get(a) ?? 0) <= (df.get(b) ?? 0) ? a : b))];
+}
+
 /** recallCandidates' 'any' mode (see RecallOptions.mode). Each content word
  * matches as a prefix twice — raw ("sloop:*" reaches the compound
  * "sloopvoertuig") and Dutch-stemmed — and the alias expansions join as
@@ -221,8 +257,9 @@ async function recallAnyWords(
   includeEurostat: boolean,
   aliasHints: AliasHint[],
 ): Promise<CatalogCandidate[]> {
-  const words = contentWords(text);
-  if (words.length === 0) return [];
+  const allWords = contentWords(text);
+  if (allWords.length === 0) return [];
+  const words = await withoutCommonWords(db, allWords);
   const aliasPhrases = expandTopicTerms(text, aliasHints)
     .slice(1)
     .filter((t) => t.trim().length > 0);
