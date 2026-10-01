@@ -96,12 +96,22 @@ describe('buildChartSpec — shapes and policy', () => {
 });
 
 describe('buildChartSpec — the #64 non-contiguous enumeration gate', () => {
-  it('draws NO chart for a series with a hole in its own periods (a line would imply the unseen year)', () => {
+  it('session 153: a ONE-PLACE series with a hole is drawn as bars marked periodGaps — never a line (a line would imply the unseen year)', () => {
     const result = makeResult('series', [
       makeCell({ periodCode: '2020JJ00' }),
       makeCell({ periodCode: '2022JJ00' }),
     ]);
-    expect(buildChartSpec(result)).toBeNull();
+    const spec = buildChartSpec(result);
+    expect(spec).not.toBeNull();
+    expect(spec!.kind).toBe('bar');
+    expect(spec!.periodGaps).toBe(true);
+    expect(spec!.series).toHaveLength(1);
+    expect(spec!.series[0]!.points.map((p) => p.periodCode)).toEqual(['2020JJ00', '2022JJ00']);
+  });
+
+  it('a gap-free series carries NO periodGaps key at all (byte-identical to before)', () => {
+    const result = makeResult('series', [makeCell({ periodCode: '2020JJ00' }), makeCell({ periodCode: '2021JJ00' })]);
+    expect('periodGaps' in buildChartSpec(result)!).toBe(false);
   });
 
   it('still charts a gap-free series (adjacent years, the B4/B8 class)', () => {

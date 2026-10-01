@@ -953,3 +953,17 @@ describe('defaultFormFor / defaultFormIsTable', () => {
     expect(defaultFormFor(lineKindComparison)).toBe('table');
   });
 });
+
+describe('session 153: a series with period gaps (ChartSpec.periodGaps) is bars only', () => {
+  it('never offers a line or a horizontal bar for it', () => {
+    expect(lineFormAllowed({ kind: 'bar', periodGaps: true }, 1)).toBe(false);
+    expect(hbarFormAllowed({ kind: 'bar', periodGaps: true })).toBe(false);
+  });
+
+  it('leaves every other spec exactly as before', () => {
+    expect(lineFormAllowed({ kind: 'bar' }, 1)).toBe(true);
+    expect(lineFormAllowed({ kind: 'line' }, 1)).toBe(true);
+    expect(hbarFormAllowed({ kind: 'bar' })).toBe(true);
+  });
+});
+

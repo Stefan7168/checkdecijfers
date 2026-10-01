@@ -2215,6 +2215,17 @@ describe('ChartView form switch', () => {
     expect(lineTab).toHaveAttribute('title', expect.stringContaining('regio'));
   });
 
+  it('session 153: a one-place series with period gaps renders as bars, with Lijn disabled for its own reason', async () => {
+    const base = twoSeriesLineSpec();
+    const s = { ...base, kind: 'bar' as const, periodGaps: true as const, series: [base.series[0]!] };
+    render(<ChartView spec={s} />);
+    expect(document.querySelector('.recharts-bar')).not.toBeNull();
+    await openEdit();
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    expect(lineTab).toBeDisabled();
+    expect(lineTab).toHaveAttribute('title', expect.stringContaining('niet elke periode'));
+  });
+
   it('switching to Staaf renders a BarChart-shaped structure for a line-kind spec', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);

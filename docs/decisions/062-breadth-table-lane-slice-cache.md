@@ -436,6 +436,11 @@ context; we answered 9.188 million (April 2026, provisional — exactly the CBS 
   the composed trend sentence under the same validators, a line chart with the latest value — and the stated default
   reads "Perioden: <first> t/m <latest>". A named period, a comparison of several places and a region class are
   unchanged. Table-lane benchmark unchanged (every task names its period): 12/14, 9/9, 0 invented.
+- **Live follow-ups (owner: "a mess"):** the first trend answer (pigs) fell back to the series template — the phrasing
+  model wrote a 2020→2026 decline without the provisional marking in that sentence and was rejected twice — and listed
+  13 values; it also had no chart (April/December gaps). The series template now leads with the latest value (a year
+  earlier, the start of the series; `SERIES_LATEST_FIRST_MIN_CELLS` = 4, one-place series only), and a one-place series
+  with gaps is drawn as bars (ADR 007 as-built note).
 
 ## Trade-offs and open points (after step 5)
 

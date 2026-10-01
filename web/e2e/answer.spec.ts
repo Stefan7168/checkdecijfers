@@ -205,12 +205,13 @@ test.describe.serial('the logged-in answer pipeline', () => {
     await expect(page.getByPlaceholder('Stel een vraag…')).toHaveValue(chipLabel); // toHaveValue accepts a RegExp
     await page.getByRole('button', { name: 'Verstuur' }).click();
 
-    // The template body strips the CBS "(PV)" suffix (baseRegionLabel) — a
-    // single line per requested period, naming the region it belongs to.
+    // The template body strips the CBS "(PV)" suffix (baseRegionLabel) and,
+    // since session 153 (SERIES_LATEST_FIRST_MIN_CELLS), leads a series of 4+
+    // periods with its latest value, naming the region it belongs to.
     // (A single-series chart shows no legend at all — `seriesMeta.length > 1`
     // in web/components/chart.tsx — so the region name only surfaces in the
     // body text, not as a legend button like the two-region case above.)
-    await expect(page.getByText('in Groningen:', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText('in Groningen was in 2024', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
   });
 });

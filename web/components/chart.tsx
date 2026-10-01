@@ -2025,6 +2025,8 @@ export function ChartView({
   const areaDisabledReason =
     spec.kind === 'line' ? t(chartLang, 'chart.formReason.areaMultiSeries') : t(chartLang, 'chart.formReason.areaComparison');
   const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
+  // Session 153: a series with period gaps gets its own reason (ChartSpec.periodGaps).
+  const lineDisabledReason = t(chartLang, spec.periodGaps === true ? 'chart.lineDisabledReasonGaps' : 'chart.lineDisabledReason');
   const slopeDisabledReason = t(chartLang, 'chart.slopeDisabledReason');
   const dumbbellDisabledReason = t(chartLang, 'chart.dumbbellDisabledReason');
   const heatmapDisabledReason = t(chartLang, 'chart.heatmapDisabledReason');
@@ -4075,7 +4077,7 @@ export function ChartView({
                       aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
                       tabIndex={activeForm === 'line' ? 0 : -1}
                       disabled={!canUseLine}
-                      title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
+                      title={canUseLine ? undefined : lineDisabledReason}
                       onClick={() => selectForm('line')}
                       className={quietTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
                     >
@@ -4313,7 +4315,7 @@ export function ChartView({
                     * to whoever reaches it by keyboard/AT. */}
                   {!canUseLine ? (
                     <span id={`${domId}-line-reason`} className="sr-only">
-                      {t(chartLang, 'chart.lineDisabledReason')}
+                      {lineDisabledReason}
                     </span>
                   ) : null}
                   {!canUseArea ? (

@@ -303,7 +303,10 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
  * time series (spec.kind === 'line') may always be shown as a bar; a
  * single-series bar (one region) may always be shown as a line.
  */
-export function lineFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: number): boolean {
+export function lineFormAllowed(spec: Pick<ChartSpec, 'kind' | 'periodGaps'>, seriesCount: number): boolean {
+  // Session 153: a series with gaps between its periods is bars only — a line
+  // would claim values between them that nobody measured (ChartSpec.periodGaps).
+  if (spec.periodGaps === true) return false;
   return !(spec.kind === 'bar' && seriesCount > 1);
 }
 
@@ -322,8 +325,9 @@ export function areaFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: numb
  * comparison (bar-kind spec) — a time series reads chronologically
  * left-to-right, which a category axis of regions would break.
  */
-export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind'>): boolean {
-  return spec.kind === 'bar';
+export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind' | 'periodGaps'>): boolean {
+  // Session 153: bars over periods read left-to-right in time, never sideways.
+  return spec.kind === 'bar' && spec.periodGaps !== true;
 }
 
 /**

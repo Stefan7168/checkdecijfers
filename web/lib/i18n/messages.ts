@@ -692,6 +692,7 @@ const nl = {
   'chart.tabBar': 'Staaf',
   'chart.tabTable': 'Tabel',
   'chart.lineDisabledReason': 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.',
+  'chart.lineDisabledReasonGaps': 'Het CBS meet niet elke periode; een lijn tussen de staven zou waarden suggereren die niet gemeten zijn.',
   // WP218 phase 5 (owner D): two more Weergave tabs — Vlak (area) and
   // Liggend (horizontal bar) — plus their own disabled-tab reasons.
   'chart.form.area': 'Vlak',
@@ -2161,6 +2162,7 @@ const en: Messages = {
   'chart.tabBar': 'Bar',
   'chart.tabTable': 'Table',
   'chart.lineDisabledReason': 'A line between regions would suggest a trend that was never measured.',
+  'chart.lineDisabledReasonGaps': 'CBS does not measure every period; a line between the bars would suggest values that were never measured.',
   'chart.form.area': 'Area',
   'chart.form.hbar': 'Horizontal bar',
   'chart.form.dumbbell': 'Dumbbell',

@@ -8,6 +8,10 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+0000. **A change to answer TEXT needs the verification block WITH `--e2e`.** The latest-first template change was pushed
+   after a block without browser tests; CI's e2e smoke pinned the old series wording and went red (`9c5742e4`, deploy
+   skipped, production unharmed). The block's own header already says it: use `--e2e` whenever a change touches text an
+   answer, chart or card shows.
 000. **Editing docs while the verification block runs makes the doc-conventions test flaky.** Two "failures" of
    `tests/docs/doc-conventions.test.ts` this session happened exactly when docs were being edited mid-run, and passed on a
    rerun. Write docs before or after a verification run, never during.

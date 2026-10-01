@@ -47,3 +47,14 @@ Every future output format is *another renderer over the same spec*: a static-im
 - Phase 2 sharing features → build the static-image renderer over the spec.
 - Enterprise tier (Phase 3) → theme object / huisstijl support in the spec schema.
 - Chosen chart library obstructs the spec model → swap behind the wrapper (that's what it's for).
+
+## As built — bars for a series with period gaps (2026-10-01, session 153)
+
+A one-place series whose periods are not consecutive (CBS's own rhythm, e.g. 84952NED counts pigs only in April and
+December, or a picked list of years) used to get no chart at all (#64: a connecting line would claim values nobody
+measured). The owner's trend answer for pigs therefore had no chart. Since session 153 such a series is drawn as BARS,
+one per period (`kind: 'bar'`), with the present-only marker `periodGaps: true` on the spec; the web app then never
+offers the line or horizontal-bar form for it (`lineFormAllowed`/`hbarFormAllowed`, own reason text nl+en). Every other
+spec is byte-identical (no key). A multi-region series with gaps keeps the old gate (no chart). Stored rows: 344 pinned as
+a known divergence; 103/192/195 (already in #359) show the same difference.
+

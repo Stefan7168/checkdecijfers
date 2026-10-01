@@ -150,4 +150,12 @@ export interface ChartSpec {
    * `src/answer/audit/reconstruct.ts` carries the matching strip-if-absent /
    * compare-if-present tolerance. No schemaVersion bump (ADR 014). */
   regionScope?: RegionScope | null;
+  /** Session 153, present-only: `true` ONLY on a one-place series whose
+   * periods are not consecutive (CBS measures on its own rhythm — e.g. only
+   * April and December — or a picked list of years). Such a series is drawn as
+   * BARS, one per period (`kind: 'bar'`), never a line: a connecting line
+   * would claim values between the bars that nobody measured (#64). Renderers
+   * must not offer a line/area form for it. Absent on every other spec, so
+   * every spec built before or outside this case is byte-identical. */
+  periodGaps?: true;
 }

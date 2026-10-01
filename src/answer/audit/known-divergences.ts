@@ -77,6 +77,16 @@ export interface KnownDivergence {
 // classification here rather than a silent miss.
 export const KNOWN_DIVERGENCES: KnownDivergence[] = [
   {
+    id: 344,
+    kind: 'answer',
+    expectProblemsContaining: ['chart spec does not re-derive from the stored result'],
+    cause:
+      'row stored when a one-place series with period gaps (84952NED counts only in April and December) drew NO ' +
+      'chart (#64). Since session 153 the same result is drawn as bars marked periodGaps, so a fresh re-derivation ' +
+      'yields a chart where the row stored none — the row shows exactly what the reader saw.',
+    recordedDate: '2026-10-01',
+  },
+  {
     id: 342,
     kind: 'answer',
     expectProblemsContaining: ["R11: de tekst spreekt van een verwachting of voorspelling ('naar verwachting')"],

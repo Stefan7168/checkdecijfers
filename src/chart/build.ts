@@ -86,13 +86,20 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   // list carries each code N times — contiguousPeriodCodes de-dupes
   // internally (src/query/resolve.ts), so this checks the shared period
   // axis exactly once, regardless of region count.
-  if (
+  //
+  // Session 153: a ONE-PLACE series with gaps is drawn as bars, one per
+  // period, instead of no chart at all (the owner's pigs question — CBS counts
+  // only in April and December — got a trend answer with no chart). Bars
+  // claim nothing between periods; the spec carries `periodGaps: true` so no
+  // renderer offers a line or area form for it. region_series keeps the gate.
+  const gappedSeries =
     (result.shape === 'series' || result.shape === 'region_series') &&
-    !contiguousPeriodCodes(result.cells.map((c) => c.periodCode))
-  ) {
+    !contiguousPeriodCodes(result.cells.map((c) => c.periodCode));
+  const onePlace = new Set(result.cells.map((c) => c.regionCode)).size === 1;
+  if (gappedSeries && !(result.shape === 'series' && onePlace)) {
     return null;
   }
-  const kind = result.shape === 'series' || result.shape === 'region_series' ? 'line' : 'bar';
+  const kind = (result.shape === 'series' || result.shape === 'region_series') && !gappedSeries ? 'line' : 'bar';
 
   // One unit per chart (R10). The query layer already refuses mixed units
   // (internal_inconsistency), so this firing means upstream corruption —
@@ -143,7 +150,7 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
 
   // Shape guarantee from the query layer: a comparison is one period across
   // regions. A multi-point series here is a contract break — fail loudly.
-  if (kind === 'bar' && series.some((s) => s.points.length !== 1)) {
+  if (kind === 'bar' && !gappedSeries && series.some((s) => s.points.length !== 1)) {
     throw new Error('chart spec refused: comparison result with multiple periods per region');
   }
 
@@ -212,5 +219,7 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
     // emitted (never omitted) — the verified-whole guards read it directly;
     // reconstruct.ts tolerates its ABSENCE on specs stored before it existed.
     regionScope: result.regionSet?.scope ?? null,
+    // Session 153: present-only (see ChartSpec.periodGaps).
+    ...(gappedSeries ? { periodGaps: true as const } : {}),
   };
 }

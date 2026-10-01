@@ -79,6 +79,7 @@ export const chartSpecSchema = z
     attribution: chartAttributionSchema,
     annotations: z.array(chartAnnotationSchema).optional(),
     regionScope: regionScopeSchema.nullable().optional(),
+    periodGaps: z.literal(true).optional(),
   })
   // A point's display string and its value must be null together — a value
   // without display text (or text without a value) is a malformed spec.
