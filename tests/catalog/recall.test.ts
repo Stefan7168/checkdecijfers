@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
 import {
+  contentWords,
   recallCandidates,
   RECALL_HISTORIC_SLOTS,
   RECALL_LIMIT,
@@ -305,3 +306,48 @@ describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)',
     expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(false);
   });
 });
+
+describe("recallCandidates — 'any' mode for a whole question (session 153, the front door)", () => {
+  let db: Db;
+  let close: () => Promise<void>;
+  beforeAll(async () => {
+    ({ db, close } = await createTestDb());
+  });
+  afterAll(async () => {
+    await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
+    await insertRow(db, { id: 'SLOOP1', title: 'Motorvoertuigen actief; sloopvoertuigen, voertuigtype, brandstofsoort' });
+    await insertRow(db, { id: 'BESTEL1', title: "Bestelauto's; leeftijd, leeftijdsklasse, hoofdgebruiker" });
+    await insertRow(db, { id: 'TEXT1', title: 'Sloopvoertuigen; toelichting', type: 'Text' });
+    await insertRow(db, { id: 'OTHER1', title: 'Bevolking; geslacht, leeftijd' });
+  });
+
+  it('contentWords keeps topic words, drops question words and years, and adds a participle base', () => {
+    expect(contentWords("Hoeveel bestelauto's werden er in 2024 gesloopt?")).toEqual(['bestelauto', 'gesloopt', 'sloop']);
+    expect(contentWords('Hoeveel waren er?')).toEqual([]);
+  });
+
+  it("'all' mode finds nothing for a whole question; 'any' mode reaches the compound title by prefix", async () => {
+    const q = "Hoeveel bestelauto's werden er in 2024 gesloopt?";
+    expect(await recallCandidates(db, q)).toEqual([]);
+    const got = (await recallCandidates(db, q, { mode: 'any' })).map((c) => c.tableId);
+    expect(got).toContain('SLOOP1'); // "sloop:*" → "sloopvoertuig"
+    expect(got).toContain('BESTEL1');
+    expect(got).not.toContain('TEXT1'); // Text tables stay excluded
+    expect(got).not.toContain('OTHER1');
+  });
+
+  it("'any' mode: a Dutch stopword of 4+ letters ('door', 'voor') adds no raw prefix match", async () => {
+    await insertRow(db, { id: 'NOISE1', title: 'Doorlooptijden rechtspraak', summary: 'Voorlopige cijfers' });
+    const got = (await recallCandidates(db, "Hoeveel bestelauto's gingen door de sloop voor 2024?", { mode: 'any' })).map((c) => c.tableId);
+    expect(got).toContain('SLOOP1');
+    expect(got).not.toContain('NOISE1');
+  });
+
+  it("'any' mode with no content words returns nothing (no query at all)", async () => {
+    expect(await recallCandidates(db, 'Hoeveel waren er in 2024?', { mode: 'any' })).toEqual([]);
+  });
+});
+

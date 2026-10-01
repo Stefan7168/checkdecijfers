@@ -24,7 +24,7 @@ import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND, extraKeysOf } from './pa
 import { buildSystemPrompt, type OnboardedMeasure } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
-import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
+import { resolveUnmatched, routeWholeQuestion, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
 import type { FreshIntentParseOptions } from './options.ts';
 
@@ -142,6 +142,10 @@ export async function parseFollowUpQuestion(
     usage: response.usage,
   };
 
+  if (raw.kind === 'out_of_scope' && options.questionFinder) {
+    const routed = await routeWholeQuestion(outcomeContext, options.questionFinder);
+    if (routed !== null) return routed;
+  }
   if (raw.kind !== 'data_query') {
     return {
       kind: 'refusal',
@@ -151,7 +155,7 @@ export async function parseFollowUpQuestion(
     };
   }
 
-  if (raw.candidates.length === 0) return resolveUnmatched(outcomeContext, options.tableFinder);
+  if (raw.candidates.length === 0) return resolveUnmatched(outcomeContext, options.tableFinder, options.questionFinder);
 
   const resolutions = await Promise.all(
     raw.candidates

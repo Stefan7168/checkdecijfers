@@ -60,6 +60,7 @@
     "measurefit:eval": "node --env-file-if-exists=.env scripts/measurefit-eval.ts",
     "measurefit:record": "node --env-file-if-exists=.env scripts/measurefit-eval.ts --record",
     "tableparse:eval": "node --env-file-if-exists=.env scripts/tableparse-eval.ts",
+    "frontdoor:eval": "node --env-file-if-exists=.env scripts/frontdoor-eval.ts",
     "tableparse:record": "node --env-file-if-exists=.env scripts/tableparse-eval.ts --record",
     "tablelane:bench:run": "node scripts/run-tablelane-benchmark.ts",
     "tablelane:bench:score": "node scripts/score-tablelane-benchmark.ts",

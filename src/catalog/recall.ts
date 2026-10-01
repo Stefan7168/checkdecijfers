@@ -69,6 +69,13 @@ export const RECALL_LIMIT = RECALL_REGULIER_SLOTS + RECALL_HISTORIC_SLOTS;
 export interface RecallOptions {
   limit?: number;
   aliasHints?: AliasHint[];
+  /** Session 153 (the front door): 'all' (default) is the original search —
+   * every word of a short topic term must appear. 'any' takes free text (a
+   * whole question), keeps its content words and matches ANY of them as a
+   * prefix (raw and stemmed), ranked by how well a table matches. Used ONLY
+   * for a question the intent parser called out_of_scope, which carries no
+   * topic term; every other caller stays on 'all', byte for byte. */
+  mode?: 'all' | 'any';
   /** #357 step 3: let Eurostat catalogue rows into the shortlist. Absent: eurostatFinderEnabled(). */
   includeEurostat?: boolean;
 }
@@ -91,6 +98,7 @@ export async function recallCandidates(
 ): Promise<CatalogCandidate[]> {
   const limit = options.limit ?? RECALL_LIMIT;
   const includeEurostat = options.includeEurostat ?? eurostatFinderEnabled();
+  if (options.mode === 'any') return recallAnyWords(db, topic, limit, includeEurostat, options.aliasHints ?? ALIAS_HINTS);
   const terms = expandTopicTerms(topic, options.aliasHints ?? ALIAS_HINTS).filter(
     (t) => t.trim().length > 0,
   );
@@ -169,6 +177,109 @@ export async function recallCandidates(
   const historic = rows.filter((r) => r.is_current !== true).map(toCandidate);
 
   return quotaMerge(regulier, historic, limit);
+}
+
+/**
+ * Function words a question carries that never name a statistics topic —
+ * question words, auxiliaries and filler that Postgres' Dutch stopword list
+ * does not drop. NOT a topic list: nothing here is a CBS subject, so the list
+ * never steers WHICH table is found, only stops "hoeveel" from prefix-matching
+ * every "hoeveelheid" title.
+ */
+const QUESTION_FUNCTION_WORDS = new Set([
+  'hoeveel', 'hoeveelste', 'welk', 'welke', 'waar', 'wanneer', 'hoelang', 'hoeverre', 'hoezeer',
+  'waren', 'werden', 'wordt', 'worden', 'werd', 'hebben', 'heeft', 'hadden', 'gaan', 'gaat', 'ging', 'gingen',
+  'staat', 'stond', 'stonden', 'komen', 'kwam', 'kwamen', 'zitten', 'zaten', 'jaar', 'jaren', 'maand', 'kwartaal',
+  'aantal', 'totaal', 'nederland', 'nederlandse', 'nederlanders', 'gemiddeld', 'gemiddelde', 'ongeveer',
+  'vorig', 'vorige', 'afgelopen', 'laatste', 'eerste', 'tussen', 'sinds', 'vanaf', 'meeste', 'minste',
+]);
+
+/** Content words of free text, lower case, letters/digits only (so they are
+ * safe inside to_tsquery), at least 4 characters, no numbers, no function
+ * words. A Dutch past participle "ge…t"/"ge…d" ("gesloopt", "geregistreerd")
+ * also contributes its base ("sloop", "registreer"): CBS titles name the
+ * thing ("sloopvoertuigen"), questions the event — a spelling rule, not a word list. */
+export function contentWords(text: string): string[] {
+  const out = new Set<string>();
+  for (const raw of text.toLowerCase().normalize('NFC').split(/[^a-z0-9\u00e0-\u00ff]+/)) {
+    if (raw.length < 4 || /^[0-9]+$/.test(raw) || QUESTION_FUNCTION_WORDS.has(raw)) continue;
+    out.add(raw);
+    const participle = /^ge([a-z\u00e0-\u00ff]{3,})[td]$/.exec(raw);
+    if (participle) out.add(participle[1]!);
+  }
+  return [...out];
+}
+
+/** recallCandidates' 'any' mode (see RecallOptions.mode). Each content word
+ * matches as a prefix twice — raw ("sloop:*" reaches the compound
+ * "sloopvoertuig") and Dutch-stemmed — and the alias expansions join as
+ * plain phrases. Same filters, same deny gate, same quota merge as 'all'. */
+async function recallAnyWords(
+  db: Db,
+  text: string,
+  limit: number,
+  includeEurostat: boolean,
+  aliasHints: AliasHint[],
+): Promise<CatalogCandidate[]> {
+  const words = contentWords(text);
+  if (words.length === 0) return [];
+  const aliasPhrases = expandTopicTerms(text, aliasHints)
+    .slice(1)
+    .filter((t) => t.trim().length > 0);
+  const aliasParts = aliasPhrases.map((_, i) => ` || plainto_tsquery('dutch', $${i + 2})`).join('');
+  const limitParam = `$${aliasPhrases.length + 2}`;
+  const isCurrent = buildIsCurrentPredicate(undefined, aliasPhrases.length + 3);
+  const languageClause = includeEurostat
+    ? `(language is null or language = 'nl' or (language = 'en' and table_id like '${EUROSTAT_SOURCE_KEY}:%'))`
+    : `(language is null or language = 'nl')`;
+  const sql = `
+    with kept as (
+      -- Raw prefixes only for words the Dutch dictionary keeps: 'simple' does
+      -- not drop stopwords, so "door:*"/"voor:*" would match nearly every row.
+      select string_agg(w || ':*', ' | ') as raw_q
+        from unnest($1::text[]) as w
+       where to_tsvector('dutch', w) <> ''::tsvector
+    ),
+    q as (
+      select (to_tsquery('simple', coalesce(kept.raw_q, ''))
+              || to_tsquery('dutch', array_to_string(array(select x || ':*' from unnest($1::text[]) as x), ' | '))${aliasParts}) as tsq
+        from kept
+    ),
+    ranked as (
+      select table_id, title, summary, status, dataset_type,
+             ts_rank(cbs_catalog.tsv, q.tsq) as rank,
+             (${isCurrent.sql}) as is_current,
+             row_number() over (
+               partition by (${isCurrent.sql})
+               order by ts_rank(cbs_catalog.tsv, q.tsq) desc, table_id
+             ) as class_pos
+        from cbs_catalog, q
+       where cbs_catalog.tsv @@ q.tsq
+         and (dataset_type is null or dataset_type <> 'Text')
+         and ${languageClause}
+    )
+    select table_id, title, summary, status, dataset_type, rank, is_current
+      from ranked
+     where class_pos <= ${limitParam}
+     order by is_current desc, class_pos
+  `;
+  const { rows: rawRows } = await db.query(sql, [words, ...aliasPhrases, limit, ...isCurrent.params]);
+  const rows = includeEurostat
+    ? rawRows
+    : rawRows.filter((r) => sourceKeyForTableId(r.table_id as string) !== EUROSTAT_SOURCE_KEY);
+  const toCandidate = (r: Record<string, unknown>): CatalogCandidate => ({
+    tableId: r.table_id as string,
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? '',
+    status: (r.status as string | null) ?? null,
+    datasetType: (r.dataset_type as string | null) ?? null,
+    rank: Number(r.rank),
+  });
+  return quotaMerge(
+    rows.filter((r) => r.is_current === true).map(toCandidate),
+    rows.filter((r) => r.is_current !== true).map(toCandidate),
+    limit,
+  );
 }
 
 /** The shortlist from the two status classes (each already in class order, strongest first). Exported for

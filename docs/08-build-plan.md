@@ -1241,6 +1241,10 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
 - **Next (owner GO, in order) — THE single priority (STATUS "THE PLOT"):** set `gate.enforcedInCi` true in
   `benchmark/tablelane-tasks.json` → flip `TABLE_LANE_ENABLED` (owner-supervised env flip; RUNBOOK "Table lane (breadth
   step 5)") → evict `37789ksz` (`npm run tables:evict -- --table 37789ksz`, dry run then `--apply`).
+- **✅ 2026-10-01 (session 153, owner GO): CI gate enforced, `TABLE_LANE_ENABLED=1` LIVE.** The owner's live check found the
+  front door closed (out-of-scope refusals); the question finder was built (6 → 20 of 32, ADR 062 "As built — the front
+  door"). **Eviction of `37789ksz` HELD.** Next: the meaning-gap step ([#362](open-questions.md)), then a live re-check,
+  then the eviction.
 
 ## SEO landing pages ([#353](open-questions.md), owner pick session 145, 2026-09-29) — NETHERLANDS PAGE ✅ BUILT DARK; EUROSTAT PAGE WAITS FOR CURATED EUROSTAT SERIES; SWITCH-ON WAITS FOR THE DOMAIN
 

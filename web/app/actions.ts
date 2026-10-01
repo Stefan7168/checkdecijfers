@@ -684,6 +684,22 @@ export async function askQuestion(
                 }),
               }
             : {}),
+        // Session 153 (the front door): behind TABLE_LANE_ENABLED, a question
+        // the parser calls out_of_scope is still searched for a CBS table
+        // (recall 'any' mode over the whole question); a confident pick goes
+        // to the table lane below, otherwise the out_of_scope refusal stands.
+        // Thread-aware callers only, like the lane itself. Flag off ⇒ absent ⇒
+        // byte-identical.
+        ...(threadAware && tableLaneEnabled() && process.env.ONBOARDING_ENABLED === '1'
+          ? {
+              questionFinder: buildOnboardingFinder({
+                db: getDb(),
+                userId,
+                rerankClient: new AnthropicLlmClient(),
+                recall: { mode: 'any' },
+              }),
+            }
+          : {}),
         // ADR 058 (English answers, Task 8): dormant unless
         // ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English — {} ⇒
         // byte-identical to today (englishAnswerOptions's own dormancy).

@@ -1,0 +1,353 @@
+{
+  "note": "Labelled set for measuring the front door (question reader -> table finder -> table reader): does a realistic Dutch question end at a current CBS table that can answer it? Drafted 2026-10-01 by an agent from the live cbs_catalog mirror, read-only (SELECT only, no LLM calls). 32 answerable cases, each on a different topic area, with expectTables listing every current table (status Regulier, dataset_type Numeric/Mixed, not eurostat:) that clearly covers the topic; 6 negative cases (ids prefixed neg-) have an empty expectTables and must not lead to a table. Word forms were varied on purpose (past participles, plurals, everyday vs. formal words, compounds that differ from the CBS title), and the held tables plus curated topics (population totals, inflation, unemployment, housing stock, house prices, bankruptcies, solar, consumer confidence, income, GDP, prices, retail, consumption, trade) were excluded. Several expectTables lists include sibling tables by region or breakdown; a hit on any listed table counts as correct. Reviewed 2026-10-01 (session 153) after the first live run: four expected-table lists were incomplete and were extended (see each case's 'why'); no case was removed or loosened otherwise.",
+  "cases": [
+    {
+      "id": "scrapped-cars",
+      "question": "Hoeveel auto's zijn er vorig jaar gesloopt?",
+      "expectTables": [
+        "85244NED",
+        "85245NED",
+        "85249NED",
+        "85250NED"
+      ],
+      "why": "Tables on scrapped vehicles: 'Motorvoertuigen actief; sloop, export en overige uitval, leeftijd auto', '...sloopvoertuigen, voertuigtype, brandstofsoort', '...sloop, export en overige uitval, regio's' and '...sloopvoertuigen, gewichtsklasse'."
+    },
+    {
+      "id": "asylum-applications-2022",
+      "question": "Hoeveel mensen hebben in 2022 asiel aangevraagd in Nederland?",
+      "expectTables": [
+        "80059ned",
+        "83102NED"
+      ],
+      "why": "'Asielverzoeken; nationaliteit, vanaf 1975' and 'Asielverzoeken en nareizigers; nationaliteit, geslacht en leeftijd' count submitted asylum requests per year."
+    },
+    {
+      "id": "traffic-deaths-2019",
+      "question": "Hoeveel verkeersdoden waren er in 2019?",
+      "expectTables": [
+        "71426ned",
+        "71936ned"
+      ],
+      "why": "'Overledenen; doden als gevolg van verkeersongeval in Nederland, provincie' and '...doden door verkeersongeval in Nederland, wijze van deelname' give the number of road deaths per year."
+    },
+    {
+      "id": "police-registered-crime",
+      "question": "Hoeveel misdrijven registreerde de politie vorig jaar?",
+      "expectTables": [
+        "83648NED",
+        "83723NED"
+      ],
+      "why": "'Geregistreerde criminaliteit; soort misdrijf, regio' and '...tijdreeks vanaf 1948' give absolute numbers of offences registered by the police."
+    },
+    {
+      "id": "foreign-tourists-hotels-2019",
+      "question": "Hoeveel buitenlandse toeristen overnachtten er in 2019 in Nederlandse hotels?",
+      "expectTables": [
+        "82061NED",
+        "84037NED",
+        "82059NED",
+        "82058NED"
+      ],
+      "why": "'Hotels; gasten, overnachtingen, woonland, regio' and '...woonland, sterklasse' (plus the broader 'Logiesaccommodaties' tables) give guests and overnight stays by country of residence."
+    },
+    {
+      "id": "pigs-kept",
+      "question": "Hoeveel varkens worden er in Nederland gehouden?",
+      "expectTables": [
+        "84952NED",
+        "81302ned",
+        "80780ned"
+      ],
+      "why": "'Omvang veestapel op agrarische bedrijven: peildatum 1 april en 1 december' counts pigs (varkens); the 'Landbouw; gewassen, dieren, grondgebruik...' tables also hold animal numbers."
+    },
+    {
+      "id": "airport-passengers-2023",
+      "question": "Hoeveel mensen vlogen er in 2023 via Schiphol?",
+      "expectTables": [
+        "37478hvv",
+        "83435NED"
+      ],
+      "why": "'Luchtvaart; maandcijfers Nederlandse luchthavens van nationaal belang' holds passengers per airport per month. Session 153 review: 83435NED added after the first live run picked it — checked by title/summary that it answers the question."
+    },
+    {
+      "id": "open-vacancies-q2-2025",
+      "question": "Hoeveel vacatures stonden er in het tweede kwartaal van 2025 open?",
+      "expectTables": [
+        "80472ned",
+        "83599NED",
+        "80473ned",
+        "80474ned",
+        "84545NED"
+      ],
+      "why": "'Vacatures; SBI 2008; naar economische activiteit en bedrijfsgrootte', 'Openstaande vacatures; SBI 2008, regio' and related vacancy tables give open vacancies per quarter."
+    },
+    {
+      "id": "collective-wage-increase",
+      "question": "Hoeveel stegen de lonen volgens de cao's vorig jaar?",
+      "expectTables": [
+        "85663NED"
+      ],
+      "why": "'Cao-lonen, contractuele loonkosten en arbeidsduur; indexcijfers (2020=100)' is the collective-agreement wage index."
+    },
+    {
+      "id": "new-companies-2024",
+      "question": "Hoeveel nieuwe bedrijven zijn er in 2024 opgericht?",
+      "expectTables": [
+        "83148NED",
+        "86283NED",
+        "85206NED"
+      ],
+      "why": "'Bedrijven; oprichtingen, bedrijfsgrootte, rechtsvorm, bedrijfstak' (SBI 2008 and SBI 2025 editions) count company foundations. Session 153 review: 85206NED added after the first live run picked it — checked by title/summary that it answers the question."
+    },
+    {
+      "id": "divorces-2023",
+      "question": "Hoeveel stellen zijn er in 2023 gescheiden?",
+      "expectTables": [
+        "60060ned",
+        "37425ned",
+        "37890",
+        "83519NED"
+      ],
+      "why": "'Echtscheiding; leeftijdsverschil, kinderen, geboorteland, huwelijksduur', 'Huwelijksontbindingen; door echtscheiding en door overlijden' and 'Huwen en huwelijksontbinding...' count divorces. Session 153 review: 83519NED added after the first live run picked it — checked by title/summary that it answers the question."
+    },
+    {
+      "id": "marriages-2022",
+      "question": "Hoeveel mensen zijn er in 2022 getrouwd?",
+      "expectTables": [
+        "60036ned",
+        "37772ned",
+        "37586ned",
+        "37890"
+      ],
+      "why": "'Huwen; huwelijkssluitingen en huwende personen naar diverse kenmerken', 'Huwen en partnerschapsregistraties; kerncijfers', 'Huwenden; leeftijd...' and 'Huwen en huwelijksontbinding...' count marriages and marrying persons."
+    },
+    {
+      "id": "overweight-share",
+      "question": "Hoeveel procent van de Nederlanders is te zwaar?",
+      "expectTables": [
+        "81565NED"
+      ],
+      "why": "'Lengte en gewicht van personen, ondergewicht en overgewicht; vanaf 1981' gives the share with overweight."
+    },
+    {
+      "id": "rent-increase-2024",
+      "question": "Hoeveel gingen de huren in 2024 omhoog?",
+      "expectTables": [
+        "83162NED",
+        "83163NED",
+        "84822NED"
+      ],
+      "why": "'Huurverhoging woningen; regio', '...soort verhuur' and 'Reële huurverhoging woningen; sociale- en overige verhuurders' give the average rent increase."
+    },
+    {
+      "id": "household-waste-per-person",
+      "question": "Hoeveel huisvuil produceert een Nederlander gemiddeld per jaar?",
+      "expectTables": [
+        "83452NED",
+        "83558NED"
+      ],
+      "why": "'Huishoudelijk afval per gemeente per inwoner' and 'Gemeentelijke afvalstoffen; hoeveelheden' give household waste in kilograms per inhabitant."
+    },
+    {
+      "id": "tap-water-use",
+      "question": "Hoeveel leidingwater gebruikt Nederland per jaar?",
+      "expectTables": [
+        "82883NED"
+      ],
+      "why": "'Watergebruik binnen de Nederlandse economie; Milieurekeningen' covers the physical use of tap water (leidingwater), groundwater and surface water."
+    },
+    {
+      "id": "household-gas-use",
+      "question": "Hoeveel gas verbruikt een gemiddeld huishouden per jaar?",
+      "expectTables": [
+        "81528NED"
+      ],
+      "why": "'Energieverbruik particuliere woningen; woningtype en regio's' gives average natural gas and electricity use per dwelling."
+    },
+    {
+      "id": "foreign-students",
+      "question": "Hoeveel buitenlandse studenten studeren er in Nederland?",
+      "expectTables": [
+        "85124NED",
+        "85125NED"
+      ],
+      "why": "'Hoger onderwijs; internationale studenten, nationaliteit' and '...onderwijskenmerken' count international students in higher education."
+    },
+    {
+      "id": "births-2023",
+      "question": "Hoeveel baby's zijn er in 2023 geboren?",
+      "expectTables": [
+        "85722NED",
+        "37201",
+        "37744ned",
+        "37259ned",
+        "83474NED"
+      ],
+      "why": "'Geboorte; kerncijfers', 'Geboorte; kerncijfers vruchtbaarheid, leeftijd moeder, regio', 'Levend geboren kinderen; leeftijd moeder...' and the 'Bevolkingsontwikkeling' tables give live births per year."
+    },
+    {
+      "id": "causes-of-death",
+      "question": "Waaraan sterven de meeste mensen in Nederland?",
+      "expectTables": [
+        "7233",
+        "7052_95",
+        "82899NED"
+      ],
+      "why": "'Overledenen; doodsoorzaak (uitgebreide lijst), leeftijd, geslacht', '...belangrijke doodsoorzaken (korte lijst)...' and 'Overledenen; doodsoorzaak, kwartaal en jaar overlijden' count deaths per underlying cause."
+    },
+    {
+      "id": "co2-emissions-2023",
+      "question": "Hoeveel CO2 stootte Nederland in 2023 uit?",
+      "expectTables": [
+        "85669NED",
+        "85668NED",
+        "84979NED"
+      ],
+      "why": "'Emissies van broeikasgassen berekend volgens IPCC-voorschriften', 'Emissies naar lucht op Nederlands grondgebied; totalen' and 'Emissies broeikasgassen (IPCC); klimaatsector, kwartaal' give CO2 and greenhouse-gas emissions per year."
+    },
+    {
+      "id": "emigration-2023",
+      "question": "Hoeveel mensen emigreerden er in 2023 uit Nederland?",
+      "expectTables": [
+        "85468NED",
+        "83474NED",
+        "37259ned"
+      ],
+      "why": "'Immigratie en emigratie; geslacht, leeftijd, geboorteland, regio' counts emigrants; the 'Bevolkingsontwikkeling' tables also list immigration and emigration."
+    },
+    {
+      "id": "cars-on-the-road",
+      "question": "Hoeveel auto's rijden er in Nederland rond?",
+      "expectTables": [
+        "85237NED",
+        "82472NED",
+        "85243NED",
+        "85235NED"
+      ],
+      "why": "'Personenauto's actief; voertuigkenmerken, regio's, 1 januari', 'Motorvoertuigen; vanaf 1927', 'Motorvoertuigen actief; type, leeftijdsklasse, 1 januari' and 'Motorvoertuigenpark actief; inwoners, type, regio' count registered cars."
+    },
+    {
+      "id": "cycle-path-length",
+      "question": "Hoeveel kilometer fietspad ligt er in Nederland?",
+      "expectTables": [
+        "85020NED"
+      ],
+      "why": "'Lengte van fietsnetwerk; fietswegkenmerken, regio' gives the length of the Dutch cycling network."
+    },
+    {
+      "id": "potato-harvest-2023",
+      "question": "Hoeveel aardappelen zijn er in 2023 geoogst?",
+      "expectTables": [
+        "85636NED",
+        "85676NED",
+        "7100oogs"
+      ],
+      "why": "'Akkerbouwgewassen; productie, regio' and '...voorlopige en definitieve oogstraming' give harvested area and total yield per arable crop. Session 153 review: 7100oogs added after the first live run picked it — checked by title/summary that it answers the question (discontinued, but its 1994-2023 range covers 2023)."
+    },
+    {
+      "id": "fish-caught",
+      "question": "Hoeveel vis vangen Nederlandse vissers per jaar?",
+      "expectTables": [
+        "83622NED"
+      ],
+      "why": "'Visserij en aquacultuur; hoeveelheid vis, schaal- en schelpdieren' gives quantities of fish landed by Dutch vessels."
+    },
+    {
+      "id": "building-permits-2024",
+      "question": "Hoeveel bouwvergunningen zijn er in 2024 afgegeven?",
+      "expectTables": [
+        "83667NED",
+        "83671NED",
+        "83672NED"
+      ],
+      "why": "'Bouwvergunningen; aantal, bouwkosten, index, aard werk, bestemming', 'Bouwvergunningen woonruimten...' and 'Bouwvergunningen; bedrijfsgebouwen...' give numbers of granted building permits."
+    },
+    {
+      "id": "pension-build-up",
+      "question": "Hoeveel mensen bouwen pensioen op via hun werkgever?",
+      "expectTables": [
+        "85714NED",
+        "84184NED"
+      ],
+      "why": "'Personen met pensioenaanspraken; persoonsgegevens, aanspraken' and 'Arbeidsgerelateerd ouderdomspensioen; aanspraken, uitvoerders, regelingen' count people with employer-related pension entitlements."
+    },
+    {
+      "id": "people-on-social-assistance",
+      "question": "Hoeveel mensen leven van de bijstand?",
+      "expectTables": [
+        "82015NED",
+        "85692NED",
+        "80794ned",
+        "86113NED",
+        "86003NED"
+      ],
+      "why": "'Bijstandsuitkeringen; uitkeringsgrondslag, regio's' and the 'Personen met een uitkering' tables (kenmerken, per regio, soort uitkering) count social assistance recipients."
+    },
+    {
+      "id": "hospital-admissions-2022",
+      "question": "Hoeveel mensen zijn er in 2022 in het ziekenhuis opgenomen?",
+      "expectTables": [
+        "84067NED",
+        "84068NED",
+        "84069NED",
+        "84522NED"
+      ],
+      "why": "'Ziekenhuisopnamen en -patiënten; diagnose-indeling VTV/ISHMT/ICD-10' and 'Ziekenhuisopnamen; sterfte, urgentie, diagnose-indelingen CCS en VTV' give admissions and patients per year."
+    },
+    {
+      "id": "holidays-abroad-2023",
+      "question": "Hoeveel Nederlanders gingen er in 2023 op vakantie naar het buitenland?",
+      "expectTables": [
+        "85302NED",
+        "84365NED",
+        "84367NED"
+      ],
+      "why": "'Vakanties van Nederlanders; kerncijfers', '...buitenland, vakantiekenmerken' and '...buitenland, bestemmingen' give holiday participation and trips abroad."
+    },
+    {
+      "id": "gender-pay-gap",
+      "question": "Hoeveel minder verdienen vrouwen dan mannen per uur?",
+      "expectTables": [
+        "81901NED",
+        "81920NED"
+      ],
+      "why": "'Beloningsverschillen tussen mannen en vrouwen; kenmerken baan, werknemer' and '...bedrijfstakken (SBI 2008)' give the gap in average hourly wage."
+    },
+    {
+      "id": "neg-forecast",
+      "question": "Hoeveel elektrische auto's rijden er in 2035 in Nederland?",
+      "expectTables": [],
+      "why": "Forecast of a future year for a series CBS publishes no projection for; the product must refuse instead of extrapolating."
+    },
+    {
+      "id": "neg-causal",
+      "question": "Waarom zijn er steeds minder vissers in Nederland?",
+      "expectTables": [],
+      "why": "Causal 'why' question; CBS tables give counts, not causes."
+    },
+    {
+      "id": "neg-smalltalk",
+      "question": "Hallo, wie ben jij?",
+      "expectTables": [],
+      "why": "Smalltalk, not a statistics question."
+    },
+    {
+      "id": "neg-opinion",
+      "question": "Wat vind jij van het nieuwe pensioenstelsel?",
+      "expectTables": [],
+      "why": "Asks for an opinion, not for a number."
+    },
+    {
+      "id": "neg-personal",
+      "question": "Hoeveel verdien ik als ik 32 uur per week werk?",
+      "expectTables": [],
+      "why": "Personal question about the asker's own pay; no CBS table can answer it."
+    },
+    {
+      "id": "neg-weather",
+      "question": "Wat voor weer wordt het morgen in Utrecht?",
+      "expectTables": [],
+      "why": "Weather forecast is KNMI territory, not Dutch statistics from CBS."
+    }
+  ]
+}

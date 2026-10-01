@@ -944,6 +944,8 @@ export async function respondToQuestion(
       // unmatched topic on either turn can route to onboarding when a finder
       // is injected. Undefined when absent → B15 unchanged.
       tableFinder: options.tableFinder,
+      // Session 153: the out_of_scope finder, same threading as tableFinder.
+      questionFinder: options.questionFinder,
       // WP16 sub-part 2 delivery vocabulary (design §3.6): undefined/empty →
       // byte-identical Phase-0 prompt. The delivery re-run passes the
       // just-onboarded measure(s) so the parser can actually emit their
@@ -1054,6 +1056,8 @@ export async function respondToClarificationReply(
       // byte-identical B15 clarification — a reply-turn onboarding trigger is
       // a separate, unmade decision.
       tableFinder: undefined,
+      // Same decision for the out_of_scope finder: never on a reply turn.
+      questionFinder: undefined,
       // #191: the reply turn runs under the SAME rollout flag as the answer
       // turn. It was declared on ClarifyReplyOptions and threaded onward by
       // clarify.ts (lines 194, 210) but never SET here, and the result was not

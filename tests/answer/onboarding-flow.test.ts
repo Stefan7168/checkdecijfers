@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildUnmatchedClarification,
   resolveUnmatched,
+  routeWholeQuestion,
+  parseQuestion,
   type OnboardingRouting,
   type OutcomeContext,
   type RawParse,
@@ -203,3 +205,70 @@ describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §
     expect(ONBOARDING_PENDING_TEXT.trimEnd().endsWith('?')).toBe(true);
   });
 });
+
+describe('the out_of_scope finder (session 153, the front door)', () => {
+  const OOS = context({ kind: 'out_of_scope', nearestCanonicalKeys: [] }, "Hoeveel bestelauto's werden er in 2024 gesloopt?");
+
+  it('routeWholeQuestion searches the QUESTION itself and returns the onboarding outcome on a confident pick', async () => {
+    const seen: string[][] = [];
+    const finder: TableFinder = async (term, question) => {
+      seen.push([term, question]);
+      return { tableId: '85245NED', topicTerm: term, confidence: 0.9, alreadyPending: false, candidateIds: ['85245NED'] };
+    };
+    const outcome = await routeWholeQuestion(OOS, finder);
+    expect(seen).toEqual([[OOS.question, OOS.question]]);
+    expect(outcome?.kind).toBe('onboarding');
+    if (outcome?.kind !== 'onboarding') throw new Error('unreachable');
+    expect(outcome.tableId).toBe('85245NED');
+  });
+
+  it('routeWholeQuestion returns null when the finder has no confident pick', async () => {
+    expect(await routeWholeQuestion(OOS, async () => null)).toBeNull();
+  });
+
+  const outOfScopeClient = {
+    async complete() {
+      return {
+        outputText: JSON.stringify({ version: 4, kind: 'out_of_scope', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null }),
+        model: 'stub',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      };
+    },
+  };
+  const noDb = {} as never;
+
+  it('parseQuestion: an out_of_scope parse WITH the finder and a pick → onboarding; without a pick → the refusal', async () => {
+    const q = "Hoeveel bestelauto's werden er in 2024 gesloopt?";
+    const base = { client: outOfScopeClient, referenceDate: '2026-10-01' } as never;
+    const routed = await parseQuestion(noDb, q, { ...(base as object), questionFinder: confidentFinder } as never);
+    expect(routed.kind).toBe('onboarding');
+    const refused = await parseQuestion(noDb, q, { ...(base as object), questionFinder: async () => null } as never);
+    expect(refused).toMatchObject({ kind: 'refusal', refusalKind: 'out_of_scope' });
+  });
+
+  it('parseQuestion: no out_of_scope finder (benchmark, tests, flag off) → the refusal, the plain unmatched finder is NOT consulted', async () => {
+    let called = false;
+    const finder: TableFinder = async () => {
+      called = true;
+      return null;
+    };
+    const out = await parseQuestion(noDb, 'Hoeveel stikstof?', { client: outOfScopeClient, referenceDate: '2026-10-01', tableFinder: finder } as never);
+    expect(out).toMatchObject({ kind: 'refusal', refusalKind: 'out_of_scope' });
+    expect(called).toBe(false);
+  });
+
+  it('resolveUnmatched: when the term finder has no pick, the question finder gets a turn; with neither pick → B15', async () => {
+    const asked: string[] = [];
+    const qf: TableFinder = async (term) => {
+      asked.push(term);
+      return { tableId: '82883NED', topicTerm: term, confidence: 0.9, alreadyPending: false, candidateIds: ['82883NED'] };
+    };
+    const routed = await resolveUnmatched(B15_CONTEXT, async () => null, qf);
+    expect(routed.kind).toBe('onboarding');
+    expect(asked).toEqual([B15_CONTEXT.question]);
+    const b15 = await resolveUnmatched(B15_CONTEXT, async () => null, async () => null);
+    expect(b15).toEqual(buildUnmatchedClarification(B15_CONTEXT));
+  });
+});
+

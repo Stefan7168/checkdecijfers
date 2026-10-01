@@ -1134,7 +1134,15 @@ demand (`src/ingestion/slice-cache.ts`). Operational facts:
 4. `last_sync_at` stays NULL for these tables by design — the stale-sync alert, onboarding and the coverage page ignore
    them; each served cell is dated by its covering slice's `checked_at`.
 
-## Table lane (breadth step 5, ADR 062, built session 140, 2026-09-29 — merged DARK; nothing live until the owner flips it)
+## Table lane (breadth step 5, ADR 062, built session 140, 2026-09-29 — LIVE since 2026-10-01, session 153)
+
+**The front door (session 153).** A question reaches the lane only when the table finder confidently picks a table. Since
+session 153 that includes questions the curated reader calls out of scope (searched with the question itself). Measure
+how many realistic questions get through: `npm run frontdoor:eval` (free, search only) and
+`FRONTDOOR_LIVE_OK=1 npm run frontdoor:eval -- --live` (~$0.60, real reader + finder; writes
+`benchmark/frontdoor-report.json`). Last measured 2026-10-01: 20 of 32 reach a right table, 0 of 6 non-questions routed.
+`37789ksz` stays loaded until welfare questions reliably reach their table ([#362](open-questions.md)).
+
 
 What it is: in the workspace chat, a question the curated figures cannot place, but the table finder matches to a CBS
 table, is answered from that table at the normal question price (instead of the 100-credit e-mail offer). The reader

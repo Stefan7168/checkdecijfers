@@ -368,6 +368,7 @@ export type TableFinder = (term: string, question: string) => Promise<Onboarding
 export async function resolveUnmatched(
   context: OutcomeContext,
   finder: TableFinder | undefined,
+  questionFinder?: TableFinder,
 ): Promise<ParseOutcome> {
   const term = context.raw.unmatchedMeasureTerm;
   if (finder && term !== null) {
@@ -386,7 +387,36 @@ export async function resolveUnmatched(
       };
     }
   }
+  // Session 153 (the front door): the term search found nothing confident —
+  // the whole-question search gets a turn before the B15 clarification
+  // (measured: "Hoeveel leidingwater gebruikt Nederland per jaar?" had the
+  // right table first in the whole-question shortlist and still ended in
+  // B15). Absent (benchmark, tests, flag off) → B15, byte-identical.
+  if (questionFinder) {
+    const routed = await routeWholeQuestion(context, questionFinder);
+    if (routed !== null) return routed;
+  }
   return buildUnmatchedClarification(context);
+}
+
+/** Session 153 (the front door): an out_of_scope parse — or an unmatched
+ * topic the term search could not place — routed through the
+ * finder with the QUESTION as its search text (the finder searches it in
+ * recall's 'any' mode). A confident pick → the same 'onboarding' outcome an
+ * unmatched topic produces (the table lane takes it from there); no pick →
+ * null, and the caller keeps its out_of_scope refusal unchanged. */
+export async function routeWholeQuestion(context: OutcomeContext, finder: TableFinder): Promise<ParseOutcome | null> {
+  const routing = await finder(context.question, context.question);
+  if (!routing) return null;
+  return {
+    kind: 'onboarding',
+    ...context,
+    tableId: routing.tableId,
+    topicTerm: routing.topicTerm,
+    confidence: routing.confidence,
+    alreadyPending: routing.alreadyPending,
+    candidateIds: routing.candidateIds,
+  };
 }
 
 /** B15 shape: the topic term matched nothing loaded. Measure is unresolved,

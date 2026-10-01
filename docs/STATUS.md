@@ -39,8 +39,16 @@
   birth-country hazard). Threshold calibrated to 0.6. **Measured on both recordings: labelled 44/50
   (all six misses refuse or ask), table-lane benchmark 12/14 answers (the floor), 9/9 refuse/ask, 0 invented — GATE PASS.** AI spend
   ~$4.24 (estimate undercounts billed tokens 2.5×; fixed in the dry-run print). Per table-lane question ~1.8 cents.
-  **Owner GO the same session: `gate.enforcedInCi` = true, `TABLE_LANE_ENABLED=1` set in Vercel Production** (live check and
-  the `37789ksz` eviction follow — see the archive entry / next block).
+  **Owner GO the same session: `gate.enforcedInCi` = true, `TABLE_LANE_ENABLED=1` LIVE in Vercel Production** (the live
+  check found the closed front door — part 2 below; the `37789ksz` eviction is held).
+
+**▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
+  live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated
+  question reader turned the topic away before any table search. Built (code only, no prompt change): a whole-question
+  table search (any word, prefix, Dutch participle base) used for out-of-scope questions and as the fallback for unplaced
+  topics, behind the table-lane switch. Measured on 38 real questions: **6 → 20 of 32 reach a right table, 0 of 6
+  non-questions routed.** `37789ksz` eviction HELD (welfare questions do not reliably reach their table yet). Next: the
+  meaning-gap step (#362).
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,
@@ -105,8 +113,9 @@
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
-Single priority: switch on the CBS any-table route — the gate PASSED (12/14, 9/9, 0 invented). With the owner's GO: set
-`gate.enforcedInCi` true → flip `TABLE_LANE_ENABLED` (owner-supervised) → evict `37789ksz`. Then the Eurostat route (THE PLOT 2).
+The CBS any-table route is LIVE (`TABLE_LANE_ENABLED=1`, CI gate enforced). Single priority: widen the front door —
+the meaning-gap step ([#362](open-questions.md): an AI step proposing CBS's formal search words; measure with
+`npm run frontdoor:eval`, today 20/32), then a live re-check by the owner, then evict `37789ksz`. Then the Eurostat route.
 The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables

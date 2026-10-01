@@ -383,6 +383,28 @@ The parser's first live recordings. Measured numbers, then the changes they forc
   estimator in `tableparse:eval --dry-run` undercounts billed tokens 1.9× (Haiku) to 2.5× (Sonnet) — it omits the
   structured-output schema; the script now prints the measured factor.
 
+## As built — the front door (2026-10-01, session 153, owner present, after the flip)
+
+**Found by the owner's live check, not by any benchmark.** With `TABLE_LANE_ENABLED=1` live, "Hoeveel bestelauto's werden
+er in 2024 gesloopt?" was refused as out of scope (audit row 337): the curated intent parser calls a topic far from its
+vocabulary `out_of_scope`, and only an *unmatched* topic ever reached the table finder. The table-lane benchmark hands
+each task its table, so it could not see this. Second gap: recall is Dutch full-text with every word required, so a
+whole question finds nothing and word forms miss ("gesloopt" vs the title's "sloopvoertuigen").
+
+- **Recall 'any' mode** (`recallCandidates(..., { mode: 'any' })`): the question's content words (question/function words
+  and numbers dropped; a past participle "ge…t/d" adds its base, "gesloopt" → "sloop") match ANY word as a prefix, raw
+  and stemmed, ranked by `ts_rank`; same Text filter, Eurostat deny gate and quota merge. The default mode is untouched.
+- **The question finder** (`questionFinder`, injected by `askQuestion` only while `TABLE_LANE_ENABLED` and
+  `ONBOARDING_ENABLED` are on, thread-aware callers only): an `out_of_scope` parse, or an unmatched topic the term
+  finder could not place, is searched with the question itself; a confident pick routes to the table lane, otherwise the
+  original refusal / B15 clarification stands byte-identical. Reply turns never get it. No prompt changed, no fixture moved.
+- **Measured** (`npm run frontdoor:eval`, 38 questions drafted by an agent from the live catalogue: 32 about
+  non-curated tables, 6 that must not route; four expected-table lists extended after review): **before 6/32 reach a
+  right table, after 20/32; 0/6 negatives routed.** Two live runs, ~$1.20.
+- **Open ([#362](../open-questions.md)):** 9 of the 12 misses are meaning gaps word search cannot bridge ("getrouwd" vs
+  "huwelijkssluitingen", "te zwaar" vs "overgewicht", "huisvuil" vs "huishoudelijk afval"); 3 reach the shortlist but the
+  rerank is not confident. Candidate fix: a small AI step that proposes CBS's formal search words (a new LLM role).
+
 ## Trade-offs and open points (after step 5)
 
 - A quarantined slice-cache table has no rebaseline path yet (syncTable refuses it) — recovery = eviction or a supervised

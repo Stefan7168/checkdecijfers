@@ -8,6 +8,12 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+0. **A benchmark that hands the component its input cannot see the door in front of it.** The table-lane benchmark passed
+   (12/14, 9/9, 0 invented) because each task is given its table; the owner's first live question never reached the lane
+   (the curated reader refused it as out of scope). Before a switch-on, one live end-to-end question through the real
+   front door is part of the gate, and a measurement of the whole path (`frontdoor:eval`) belongs next to the component
+   benchmark.
+
 1. **A token estimate is not a cost basis until it has been checked against one billed run.** The dry run said ~243k input
    tokens; the API billed 465k (Haiku) and 604k (Sonnet). The `chars / 3.5` estimate leaves out the structured-output JSON
    schema the API adds to every call. The owner was quoted $0.45 and the two cheap runs alone cost ~$1.00. Rule: quote

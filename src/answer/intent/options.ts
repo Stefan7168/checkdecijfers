@@ -29,6 +29,14 @@ export interface IntentCallOptions extends LlmCallOptions {
    * respond.ts's `clarifyOptions` — the reply turn) → the plain B15
    * clarification, byte-identical. */
   tableFinder?: TableFinder;
+  /** Session 153 (the front door, ADR 062): OPTIONAL finder that searches
+   * the QUESTION itself (recall's 'any' mode) — for a question the parser
+   * calls out_of_scope (no topic term), and as the fallback when the term
+   * finder could not place an unmatched topic. Injected only by web/app/actions.ts's askQuestion while
+   * TABLE_LANE_ENABLED is on — a confident pick goes to the table lane;
+   * no pick, or absent (benchmark, tests, reply turns) → the out_of_scope
+   * refusal, byte-identical. */
+  questionFinder?: TableFinder;
   /** WP16 sub-part 2 (ADR 026, design §3.6/§0.4): OPTIONAL extra canonical
    * measures appended to the parser vocabulary — the on-demand-onboarded
    * measures registered by the fetch job. Absent/empty → the prompt bytes are
