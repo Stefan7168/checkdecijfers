@@ -1046,7 +1046,7 @@ and needs at least one (`no_licensed_geo`); a dataset with no marked dimension i
 (same code, same English name) is refused (`unmarked_geography`). Kinds are unchanged: only a dimension named `geo` is
 the waist's GeoDimension; a marked `citizen` is a plain dimension with restricted codes. **Assumption:** the licence
 exceptions (Assumption 2) are read restrictively — a citizenship or partner breakdown by a non-EU country is also
-withheld, although it is EU-reported data; a legal review may relax this per dimension. Measured cost: in the
+withheld, although it is EU-reported data; a legal review may relax this per dimension. (**2026-10-02, #365:** the all-citizenships `TOTAL` in a GEO-derived list is now kept — see the session-153 addendum below.) Measured cost: in the
 30-dataset crawl the 3 datasets without `geo` are exactly the unmarked kind, now refused.
 
 **Open:** a dataset whose only marked dimension is not named `geo` would still get the adapter's `geo=` sweep on a data
@@ -1136,5 +1136,8 @@ not twin measures: a reading that leaves it open is filled by code from the ques
 (month/quarter → `SCA`, else `SA`; year → `NSA`) — the CBS rule's decision, no prompt change. Recorded with the owner
 (mid tier, ~$0.50): 17 Dutch questions over five captured structures, **13/17, 0 invented numbers**
 (`benchmark/eurostat-tableparse-set.json`, replay pinned in `tests/answer/table-parse/eurostat-calibration-replay.test.ts`).
-Finding: the licence rule's restrictive reading withholds `TOTAL` in `CITIZEN`, so `migr_asyappctza` cannot give a
-country's total applications — owner decision [#365](../open-questions.md).
+Finding: the licence rule's restrictive reading withheld `TOTAL` in `CITIZEN`, so `migr_asyappctza` could not give a
+country's total applications. **Owner GO 2026-10-02 ([#365](../open-questions.md)), built:** in a list DERIVED from GEO the
+exact code `TOTAL` at Eurostat's aggregate level is kept (`isAllCodesTotal`) — the reporting country's own count over
+every citizenship, not a breakdown by a non-EU country; never in the reporting `geo` list; every non-EU citizenship and
+`EXT_EU27_2020` stay withheld. This narrows the addendum (d) Assumption above. Re-recorded asylum cases: **15/17**.

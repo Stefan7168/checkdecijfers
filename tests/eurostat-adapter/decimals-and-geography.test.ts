@@ -102,7 +102,9 @@ describe('(d) geography-bearing dimensions come from Eurostat’s marks, never f
     if (!layout.ok) throw new Error(layout.summary);
     const kept = layout.codeLists.citizen!.map((c) => c.code);
     expect(kept).toContain('NL');
-    for (const outside of ['SY', 'AF', 'UA', 'TOTAL', 'UNK', 'EXT_EU27_2020']) {
+    // #365: the all-citizenships total is the reporting country's own count — kept.
+    expect(kept).toContain('TOTAL');
+    for (const outside of ['SY', 'AF', 'UA', 'UNK', 'EXT_EU27_2020']) {
       expect(citizen.codes.some((c) => c.code === outside), outside).toBe(true);
       expect(kept, outside).not.toContain(outside);
     }
@@ -143,9 +145,20 @@ describe('(d) geography-bearing dimensions come from Eurostat’s marks, never f
   it('every marked dimension needs a licensed code', () => {
     const s = structureOf('migr_asyappctza');
     const dims = s.dimensions.map((d) =>
-      d.name === 'citizen' ? { ...d, codes: d.codes.filter((c) => ['SY', 'AF', 'TOTAL'].includes(c.code)) } : d,
+      d.name === 'citizen' ? { ...d, codes: d.codes.filter((c) => ['SY', 'AF'].includes(c.code)) } : d,
     );
     expect(fitEurostatStructure('x', { ...s, dimensions: dims })).toMatchObject({ ok: false, reason: 'no_licensed_geo' });
+  });
+
+  it('#365: TOTAL is kept only in a list derived from GEO, never in the reporting geo list', () => {
+    const s = structureOf('migr_asyappctza');
+    const geo = s.dimensions.find((d) => d.name === 'geo')!;
+    const total = s.dimensions.find((d) => d.name === 'citizen')!.codes.find((c) => c.code === 'TOTAL')!;
+    const dims = s.dimensions.map((d) => (d.name === 'geo' ? { ...geo, codes: [...geo.codes, total] } : d));
+    const layout = eurostatLayoutFromStructure('eurostat:migr_asyappctza', { ...s, dimensions: dims }, () => 0);
+    if (!layout.ok) throw new Error(layout.summary);
+    expect(layout.codeLists.geo!.map((c) => c.code)).not.toContain('TOTAL');
+    expect(layout.codeLists.citizen!.map((c) => c.code)).toContain('TOTAL');
   });
 });
 

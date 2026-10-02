@@ -7,11 +7,8 @@
 // shifts the hash, replay misses, and this fails — forcing a re-record
 // (`TABLEPARSE_RECORD_OK=1 npm run tableparse:record -- --eurostat`).
 //
-// The four known misses are pinned BY NAME. None shows an invented number:
-// E7 (Beieren, below country level) and E10 (minors asking asylum in België)
-// read 'geen' → refused; E9 chose 'anders' on citizenship → asked/refused —
-// both asylum misses follow from the licence rule withholding the
-// all-citizenships total (ADR 048 addendum (d), restrictive reading); E4 picked
+// The two known misses are pinned BY NAME. None shows an invented number:
+// E7 (Beieren, below country level) reads 'geen' → refused; E4 picked
 // the count (thousand persons) instead of the rate for "hoe hoog was de
 // werkloosheid" — a real cell with its unit stated, the wrong kind of figure.
 import { readFileSync } from 'node:fs';
@@ -25,7 +22,9 @@ const SET = JSON.parse(
   readFileSync(new URL('../../../benchmark/eurostat-tableparse-set.json', import.meta.url), 'utf8'),
 ) as LabelledSet;
 
-const KNOWN_MISSES = ['E10', 'E4', 'E7', 'E9'];
+// E8–E10 (asylum) were misses until #365 kept the all-citizenships TOTAL;
+// re-recorded 2026-10-02, all three pass.
+const KNOWN_MISSES = ['E4', 'E7'];
 
 describe('Eurostat table-parse calibration — replay of the recorded set', () => {
   it('replays every case; exactly the pinned known misses fail', async () => {

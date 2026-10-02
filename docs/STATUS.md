@@ -55,8 +55,8 @@
   — old path 1/30; 0 non-questions routed). Eurostat (dark): the Dutch → English search bridge takes Dutch Eurostat
   questions from 0/12 to 10/12 in the shortlist (#357), and the lane now PLANS a Eurostat dataset correctly in a hermetic
   test (totals, freq, Dutch country names); the source-aware job is built too (dark); the table-reader recording on Eurostat
-  ran (owner GO, ~$0.50): 13/17, 0 invented numbers (#357). Next: step 5 — ≥5 Eurostat benchmark tasks, the public-claim
-  sweep, then switching the Eurostat finder on (owner); decide #365 (asylum citizenship total, licence reading).
+  ran (owner GO, ~$0.50): 13/17, 0 invented numbers (#357); #365 (keep the all-citizenships total, owner GO)
+  built → 15/17. Next: step 5 — ≥5 Eurostat benchmark tasks, the public-claim sweep, then switching the Eurostat finder on (owner).
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated

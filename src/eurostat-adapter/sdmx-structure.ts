@@ -388,6 +388,17 @@ export function licensedGeo(code: string, level: GeoLevel | null): { ok: true } 
   return { ok: true };
 }
 
+/**
+ * #365 (owner GO, 2026-10-02): in a list DERIVED from GEO (a breakdown such as citizenship, never the reporting
+ * `geo` itself) the all-codes `TOTAL` is kept. It is the reporting EU/EFTA country's own count over every
+ * citizenship — not a breakdown by a non-EU country — and without it such a table can never answer "how many in
+ * total" (the asylum table always asked which EU citizenship). Only the exact code `TOTAL` at Eurostat's aggregate
+ * level; every non-EU citizenship and every other aggregate (`EXT_EU27_2020`, …) stays withheld.
+ */
+function isAllCodesTotal(code: string, level: GeoLevel | null): boolean {
+  return code === 'TOTAL' && level === 'aggregate';
+}
+
 export type GeographyMark = 'geo_code_list' | 'derived_from_geo';
 
 /**
@@ -572,7 +583,7 @@ export function fitEurostatStructure(tableId: string, structure: EurostatStructu
     for (const c of d.codes) {
       const level = geoLevelOf(c);
       levels[c.code] = level;
-      const verdict = licensedGeo(c.code, level);
+      const verdict = mark === 'derived_from_geo' && isAllCodesTotal(c.code, level) ? ({ ok: true } as const) : licensedGeo(c.code, level);
       if (verdict.ok) licensed.push(c.code);
       else excluded.push({ code: c.code, why: verdict.why });
     }
