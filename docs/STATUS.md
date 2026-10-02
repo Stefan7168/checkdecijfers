@@ -66,7 +66,8 @@
   non-questions routed;** then the meaning step (the cheap model proposes CBS-style search words on a no-pick): **27 of 32**.
   Read-only end-to-end proof: the vans question lands on the CBS cell 9,517. `37789ksz` eviction held at first, then DONE
   2026-10-02 (rehearsal: welfare questions route to 37789ksz / 85585NED; read-only e2e plans 'Totaal bijstandsuitkeringen'). AI spend this session ~$7. **Owner live re-check PASSED 2026-10-02:** the vans
-  question answers 9.517 from 85245NED in production.
+  question answers 9.517 from 85245NED in production; its sentence now names what was counted
+  ("In 2024 kwamen 9.517 bestelauto's voor sloop vrij.", #364).
 
 **▶ SESSION 152 (2026-09-30, owner present) — ALL 17 PINNED CBS TABLES NOW LIVE ON SLICE STORAGE ([#358](open-questions.md), ADR
   [065](decisions/065-retire-whole-table-copies-one-route.md)):** owner GO "all 20, stop on problem". 17 pinned tables converted one at a time,

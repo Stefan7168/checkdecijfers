@@ -331,6 +331,8 @@ describe('anti-hallucination invariants — answer-side halves, real since WP7 (
       'periodLabel', 'regionLabel', 'value', 'nullReason', 'unit', 'provisional',
       'kind', 'explicit', 'direction', 'trendWord', 'monotonic', 'winnerRegion',
       'firstPeriodLabel', 'lastPeriodLabel',
+      // #364: what was counted, for results without a curated definition.
+      'subject', 'measureTitle', 'selection',
     ]);
     const collectKeys = (value: unknown, into: Set<string>): void => {
       if (Array.isArray(value)) { for (const v of value) collectKeys(v, into); return; }

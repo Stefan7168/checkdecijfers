@@ -257,3 +257,14 @@ The R3 word-form rejection (`wordFormProblems`, `src/answer/compose/validate.ts`
 **English path:** checked, no change needed. The English check C9 (`src/answer/translate/check.ts`) is a counterpart check, not a ban: an English "billion" needs a Dutch "miljard" in the masked Dutch, and the unit's own "miljard" provides it.
 
 **Verification:** hermetic unit tests for the pass and fail cases (`tests/answer/compose-validate.test.ts`, `tests/answer/translate/check.test.ts`); canned table-lane benchmark 14/14 answers, 9/9 refuse/ask, 0 invented (the known-finding pin in `tests/benchmark/tablelane-benchmark.test.ts` is removed); curated benchmark PASS, 14/14 + 6/6 + 0 fabricated; `audit:verify 1 336` output is identical to the pre-change validator's (the change can only remove word-form findings, never add them).
+
+### As-built note (2026-10-02, session 153) — the phrasing input names what was counted (#364)
+
+A result without a curated `definitionLabel` (the any-table route, explicit targets) gave the model only values and
+units, so the owner's live answer read "In 2024 bedroeg het aantal 9.517". The payload (R2 whitelist) now carries an
+optional `subject` — CBS's own measure title plus the member labels every cell shares, minus "Totaal …" defaults
+(`phrasingSubject`, `src/answer/compose/prompt.ts`). Every word in it is already an R9/R10 anchor on the cells, so
+the validator and semantic check need no change. It is ABSENT whenever `definitionLabel` is set, so curated payloads
+and their fixtures are byte-identical; no prompt rule changed (COMPOSE_PROMPT_VERSION stays 4). Live check (one call):
+"In 2024 kwamen 9.517 bestelauto's voor sloop vrij." Tests: `tests/answer/compose-subject.test.ts`, the R2 whitelist in
+`tests/invariants/invariants.test.ts`.

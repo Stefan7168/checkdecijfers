@@ -63,6 +63,13 @@ export const TREND_WORD_BY_DIRECTION = { up: 'stijging', down: 'daling', flat: '
 export interface PhrasingPayload {
   shape: string;
   definitionLabel: string | null;
+  /** Session 153 (#364): WHAT was counted, for a result without a curated
+   * definitionLabel (the any-table route, explicit targets) — CBS's own
+   * measure title plus the selected members' own labels, all already R9/R10
+   * anchors on the cells. Absent whenever definitionLabel is set, so every
+   * curated payload stays byte-identical (fixtures keep their hashes).
+   * Without it the model saw only "9.517, unit aantal" and wrote "het aantal". */
+  subject?: { measureTitle: string; selection: string[] };
   periodSemantics: string | null;
   cells: {
     periodLabel: string;
@@ -89,14 +96,35 @@ export interface PhrasingPayload {
   }[];
 }
 
+const TOTAL_LABEL = /^totaal\b/i;
+
+/** The payload's `subject` (#364): only when there is no curated definition
+ * and every cell measures the same thing. `selection` is each breakdown label
+ * shared by every cell, in cell order, minus "Totaal …" defaults (a total adds
+ * nothing to what was counted). */
+export function phrasingSubject(result: ValidatedResult): { measureTitle: string; selection: string[] } | null {
+  if (result.attribution.definitionLabel !== null) return null;
+  const first = result.cells[0];
+  if (first === undefined) return null;
+  const measureTitle = first.measureTitle.trim();
+  if (measureTitle.length === 0 || result.cells.some((c) => c.measureTitle.trim() !== measureTitle)) return null;
+  const selection = Object.entries(first.dimLabels)
+    .filter(([dim, label]) => result.cells.every((c) => c.dimLabels[dim] === label))
+    .map(([, label]) => label.trim())
+    .filter((label) => label.length > 0 && !TOTAL_LABEL.test(label));
+  return { measureTitle, selection };
+}
+
 export function buildPhrasingPayload(result: ValidatedResult): PhrasingPayload {
   const byId = new Map(result.cells.map((c) => [c.resultId, c]));
   const decimals = result.cells[0]?.decimals ?? 0;
   const differenceUnit = (unit: string) => (unit.trim() === '%' ? 'procentpunt' : unit);
 
+  const subject = phrasingSubject(result);
   return {
     shape: result.shape,
     definitionLabel: result.attribution.definitionLabel,
+    ...(subject === null ? {} : { subject }),
     periodSemantics: result.attribution.periodSemantics,
     cells: result.cells.map((cell) => ({
       periodLabel: cell.periodLabel,
