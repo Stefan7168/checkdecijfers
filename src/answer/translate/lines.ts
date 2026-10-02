@@ -16,7 +16,7 @@ import type {
   ValidatedResult,
 } from '../../query/index.ts';
 import { isDerivedResult } from '../../query/index.ts';
-import { EUROSTAT_SOURCE_KEY, resolveSource } from '../../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, resolveSource, resolveSourceForTable } from '../../sources/registry.ts';
 import { baseRegionLabel, buildDefinitionLine, displayAlternateLabel } from '../compose/format.ts';
 import { translatePeriodLabel, translateRegion, translateTableTitle } from '../../registry/english-names.ts';
 
@@ -215,6 +215,12 @@ function buildAlternatesLineEn(translatedAlternates: string[]): string | null {
 // Dutch string (principle a).
 const DERIVED_DATA_MARKING_EN = 'adaptation of CBS data by graphmaker.studio';
 
+/** Session 153: the English twin of derivedDataMarking — CBS byte-identical, other sources by display name. */
+function derivedDataMarkingEn(tableId: string): string {
+  const source = resolveSourceForTable(tableId);
+  return source.key === CBS_SOURCE_KEY ? DERIVED_DATA_MARKING_EN : `adaptation of ${source.displayName} data by graphmaker.studio`;
+}
+
 // ---------------------------------------------------------------------------
 // attributionLine — mirrors buildAttributionLine
 // ---------------------------------------------------------------------------
@@ -269,7 +275,7 @@ export function buildEnglishLines(
     regionSeriesLine: buildRegionSeriesLineEn(result),
     definitionLine: buildDefinitionLineEn(translated.definition),
     alternatesLine: buildAlternatesLineEn(translated.alternates),
-    markingLine: isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING_EN}` : null,
+    markingLine: isDerivedResult(result) ? `— ${derivedDataMarkingEn(result.attribution.tableId)}` : null,
     attributionLine: buildAttributionLineEn(result),
   };
 }

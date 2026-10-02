@@ -37,6 +37,7 @@ import { answerCsvFor } from '../lib/scatter-csv.ts';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import type { ReplyTableLaneChoice } from '../lib/table-lane.ts';
 import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
+import { sourceWords } from '../lib/source-words.ts';
 import { DownloadCsvButton } from './download-csv-button.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
 import { sourceTableUrl } from '../lib/statline.ts';
@@ -630,7 +631,11 @@ export function Chat({
         onThreadId?.(outcome.threadId);
       }
       onOutcome?.(outcome.gated);
-      setMessages((m) => [...m, tableLaneProgressMessage(outcome.tableLane!.rowId, t('tableLane.progress'), outcome.tableLane!.table)]);
+      const found = outcome.tableLane!.table;
+      setMessages((m) => [
+        ...m,
+        tableLaneProgressMessage(outcome.tableLane!.rowId, t('tableLane.progress', { table: sourceWords(found?.id, lang).table }), found),
+      ]);
       setPending(null);
       setOpenTableLane(null);
       return;
@@ -1189,7 +1194,11 @@ export function Chat({
       if (generationRef.current !== submitGeneration) return false;
       if (result.kind === 'started') {
         setOpenTableLane(null);
-        setMessages((m) => [...m, tableLaneProgressMessage(result.rowId, t('tableLane.progress'))]);
+        // The reply re-asks the same table: carry it from the question's own progress bubble (its source words).
+        setMessages((m) => {
+          const asked = [...m].reverse().find((x) => x.tableLane?.table !== undefined)?.tableLane?.table;
+          return [...m, tableLaneProgressMessage(result.rowId, t('tableLane.progress', { table: sourceWords(asked?.id, lang).table }), asked)];
+        });
       } else if (typed && (result.kind === 'no_match' || result.kind === 'gone')) {
         // R13: typed text that is not one of the question's members (or whose
         // question is no longer open) is a fresh question, never a dead end.

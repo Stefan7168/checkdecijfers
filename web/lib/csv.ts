@@ -35,7 +35,7 @@
 // query/types.ts — the WP20 precedent), never a barrel.
 import { buildAttributionLine } from '../backend/answer/compose/format.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
-import { DERIVED_DATA_MARKING, isDerivedResult } from '../backend/query/types.ts';
+import { derivedDataMarking, isDerivedResult } from '../backend/query/types.ts';
 import type { DerivationRecord, ResultCell } from '../backend/query/types.ts';
 import type { Lang } from './i18n/messages.ts';
 
@@ -171,7 +171,7 @@ export function buildAnswerCsv(response: AnswerResponse, lang: Lang = 'nl'): Ans
     preamble.push(csvRow([response.stalenessWarning]));
   }
   if (showDerivedMarking) {
-    preamble.push(csvRow([`Bewerking: ${DERIVED_DATA_MARKING}`]));
+    preamble.push(csvRow([`Bewerking: ${derivedDataMarking(result.attribution.tableId)}`]));
   }
   preamble.push(csvRow(['Bestand aangemaakt door graphmaker.studio']));
 
@@ -217,7 +217,7 @@ export function buildAnswerCsv(response: AnswerResponse, lang: Lang = 'nl'): Ans
       // The section title stays Dutch on every language, same as the
       // preamble above — it embeds DERIVED_DATA_MARKING, a provenance
       // sentence, not a plain column name.
-      csvRow([`Afgeleide waarden (${DERIVED_DATA_MARKING})`]),
+      csvRow([`Afgeleide waarden (${derivedDataMarking(result.attribution.tableId)})`]),
       headerRow(lang, ['afleiding', 'waarde', 'eenheid', 'bron-cellen']),
       ...derived.map((derivation) =>
         csvRow([

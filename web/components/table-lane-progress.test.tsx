@@ -172,6 +172,17 @@ describe('TableLaneProgress — what it found and what it is doing (session 153,
     expect(screen.getByText('Cijfers ophalen bij het CBS en controleren…')).toBeTruthy();
   });
 
+  it('a Eurostat table is named as one — never a "CBS-tabel" (session 153, #357)', async () => {
+    pollTableLane.mockResolvedValueOnce({ status: 'running' });
+    setup({ table: { id: 'eurostat:tran_sf_roadus', title: 'Persons killed in road accidents' } });
+    expect(screen.getByTestId('table-lane-found').textContent).toBe(
+      'Gevonden: Eurostat-tabel tran_sf_roadus — Persons killed in road accidents',
+    );
+    expect(screen.getByText('Eurostat-tabel ophalen…')).toBeTruthy();
+    await advance(1_000);
+    expect(screen.getByText('Cijfers ophalen bij Eurostat en controleren…')).toBeTruthy();
+  });
+
   it('without a title names just the table id; without a table shows no found line', () => {
     setup({ table: { id: '84952NED', title: null } });
     expect(screen.getByTestId('table-lane-found').textContent).toBe('Gevonden: CBS-tabel 84952NED');

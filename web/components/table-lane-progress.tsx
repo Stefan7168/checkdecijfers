@@ -9,7 +9,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { pollTableLane } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
-import { useT } from '../lib/i18n/lang-provider.tsx';
+import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
+import { sourceWords } from '../lib/source-words.ts';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import type { TableLaneFoundTable } from '../lib/table-lane.ts';
 
@@ -47,6 +48,7 @@ export function TableLaneProgress({
   onSlow: () => void;
 }) {
   const t = useT();
+  const lang = useLang();
   // The latest callbacks, so a parent re-render never restarts the poller.
   const callbacks = useRef({ onDone, onGone, onSlow });
   // The job's real state from the last poll: 'pending' (queued) or 'running'.
@@ -109,15 +111,22 @@ export function TableLaneProgress({
     };
   }, [rowId]);
 
+  const words = sourceWords(table?.id, lang);
   return (
     <div className="flex flex-col gap-2" data-testid="table-lane-progress">
       {table !== undefined ? (
         <div className="text-left text-sm text-foreground" data-testid="table-lane-found">
-          {table.title !== null ? t('tableLane.found', { id: table.id, title: table.title }) : t('tableLane.foundNoTitle', { id: table.id })}
+          {table.title !== null
+            ? t('tableLane.found', { id: words.id, title: table.title, table: words.table })
+            : t('tableLane.foundNoTitle', { id: words.id, table: words.table })}
         </div>
       ) : null}
       <div className="text-left text-sm text-muted-foreground" role="status">
-        {status === 'running' ? t('tableLane.running') : status === 'pending' ? t('tableLane.queued') : t('tableLane.progress')}
+        {status === 'running'
+          ? t('tableLane.running', { from: words.from })
+          : status === 'pending'
+            ? t('tableLane.queued')
+            : t('tableLane.progress', { table: words.table })}
       </div>
       <AnswerSkeleton />
       {phase === 'slow' ? <p className="text-left text-xs text-muted-foreground">{t('tableLane.slow')}</p> : null}

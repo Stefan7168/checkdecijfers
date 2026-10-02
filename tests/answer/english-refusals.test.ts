@@ -226,6 +226,24 @@ describe('English refusal siblings — exact text for the reasons the brief name
     assertEnglishSibling(built, 'freshness (differs)');
   });
 
+  it('a Eurostat table names Eurostat, never CBS, in not_published / outside_loaded_slice / quarantined (session 153)', () => {
+    const eu: StructuredIntent = { ...explicitIntent, target: { kind: 'explicit', tableId: 'eurostat:une_rt_q', measure: 'une_rt_q|PC_ACT' } };
+    const sibling: StructuredIntent = { ...dummyIntent, target: { kind: 'canonical', key: 'eu_unemployment_rate_harmonised' } };
+    for (const intent of [eu, sibling]) {
+      for (const kind of ['not_published', 'outside_loaded_slice', 'table_quarantined'] as const) {
+        const outcome = buildQueryRefusal(queryRefusal(kind, {}, intent));
+        if (outcome.kind !== 'refusal') throw new Error(kind);
+        expect(outcome.refusal.text, kind).toContain('Eurostat');
+        expect(outcome.refusal.text, kind).not.toContain('CBS');
+        expect(outcome.refusal.en.text, kind).toContain('Eurostat');
+      }
+    }
+    // A CBS target is unchanged.
+    const cbs = buildQueryRefusal(queryRefusal('not_published'));
+    if (cbs.kind !== 'refusal') throw new Error('cbs');
+    expect(cbs.refusal.text).toMatch(/^CBS heeft/);
+  });
+
   it('not_published: exact English body naming the measure', () => {
     const outcome = buildQueryRefusal(queryRefusal('not_published'));
     if (outcome.kind !== 'refusal') throw new Error('unreachable');

@@ -10,7 +10,7 @@
 // fields, after the body is settled — no LLM output can add, alter or drop
 // them.
 import type { ValidatedResult } from '../../query/index.ts';
-import { DERIVED_DATA_MARKING, isDerivedResult } from '../../query/index.ts';
+import { derivedDataMarking, isDerivedResult } from '../../query/index.ts';
 import type { LlmCallOptions, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
 import {
@@ -122,7 +122,7 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // buildRegionSeriesLine, so the shown disclosure and the audited one can
   // never drift. Null (and no key) whenever the series is complete.
   const regionSeriesLine = buildRegionSeriesLine(result);
-  const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
+  const markingLine = isDerivedResult(result) ? `— ${derivedDataMarking(result.attribution.tableId)}` : null;
   const attribution = buildAttributionLine(result);
   const text = [
     body,

@@ -136,3 +136,11 @@ describe('NeutralPreviewCard', () => {
     expect(text).not.toMatch(/\d/);
   });
 });
+
+describe('shareTaglineFor (session 153, #357)', () => {
+  it('a Eurostat chart names Eurostat; a CBS chart keeps the public claim byte-identically', async () => {
+    const { shareTaglineFor, SHARE_PREVIEW_TAGLINE } = await import('./share-preview.tsx');
+    expect(shareTaglineFor('85245NED')).toBe(SHARE_PREVIEW_TAGLINE);
+    expect(shareTaglineFor('eurostat:env_wasmun')).toBe('Elk getal herleidbaar tot een officiële Eurostat-tabel');
+  });
+});

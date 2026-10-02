@@ -24,11 +24,14 @@ const CADENCE_EN: Record<string, string> = {
  * that itself ends in a parenthesis ("… (euro)") stays whole. */
 const SUBJECT = '(deze tabel|de tabel (\\S+)(?: \\((.+)\\))?)';
 
+/** Session 153: the source the Dutch warning names (staleness.ts — the table's own source's display name). */
+const SOURCE = '(CBS|Eurostat)';
+
 const STALENESS_PLAIN_RE = new RegExp(
-  `^Let op: ${SUBJECT} wordt normaal (.+?) bijgewerkt door CBS, maar onze laatste synchronisatie was op (\\d{4}-\\d{2}-\\d{2}) — recentere cijfers kunnen inmiddels beschikbaar zijn\\.$`,
+  `^Let op: ${SUBJECT} wordt normaal (.+?) bijgewerkt door ${SOURCE}, maar onze laatste synchronisatie was op (\\d{4}-\\d{2}-\\d{2}) — recentere cijfers kunnen inmiddels beschikbaar zijn\\.$`,
 );
 const STALENESS_RETAINED_RE = new RegExp(
-  `^Let op: ${SUBJECT} wordt normaal (.+?) bijgewerkt door CBS, maar een deel van deze cijfers is door CBS sinds (\\d{4}-\\d{2}-\\d{2}) niet opnieuw bevestigd — recentere cijfers kunnen inmiddels beschikbaar zijn\\.$`,
+  `^Let op: ${SUBJECT} wordt normaal (.+?) bijgewerkt door ${SOURCE}, maar een deel van deze cijfers is door \\5 sinds (\\d{4}-\\d{2}-\\d{2}) niet opnieuw bevestigd — recentere cijfers kunnen inmiddels beschikbaar zijn\\.$`,
 );
 
 /** The English name of the measure a NAMED warning is about, from the
@@ -66,7 +69,7 @@ export function translateStalenessWarning(dutch: string, namedMeasureEn?: NamedM
     const cadenceEn = CADENCE_EN[plain[4]!];
     if (subject === null || cadenceEn === undefined) return null;
     return (
-      `Note: CBS normally updates ${subject} ${cadenceEn}, but our last sync was on ${plain[5]} — ` +
+      `Note: ${plain[5]} normally updates ${subject} ${cadenceEn}, but our last sync was on ${plain[6]} — ` +
       `more recent figures may now be available.`
     );
   }
@@ -76,8 +79,8 @@ export function translateStalenessWarning(dutch: string, namedMeasureEn?: NamedM
     const cadenceEn = CADENCE_EN[retained[4]!];
     if (subject === null || cadenceEn === undefined) return null;
     return (
-      `Note: CBS normally updates ${subject} ${cadenceEn}, but part of these figures has not been reconfirmed ` +
-      `by CBS since ${retained[5]} — more recent figures may now be available.`
+      `Note: ${retained[5]} normally updates ${subject} ${cadenceEn}, but part of these figures has not been reconfirmed ` +
+      `by ${retained[5]} since ${retained[6]} — more recent figures may now be available.`
     );
   }
   return null;

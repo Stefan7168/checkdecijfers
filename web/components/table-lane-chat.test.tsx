@@ -301,7 +301,7 @@ describe('table lane breakdown question in the chat', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Mannen' })).toBeNull());
     expect(
       screen.queryByText(
-        'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+        'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals de tabel hem noemt.',
       ),
     ).toBeNull();
   });
@@ -311,7 +311,7 @@ describe('table lane breakdown question in the chat', () => {
     replyToTableLane.mockResolvedValue({ kind: 'no_match' });
     fireEvent.click(screen.getByRole('button', { name: 'Mannen' }));
     await screen.findByText(
-      'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+      'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals de tabel hem noemt.',
     );
     expect(screen.getByRole('button', { name: 'Mannen' })).toBeTruthy();
   });

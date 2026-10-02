@@ -15,7 +15,8 @@
 // not a side panel).
 import { ShieldCheck } from 'lucide-react';
 import { memo, useEffect, useId, useRef, useState } from 'react';
-import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
+import { derivedDataMarking } from '../backend/query/types.ts';
+import { resolveSourceForTable } from '../backend/sources/registry.ts';
 import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import type { AnswerProof as AnswerProofData, RequestUrlsByBatch } from '../lib/answer-proof.ts';
 import { toEnglishAnswerProof } from '../lib/answer-proof.ts';
@@ -120,7 +121,7 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
                     href={cell.highlightUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title={t('answerProof.highlightLinkTitle')}
+                    title={t('answerProof.highlightLinkTitle', { source: resolveSourceForTable(proof.tableId).displayName })}
                     className="underline-offset-2 hover:underline"
                   >
                     {cell.valueText}
@@ -205,7 +206,7 @@ function ProofSections({
           ))}
         </ol>
         {proof.nullNotice !== null ? <p className="mt-1">{proof.nullNotice}</p> : null}
-        {proof.marked ? <p className="mt-1">{DERIVED_DATA_MARKING}</p> : null}
+        {proof.marked ? <p className="mt-1">{derivedDataMarking(proof.tableId)}</p> : null}
       </div>
     </>
   );

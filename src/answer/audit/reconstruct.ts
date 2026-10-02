@@ -21,7 +21,7 @@
 //     suites at produce time, and the benchmark scorer re-scans refusal texts
 //     against run-time whitelists.
 import {
-  DERIVED_DATA_MARKING,
+  derivedDataMarking,
   isDerivedResult,
   pairIntentProblem,
   pairRegions,
@@ -467,7 +467,7 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
       problems.push(`${label} body does not re-derive from the stored result`);
     }
   }
-  const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
+  const markingLine = isDerivedResult(result) ? `— ${derivedDataMarking(result.attribution.tableId)}` : null;
   if (answer.markingLine !== markingLine) {
     problems.push('derived-data marking line does not re-derive from the stored derivations');
   }

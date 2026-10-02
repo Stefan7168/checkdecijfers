@@ -77,16 +77,17 @@ const nl = {
   // Breadth step 5 (Task 6): the table lane's chat chrome - progress bubble,
   // over-budget and gave-up lines, and the breakdown question's hint/no-match
   // lines. The over-budget wording is fixed by the plan's Global Constraints.
-  'tableLane.progress': 'CBS-tabel ophalen…',
-  'tableLane.found': 'Gevonden: CBS-tabel {id} — {title}',
-  'tableLane.foundNoTitle': 'Gevonden: CBS-tabel {id}',
+  // Session 153: {table} = "CBS-tabel" / "Eurostat-tabel", {from} = "het CBS" / "Eurostat" (web/lib/source-words.ts).
+  'tableLane.progress': '{table} ophalen…',
+  'tableLane.found': 'Gevonden: {table} {id} — {title}',
+  'tableLane.foundNoTitle': 'Gevonden: {table} {id}',
   'tableLane.queued': 'Even wachten, je vraag staat in de rij…',
-  'tableLane.running': 'Cijfers ophalen bij het CBS en controleren…',
+  'tableLane.running': 'Cijfers ophalen bij {from} en controleren…',
   'tableLane.slow': 'Dit duurt langer dan normaal. Het antwoord verschijnt in dit gesprek zodra het klaar is.',
   'tableLane.notReady': 'Het antwoord is nog niet klaar. Het verschijnt in dit gesprek zodra het er is.',
   'tableLane.moreOptionsHint': 'Staat je keuze er niet bij? Typ de naam.',
   'tableLane.noMatch':
-    'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals CBS hem noemt.',
+    'Die naam staat niet in de lijst van deze tabel. Kies een knop of typ de naam precies zoals de tabel hem noemt.',
   'tableLane.replyGone': 'Deze keuzevraag staat niet meer open. Stel je vraag opnieuw.',
   'chat.dockedChipChart': 'Grafiek in het paneel →',
   'chat.dockedChipCard': 'Kaart in het paneel →',
@@ -503,7 +504,7 @@ const nl = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'onbekend',
   'answerProof.tableCaption': 'Tabel {tableId} — {tableTitle} · versie {version} · gesynchroniseerd {date} · licentie {license}',
-  'answerProof.highlightLinkTitle': 'Bekijk deze cel bij CBS',
+  'answerProof.highlightLinkTitle': 'Bekijk deze cel bij {source}',
   // WP30c D7(b) (ADR 048): shown under Technische details, only when the
   // live request_urls lookup found at least one entry (answer-proof.tsx's
   // RequestUrlsSection).
@@ -696,7 +697,7 @@ const nl = {
   'chart.tabBar': 'Staaf',
   'chart.tabTable': 'Tabel',
   'chart.lineDisabledReason': 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.',
-  'chart.lineDisabledReasonGaps': 'Het CBS meet niet elke periode; een lijn tussen de staven zou waarden suggereren die niet gemeten zijn.',
+  'chart.lineDisabledReasonGaps': 'Deze tabel meet niet elke periode; een lijn tussen de staven zou waarden suggereren die niet gemeten zijn.',
   // WP218 phase 5 (owner D): two more Weergave tabs — Vlak (area) and
   // Liggend (horizontal bar) — plus their own disabled-tab reasons.
   'chart.form.area': 'Vlak',
@@ -1698,17 +1699,17 @@ const en: Messages = {
   'chat.replyCostSuffix': ' · answering the follow-up question costs ~{price} credits',
   'chat.costCredits': '{n} credits',
   'chat.onboardingOfferButton': 'Fetch for {n} credits',
-  'tableLane.progress': 'Fetching the CBS table…',
-  'tableLane.found': 'Found: CBS table {id} — {title}',
-  'tableLane.foundNoTitle': 'Found: CBS table {id}',
+  'tableLane.progress': 'Fetching the {table}…',
+  'tableLane.found': 'Found: {table} {id} — {title}',
+  'tableLane.foundNoTitle': 'Found: {table} {id}',
   'tableLane.queued': 'One moment, your question is in the queue…',
-  'tableLane.running': 'Fetching the figures from CBS and checking them…',
+  'tableLane.running': 'Fetching the figures from {from} and checking them…',
   'tableLane.slow':
     'This is taking longer than usual. The answer will appear in this conversation as soon as it is ready.',
   'tableLane.notReady': 'The answer is not ready yet. It will appear in this conversation as soon as it is.',
   'tableLane.moreOptionsHint': 'Not listed? Type the name.',
   'tableLane.noMatch':
-    'That name is not in this table\'s list. Pick a button or type the name exactly as CBS calls it.',
+    'That name is not in this table\'s list. Pick a button or type the name exactly as the table calls it.',
   'tableLane.replyGone': 'This question is no longer open. Please ask your question again.',
   'chat.dockedChipChart': 'Chart in panel →',
   'chat.dockedChipCard': 'Card in panel →',
@@ -2033,7 +2034,7 @@ const en: Messages = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'unknown',
   'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · licence {license}',
-  'answerProof.highlightLinkTitle': 'View this cell at CBS',
+  'answerProof.highlightLinkTitle': 'View this cell at {source}',
   'answerProof.requestUrlsHeading': 'Fetched URLs',
   'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
   'answerProof.tableHeading': '{measure}: table {tableId}',
@@ -2170,7 +2171,7 @@ const en: Messages = {
   'chart.tabBar': 'Bar',
   'chart.tabTable': 'Table',
   'chart.lineDisabledReason': 'A line between regions would suggest a trend that was never measured.',
-  'chart.lineDisabledReasonGaps': 'CBS does not measure every period; a line between the bars would suggest values that were never measured.',
+  'chart.lineDisabledReasonGaps': 'This table does not measure every period; a line between the bars would suggest values that were never measured.',
   'chart.form.area': 'Area',
   'chart.form.hbar': 'Horizontal bar',
   'chart.form.dumbbell': 'Dumbbell',

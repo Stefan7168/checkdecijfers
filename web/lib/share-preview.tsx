@@ -32,11 +32,19 @@ import type { ChartSpec } from '../backend/chart/types.ts';
 import { headlineFigure, type HeadlineFigure } from './chart-headline.ts';
 import { DEFAULT_PALETTE } from './chart-presentation.ts';
 import { stripDimensionCode } from './dim-label.ts';
+import { CBS_SOURCE_KEY, resolveSourceForTable } from '../backend/sources/registry.ts';
 
 export const SHARE_PREVIEW_SIZE = { width: 1200, height: 630 } as const;
 export const SHARE_PREVIEW_BRAND = 'graphmaker.studio';
 /** The public claim, digit-free (CLAUDE.md, public-claim rule). */
 export const SHARE_PREVIEW_TAGLINE = 'Elk getal herleidbaar tot een officiële CBS-tabel';
+
+/** Session 153 (#357): a chart's card names its table's OWN source; a CBS chart (and the neutral card) keeps
+ * SHARE_PREVIEW_TAGLINE byte-identically. */
+export function shareTaglineFor(tableId: string): string {
+  const source = resolveSourceForTable(tableId);
+  return source.key === CBS_SOURCE_KEY ? SHARE_PREVIEW_TAGLINE : `Elk getal herleidbaar tot een officiële ${source.displayName}-tabel`;
+}
 /** The typeface the route loads for the image tool; the card names it so the
  * two can never drift apart. */
 export const SHARE_PREVIEW_FONT = 'Inter';
@@ -66,6 +74,8 @@ export interface SharePreviewModel {
   plotDataUri: string;
   provisionalNote: string | null;
   attributionLine: string;
+  /** The claim under a card without a headline (shareTaglineFor). */
+  tagline: string;
   /** Every string the card renders (for the digit scan). */
   strings: string[];
 }
@@ -105,7 +115,7 @@ export function buildSharePreview(spec: ChartSpec, headlineText: string | null, 
     headlineText ?? '',
     headline ? `${headline.value}${headline.provisional ? '*' : ''}` : '',
     headline ? `${headline.unit} · ${headline.periodLabel}` : '',
-    headline ? '' : SHARE_PREVIEW_TAGLINE,
+    headline ? '' : shareTaglineFor(spec.attribution.tableId),
     SHARE_PREVIEW_BRAND,
     ...plot.texts.map((t) => t.text),
     ...plot.legend.map((l) => l.label),
@@ -122,6 +132,7 @@ export function buildSharePreview(spec: ChartSpec, headlineText: string | null, 
     plotDataUri: svgDataUri(plot.svg),
     provisionalNote: spec.provisionalNote,
     attributionLine: spec.attributionLine,
+    tagline: shareTaglineFor(spec.attribution.tableId),
     strings,
   };
 }
@@ -198,7 +209,7 @@ export function SharePreviewCard({ model }: { model: SharePreviewModel }): React
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', fontSize: '24px', color: COLOR_MUTED }}>{SHARE_PREVIEW_TAGLINE}</div>
+          <div style={{ display: 'flex', fontSize: '24px', color: COLOR_MUTED }}>{model.tagline}</div>
         )}
         {plot.legend.length > 1 ? (
           <div style={{ display: 'flex', marginLeft: 'auto', alignItems: 'center' }}>

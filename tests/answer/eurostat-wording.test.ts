@@ -45,3 +45,11 @@ describe('table-lane refusals name the source', () => {
     expect(buildTableLaneRefusal('cbs_unreachable', ctx('eurostat:tran_sf_roadus')).text).toMatch(/^Eurostat is op dit moment/);
   });
 });
+
+describe('the derived-data marking names the source (session 153)', () => {
+  it('Eurostat says Eurostat; CBS keeps the exact constant every stored row was built with (R8)', async () => {
+    const { derivedDataMarking, DERIVED_DATA_MARKING } = await import('../../src/query/types.ts');
+    expect(derivedDataMarking('85245NED')).toBe(DERIVED_DATA_MARKING);
+    expect(derivedDataMarking('eurostat:tran_sf_roadus')).toBe('bewerking van Eurostat-gegevens door graphmaker.studio');
+  });
+});

@@ -11,6 +11,8 @@
 // never a guessed value (principle c). Invariants served here: R1, R4, R5,
 // R9, R10, R11 (docs/05-data-rules.md).
 
+import { CBS_SOURCE_KEY, resolveSourceForTable } from '../sources/registry.ts';
+
 export const INTENT_SCHEMA_VERSION = 1 as const;
 export const RESULT_SCHEMA_VERSION = 1 as const;
 
@@ -127,6 +129,16 @@ export interface ResultCell {
 }
 
 export const DERIVED_DATA_MARKING = 'bewerking van CBS-gegevens door graphmaker.studio' as const;
+
+/** Session 153 (#357 step 5): the marking line names the table's OWN source — "bewerking van Eurostat-gegevens
+ * …" under a Eurostat answer. A CBS table returns DERIVED_DATA_MARKING itself, byte-identical, so every stored
+ * CBS row still re-derives (R8). Every reader-visible marking site calls this (compose.ts, reconstruct.ts,
+ * csv.ts, citation.ts, the proof panel); the derivation records' own `marking` field is metadata no surface
+ * reads, and keeps the constant. */
+export function derivedDataMarking(tableId: string): string {
+  const source = resolveSourceForTable(tableId);
+  return source.key === CBS_SOURCE_KEY ? DERIVED_DATA_MARKING : `bewerking van ${source.displayName}-gegevens door graphmaker.studio`;
+}
 
 /** R5's single true-by-construction "is this result derived, so must it show
  * DERIVED_DATA_MARKING?" predicate. Every marking-line call site (compose.ts,

@@ -387,6 +387,22 @@ describe('buildEnglishLines: attributionLine', () => {
 // ---------------------------------------------------------------------------
 
 describe('translateStalenessWarning', () => {
+  it('a Eurostat warning keeps its source in both shapes (session 153, #357)', () => {
+    const plain =
+      'Let op: deze tabel wordt normaal maandelijks bijgewerkt door Eurostat, ' +
+      'maar onze laatste synchronisatie was op 2026-08-01 — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+    expect(translateStalenessWarning(plain)).toBe(
+      'Note: Eurostat normally updates this table monthly, but our last sync was on 2026-08-01 — ' +
+        'more recent figures may now be available.',
+    );
+    const retained =
+      'Let op: deze tabel wordt normaal maandelijks bijgewerkt door Eurostat, maar een deel van deze cijfers is ' +
+      'door Eurostat sinds 2026-08-01 niet opnieuw bevestigd — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+    expect(translateStalenessWarning(retained)).toContain('not been reconfirmed by Eurostat since 2026-08-01');
+    // Two different sources in one sentence never match (the backreference).
+    expect(translateStalenessWarning(retained.replace('door Eurostat sinds', 'door CBS sinds'))).toBeNull();
+  });
+
   it('translates the plain (never-reconfirmed-by-us) shape', () => {
     const dutch =
       'Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS, ' +

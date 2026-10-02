@@ -6,7 +6,8 @@
 // and QueryRefusal, neither of which carries a cell value, so a fabricated
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
-import { provisionalNoteFor, sourceKeyForTableId } from '../../sources/registry.ts';
+import { provisionalNoteFor, resolveSource, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
+import { EUROSTAT_SIBLING_MEASURES_REVIEWED } from '../../sources/eurostat-siblings.ts';
 import {
   freshestForCanonical,
   REGION_SERIES_MAX_REGIONS,
@@ -162,7 +163,12 @@ function periodWithStatusEn(period: { periodCode: string; status: string }, sour
  * not recognise at all — never a guess. */
 function tableIdForTarget(target: StructuredIntent['target']): string | null {
   if (target.kind === 'explicit') return target.tableId;
-  return CANONICAL_MEASURES.find((m) => m.key === target.key)?.tableId ?? null;
+  // Session 153: a reviewed Eurostat sibling key lives outside CANONICAL_MEASURES (its own list, by ruling R7).
+  return (
+    CANONICAL_MEASURES.find((m) => m.key === target.key)?.tableId ??
+    EUROSTAT_SIBLING_MEASURES_REVIEWED.find((m) => m.key === target.key)?.tableId ??
+    null
+  );
 }
 
 /** Refusal text never ends in '?' (docs/05: refusals never create pending
@@ -652,9 +658,10 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
       // the copy — owner-confirmed option (b) — so it reads as CBS's
       // current publication status, not "final". The freshestDefinitief
       // preference itself stays correct and unchanged.
-      offer += ` (De laatste periode met CBS-status 'definitief' is ${periodCodeToNl(definitief!.periodCode)} — ook die cijfers kan CBS later nog bijstellen.)`;
+      const src = resolveSource(resolvedSourceKey).displayName;
+      offer += ` (De laatste periode met ${src}-status 'definitief' is ${periodCodeToNl(definitief!.periodCode)} — ook die cijfers kan ${src} later nog bijstellen.)`;
       offerEn += ` (The last definitive figure is for ${periodCodeToEn(definitief!.periodCode)}.)`;
-      offerEn += ` (The latest period with CBS status 'definitive' is ${periodCodeToEn(definitief!.periodCode)} — those figures too may still be revised later by CBS.)`;
+      offerEn += ` (The latest period with ${src} status 'definitive' is ${periodCodeToEn(definitief!.periodCode)} — those figures too may still be revised later by ${src}.)`;
     }
   } else {
     body = definitionLabel
@@ -685,15 +692,22 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
 /** not_published (CBS never published it) vs outside_loaded_slice (CBS DOES
  * publish it, our ingested slice doesn't reach it) — deliberately different
  * wording per docs/05. */
+/** Session 153 (#357): the source a query refusal is about — the target table's own (a Eurostat sibling's
+ * refusal says "Eurostat"); no resolvable table reads as CBS, byte-identical to before. */
+function sourceNameForRefusal(refusal: QueryRefusal): string {
+  return resolveSourceForTable(tableIdForTarget(refusal.intent.target) ?? '').displayName;
+}
+
 function buildNotPublishedRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
   const definitionLabelEn = definitionLabelEnForRefusal(refusal);
+  const src = sourceNameForRefusal(refusal);
   const body = definitionLabel
-    ? `CBS heeft voor ${definitionLabel} (nog) geen cijfer over deze periode gepubliceerd.`
-    : 'CBS heeft (nog) geen cijfer over deze periode gepubliceerd.';
+    ? `${src} heeft voor ${definitionLabel} (nog) geen cijfer over deze periode gepubliceerd.`
+    : `${src} heeft (nog) geen cijfer over deze periode gepubliceerd.`;
   const bodyEn = definitionLabelEn
-    ? `CBS has not (yet) published a figure for this period for ${definitionLabelEn}.`
-    : 'CBS has not (yet) published a figure for this period.';
+    ? `${src} has not (yet) published a figure for this period for ${definitionLabelEn}.`
+    : `${src} has not (yet) published a figure for this period.`;
   return {
     reason: 'not_published',
     text: assertNotAQuestion(body),
@@ -714,12 +728,13 @@ function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
   const definitionLabelEn = definitionLabelEnForRefusal(refusal);
   const nearest = refusal.refusal.nearestAlternative;
+  const src = sourceNameForRefusal(refusal);
   const body = definitionLabel
-    ? `CBS publiceert de cijfers over ${definitionLabel} wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.`
-    : 'CBS publiceert deze cijfers wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.';
+    ? `${src} publiceert de cijfers over ${definitionLabel} wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.`
+    : `${src} publiceert deze cijfers wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.`;
   const bodyEn = definitionLabelEn
-    ? `CBS does publish figures on ${definitionLabelEn}, but the requested part lies outside what we have loaded.`
-    : 'CBS does publish these figures, but the requested part lies outside what we have loaded.';
+    ? `${src} does publish figures on ${definitionLabelEn}, but the requested part lies outside what we have loaded.`
+    : `${src} does publish these figures, but the requested part lies outside what we have loaded.`;
   const offer = nearest
     ? `Ik kan wel cijfers laten zien vanaf ${periodCodeToNl(nearest)}.`
     : null;
@@ -1003,11 +1018,10 @@ export function relabelMultiRegionMultiPeriodOfferChip(
   };
 }
 
-function buildQuarantinedRefusal(): BuiltRefusal {
-  const body =
-    'Deze tabel is tijdelijk niet beschikbaar omdat we de gegevens opnieuw aan het controleren zijn (kwaliteitscheck na een mogelijke wijziging bij CBS).';
-  const bodyEn =
-    "This table is temporarily unavailable because we're re-checking the data (a quality check after a possible change at CBS).";
+function buildQuarantinedRefusal(refusal: QueryRefusal): BuiltRefusal {
+  const src = sourceNameForRefusal(refusal);
+  const body = `Deze tabel is tijdelijk niet beschikbaar omdat we de gegevens opnieuw aan het controleren zijn (kwaliteitscheck na een mogelijke wijziging bij ${src}).`;
+  const bodyEn = `This table is temporarily unavailable because we're re-checking the data (a quality check after a possible change at ${src}).`;
   return {
     reason: 'quarantined',
     text: assertNotAQuestion(body),
@@ -1179,7 +1193,7 @@ export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
     case 'outside_loaded_slice':
       return { kind: 'refusal', refusal: buildOutsideSliceRefusal(refusal) };
     case 'table_quarantined':
-      return { kind: 'refusal', refusal: buildQuarantinedRefusal() };
+      return { kind: 'refusal', refusal: buildQuarantinedRefusal(refusal) };
     case 'needs_clarification':
       return { kind: 'clarification', ...buildNeedsClarificationAsClarification(refusal) };
     case 'table_evicted':

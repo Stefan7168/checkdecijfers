@@ -10,6 +10,7 @@
 import type { ValidatedResult } from '../../query/index.ts';
 import { readUpdateCadence } from '../../registry/read.ts';
 import type { Db } from '../../db/types.ts';
+import { resolveSourceForTable } from '../../sources/registry.ts';
 
 export interface StalenessCheck {
   stale: boolean;
@@ -114,12 +115,14 @@ export async function checkStaleness(
   const tableLastSync =
     registry !== undefined ? registry.lastSyncAt : await readTableLastSync(db, result.attribution.tableId);
   const retainedMin = tableLastSync !== null && result.attribution.syncedAt < tableLastSync;
+  // Session 153: the table's own source ("door Eurostat"); a CBS table reads byte-identically.
+  const source = resolveSourceForTable(result.attribution.tableId).displayName;
   const clause = retainedMin
-    ? `maar een deel van deze cijfers is door CBS sinds ${syncDate} niet opnieuw bevestigd`
+    ? `maar een deel van deze cijfers is door ${source} sinds ${syncDate} niet opnieuw bevestigd`
     : `maar onze laatste synchronisatie was op ${syncDate}`;
   const subject = options.namedTable === true ? namedTableNl(result) : 'deze tabel';
   const warning =
-    `Let op: ${subject} wordt normaal ${cadenceWordsNl(cadence!)} bijgewerkt door CBS, ` +
+    `Let op: ${subject} wordt normaal ${cadenceWordsNl(cadence!)} bijgewerkt door ${source}, ` +
     `${clause} — recentere cijfers kunnen inmiddels beschikbaar zijn.`;
   return { stale: true, warning };
 }

@@ -49,6 +49,7 @@ import {
 } from '../backend/answer/compose/template.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import { isDerivedResult } from '../backend/query/types.ts';
+import { resolveSourceForTable } from '../backend/sources/registry.ts';
 import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResult } from '../backend/query/types.ts';
 import type { Db } from '../backend/db/types.ts';
 // #170(1): the same measured-date formatter the source badge chip already
@@ -378,7 +379,8 @@ function buildSteps(result: ValidatedResult, cellsById: Map<string, ResultCell>)
 function buildNullNotice(result: ValidatedResult): string | null {
   const nullCount = result.cells.filter((cell) => cell.value === null).length;
   if (nullCount === 0) return null;
-  return `${nullCount} van de ${result.cells.length} cellen heeft geen waarde; de reden van CBS staat per cel in de tabel.`;
+  const source = resolveSourceForTable(result.attribution.tableId).displayName;
+  return `${nullCount} van de ${result.cells.length} cellen heeft geen waarde; de reden van ${source} staat per cel in de tabel.`;
 }
 
 /** One table's proof: the three depths over ONE validated result. Null
