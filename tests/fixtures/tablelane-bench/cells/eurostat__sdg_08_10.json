@@ -1,0 +1,47 @@
+{
+ "tableId": "eurostat:sdg_08_10",
+ "capturedAt": "2026-10-02T05:54:05.357Z",
+ "cbsModified": "2026-10-01T23:00:00+0200",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_08_10",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "sdg_08_10|CLV20_EUR_HAB"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "na_item": [
+      "B1GQ"
+     ],
+     "geo": [
+      "IE"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2024JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "sdg_08_10|CLV20_EUR_HAB",
+     "coordinates": {
+      "freq": "A",
+      "na_item": "B1GQ",
+      "geo": "IE",
+      "time": "2024JJ00"
+     },
+     "value": 89300,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  }
+ ]
+}

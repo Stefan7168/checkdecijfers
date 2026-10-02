@@ -15,6 +15,7 @@ import type { CbsObservationRow } from '../../src/cbs-adapter/types.ts';
 import { parseJsonStatDataset } from '../../src/eurostat-adapter/jsonstat.ts';
 import {
   DECIMALS_PROBE_MAX_CELLS,
+  DECIMALS_PROBE_MAX_READS,
   decimalsProbeSlice,
   eurostatLayoutFromStructure,
   EurostatLayoutRefusalError,
@@ -219,13 +220,13 @@ const probeAnswer = (code: string) => json(`../fixtures/eurostat-decimals/${code
 const NO_RESULTS = { error: [{ status: 200, id: 100, label: 'No data found for the selection' }] };
 
 describe('(a) observed decimals, end to end on real answers', () => {
-  it('une_rt_q: one read of the latest quarter settles all three units; the registered unit matches today', async () => {
+  it('une_rt_q: one read of the latest two quarters settles all three units; the registered unit matches today', async () => {
     const requested: string[] = [];
     const source = new StatisticsApiSource(fakeEurostat('une_rt_q', () => probeAnswer('une_rt_q'), requested), { retryBackoffMs: 0 });
     const observed = await source.observeUnitDecimals('eurostat:une_rt_q');
     expect(Object.fromEntries(observed.decimals)).toEqual({ THS_PER: 0, PC_POP: 1, PC_ACT: 1 });
     expect(observed.reads).toHaveLength(1);
-    expect(observed.reads[0]!.periods).toEqual(['2026KW02']);
+    expect(observed.reads[0]!.periods).toEqual(['2026KW01', '2026KW02']);
     expect(observed.reads[0]!.cells).toBeLessThanOrEqual(DECIMALS_PROBE_MAX_CELLS);
     // The captured fixture IS the answer to exactly this URL (the capture script builds it the same way).
     const index = json('../fixtures/eurostat-decimals/une_rt_q.index.json') as { source: string };
@@ -243,12 +244,12 @@ describe('(a) observed decimals, end to end on real answers', () => {
     const answer = (_url: string, n: number) => (n === 1 ? NO_RESULTS : probeAnswer('une_rt_q'));
     const source = new StatisticsApiSource(fakeEurostat('une_rt_q', answer, requested), { retryBackoffMs: 0 });
     const observed = await source.observeUnitDecimals('eurostat:une_rt_q');
-    expect(observed.reads.map((r) => r.periods)).toEqual([['2026KW02'], ['2026KW01', '2026KW02']]);
+    expect(observed.reads.map((r) => r.periods)).toEqual([['2026KW01', '2026KW02'], ['2025KW04', '2026KW01', '2026KW02']]);
     expect(Object.fromEntries(observed.decimals)).toEqual({ THS_PER: 0, PC_POP: 1, PC_ACT: 1 });
   });
 
   it('a few whole numbers do not settle a unit (trailing zeros); a unit no read saw is refused, never guessed', async () => {
-    // Read 1..3 all answer with PC_POP holding only three values, all whole; PC_ACT and THS_PER hold none.
+    // Both reads answer with PC_POP holding only three values, all whole; PC_ACT and THS_PER hold none.
     const thin = structuredClone(probeAnswer('une_rt_q')) as {
       id: string[];
       size: number[];
@@ -271,11 +272,36 @@ describe('(a) observed decimals, end to end on real answers', () => {
       retryBackoffMs: 0,
     });
     const observed = await source.observeUnitDecimals('eurostat:une_rt_q');
-    expect(observed.reads).toHaveLength(3);
+    expect(observed.reads).toHaveLength(DECIMALS_PROBE_MAX_READS);
     expect(Object.fromEntries(observed.decimals)).toEqual({ PC_POP: 0 });
     const refused = await source.fetchTableSchema('eurostat:une_rt_q').catch((e: unknown) => e);
     expect(refused).toBeInstanceOf(EurostatLayoutRefusalError);
     expect((refused as EurostatLayoutRefusalError).reason).toBe('decimals_unknown');
+  });
+
+  it('a rounded newest period does not set the decimals: the period before it is read in the same request (nrg_ind_ren, session 153)', async () => {
+    // Eurostat's real pattern: Sweden 2025 = 65.4 (an estimate), 2023 = 66.393. Here one PC_ACT value in the
+    // OLDER quarter of the first read carries 3 decimals; the newer quarter keeps its 1-decimal values.
+    const precise = structuredClone(probeAnswer('une_rt_q')) as {
+      id: string[];
+      size: number[];
+      dimension: Record<string, { category: { index: Record<string, number> } }>;
+      value: Record<string, number>;
+    };
+    const strides = precise.size.map((_, i) => precise.size.slice(i + 1).reduce((a, b) => a * b, 1));
+    const coord = (offset: number, dim: string) => {
+      const i = precise.id.indexOf(dim);
+      return Math.floor(offset / strides[i]!) % precise.size[i]!;
+    };
+    const older = precise.dimension.time!.category.index['2026-Q1']!;
+    const act = precise.dimension.unit!.category.index.PC_ACT!;
+    const offset = Object.keys(precise.value).map(Number).find((o) => coord(o, 'time') === older && coord(o, 'unit') === act)!;
+    precise.value[String(offset)] = 6.123;
+    const requested: string[] = [];
+    const source = new StatisticsApiSource(fakeEurostat('une_rt_q', () => precise, requested), { retryBackoffMs: 0 });
+    const observed = await source.observeUnitDecimals('eurostat:une_rt_q');
+    expect(observed.reads).toHaveLength(1);
+    expect(observed.decimals.get('PC_ACT')).toBe(3);
   });
 
   it('a dataset whose geography cannot be identified is refused before any data is read', async () => {
@@ -295,10 +321,10 @@ describe('(a) observed decimals, end to end on real answers', () => {
 // ---------------------------------------------------------------------------
 
 describe('(a) registered from observation, checked at slice time', () => {
-  /** One DE / seasonally adjusted / 15-74 / total cell of the captured latest quarter, for PC_ACT. */
+  /** One BE / seasonally adjusted / 15-74 / total cell of the captured latest quarter, for PC_ACT. */
   const request = {
     measures: ['une_rt_q|PC_ACT'],
-    members: { freq: ['Q'], s_adj: ['SA'], age: ['Y15-74'], sex: ['T'], geo: ['DE'] },
+    members: { freq: ['Q'], s_adj: ['SA'], age: ['Y15-74'], sex: ['T'], geo: ['BE'] },
     periods: ['2026KW02'],
   };
 
@@ -310,7 +336,7 @@ describe('(a) registered from observation, checked at slice time', () => {
       dimension: Record<string, { category: { index: Record<string, number> } }>;
       value: Record<string, number>;
     };
-    const at: Record<string, string> = { freq: 'Q', s_adj: 'SA', age: 'Y15-74', unit: 'PC_ACT', sex: 'T', geo: 'DE', time: '2026-Q2' };
+    const at: Record<string, string> = { freq: 'Q', s_adj: 'SA', age: 'Y15-74', unit: 'PC_ACT', sex: 'T', geo: 'BE', time: '2026-Q2' };
     let offset = 0;
     for (let i = 0; i < doc.id.length; i++) offset = offset * doc.size[i]! + doc.dimension[doc.id[i]!]!.category.index[at[doc.id[i]!]!]!;
     expect(doc.value[String(offset)]).toBeTypeOf('number');

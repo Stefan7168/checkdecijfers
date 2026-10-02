@@ -42,8 +42,12 @@ export function displayValueUnit(value: number, decimals: number, unit: string):
   const formatted = formatValueNl(value, decimals);
   const trimmed = unit.trim();
   if (trimmed === '%') return `${formatted}%`;
-  if (/^aantal$/i.test(trimmed)) return formatted;
-  if (/\d/.test(trimmed)) {
+  // Session 153: Eurostat's count unit label is exactly 'Number' (NR) — a bare count, like CBS's 'aantal'.
+  // Exact, case-sensitive: the English interface translates 'aantal' to a lowercase 'number' it shows.
+  if (/^aantal$/i.test(trimmed) || trimmed === 'Number') return formatted;
+  // A digit only inside parentheses is a base year, never a factor (Eurostat: "Chain linked volumes (2020),
+  // euro per capita" rendered as "× Chain linked …" — session 153). CBS factor units carry no parentheses.
+  if (/\d/.test(trimmed.replace(/\([^)]*\)/g, ''))) {
     // An index-BASE declaration ("2015=100") is a label, never a factor
     // (#143): an '×' prefix would claim a multiplication that isn't real.
     // parseFactorUnit (query/derivations.ts) already excludes '=' units from

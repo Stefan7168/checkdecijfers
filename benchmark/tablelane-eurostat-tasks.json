@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "source": "Session 153 (#357 step 5): the Eurostat set of the table-lane benchmark — the same harness and rules as benchmark/tablelane-tasks.json, over NON-curated Eurostat datasets (none is a seed or sibling table: the layer, not hand-tended tables). Questions are Dutch, held out from benchmark/eurostat-tableparse-set.json. Schemas: tests/fixtures/tablelane-bench/eurostat-schemas/ (captured through the job's own source); cells: tests/fixtures/tablelane-bench/cells/eurostat__*.json; key: benchmark/tablelane-eurostat-answer-key.json (read independently from Eurostat's JSON-stat API).",
+  "frozen": true,
+  "referenceDate": "2026-10-02",
+  "gate": {
+    "answerableMin": 6,
+    "answerableMinReason": "6 of the 6 answer tasks: the curated floor share (12 of 14 = 85.7%) applied to 6 tasks rounds up to all 6. The 6 refuse/ask tasks must ALL pass and invented numbers must be 0, exactly like the CBS set. Not enforced in CI until a recorded run has passed (the CBS set's own sequence).",
+    "enforcedInCi": false
+  },
+  "tasks": [
+    {
+      "id": "LE1",
+      "type": "answer",
+      "table": "eurostat:tran_sf_roadus",
+      "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+      "covers": "a non-curated Eurostat dataset; sex/age/person category default to their Eurostat totals (T, TOTAL); a Dutch country name on geo",
+      "canned": {
+        "measureCode": "tran_sf_roadus|NR",
+        "period": {
+          "kind": "year",
+          "year": 2023
+        },
+        "regions": [
+          {
+            "name": "Polen",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE2",
+      "type": "answer",
+      "table": "eurostat:tran_sf_roadus",
+      "question": "Hoeveel voetgangers verloren in 2022 het leven in het verkeer in Spanje?",
+      "covers": "a member named in Dutch words (voetgangers → PED) on an English code list",
+      "canned": {
+        "measureCode": "tran_sf_roadus|NR",
+        "breakdowns": {
+          "pers_cat": "PED"
+        },
+        "period": {
+          "kind": "year",
+          "year": 2022
+        },
+        "regions": [
+          {
+            "name": "Spanje",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE3",
+      "type": "ask",
+      "table": "eurostat:nrg_ind_ren",
+      "question": "Hoe groot was het aandeel hernieuwbare energie in Zweden in 2023?",
+      "covers": "a dimension with no Eurostat total (energy balance item) → one button question, never a guessed member; the reply answers",
+      "expectDimension": "nrg_bal",
+      "reply": {
+        "code": "REN"
+      },
+      "canned": {
+        "measureCode": "nrg_ind_ren|PC",
+        "period": {
+          "kind": "year",
+          "year": 2023
+        },
+        "regions": [
+          {
+            "name": "Zweden",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE4",
+      "type": "answer",
+      "table": "eurostat:env_wasmun",
+      "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+      "covers": "unit as measure: per-inhabitant kilograms, not thousand tonnes; waste generated named in words",
+      "canned": {
+        "measureCode": "env_wasmun|KG_HAB",
+        "breakdowns": {
+          "wst_oper": "GEN"
+        },
+        "period": {
+          "kind": "year",
+          "year": 2022
+        },
+        "regions": [
+          {
+            "name": "Denemarken",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE5",
+      "type": "answer",
+      "table": "eurostat:sdg_08_10",
+      "question": "Wat was het reële bbp per inwoner van Ierland in 2024?",
+      "covers": "a one-member dimension (na_item) is its own default; real = chain-linked volumes",
+      "canned": {
+        "measureCode": "sdg_08_10|CLV20_EUR_HAB",
+        "period": {
+          "kind": "year",
+          "year": 2024
+        },
+        "regions": [
+          {
+            "name": "Ierland",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE6",
+      "type": "answer",
+      "table": "eurostat:crim_off_cat",
+      "question": "Hoeveel inbraken registreerde de politie in 2022 in België?",
+      "covers": "a 25-member offence classification with no total: the named offence (burglary) is chosen",
+      "canned": {
+        "measureCode": "crim_off_cat|NR",
+        "breakdowns": {
+          "iccs": "ICCS0501"
+        },
+        "period": {
+          "kind": "year",
+          "year": 2022
+        },
+        "regions": [
+          {
+            "name": "België",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE7",
+      "type": "answer",
+      "table": "eurostat:migr_asyappctza",
+      "question": "Hoeveel asielaanvragen werden er in 2023 in Frankrijk ingediend?",
+      "covers": "#365: the all-citizenships TOTAL is the default (the receiving country is the place, never the citizenship member FR)",
+      "canned": {
+        "measureCode": "migr_asyappctza|PER",
+        "period": {
+          "kind": "year",
+          "year": 2023
+        },
+        "regions": [
+          {
+            "name": "Frankrijk",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE8",
+      "type": "refuse",
+      "table": "eurostat:tran_sf_roadus",
+      "question": "Hoeveel verkeersdoden waren er in 2023 in Beieren?",
+      "covers": "a region below country level on a country-level dataset → an honest region refusal",
+      "expectReasons": [
+        "region_unknown",
+        "region_unavailable"
+      ],
+      "canned": {
+        "measureCode": "tran_sf_roadus|NR",
+        "period": {
+          "kind": "year",
+          "year": 2023
+        },
+        "regions": [
+          {
+            "name": "Beieren",
+            "kind": "onbekend"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE9",
+      "type": "refuse",
+      "table": "eurostat:crim_off_cat",
+      "question": "Hoeveel inbraken registreerde de politie in 2022 in Turkije?",
+      "covers": "a country outside the EU/EFTA licence rule (ADR 048 D6) is never served",
+      "expectReasons": [
+        "region_unknown",
+        "region_unavailable"
+      ],
+      "canned": {
+        "measureCode": "crim_off_cat|NR",
+        "breakdowns": {
+          "iccs": "ICCS0501"
+        },
+        "period": {
+          "kind": "year",
+          "year": 2022
+        },
+        "regions": [
+          {
+            "name": "Turkije",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE10",
+      "type": "refuse",
+      "table": "eurostat:env_wasmun",
+      "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2030 in Denemarken ingezameld?",
+      "covers": "a year past the data end → refused with the latest period named, never filled",
+      "expectReasons": [
+        "table_lane_period_missing"
+      ],
+      "canned": {
+        "measureCode": "env_wasmun|KG_HAB",
+        "breakdowns": {
+          "wst_oper": "GEN"
+        },
+        "period": {
+          "kind": "year",
+          "year": 2030
+        },
+        "regions": [
+          {
+            "name": "Denemarken",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE11",
+      "type": "refuse",
+      "table": "eurostat:tran_sf_roadus",
+      "question": "Hoeveel verkeersongevallen met alleen blikschade waren er in 2023 in Polen?",
+      "covers": "the dataset counts road deaths, not damage-only accidents → no measure fits, refused (never the nearest topic)",
+      "expectReasons": [
+        "table_lane_no_measure"
+      ],
+      "canned": {
+        "measureCode": "geen",
+        "period": {
+          "kind": "year",
+          "year": 2023
+        },
+        "regions": [
+          {
+            "name": "Polen",
+            "kind": "land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LE12",
+      "type": "ask",
+      "table": "eurostat:crim_off_cat",
+      "question": "Hoeveel misdrijven registreerde de politie in 2022 in Oostenrijk?",
+      "covers": "an offence classification with no total and none named → one button question; the reply (theft) answers",
+      "expectDimension": "iccs",
+      "reply": {
+        "code": "ICCS0502"
+      },
+      "canned": {
+        "measureCode": "crim_off_cat|NR",
+        "period": {
+          "kind": "year",
+          "year": 2022
+        },
+        "regions": [
+          {
+            "name": "Oostenrijk",
+            "kind": "land"
+          }
+        ]
+      }
+    }
+  ]
+}

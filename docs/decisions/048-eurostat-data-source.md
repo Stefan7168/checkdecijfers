@@ -1141,3 +1141,17 @@ country's total applications. **Owner GO 2026-10-02 ([#365](../open-questions.md
 exact code `TOTAL` at Eurostat's aggregate level is kept (`isAllCodesTotal`) — the reporting country's own count over
 every citizenship, not a breakdown by a non-EU country; never in the reporting `geo` list; every non-EU citizenship and
 `EXT_EU27_2020` stay withheld. This narrows the addendum (d) Assumption above. Re-recorded asylum cases: **15/17**.
+
+### Addendum (2026-10-02, session 153) — the first end-to-end Eurostat table-lane run (#357 step 5)
+
+A Eurostat set in the table-lane benchmark (`benchmark/tablelane-eurostat-tasks.json`, 12 questions over six
+NON-curated datasets, snapshot + key read independently from Eurostat) is the first time a Eurostat question ran the
+whole lane: register → plan → slice → store → answer → audit. Canned 12/12; real model answers 6/6, 0 invented, refuse/ask
+3/6 (no number shown in any). Found and fixed on the way: **decimals** — the registration read the newest period alone,
+and Eurostat often publishes the newest year as a rounded estimate (`nrg_ind_ren` Sweden 2025: 65.4; 2023: 66.393), so
+1 decimal was registered and the next question refused + quarantined the table; the first read now covers the latest
+TWO periods (`DECIMALS_PROBE_FIRST_PERIODS`, at most three in two reads — the bound per read is unchanged). Still a
+lower bound: a deeper period with more decimals still refuses (never rounds). **Wording** — lane refusals now name the
+source ("Eurostat-tabel"); Eurostat's count unit `Number` is a bare count like `aantal` (template and R10); a base year
+in parentheses in a unit label is not a factor. **Scorer** — the provisional rule is the source's own
+(`isProvisionalStatus`).

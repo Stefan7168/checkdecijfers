@@ -129,12 +129,12 @@ if (process.argv.includes('--siblings')) {
 }
 
 // `--decimals-probe <code...>` (#357 (a), 2026-10-01): captures Eurostat's REAL answer to the first decimals read
-// (`decimalsProbeSlice`, read 1: every unit, the latest period, bounded) for a dataset whose structure is already
+// (`decimalsProbeSlice`, read 1: every unit, the latest two periods, bounded) for a dataset whose structure is already
 // captured under tests/fixtures/eurostat-structure/, built from that committed structure so the URL is exactly the
 // one a hermetic test's adapter will request. Into tests/fixtures/eurostat-decimals/<code>.json (+ .index.json).
 if (process.argv.includes('--decimals-probe')) {
   const { buildRequestUrl } = await import('../src/eurostat-adapter/statistics-api.ts');
-  const { decimalsProbeSlice, fitEurostatStructure, readEurostatStructure } = await import('../src/eurostat-adapter/sdmx-structure.ts');
+  const { decimalsProbePeriods, decimalsProbeSlice, fitEurostatStructure, readEurostatStructure } = await import('../src/eurostat-adapter/sdmx-structure.ts');
   const structureDir = join(OUT, '..', 'eurostat-structure');
   const dir = join(OUT, '..', 'eurostat-decimals');
   mkdirSync(dir, { recursive: true });
@@ -147,7 +147,7 @@ if (process.argv.includes('--decimals-probe')) {
     );
     const fit = fitEurostatStructure(`eurostat:${code}`, structure);
     if (!fit.ok) throw new Error(`${code}: ${fit.summary}`);
-    const probe = decimalsProbeSlice(`eurostat:${code}`, structure, fit, fit.unitCodes, 1);
+    const probe = decimalsProbeSlice(`eurostat:${code}`, structure, fit, fit.unitCodes, decimalsProbePeriods(1));
     if (probe === null) throw new Error(`${code}: no bounded decimals read exists`);
     const url = buildRequestUrl(code, probe.slice);
     writeFileSync(join(dir, `${code}.json`), JSON.stringify(await fetchJson(url)) + '\n');

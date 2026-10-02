@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "source": "Frozen ground truth for the Eurostat table-lane benchmark (benchmark/tablelane-eurostat-tasks.json): one cell per answer task and per ask task's post-click answer, read independently from Eurostat's public JSON-stat API (verifyUrl, every dimension pinned, plain fetch — not our adapter) by scripts/capture-tablelane-bench.ts --eurostat --write-key, and checked equal to the committed snapshot (tests/fixtures/tablelane-bench/cells/eurostat__*.json). Dataset versions are pinned by the schema fixtures' 'modified' (Eurostat UPDATE_DATA). Never hand-edited to green.",
+  "frozenAt": "2026-10-02",
+  "tasks": {
+    "LE1": {
+      "table": "eurostat:tran_sf_roadus",
+      "cells": [
+        {
+          "measure": "tran_sf_roadus|NR",
+          "period": "2023JJ00",
+          "region": "PL",
+          "dims": {
+            "freq": "A",
+            "sex": "T",
+            "age": "TOTAL",
+            "pers_cat": "TOTAL"
+          },
+          "value": 1893,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tran_sf_roadus?format=JSON&lang=EN&unit=NR&freq=A&sex=T&age=TOTAL&pers_cat=TOTAL&geo=PL&time=2023"
+    },
+    "LE2": {
+      "table": "eurostat:tran_sf_roadus",
+      "cells": [
+        {
+          "measure": "tran_sf_roadus|NR",
+          "period": "2022JJ00",
+          "region": "ES",
+          "dims": {
+            "freq": "A",
+            "sex": "T",
+            "age": "TOTAL",
+            "pers_cat": "PED"
+          },
+          "value": 348,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tran_sf_roadus?format=JSON&lang=EN&unit=NR&freq=A&sex=T&age=TOTAL&pers_cat=PED&geo=ES&time=2022"
+    },
+    "LE3": {
+      "table": "eurostat:nrg_ind_ren",
+      "cells": [
+        {
+          "measure": "nrg_ind_ren|PC",
+          "period": "2023JJ00",
+          "region": "SE",
+          "dims": {
+            "freq": "A",
+            "nrg_bal": "REN"
+          },
+          "value": 66.393,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_ind_ren?format=JSON&lang=EN&unit=PC&freq=A&nrg_bal=REN&geo=SE&time=2023"
+    },
+    "LE4": {
+      "table": "eurostat:env_wasmun",
+      "cells": [
+        {
+          "measure": "env_wasmun|KG_HAB",
+          "period": "2022JJ00",
+          "region": "DK",
+          "dims": {
+            "freq": "A",
+            "wst_oper": "GEN"
+          },
+          "value": 759,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/env_wasmun?format=JSON&lang=EN&unit=KG_HAB&freq=A&wst_oper=GEN&geo=DK&time=2022"
+    },
+    "LE5": {
+      "table": "eurostat:sdg_08_10",
+      "cells": [
+        {
+          "measure": "sdg_08_10|CLV20_EUR_HAB",
+          "period": "2024JJ00",
+          "region": "IE",
+          "dims": {
+            "freq": "A",
+            "na_item": "B1GQ"
+          },
+          "value": 89300,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_08_10?format=JSON&lang=EN&unit=CLV20_EUR_HAB&freq=A&na_item=B1GQ&geo=IE&time=2024"
+    },
+    "LE6": {
+      "table": "eurostat:crim_off_cat",
+      "cells": [
+        {
+          "measure": "crim_off_cat|NR",
+          "period": "2022JJ00",
+          "region": "BE",
+          "dims": {
+            "freq": "A",
+            "iccs": "ICCS0501"
+          },
+          "value": 52137,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/crim_off_cat?format=JSON&lang=EN&unit=NR&freq=A&iccs=ICCS0501&geo=BE&time=2022"
+    },
+    "LE7": {
+      "table": "eurostat:migr_asyappctza",
+      "cells": [
+        {
+          "measure": "migr_asyappctza|PER",
+          "period": "2023JJ00",
+          "region": "FR",
+          "dims": {
+            "freq": "A",
+            "citizen": "TOTAL",
+            "applicant": "TOTAL",
+            "sex": "T",
+            "age": "TOTAL"
+          },
+          "value": 167055,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/migr_asyappctza?format=JSON&lang=EN&unit=PER&freq=A&citizen=TOTAL&applicant=TOTAL&sex=T&age=TOTAL&geo=FR&time=2023"
+    },
+    "LE12": {
+      "table": "eurostat:crim_off_cat",
+      "cells": [
+        {
+          "measure": "crim_off_cat|NR",
+          "period": "2022JJ00",
+          "region": "AT",
+          "dims": {
+            "freq": "A",
+            "iccs": "ICCS0502"
+          },
+          "value": 97139,
+          "status": "Published"
+        }
+      ],
+      "verifyUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/crim_off_cat?format=JSON&lang=EN&unit=NR&freq=A&iccs=ICCS0502&geo=AT&time=2022"
+    }
+  }
+}

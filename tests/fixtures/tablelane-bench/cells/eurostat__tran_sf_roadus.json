@@ -1,0 +1,102 @@
+{
+ "tableId": "eurostat:tran_sf_roadus",
+ "capturedAt": "2026-10-02T05:54:00.948Z",
+ "cbsModified": "2026-08-25T23:00:00+0200",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tran_sf_roadus",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "tran_sf_roadus|NR"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "sex": [
+      "T"
+     ],
+     "age": [
+      "TOTAL"
+     ],
+     "pers_cat": [
+      "TOTAL"
+     ],
+     "geo": [
+      "PL"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "tran_sf_roadus|NR",
+     "coordinates": {
+      "freq": "A",
+      "sex": "T",
+      "age": "TOTAL",
+      "pers_cat": "TOTAL",
+      "geo": "PL",
+      "time": "2023JJ00"
+     },
+     "value": 1893,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "tran_sf_roadus|NR"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "sex": [
+      "T"
+     ],
+     "age": [
+      "TOTAL"
+     ],
+     "pers_cat": [
+      "PED"
+     ],
+     "geo": [
+      "ES"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "tran_sf_roadus|NR",
+     "coordinates": {
+      "freq": "A",
+      "sex": "T",
+      "age": "TOTAL",
+      "pers_cat": "PED",
+      "geo": "ES",
+      "time": "2022JJ00"
+     },
+     "value": 348,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  }
+ ]
+}

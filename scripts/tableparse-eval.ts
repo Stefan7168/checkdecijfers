@@ -63,7 +63,7 @@ import {
   type LlmClient,
   type LlmRequest,
 } from '../src/answer/llm/client.ts';
-import { loadTableLaneTasks, taskParseRequest } from './tablelane-bench-lib.ts';
+import { loadTableLaneTasks, taskParseRequest, type TableLaneSet } from './tablelane-bench-lib.ts';
 
 const SCHEMAS_DIR = fileURLToPath(new URL('../tests/fixtures/tableparse/schemas', import.meta.url));
 const EUROSTAT_STRUCTURES_DIR = fileURLToPath(new URL('../tests/fixtures/eurostat-structure', import.meta.url));
@@ -71,7 +71,8 @@ const EUROSTAT_STRUCTURES_DIR = fileURLToPath(new URL('../tests/fixtures/eurosta
 /** Session 153 (#357 step 4): `--eurostat` runs the same eval over a separate
  * Eurostat labelled set, recorded into its own fixture directory with its own
  * report, so the CBS set, fixtures and report are never touched. The table-
- * lane benchmark requests are CBS-only and are left out of a Eurostat run. */
+ * lane benchmark requests come from the matching set (benchmark/tablelane-
+ * eurostat-tasks.json in a Eurostat run). */
 const EUROSTAT_RUN = process.argv.includes('--eurostat');
 const FIXTURES_DIR = fileURLToPath(
   new URL(EUROSTAT_RUN ? '../tests/fixtures/llm/tableparse-eurostat' : '../tests/fixtures/llm/tableparse', import.meta.url),
@@ -283,9 +284,8 @@ export interface BenchRequest {
   request: LlmRequest;
 }
 
-export function benchmarkRequests(): BenchRequest[] {
-  if (EUROSTAT_RUN) return [];
-  return loadTableLaneTasks().tasks.map((t) => ({ id: `${BENCH_LABEL_PREFIX}${t.id}`, table: t.table, request: taskParseRequest(t) }));
+export function benchmarkRequests(set: TableLaneSet = EUROSTAT_RUN ? 'eurostat' : 'cbs'): BenchRequest[] {
+  return loadTableLaneTasks(set).tasks.map((t) => ({ id: `${BENCH_LABEL_PREFIX}${t.id}`, table: t.table, request: taskParseRequest(t) }));
 }
 
 /** Dry-run rows for the benchmark requests — the same size estimate as the

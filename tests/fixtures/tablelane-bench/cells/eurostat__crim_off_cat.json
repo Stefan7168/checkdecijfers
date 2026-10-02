@@ -1,0 +1,86 @@
+{
+ "tableId": "eurostat:crim_off_cat",
+ "capturedAt": "2026-10-02T05:54:06.993Z",
+ "cbsModified": "2026-04-29T11:00:00+0200",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/crim_off_cat",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "crim_off_cat|NR"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "iccs": [
+      "ICCS0501"
+     ],
+     "geo": [
+      "BE"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "crim_off_cat|NR",
+     "coordinates": {
+      "freq": "A",
+      "iccs": "ICCS0501",
+      "geo": "BE",
+      "time": "2022JJ00"
+     },
+     "value": 52137,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  },
+  {
+   "slice": {
+    "measures": [
+     "crim_off_cat|NR"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "iccs": [
+      "ICCS0502"
+     ],
+     "geo": [
+      "AT"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2022JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "crim_off_cat|NR",
+     "coordinates": {
+      "freq": "A",
+      "iccs": "ICCS0502",
+      "geo": "AT",
+      "time": "2022JJ00"
+     },
+     "value": 97139,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  }
+ ]
+}

@@ -15,7 +15,7 @@
 //    the full gate fails CI only once the task file says `enforcedInCi`.
 //
 // Hermetic: PGlite + committed fixtures. No network, no API key, no spend.
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -30,8 +30,10 @@ import {
   MissingFixturesError,
   missingBenchFixtures,
   runTableLaneBenchmark,
+  EUROSTAT_TABLEPARSE_FIXTURES_DIR,
   TABLEPARSE_FIXTURES_DIR,
 } from '../../scripts/run-tablelane-benchmark.ts';
+import { EUROSTAT_SIBLING_REGISTRATIONS } from '../../src/sources/eurostat-siblings.ts';
 import { definitionProblems, formatScore, scoreTableLaneDump } from '../../scripts/score-tablelane-benchmark.ts';
 import {
   CannedParseClient,
@@ -186,3 +188,66 @@ describe.skipIf(!fixturesRecorded)(
     });
   },
 );
+
+// ---------------------------------------------------------------------------
+// Session 153 (#357 step 5): the Eurostat set — same harness, its own frozen
+// tasks, snapshot, key and parser fixtures (benchmark/tablelane-eurostat-*.json).
+// ---------------------------------------------------------------------------
+
+const eFile = loadTableLaneTasks('eurostat');
+const eKey = loadTableLaneKey('eurostat');
+const eurostatFixturesRecorded = missingBenchFixtures(eFile.tasks, EUROSTAT_TABLEPARSE_FIXTURES_DIR).length === 0;
+
+describe('table-lane benchmark (Eurostat set) — frozen definition', () => {
+  it('is well-formed; every table is a non-curated Eurostat dataset', () => {
+    expect(definitionProblems(eFile, eKey)).toEqual([]);
+    expect(eFile.frozen).toBe(true);
+    for (const t of eFile.tasks) expect(t.table.startsWith('eurostat:'), t.id).toBe(true);
+    const siblings = new Set(EUROSTAT_SIBLING_REGISTRATIONS.map((r) => r.tableId));
+    for (const t of eFile.tasks) expect(siblings.has(t.table), `${t.id} uses a curated Eurostat table`).toBe(false);
+  });
+
+  it('holds out every question from the Eurostat calibration set; one request per task', () => {
+    const labelled = (JSON.parse(readFileSync(new URL('../../benchmark/eurostat-tableparse-set.json', import.meta.url), 'utf8')) as {
+      cases: { question: string }[];
+    }).cases.map((c) => c.question.trim().toLowerCase());
+    for (const t of eFile.tasks) expect(labelled.includes(t.question.trim().toLowerCase()), t.id).toBe(false);
+    expect(new Set(eFile.tasks.map((t) => requestHash(taskParseRequest(t)))).size).toBe(eFile.tasks.length);
+  });
+
+  it('pins one Eurostat version per table, and the key equals the snapshot cell for cell', async () => {
+    for (const tableId of new Set(eFile.tasks.map((t) => t.table))) {
+      const cells = loadCellsFixture(tableId);
+      if (cells !== null) expect(cells.cbsModified, tableId).toBe(loadSchemaFixture(tableId).schema.modified);
+    }
+    const plans = await cannedPlans(eFile);
+    for (const [taskId, entry] of Object.entries(eKey.tasks)) {
+      const task = eFile.tasks.find((t) => t.id === taskId)!;
+      const plan = plans.find((p) => p.taskId === taskId && p.round === (task.type === 'ask' ? 'reply' : 'first'))!;
+      const rows = loadCellsFixture(entry.table)!.slices.flatMap((s) => s.rows).filter((r) => rowMatches(r, plan.slice!));
+      expect(rows.map((r) => r.value), taskId).toEqual(entry.cells.map((c) => c.value));
+    }
+  });
+});
+
+describe('table-lane benchmark (Eurostat set) — canned run', () => {
+  it('every task passes through the real lane over the Eurostat snapshot', async () => {
+    const dump = await runTableLaneBenchmark({ mode: 'canned', dumpPath: null, set: 'eurostat' });
+    const score = scoreTableLaneDump(dump, eFile, eKey);
+    console.log(formatScore(score));
+    expect(new Set(dump.parseRequestHashes)).toEqual(new Set(benchmarkRequests('eurostat').map((b) => requestHash(b.request))));
+    for (const run of dump.tasks) expect(run.uncovered, run.id).toEqual([]);
+    expect(score.inventedNumbers).toBe(0);
+    for (const t of score.tasks) expect(t.problems, `${t.id} (${t.outcome})`).toEqual([]);
+  });
+});
+
+describe.skipIf(!eurostatFixturesRecorded)('table-lane benchmark (Eurostat set) — replay of the recorded parser', () => {
+  it('scores the recorded run: zero invented numbers always; the full gate once enforcedInCi', async () => {
+    const dump = await runTableLaneBenchmark({ mode: 'replay', dumpPath: null, set: 'eurostat' });
+    const score = scoreTableLaneDump(dump, eFile, eKey);
+    console.log(formatScore(score));
+    expect(score.inventedNumbers).toBe(0);
+    if (eFile.gate.enforcedInCi) expect(score.gatePass, formatScore(score)).toBe(true);
+  });
+});

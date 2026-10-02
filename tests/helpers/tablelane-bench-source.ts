@@ -28,6 +28,29 @@ import type {
 
 export const TABLEPARSE_SCHEMAS_DIR = fileURLToPath(new URL('../fixtures/tableparse/schemas', import.meta.url));
 export const TABLELANE_BENCH_CELLS_DIR = fileURLToPath(new URL('../fixtures/tablelane-bench/cells', import.meta.url));
+/** Session 153 (#357 step 5): a Eurostat table's layout, captured read-only
+ * through the job's own source (StatisticsApiSource, structure mode, decimals
+ * observed) — the same shape as a CBS schema fixture. */
+export const EUROSTAT_BENCH_SCHEMAS_DIR = fileURLToPath(new URL('../fixtures/tablelane-bench/eurostat-schemas', import.meta.url));
+
+const EUROSTAT_PREFIX = 'eurostat:';
+
+/** A table id as a file name ('eurostat:x' → 'eurostat__x'; a CBS id is unchanged). */
+export function fixtureFileName(tableId: string): string {
+  return tableId.replace(/:/g, '__');
+}
+
+/** Where a table's schema fixture lives: CBS beside the parser's schema
+ * captures, Eurostat in its own directory (named by the dataset code). */
+export function schemaFixturePath(tableId: string): string {
+  return tableId.startsWith(EUROSTAT_PREFIX)
+    ? `${EUROSTAT_BENCH_SCHEMAS_DIR}/${tableId.slice(EUROSTAT_PREFIX.length)}.json`
+    : `${TABLEPARSE_SCHEMAS_DIR}/${tableId}.json`;
+}
+
+export function cellsFixturePath(tableId: string): string {
+  return `${TABLELANE_BENCH_CELLS_DIR}/${fixtureFileName(tableId)}.json`;
+}
 
 export interface SchemaFixture {
   fetchedAt: string;
@@ -47,18 +70,19 @@ export interface CellsFixture {
   tableId: string;
   capturedAt: string;
   /** CBS `Modified` of the table when the cells were captured — must equal
-   * the schema fixture's, or the snapshot mixes two CBS versions. */
+   * the schema fixture's, or the snapshot mixes two CBS versions. For a
+   * Eurostat table: Eurostat's UPDATE_DATA (the layout's `modified`). */
   cbsModified: string;
   source: string;
   slices: CapturedSlice[];
 }
 
 export function loadSchemaFixture(tableId: string): SchemaFixture {
-  return JSON.parse(readFileSync(`${TABLEPARSE_SCHEMAS_DIR}/${tableId}.json`, 'utf8')) as SchemaFixture;
+  return JSON.parse(readFileSync(schemaFixturePath(tableId), 'utf8')) as SchemaFixture;
 }
 
 export function loadCellsFixture(tableId: string): CellsFixture | null {
-  const path = `${TABLELANE_BENCH_CELLS_DIR}/${tableId}.json`;
+  const path = cellsFixturePath(tableId);
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, 'utf8')) as CellsFixture;
 }
@@ -110,7 +134,7 @@ export class TableLaneBenchSource implements CbsSource {
   private schemaOf(tableId: string): SchemaFixture {
     let fixture = this.schemas.get(tableId);
     if (fixture === undefined) {
-      if (!existsSync(`${TABLEPARSE_SCHEMAS_DIR}/${tableId}.json`)) {
+      if (!existsSync(schemaFixturePath(tableId))) {
         throw new Error(`TableLaneBenchSource: no schema fixture for table '${tableId}'`);
       }
       fixture = loadSchemaFixture(tableId);

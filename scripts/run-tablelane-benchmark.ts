@@ -51,10 +51,29 @@ import { runTableLaneJob, type TableLaneJobSummary } from '../src/ingestion/tabl
 import { createTableLaneRequest, readTableLaneRequest, type TableLaneRow } from '../src/ingestion/table-lane-store.ts';
 import { createTestDb } from '../tests/helpers/pglite-db.ts';
 import { TableLaneBenchSource } from '../tests/helpers/tablelane-bench-source.ts';
-import { CannedParseClient, loadTableLaneTasks, taskParseRequest, type TableLaneTask } from './tablelane-bench-lib.ts';
+import {
+  CannedParseClient,
+  loadTableLaneTasks,
+  setFromArgv,
+  taskParseRequest,
+  type TableLaneSet,
+  type TableLaneTask,
+} from './tablelane-bench-lib.ts';
 
 export const TABLEPARSE_FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tableparse', import.meta.url));
 export const DEFAULT_DUMP_PATH = fileURLToPath(new URL('../benchmark/tablelane-audit-run.json', import.meta.url));
+/** The Eurostat set (session 153): its parser fixtures sit with the Eurostat
+ * calibration recordings, its dump beside the CBS one. */
+export const EUROSTAT_TABLEPARSE_FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tableparse-eurostat', import.meta.url));
+export const EUROSTAT_DUMP_PATH = fileURLToPath(new URL('../benchmark/tablelane-eurostat-audit-run.json', import.meta.url));
+
+export function fixturesDirFor(set: TableLaneSet): string {
+  return set === 'eurostat' ? EUROSTAT_TABLEPARSE_FIXTURES_DIR : TABLEPARSE_FIXTURES_DIR;
+}
+
+export function dumpPathFor(set: TableLaneSet): string {
+  return set === 'eurostat' ? EUROSTAT_DUMP_PATH : DEFAULT_DUMP_PATH;
+}
 
 export type TableLaneBenchMode = 'replay' | 'canned';
 
@@ -169,9 +188,12 @@ export async function runTableLaneBenchmark(options: {
   /** null = do not write a dump file (tests). */
   dumpPath?: string | null;
   fixturesDir?: string;
+  /** Which frozen set; default CBS. */
+  set?: TableLaneSet;
 }): Promise<TableLaneDump> {
-  const file = loadTableLaneTasks();
-  const fixturesDir = options.fixturesDir ?? TABLEPARSE_FIXTURES_DIR;
+  const set = options.set ?? 'cbs';
+  const file = loadTableLaneTasks(set);
+  const fixturesDir = options.fixturesDir ?? fixturesDirFor(set);
   let inner: LlmClient;
   if (options.mode === 'replay') {
     const missing = missingBenchFixtures(file.tasks, fixturesDir);
@@ -273,18 +295,20 @@ export async function runTableLaneBenchmark(options: {
     tasks: runs,
     records,
   };
-  const dumpPath = options.dumpPath === undefined ? DEFAULT_DUMP_PATH : options.dumpPath;
+  const dumpPath = options.dumpPath === undefined ? dumpPathFor(set) : options.dumpPath;
   if (dumpPath !== null) writeFileSync(dumpPath, `${JSON.stringify(dump, null, 1)}\n`);
   return dump;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const mode: TableLaneBenchMode = process.argv.includes('--canned') ? 'canned' : 'replay';
+  const set = setFromArgv();
   try {
-    const dump = await runTableLaneBenchmark({ mode });
+    const dump = await runTableLaneBenchmark({ mode, set });
     console.log(
-      `table-lane benchmark run (${mode}): ${dump.tasks.length} tasks -> ${dump.records.length} audit records, ` +
-        `${dump.parseRequestHashes.length} parse calls. Dump: benchmark/tablelane-audit-run.json — score with: npm run tablelane:bench:score`,
+      `table-lane benchmark run (${set}, ${mode}): ${dump.tasks.length} tasks -> ${dump.records.length} audit records, ` +
+        `${dump.parseRequestHashes.length} parse calls. Dump: ${dumpPathFor(set)} — score with: npm run tablelane:bench:score` +
+        (set === 'eurostat' ? ' -- --eurostat' : ''),
     );
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

@@ -1177,6 +1177,12 @@ down to the small clarification price).
    `benchmark/tablelane-tasks.json` so CI holds the gate from then on. `npm run tablelane:bench:run -- --canned` is the
    harness self-check (no model output involved); `npm run tablelane:bench:capture -- --verify-key` re-reads every key
    value from CBS (read-only, network).
+   **The Eurostat set (session 153, #357 step 5)** runs on the same scripts with `--eurostat`: `npm run tablelane:bench:run
+   -- --eurostat [--canned]`, `npm run tablelane:bench:score -- --eurostat`, `npm run tablelane:bench:capture -- --eurostat
+   --verify-key` (re-reads every key cell from Eurostat's JSON-stat API). Re-capturing it (read-only, network): `--eurostat
+   --schemas <code ...>` (layouts through the job's own source, decimals observed), `--eurostat` (cells), `--eurostat
+   --write-key` (the key, read independently and checked equal to the snapshot). Its parser fixtures live in
+   `tests/fixtures/llm/tableparse-eurostat/` (labelled `bench:LE…`). Its gate is NOT enforced in CI yet.
 4. ✅ **DONE 2026-10-01 (session 153, owner GO): `TABLE_LANE_ENABLED=1` added to Vercel Production (`vercel env add`),
    deployed with the next push.** Original text: **Only then** set `TABLE_LANE_ENABLED=1` (row in the secrets register above) and redeploy. `ONBOARDING_ENABLED=1` and
    `CRON_SECRET` must still be set (they are).

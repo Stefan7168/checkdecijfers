@@ -1,0 +1,47 @@
+{
+ "tableId": "eurostat:nrg_ind_ren",
+ "capturedAt": "2026-10-02T05:54:02.550Z",
+ "cbsModified": "2026-09-15T23:00:00+0200",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_ind_ren",
+ "slices": [
+  {
+   "slice": {
+    "measures": [
+     "nrg_ind_ren|PC"
+    ],
+    "dimensionIn": {
+     "freq": [
+      "A"
+     ],
+     "nrg_bal": [
+      "REN"
+     ],
+     "geo": [
+      "SE"
+     ]
+    },
+    "periodIn": {
+     "dimension": "time",
+     "codes": [
+      "2023JJ00"
+     ]
+    }
+   },
+   "rows": [
+    {
+     "measure": "nrg_ind_ren|PC",
+     "coordinates": {
+      "freq": "A",
+      "nrg_bal": "REN",
+      "geo": "SE",
+      "time": "2023JJ00"
+     },
+     "value": 66.393,
+     "valueAttribute": "None",
+     "stringValue": null,
+     "status": "Published"
+    }
+   ]
+  }
+ ]
+}

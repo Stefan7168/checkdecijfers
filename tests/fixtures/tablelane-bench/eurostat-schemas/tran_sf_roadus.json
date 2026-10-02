@@ -1,0 +1,606 @@
+{
+ "fetchedAt": "2026-10-02T05:53:48.286Z",
+ "schema": {
+  "tableId": "eurostat:tran_sf_roadus",
+  "title": "Persons killed in road accidents by age, sex and category of persons involved",
+  "dimensions": [
+   {
+    "name": "freq",
+    "kind": "Dimension",
+    "title": "Time frequency"
+   },
+   {
+    "name": "sex",
+    "kind": "Dimension",
+    "title": "Sex"
+   },
+   {
+    "name": "age",
+    "kind": "Dimension",
+    "title": "Age class"
+   },
+   {
+    "name": "pers_cat",
+    "kind": "Dimension",
+    "title": "Category of persons"
+   },
+   {
+    "name": "geo",
+    "kind": "GeoDimension",
+    "title": "Geopolitical entity (reporting)"
+   },
+   {
+    "name": "time",
+    "kind": "TimeDimension",
+    "title": "Time"
+   }
+  ],
+  "measures": [
+   {
+    "code": "tran_sf_roadus|NR",
+    "title": "Persons killed in road accidents by age, sex and category of persons involved — Number",
+    "unit": "Number",
+    "decimals": 0,
+    "description": "",
+    "dataType": "",
+    "groupPath": []
+   },
+   {
+    "code": "tran_sf_roadus|P_MHAB",
+    "title": "Persons killed in road accidents by age, sex and category of persons involved — Per million inhabitants",
+    "unit": "Per million inhabitants",
+    "decimals": 0,
+    "description": "",
+    "dataType": "",
+    "groupPath": []
+   }
+  ],
+  "modified": "2026-08-25T23:00:00+0200"
+ },
+ "codeLists": {
+  "freq": [
+   {
+    "code": "A",
+    "title": "Annual",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 0
+   }
+  ],
+  "sex": [
+   {
+    "code": "T",
+    "title": "Total",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 0
+   },
+   {
+    "code": "M",
+    "title": "Males",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "F",
+    "title": "Females",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "UNK",
+    "title": "Unknown",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   }
+  ],
+  "age": [
+   {
+    "code": "TOTAL",
+    "title": "Total",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 0
+   },
+   {
+    "code": "Y_LT15",
+    "title": "Less than 15 years",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "Y15-17",
+    "title": "From 15 to 17 years",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "Y18-24",
+    "title": "From 18 to 24 years",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "Y25-49",
+    "title": "From 25 to 49 years",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "Y50-64",
+    "title": "From 50 to 64 years",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "Y_GE65",
+    "title": "65 years or over",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "UNK",
+    "title": "Unknown",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 7
+   }
+  ],
+  "pers_cat": [
+   {
+    "code": "TOTAL",
+    "title": "Total",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 0
+   },
+   {
+    "code": "PAS",
+    "title": "Passengers",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "DRIV",
+    "title": "Drivers",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "PED",
+    "title": "Pedestrians",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "UNK",
+    "title": "Unknown",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   }
+  ],
+  "geo": [
+   {
+    "code": "EU27_2020",
+    "title": "European Union - 27 countries (from 2020)",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 0
+   },
+   {
+    "code": "BE",
+    "title": "Belgium",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 1
+   },
+   {
+    "code": "BG",
+    "title": "Bulgaria",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 2
+   },
+   {
+    "code": "CZ",
+    "title": "Czechia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 3
+   },
+   {
+    "code": "DK",
+    "title": "Denmark",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 4
+   },
+   {
+    "code": "DE",
+    "title": "Germany",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 5
+   },
+   {
+    "code": "EE",
+    "title": "Estonia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 6
+   },
+   {
+    "code": "IE",
+    "title": "Ireland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 7
+   },
+   {
+    "code": "EL",
+    "title": "Greece",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 8
+   },
+   {
+    "code": "ES",
+    "title": "Spain",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 9
+   },
+   {
+    "code": "FR",
+    "title": "France",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 10
+   },
+   {
+    "code": "HR",
+    "title": "Croatia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 11
+   },
+   {
+    "code": "IT",
+    "title": "Italy",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 12
+   },
+   {
+    "code": "CY",
+    "title": "Cyprus",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 13
+   },
+   {
+    "code": "LV",
+    "title": "Latvia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 14
+   },
+   {
+    "code": "LT",
+    "title": "Lithuania",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 15
+   },
+   {
+    "code": "LU",
+    "title": "Luxembourg",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 16
+   },
+   {
+    "code": "HU",
+    "title": "Hungary",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 17
+   },
+   {
+    "code": "MT",
+    "title": "Malta",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 18
+   },
+   {
+    "code": "NL",
+    "title": "Netherlands",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 19
+   },
+   {
+    "code": "AT",
+    "title": "Austria",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 20
+   },
+   {
+    "code": "PL",
+    "title": "Poland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 21
+   },
+   {
+    "code": "PT",
+    "title": "Portugal",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 22
+   },
+   {
+    "code": "RO",
+    "title": "Romania",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 23
+   },
+   {
+    "code": "SI",
+    "title": "Slovenia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 24
+   },
+   {
+    "code": "SK",
+    "title": "Slovakia",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 25
+   },
+   {
+    "code": "FI",
+    "title": "Finland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 26
+   },
+   {
+    "code": "SE",
+    "title": "Sweden",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 27
+   },
+   {
+    "code": "IS",
+    "title": "Iceland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 28
+   },
+   {
+    "code": "LI",
+    "title": "Liechtenstein",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 29
+   },
+   {
+    "code": "NO",
+    "title": "Norway",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 30
+   },
+   {
+    "code": "CH",
+    "title": "Switzerland",
+    "dimensionGroup": null,
+    "status": null,
+    "index": 31
+   }
+  ],
+  "time": [
+   {
+    "code": "1999JJ00",
+    "title": "1999",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 0
+   },
+   {
+    "code": "2000JJ00",
+    "title": "2000",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 1
+   },
+   {
+    "code": "2001JJ00",
+    "title": "2001",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 2
+   },
+   {
+    "code": "2002JJ00",
+    "title": "2002",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 3
+   },
+   {
+    "code": "2003JJ00",
+    "title": "2003",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 4
+   },
+   {
+    "code": "2004JJ00",
+    "title": "2004",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 5
+   },
+   {
+    "code": "2005JJ00",
+    "title": "2005",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 6
+   },
+   {
+    "code": "2006JJ00",
+    "title": "2006",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 7
+   },
+   {
+    "code": "2007JJ00",
+    "title": "2007",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 8
+   },
+   {
+    "code": "2008JJ00",
+    "title": "2008",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 9
+   },
+   {
+    "code": "2009JJ00",
+    "title": "2009",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 10
+   },
+   {
+    "code": "2010JJ00",
+    "title": "2010",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 11
+   },
+   {
+    "code": "2011JJ00",
+    "title": "2011",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 12
+   },
+   {
+    "code": "2012JJ00",
+    "title": "2012",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 13
+   },
+   {
+    "code": "2013JJ00",
+    "title": "2013",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 14
+   },
+   {
+    "code": "2014JJ00",
+    "title": "2014",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 15
+   },
+   {
+    "code": "2015JJ00",
+    "title": "2015",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 16
+   },
+   {
+    "code": "2016JJ00",
+    "title": "2016",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 17
+   },
+   {
+    "code": "2017JJ00",
+    "title": "2017",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 18
+   },
+   {
+    "code": "2018JJ00",
+    "title": "2018",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 19
+   },
+   {
+    "code": "2019JJ00",
+    "title": "2019",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 20
+   },
+   {
+    "code": "2020JJ00",
+    "title": "2020",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 21
+   },
+   {
+    "code": "2021JJ00",
+    "title": "2021",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 22
+   },
+   {
+    "code": "2022JJ00",
+    "title": "2022",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 23
+   },
+   {
+    "code": "2023JJ00",
+    "title": "2023",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 24
+   },
+   {
+    "code": "2024JJ00",
+    "title": "2024",
+    "dimensionGroup": null,
+    "status": "Published",
+    "index": 25
+   }
+  ]
+ }
+}

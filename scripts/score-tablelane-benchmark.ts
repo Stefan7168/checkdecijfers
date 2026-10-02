@@ -33,12 +33,14 @@ import { scanBody } from '../src/answer/compose/validate.ts';
 import type { TableLaneEnvelope } from '../src/answer/table-lane/types.ts';
 import { parsePeriodCode } from '../src/ingestion/periods.ts';
 import { SEED_TABLES } from '../src/ingestion/registry-seed.ts';
+import { isProvisionalStatus, resolveSourceForTable } from '../src/sources/registry.ts';
 import type { ResultCell } from '../src/query/types.ts';
 import { loadSchemaFixture } from '../tests/helpers/tablelane-bench-source.ts';
-import { DEFAULT_DUMP_PATH, type TableLaneDump } from './run-tablelane-benchmark.ts';
+import { dumpPathFor, type TableLaneDump } from './run-tablelane-benchmark.ts';
 import {
   loadTableLaneKey,
   loadTableLaneTasks,
+  setFromArgv,
   type KeyCell,
   type TableLaneKeyEntry,
   type TableLaneKeyFile,
@@ -158,7 +160,10 @@ function answerProblems(record: AuditRecord, entry: TableLaneKeyEntry): string[]
     }
     if (at.value !== want.value) problems.push(`key cell ${where}: stored value ${at.value} != key ${want.value}`);
     if (at.status !== want.status) problems.push(`key cell ${where}: status ${at.status} != key ${want.status}`);
-    if (at.provisional !== (want.status !== 'Definitief')) problems.push(`key cell ${where}: provisional flag ${at.provisional} is wrong`);
+    // The source's own provisional rule (CBS: anything but 'Definitief'; Eurostat: any flag) — session 153.
+    if (at.provisional !== isProvisionalStatus(resolveSourceForTable(entry.table), want.status)) {
+      problems.push(`key cell ${where}: provisional flag ${at.provisional} is wrong`);
+    }
   }
   if (cells.length !== entry.cells.length) {
     problems.push(`the answer holds ${cells.length} cell(s), the key ${entry.cells.length} — it answered about more or other cells`);
@@ -263,14 +268,15 @@ export function formatScore(score: TableLaneScore): string {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const argv = process.argv.slice(2);
-  let dumpPath = DEFAULT_DUMP_PATH;
+  const set = setFromArgv(argv);
+  let dumpPath = dumpPathFor(set);
   let reportPath: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--report') reportPath = argv[++i] ?? null;
-    else dumpPath = resolve(argv[i]!);
+    else if (argv[i] !== '--eurostat') dumpPath = resolve(argv[i]!);
   }
-  const file = loadTableLaneTasks();
-  const key = loadTableLaneKey();
+  const file = loadTableLaneTasks(set);
+  const key = loadTableLaneKey(set);
   const structural = definitionProblems(file, key);
   if (structural.length > 0) {
     console.error(`table-lane benchmark definition is broken:\n  ${structural.join('\n  ')}`);

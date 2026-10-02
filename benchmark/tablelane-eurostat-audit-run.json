@@ -1,0 +1,3031 @@
+{
+ "mode": "replay",
+ "generatedAt": "2026-10-02T06:26:24.682Z",
+ "referenceDate": "2026-10-02",
+ "parsePromptVersion": 4,
+ "parseSchemaVersion": 2,
+ "parseRequestHashes": [
+  "4a8d812976e6389807bf48fccc3d01a9",
+  "2d2d823451202844607df049b2d49beb",
+  "9bfa332acd19fb54b599b1611f642f61",
+  "7a056608135f9887960b3a6c86cd07f0",
+  "87d2ca7c7ffb4e74fc507bd229b9cdc7",
+  "f27f4f4a8d4cd2752d0ea0339daa6e25",
+  "e64001a53f7437f98fee7d9eac832900",
+  "e6d4ba5cd197e8848b5a5200102667e1",
+  "71c2443aee446d446c08a6efb93493d6",
+  "5f34dc19ea7d95b3cb16a70ce6bd813c",
+  "7c8b0aba18e796adfb4dfc371d4a54d1",
+  "e32d09f6e3c6ff5c37fe16e4d8d76930"
+ ],
+ "tasks": [
+  {
+   "id": "LE1",
+   "type": "answer",
+   "table": "eurostat:tran_sf_roadus",
+   "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+   "previousQuestion": null,
+   "rowId": 1,
+   "rowStatus": "done",
+   "auditId": 1,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE2",
+   "type": "answer",
+   "table": "eurostat:tran_sf_roadus",
+   "question": "Hoeveel voetgangers verloren in 2022 het leven in het verkeer in Spanje?",
+   "previousQuestion": null,
+   "rowId": 2,
+   "rowStatus": "done",
+   "auditId": 2,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE3",
+   "type": "ask",
+   "table": "eurostat:nrg_ind_ren",
+   "question": "Hoe groot was het aandeel hernieuwbare energie in Zweden in 2023?",
+   "previousQuestion": null,
+   "rowId": 3,
+   "rowStatus": "done",
+   "auditId": 3,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE4",
+   "type": "answer",
+   "table": "eurostat:env_wasmun",
+   "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+   "previousQuestion": null,
+   "rowId": 4,
+   "rowStatus": "done",
+   "auditId": 4,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE5",
+   "type": "answer",
+   "table": "eurostat:sdg_08_10",
+   "question": "Wat was het reële bbp per inwoner van Ierland in 2024?",
+   "previousQuestion": null,
+   "rowId": 5,
+   "rowStatus": "done",
+   "auditId": 5,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE6",
+   "type": "answer",
+   "table": "eurostat:crim_off_cat",
+   "question": "Hoeveel inbraken registreerde de politie in 2022 in België?",
+   "previousQuestion": null,
+   "rowId": 6,
+   "rowStatus": "done",
+   "auditId": 6,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE7",
+   "type": "answer",
+   "table": "eurostat:migr_asyappctza",
+   "question": "Hoeveel asielaanvragen werden er in 2023 in Frankrijk ingediend?",
+   "previousQuestion": null,
+   "rowId": 7,
+   "rowStatus": "done",
+   "auditId": 7,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 1,
+     "asked": 0,
+     "refused": 0,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE8",
+   "type": "refuse",
+   "table": "eurostat:tran_sf_roadus",
+   "question": "Hoeveel verkeersdoden waren er in 2023 in Beieren?",
+   "previousQuestion": null,
+   "rowId": 8,
+   "rowStatus": "done",
+   "auditId": 8,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 0,
+     "asked": 0,
+     "refused": 1,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE9",
+   "type": "refuse",
+   "table": "eurostat:crim_off_cat",
+   "question": "Hoeveel inbraken registreerde de politie in 2022 in Turkije?",
+   "previousQuestion": null,
+   "rowId": 9,
+   "rowStatus": "done",
+   "auditId": 9,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 0,
+     "asked": 0,
+     "refused": 1,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE10",
+   "type": "refuse",
+   "table": "eurostat:env_wasmun",
+   "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2030 in Denemarken ingezameld?",
+   "previousQuestion": null,
+   "rowId": 10,
+   "rowStatus": "done",
+   "auditId": 10,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 0,
+     "asked": 0,
+     "refused": 1,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE11",
+   "type": "refuse",
+   "table": "eurostat:tran_sf_roadus",
+   "question": "Hoeveel verkeersongevallen met alleen blikschade waren er in 2023 in Polen?",
+   "previousQuestion": null,
+   "rowId": 11,
+   "rowStatus": "done",
+   "auditId": 11,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 0,
+     "asked": 0,
+     "refused": 1,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "id": "LE12",
+   "type": "ask",
+   "table": "eurostat:crim_off_cat",
+   "question": "Hoeveel misdrijven registreerde de politie in 2022 in Oostenrijk?",
+   "previousQuestion": null,
+   "rowId": 12,
+   "rowStatus": "done",
+   "auditId": 12,
+   "uncovered": [],
+   "jobs": [
+    {
+     "processed": 1,
+     "answered": 0,
+     "asked": 0,
+     "refused": 1,
+     "failed": 0
+    }
+   ]
+  }
+ ],
+ "records": [
+  {
+   "id": 1,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.479+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "2aee46a8-654b-41dd-8afc-1c27989a385a",
+   "kind": "answer",
+   "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Persons killed in road accidents by age, sex and category of persons involved — Number in Polen was in 2023 1.893.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7384,
+      "outputTokens": 212
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus"
+      },
+      "regions": [
+       "PL"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+     "confidence": 0.9,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Persons killed in road accidents by age, sex and category of persons involved — Number in Polen was in 2023 1.893.",
+     "text": "Persons killed in road accidents by age, sex and category of persons involved — Number in Polen was in 2023 1.893.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "TOTAL"
+       },
+       "unit": "Number",
+       "grain": "JJ",
+       "value": 1893,
+       "status": "Published",
+       "batchId": 1,
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus",
+       "decimals": 0,
+       "resultId": "eurostat:tran_sf_roadus:tran_sf_roadus|NR:PL:2023JJ00:age=TOTAL;freq=A;pers_cat=TOTAL;sex=T",
+       "dimLabels": {
+        "age": "Total",
+        "sex": "Total",
+        "freq": "Annual",
+        "pers_cat": "Total"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "PL",
+       "periodLabel": "2023",
+       "provisional": false,
+       "regionLabel": "Polen",
+       "measureTitle": "Persons killed in road accidents by age, sex and category of persons involved — Number",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus"
+      },
+      "regions": [
+       "PL"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.455Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tran_sf_roadus",
+      "syncedAt": "2026-10-02T06:26:24.455Z",
+      "tableTitle": "Persons killed in road accidents by age, sex and category of persons involved",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2023
+      },
+      "reading": "Aantal dodelijke slachtoffers bij verkeersongevallen in Polen in 2023, totaal.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Polen"
+       }
+      ],
+      "breakdowns": {
+       "age": {
+        "kind": "not_named"
+       },
+       "sex": {
+        "kind": "not_named"
+       },
+       "pers_cat": {
+        "kind": "not_named"
+       }
+      },
+      "confidence": 0.9,
+      "derivation": "none",
+      "measureCode": "tran_sf_roadus|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 1,
+     "tableId": "eurostat:tran_sf_roadus",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "PL",
+        "dimension": "geo",
+        "memberTitle": "Poland",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": [
+       {
+        "code": "T",
+        "dimension": "sex",
+        "memberTitle": "Total",
+        "dimensionTitle": "Sex"
+       },
+       {
+        "code": "TOTAL",
+        "dimension": "age",
+        "memberTitle": "Total",
+        "dimensionTitle": "Age class"
+       },
+       {
+        "code": "TOTAL",
+        "dimension": "pers_cat",
+        "memberTitle": "Total",
+        "dimensionTitle": "Category of persons"
+       }
+      ]
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7384,
+       "outputTokens": 212
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"tran_sf_roadus|NR\",\"breakdowns\":[{\"dimension\":\"sex\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"age\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"pers_cat\",\"choice\":\"niet_genoemd\"}],\"period\":{\"kind\":\"year\",\"year\":2023},\"regions\":[{\"name\":\"Polen\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.9,\"reading\":\"Aantal dodelijke slachtoffers bij verkeersongevallen in Polen in 2023, totaal.\"}",
+      "requestHash": "4a8d812976e6389807bf48fccc3d01a9"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; Geopolitical entity (reporting): Poland · Uitgangspunt: Sex: Total; Age class: Total; Category of persons: Total",
+     "sliceFilterKey": "{\"measures\":[\"tran_sf_roadus|NR\"],\"members\":{\"age\":[\"TOTAL\"],\"freq\":[\"A\"],\"geo\":[\"PL\"],\"pers_cat\":[\"TOTAL\"],\"sex\":[\"T\"]},\"periods\":[\"2023JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "a0c36f590d96a4cb0ded3019abba734e12a633e9a4f9ddce21c1cf4cff084dde",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Persons killed in road accidents by age, sex and category of persons involved — Number in Polen was in 2023 1.893.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2023JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "age": "TOTAL",
+      "sex": "T",
+      "freq": "A",
+      "pers_cat": "TOTAL"
+     },
+     "kind": "explicit",
+     "measure": "tran_sf_roadus|NR",
+     "tableId": "eurostat:tran_sf_roadus"
+    },
+    "regions": [
+     "PL"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "9d4d9cfc2de4f2618e8a5691b8d8cc13",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:tran_sf_roadus:tran_sf_roadus|NR:PL:2023JJ00:age=TOTAL;freq=A;pers_cat=TOTAL;sex=T"
+   ],
+   "tableIds": [
+    "eurostat:tran_sf_roadus"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:tran_sf_roadus",
+     "syncedAt": "2026-10-02T06:26:24.455Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7384,
+     "outputTokens": 212
+    }
+   ],
+   "inputTokens": 7384,
+   "outputTokens": 212,
+   "latencyMs": 34
+  },
+  {
+   "id": 2,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.507+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "7d8debd0-06c4-42bd-b99e-5b168e88a8c5",
+   "kind": "answer",
+   "question": "Hoeveel voetgangers verloren in 2022 het leven in het verkeer in Spanje?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Persons killed in road accidents by age, sex and category of persons involved — Number in Spanje was in 2022 348.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7384,
+      "outputTokens": 198
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "PED"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus"
+      },
+      "regions": [
+       "ES"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoeveel voetgangers verloren in 2022 het leven in het verkeer in Spanje?",
+     "confidence": 0.9,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Persons killed in road accidents by age, sex and category of persons involved — Number in Spanje was in 2022 348.",
+     "text": "Persons killed in road accidents by age, sex and category of persons involved — Number in Spanje was in 2022 348.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "PED"
+       },
+       "unit": "Number",
+       "grain": "JJ",
+       "value": 348,
+       "status": "Published",
+       "batchId": 2,
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus",
+       "decimals": 0,
+       "resultId": "eurostat:tran_sf_roadus:tran_sf_roadus|NR:ES:2022JJ00:age=TOTAL;freq=A;pers_cat=PED;sex=T",
+       "dimLabels": {
+        "age": "Total",
+        "sex": "Total",
+        "freq": "Annual",
+        "pers_cat": "Pedestrians"
+       },
+       "periodCode": "2022JJ00",
+       "regionCode": "ES",
+       "periodLabel": "2022",
+       "provisional": false,
+       "regionLabel": "Spanje",
+       "measureTitle": "Persons killed in road accidents by age, sex and category of persons involved — Number",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "pers_cat": "PED"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadus|NR",
+       "tableId": "eurostat:tran_sf_roadus"
+      },
+      "regions": [
+       "ES"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.494Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tran_sf_roadus",
+      "syncedAt": "2026-10-02T06:26:24.494Z",
+      "tableTitle": "Persons killed in road accidents by age, sex and category of persons involved",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2022JJ00",
+       "from": "2022JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoeveel voetgangers verloren in 2022 het leven in het verkeer in Spanje?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2022
+      },
+      "reading": "Aantal verkeersdoden onder voetgangers in Spanje in 2022.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Spanje"
+       }
+      ],
+      "breakdowns": {
+       "age": {
+        "kind": "not_named"
+       },
+       "sex": {
+        "kind": "not_named"
+       },
+       "pers_cat": {
+        "code": "PED",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.9,
+      "derivation": "none",
+      "measureCode": "tran_sf_roadus|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 2,
+     "tableId": "eurostat:tran_sf_roadus",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "PED",
+        "dimension": "pers_cat",
+        "memberTitle": "Pedestrians",
+        "dimensionTitle": "Category of persons"
+       },
+       {
+        "code": "ES",
+        "dimension": "geo",
+        "memberTitle": "Spain",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": [
+       {
+        "code": "T",
+        "dimension": "sex",
+        "memberTitle": "Total",
+        "dimensionTitle": "Sex"
+       },
+       {
+        "code": "TOTAL",
+        "dimension": "age",
+        "memberTitle": "Total",
+        "dimensionTitle": "Age class"
+       }
+      ]
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7384,
+       "outputTokens": 198
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"tran_sf_roadus|NR\",\"breakdowns\":[{\"dimension\":\"sex\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"age\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"pers_cat\",\"choice\":\"PED\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"regions\":[{\"name\":\"Spanje\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.9,\"reading\":\"Aantal verkeersdoden onder voetgangers in Spanje in 2022.\"}",
+      "requestHash": "2d2d823451202844607df049b2d49beb"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; Category of persons: Pedestrians; Geopolitical entity (reporting): Spain · Uitgangspunt: Sex: Total; Age class: Total",
+     "sliceFilterKey": "{\"measures\":[\"tran_sf_roadus|NR\"],\"members\":{\"age\":[\"TOTAL\"],\"freq\":[\"A\"],\"geo\":[\"ES\"],\"pers_cat\":[\"PED\"],\"sex\":[\"T\"]},\"periods\":[\"2022JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "a0c36f590d96a4cb0ded3019abba734e12a633e9a4f9ddce21c1cf4cff084dde",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Persons killed in road accidents by age, sex and category of persons involved — Number in Spanje was in 2022 348.\n\nBron: Eurostat, dataset tran_sf_roadus — Persons killed in road accidents by age, sex and category of persons involved. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2022JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "age": "TOTAL",
+      "sex": "T",
+      "freq": "A",
+      "pers_cat": "PED"
+     },
+     "kind": "explicit",
+     "measure": "tran_sf_roadus|NR",
+     "tableId": "eurostat:tran_sf_roadus"
+    },
+    "regions": [
+     "ES"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "8ef3f42599b0d44bc696544e1b21d789",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:tran_sf_roadus:tran_sf_roadus|NR:ES:2022JJ00:age=TOTAL;freq=A;pers_cat=PED;sex=T"
+   ],
+   "tableIds": [
+    "eurostat:tran_sf_roadus"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:tran_sf_roadus",
+     "syncedAt": "2026-10-02T06:26:24.494Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7384,
+     "outputTokens": 198
+    }
+   ],
+   "inputTokens": 7384,
+   "outputTokens": 198,
+   "latencyMs": 17
+  },
+  {
+   "id": 3,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.532+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "180494f9-8f5b-4d30-82a9-27793a537e57",
+   "kind": "answer",
+   "question": "Hoe groot was het aandeel hernieuwbare energie in Zweden in 2023?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Renewable energy share — Percentage in Zweden was in 2023 66,393 Percentage.\n\nBron: Eurostat, dataset nrg_ind_ren — Renewable energy share. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7202,
+      "outputTokens": 155
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "nrg_bal": "REN"
+       },
+       "kind": "explicit",
+       "measure": "nrg_ind_ren|PC",
+       "tableId": "eurostat:nrg_ind_ren"
+      },
+      "regions": [
+       "SE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoe groot was het aandeel hernieuwbare energie in Zweden in 2023?",
+     "confidence": 0.85,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Renewable energy share — Percentage in Zweden was in 2023 66,393 Percentage.",
+     "text": "Renewable energy share — Percentage in Zweden was in 2023 66,393 Percentage.\n\nBron: Eurostat, dataset nrg_ind_ren — Renewable energy share. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset nrg_ind_ren — Renewable energy share. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "nrg_bal": "REN"
+       },
+       "unit": "Percentage",
+       "grain": "JJ",
+       "value": 66.393,
+       "status": "Published",
+       "batchId": 3,
+       "measure": "nrg_ind_ren|PC",
+       "tableId": "eurostat:nrg_ind_ren",
+       "decimals": 3,
+       "resultId": "eurostat:nrg_ind_ren:nrg_ind_ren|PC:SE:2023JJ00:freq=A;nrg_bal=REN",
+       "dimLabels": {
+        "freq": "Annual",
+        "nrg_bal": "Renewable energy - overall"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "SE",
+       "periodLabel": "2023",
+       "provisional": false,
+       "regionLabel": "Zweden",
+       "measureTitle": "Renewable energy share — Percentage",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "nrg_bal": "REN"
+       },
+       "kind": "explicit",
+       "measure": "nrg_ind_ren|PC",
+       "tableId": "eurostat:nrg_ind_ren"
+      },
+      "regions": [
+       "SE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.522Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:nrg_ind_ren",
+      "syncedAt": "2026-10-02T06:26:24.522Z",
+      "tableTitle": "Renewable energy share",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoe groot was het aandeel hernieuwbare energie in Zweden in 2023?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2023
+      },
+      "reading": "Aandeel hernieuwbare energie (totaal) in Zweden in 2023.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Zweden"
+       }
+      ],
+      "breakdowns": {
+       "nrg_bal": {
+        "code": "REN",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.85,
+      "derivation": "none",
+      "measureCode": "nrg_ind_ren|PC",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 3,
+     "tableId": "eurostat:nrg_ind_ren",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "REN",
+        "dimension": "nrg_bal",
+        "memberTitle": "Renewable energy - overall",
+        "dimensionTitle": "Energy balance"
+       },
+       {
+        "code": "SE",
+        "dimension": "geo",
+        "memberTitle": "Sweden",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": []
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7202,
+       "outputTokens": 155
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"nrg_ind_ren|PC\",\"breakdowns\":[{\"dimension\":\"nrg_bal\",\"choice\":\"REN\"}],\"period\":{\"kind\":\"year\",\"year\":2023},\"regions\":[{\"name\":\"Zweden\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.85,\"reading\":\"Aandeel hernieuwbare energie (totaal) in Zweden in 2023.\"}",
+      "requestHash": "9bfa332acd19fb54b599b1611f642f61"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; Energy balance: Renewable energy - overall; Geopolitical entity (reporting): Sweden",
+     "sliceFilterKey": "{\"measures\":[\"nrg_ind_ren|PC\"],\"members\":{\"freq\":[\"A\"],\"geo\":[\"SE\"],\"nrg_bal\":[\"REN\"]},\"periods\":[\"2023JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "1274b7a2b5ba75c6a31165d5f6c625163273baf56047119182a3ba5a7a84605e",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Renewable energy share — Percentage in Zweden was in 2023 66,393 Percentage.\n\nBron: Eurostat, dataset nrg_ind_ren — Renewable energy share. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2023JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "freq": "A",
+      "nrg_bal": "REN"
+     },
+     "kind": "explicit",
+     "measure": "nrg_ind_ren|PC",
+     "tableId": "eurostat:nrg_ind_ren"
+    },
+    "regions": [
+     "SE"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "14144200a117a1d1d5833564f397f16b",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:nrg_ind_ren:nrg_ind_ren|PC:SE:2023JJ00:freq=A;nrg_bal=REN"
+   ],
+   "tableIds": [
+    "eurostat:nrg_ind_ren"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:nrg_ind_ren",
+     "syncedAt": "2026-10-02T06:26:24.522Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7202,
+     "outputTokens": 155
+    }
+   ],
+   "inputTokens": 7202,
+   "outputTokens": 155,
+   "latencyMs": 14
+  },
+  {
+   "id": 4,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.553+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "8c21784a-53e5-496f-a6eb-32fb89613d4d",
+   "kind": "answer",
+   "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Municipal waste by waste management operations — Kilograms per capita in Denemarken was in 2022 759 (Kilograms per capita).\n\nBron: Eurostat, dataset env_wasmun — Municipal waste by waste management operations. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7332,
+      "outputTokens": 164
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "wst_oper": "GEN"
+       },
+       "kind": "explicit",
+       "measure": "env_wasmun|KG_HAB",
+       "tableId": "eurostat:env_wasmun"
+      },
+      "regions": [
+       "DK"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+     "confidence": 0.88,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Municipal waste by waste management operations — Kilograms per capita in Denemarken was in 2022 759 (Kilograms per capita).",
+     "text": "Municipal waste by waste management operations — Kilograms per capita in Denemarken was in 2022 759 (Kilograms per capita).\n\nBron: Eurostat, dataset env_wasmun — Municipal waste by waste management operations. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset env_wasmun — Municipal waste by waste management operations. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "wst_oper": "GEN"
+       },
+       "unit": "Kilograms per capita",
+       "grain": "JJ",
+       "value": 759,
+       "status": "Published",
+       "batchId": 4,
+       "measure": "env_wasmun|KG_HAB",
+       "tableId": "eurostat:env_wasmun",
+       "decimals": 0,
+       "resultId": "eurostat:env_wasmun:env_wasmun|KG_HAB:DK:2022JJ00:freq=A;wst_oper=GEN",
+       "dimLabels": {
+        "freq": "Annual",
+        "wst_oper": "Waste generated"
+       },
+       "periodCode": "2022JJ00",
+       "regionCode": "DK",
+       "periodLabel": "2022",
+       "provisional": false,
+       "regionLabel": "Denemarken",
+       "measureTitle": "Municipal waste by waste management operations — Kilograms per capita",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "wst_oper": "GEN"
+       },
+       "kind": "explicit",
+       "measure": "env_wasmun|KG_HAB",
+       "tableId": "eurostat:env_wasmun"
+      },
+      "regions": [
+       "DK"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.546Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:env_wasmun",
+      "syncedAt": "2026-10-02T06:26:24.546Z",
+      "tableTitle": "Municipal waste by waste management operations",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2022JJ00",
+       "from": "2022JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2022
+      },
+      "reading": "Kilogram huishoudelijk afval per inwoner (waste generated) in Denemarken in 2022.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Denemarken"
+       }
+      ],
+      "breakdowns": {
+       "wst_oper": {
+        "code": "GEN",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.88,
+      "derivation": "none",
+      "measureCode": "env_wasmun|KG_HAB",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 4,
+     "tableId": "eurostat:env_wasmun",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "GEN",
+        "dimension": "wst_oper",
+        "memberTitle": "Waste generated",
+        "dimensionTitle": "Waste management operations"
+       },
+       {
+        "code": "DK",
+        "dimension": "geo",
+        "memberTitle": "Denmark",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": []
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7332,
+       "outputTokens": 164
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"env_wasmun|KG_HAB\",\"breakdowns\":[{\"dimension\":\"wst_oper\",\"choice\":\"GEN\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"regions\":[{\"name\":\"Denemarken\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.88,\"reading\":\"Kilogram huishoudelijk afval per inwoner (waste generated) in Denemarken in 2022.\"}",
+      "requestHash": "7a056608135f9887960b3a6c86cd07f0"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; Waste management operations: Waste generated; Geopolitical entity (reporting): Denmark",
+     "sliceFilterKey": "{\"measures\":[\"env_wasmun|KG_HAB\"],\"members\":{\"freq\":[\"A\"],\"geo\":[\"DK\"],\"wst_oper\":[\"GEN\"]},\"periods\":[\"2022JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "813235f6ae81e54a6c03e4e24df9cf4fa3cdc203897f022851d80b7527867072",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Municipal waste by waste management operations — Kilograms per capita in Denemarken was in 2022 759 (Kilograms per capita).\n\nBron: Eurostat, dataset env_wasmun — Municipal waste by waste management operations. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2022JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "freq": "A",
+      "wst_oper": "GEN"
+     },
+     "kind": "explicit",
+     "measure": "env_wasmun|KG_HAB",
+     "tableId": "eurostat:env_wasmun"
+    },
+    "regions": [
+     "DK"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "aabe52d62a95e9c8438d3ad2596afd96",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:env_wasmun:env_wasmun|KG_HAB:DK:2022JJ00:freq=A;wst_oper=GEN"
+   ],
+   "tableIds": [
+    "eurostat:env_wasmun"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:env_wasmun",
+     "syncedAt": "2026-10-02T06:26:24.546Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7332,
+     "outputTokens": 164
+    }
+   ],
+   "inputTokens": 7332,
+   "outputTokens": 164,
+   "latencyMs": 10
+  },
+  {
+   "id": 5,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.576+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "85939f9d-ee54-463e-8320-8d1aca760c2a",
+   "kind": "answer",
+   "question": "Wat was het reële bbp per inwoner van Ierland in 2024?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Real GDP per capita — Chain linked volumes (2020), euro per capita in Ierland was in 2024 89.300 (Chain linked volumes (2020), euro per capita).\n\nBron: Eurostat, dataset sdg_08_10 — Real GDP per capita. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7194,
+      "outputTokens": 176
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2024JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "na_item": "B1GQ"
+       },
+       "kind": "explicit",
+       "measure": "sdg_08_10|CLV20_EUR_HAB",
+       "tableId": "eurostat:sdg_08_10"
+      },
+      "regions": [
+       "IE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Wat was het reële bbp per inwoner van Ierland in 2024?",
+     "confidence": 0.9,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Real GDP per capita — Chain linked volumes (2020), euro per capita in Ierland was in 2024 89.300 (Chain linked volumes (2020), euro per capita).",
+     "text": "Real GDP per capita — Chain linked volumes (2020), euro per capita in Ierland was in 2024 89.300 (Chain linked volumes (2020), euro per capita).\n\nBron: Eurostat, dataset sdg_08_10 — Real GDP per capita. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset sdg_08_10 — Real GDP per capita. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "na_item": "B1GQ"
+       },
+       "unit": "Chain linked volumes (2020), euro per capita",
+       "grain": "JJ",
+       "value": 89300,
+       "status": "Published",
+       "batchId": 5,
+       "measure": "sdg_08_10|CLV20_EUR_HAB",
+       "tableId": "eurostat:sdg_08_10",
+       "decimals": 0,
+       "resultId": "eurostat:sdg_08_10:sdg_08_10|CLV20_EUR_HAB:IE:2024JJ00:freq=A;na_item=B1GQ",
+       "dimLabels": {
+        "freq": "Annual",
+        "na_item": "Gross domestic product at market prices"
+       },
+       "periodCode": "2024JJ00",
+       "regionCode": "IE",
+       "periodLabel": "2024",
+       "provisional": false,
+       "regionLabel": "Ierland",
+       "measureTitle": "Real GDP per capita — Chain linked volumes (2020), euro per capita",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2024JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "na_item": "B1GQ"
+       },
+       "kind": "explicit",
+       "measure": "sdg_08_10|CLV20_EUR_HAB",
+       "tableId": "eurostat:sdg_08_10"
+      },
+      "regions": [
+       "IE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.567Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:sdg_08_10",
+      "syncedAt": "2026-10-02T06:26:24.567Z",
+      "tableTitle": "Real GDP per capita",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2024JJ00",
+       "from": "2024JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Wat was het reële bbp per inwoner van Ierland in 2024?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2024
+      },
+      "reading": "Reëel bbp per inwoner (chain linked volumes 2020, euro per hoofd) van Ierland in 2024.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Ierland"
+       }
+      ],
+      "breakdowns": {
+       "na_item": {
+        "code": "B1GQ",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.9,
+      "derivation": "none",
+      "measureCode": "sdg_08_10|CLV20_EUR_HAB",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 5,
+     "tableId": "eurostat:sdg_08_10",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "B1GQ",
+        "dimension": "na_item",
+        "memberTitle": "Gross domestic product at market prices",
+        "dimensionTitle": "National accounts indicator (ESA 2010)"
+       },
+       {
+        "code": "IE",
+        "dimension": "geo",
+        "memberTitle": "Ireland",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": []
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7194,
+       "outputTokens": 176
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"sdg_08_10|CLV20_EUR_HAB\",\"breakdowns\":[{\"dimension\":\"na_item\",\"choice\":\"B1GQ\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"regions\":[{\"name\":\"Ierland\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.9,\"reading\":\"Reëel bbp per inwoner (chain linked volumes 2020, euro per hoofd) van Ierland in 2024.\"}",
+      "requestHash": "87d2ca7c7ffb4e74fc507bd229b9cdc7"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; National accounts indicator (ESA 2010): Gross domestic product at market prices; Geopolitical entity (reporting): Ireland",
+     "sliceFilterKey": "{\"measures\":[\"sdg_08_10|CLV20_EUR_HAB\"],\"members\":{\"freq\":[\"A\"],\"geo\":[\"IE\"],\"na_item\":[\"B1GQ\"]},\"periods\":[\"2024JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "dbbce365fa661172430991c78b3e9882e0c42227c4b09dd53691dcf9e827fd3d",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Real GDP per capita — Chain linked volumes (2020), euro per capita in Ierland was in 2024 89.300 (Chain linked volumes (2020), euro per capita).\n\nBron: Eurostat, dataset sdg_08_10 — Real GDP per capita. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2024JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "freq": "A",
+      "na_item": "B1GQ"
+     },
+     "kind": "explicit",
+     "measure": "sdg_08_10|CLV20_EUR_HAB",
+     "tableId": "eurostat:sdg_08_10"
+    },
+    "regions": [
+     "IE"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "43eab44d2e41afb895a93d5031fab628",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:sdg_08_10:sdg_08_10|CLV20_EUR_HAB:IE:2024JJ00:freq=A;na_item=B1GQ"
+   ],
+   "tableIds": [
+    "eurostat:sdg_08_10"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:sdg_08_10",
+     "syncedAt": "2026-10-02T06:26:24.567Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7194,
+     "outputTokens": 176
+    }
+   ],
+   "inputTokens": 7194,
+   "outputTokens": 176,
+   "latencyMs": 13
+  },
+  {
+   "id": 6,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.598+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "ece61c9d-804a-4e3c-ab62-ca496360052b",
+   "kind": "answer",
+   "question": "Hoeveel inbraken registreerde de politie in 2022 in België?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Police-recorded offences by offence category — Number in België was in 2022 52.137.\n\nBron: Eurostat, dataset crim_off_cat — Police-recorded offences by offence category. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7598,
+      "outputTokens": 155
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "iccs": "ICCS0501"
+       },
+       "kind": "explicit",
+       "measure": "crim_off_cat|NR",
+       "tableId": "eurostat:crim_off_cat"
+      },
+      "regions": [
+       "BE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoeveel inbraken registreerde de politie in 2022 in België?",
+     "confidence": 0.85,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Police-recorded offences by offence category — Number in België was in 2022 52.137.",
+     "text": "Police-recorded offences by offence category — Number in België was in 2022 52.137.\n\nBron: Eurostat, dataset crim_off_cat — Police-recorded offences by offence category. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset crim_off_cat — Police-recorded offences by offence category. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "iccs": "ICCS0501"
+       },
+       "unit": "Number",
+       "grain": "JJ",
+       "value": 52137,
+       "status": "Published",
+       "batchId": 6,
+       "measure": "crim_off_cat|NR",
+       "tableId": "eurostat:crim_off_cat",
+       "decimals": 0,
+       "resultId": "eurostat:crim_off_cat:crim_off_cat|NR:BE:2022JJ00:freq=A;iccs=ICCS0501",
+       "dimLabels": {
+        "freq": "Annual",
+        "iccs": "Burglary"
+       },
+       "periodCode": "2022JJ00",
+       "regionCode": "BE",
+       "periodLabel": "2022",
+       "provisional": false,
+       "regionLabel": "België",
+       "measureTitle": "Police-recorded offences by offence category — Number",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "iccs": "ICCS0501"
+       },
+       "kind": "explicit",
+       "measure": "crim_off_cat|NR",
+       "tableId": "eurostat:crim_off_cat"
+      },
+      "regions": [
+       "BE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.590Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:crim_off_cat",
+      "syncedAt": "2026-10-02T06:26:24.590Z",
+      "tableTitle": "Police-recorded offences by offence category",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2022JJ00",
+       "from": "2022JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoeveel inbraken registreerde de politie in 2022 in België?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2022
+      },
+      "reading": "Aantal door de politie geregistreerde inbraken (ICCS0501) in België in 2022.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "België"
+       }
+      ],
+      "breakdowns": {
+       "iccs": {
+        "code": "ICCS0501",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.85,
+      "derivation": "none",
+      "measureCode": "crim_off_cat|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 6,
+     "tableId": "eurostat:crim_off_cat",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "ICCS0501",
+        "dimension": "iccs",
+        "memberTitle": "Burglary",
+        "dimensionTitle": "International classification of crime for statistical purposes (ICCS)"
+       },
+       {
+        "code": "BE",
+        "dimension": "geo",
+        "memberTitle": "Belgium",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": []
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7598,
+       "outputTokens": 155
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"crim_off_cat|NR\",\"breakdowns\":[{\"dimension\":\"iccs\",\"choice\":\"ICCS0501\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"regions\":[{\"name\":\"België\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.85,\"reading\":\"Aantal door de politie geregistreerde inbraken (ICCS0501) in België in 2022.\"}",
+      "requestHash": "f27f4f4a8d4cd2752d0ea0339daa6e25"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; International classification of crime for statistical purposes (ICCS): Burglary; Geopolitical entity (reporting): Belgium",
+     "sliceFilterKey": "{\"measures\":[\"crim_off_cat|NR\"],\"members\":{\"freq\":[\"A\"],\"geo\":[\"BE\"],\"iccs\":[\"ICCS0501\"]},\"periods\":[\"2022JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "6df07ab30100508f97bf314e29ac5623c70d12c1eec209470c149031b52f9b0a",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Police-recorded offences by offence category — Number in België was in 2022 52.137.\n\nBron: Eurostat, dataset crim_off_cat — Police-recorded offences by offence category. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2022JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "freq": "A",
+      "iccs": "ICCS0501"
+     },
+     "kind": "explicit",
+     "measure": "crim_off_cat|NR",
+     "tableId": "eurostat:crim_off_cat"
+    },
+    "regions": [
+     "BE"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "eebfcb76bd4cd6d78bcdefec687a17b6",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:crim_off_cat:crim_off_cat|NR:BE:2022JJ00:freq=A;iccs=ICCS0501"
+   ],
+   "tableIds": [
+    "eurostat:crim_off_cat"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:crim_off_cat",
+     "syncedAt": "2026-10-02T06:26:24.590Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7598,
+     "outputTokens": 155
+    }
+   ],
+   "inputTokens": 7598,
+   "outputTokens": 155,
+   "latencyMs": 12
+  },
+  {
+   "id": 7,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.62+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "d3c4fcfe-9830-499a-80f8-0f52706ce480",
+   "kind": "answer",
+   "question": "Hoeveel asielaanvragen werden er in 2023 in Frankrijk ingediend?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "answer",
+    "text": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person in Frankrijk was in 2023 167.055 Person.\n\nBron: Eurostat, dataset migr_asyappctza — Asylum applicants by type, citizenship, age and sex - annual aggregated data. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+    "chart": null,
+    "parse": {
+     "raw": {
+      "kind": "data_query",
+      "note": "table-lane: intent built from a validated table-scoped parse (breadth step 5)",
+      "version": 4,
+      "candidates": [],
+      "nearestCanonicalKeys": [],
+      "unmatchedMeasureTerm": null
+     },
+     "kind": "intent",
+     "model": "claude-sonnet-5",
+     "usage": {
+      "inputTokens": 7635,
+      "outputTokens": 240
+     },
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "citizen": "TOTAL",
+        "applicant": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "migr_asyappctza|PER",
+       "tableId": "eurostat:migr_asyappctza"
+      },
+      "regions": [
+       "FR"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "ranked": [],
+     "question": "Hoeveel asielaanvragen werden er in 2023 in Frankrijk ingediend?",
+     "confidence": 0.6,
+     "impliedRecency": false
+    },
+    "answer": {
+     "body": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person in Frankrijk was in 2023 167.055 Person.",
+     "text": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person in Frankrijk was in 2023 167.055 Person.\n\nBron: Eurostat, dataset migr_asyappctza — Asylum applicants by type, citizenship, age and sex - annual aggregated data. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+     "model": null,
+     "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+     },
+     "source": "template",
+     "attempts": [
+      {
+       "ok": false,
+       "kind": "llm",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      },
+      {
+       "ok": false,
+       "kind": "llm_retry",
+       "error": "table-lane benchmark: no compose model — deterministic template",
+       "problems": []
+      }
+     ],
+     "validation": {
+      "ok": true,
+      "problems": []
+     },
+     "markingLine": null,
+     "promptVersion": 4,
+     "schemaVersion": 1,
+     "definitionLine": null,
+     "attributionLine": "Bron: Eurostat, dataset migr_asyappctza — Asylum applicants by type, citizenship, age and sex - annual aggregated data. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0."
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "citizen": "TOTAL",
+        "applicant": "TOTAL"
+       },
+       "unit": "Person",
+       "grain": "JJ",
+       "value": 167055,
+       "status": "Published",
+       "batchId": 7,
+       "measure": "migr_asyappctza|PER",
+       "tableId": "eurostat:migr_asyappctza",
+       "decimals": 0,
+       "resultId": "eurostat:migr_asyappctza:migr_asyappctza|PER:FR:2023JJ00:age=TOTAL;applicant=TOTAL;citizen=TOTAL;freq=A;sex=T",
+       "dimLabels": {
+        "age": "Total",
+        "sex": "Total",
+        "freq": "Annual",
+        "citizen": "Total",
+        "applicant": "Total"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "FR",
+       "periodLabel": "2023",
+       "provisional": false,
+       "regionLabel": "Frankrijk",
+       "measureTitle": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A",
+        "citizen": "TOTAL",
+        "applicant": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "migr_asyappctza|PER",
+       "tableId": "eurostat:migr_asyappctza"
+      },
+      "regions": [
+       "FR"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-02T06:26:24.612Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:migr_asyappctza",
+      "syncedAt": "2026-10-02T06:26:24.612Z",
+      "tableTitle": "Asylum applicants by type, citizenship, age and sex - annual aggregated data",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    },
+    "question": "Hoeveel asielaanvragen werden er in 2023 in Frankrijk ingediend?",
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2023
+      },
+      "reading": "Aantal asielaanvragen (personen) in Frankrijk in 2023, totaal over alle uitsplitsingen.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Frankrijk"
+       }
+      ],
+      "breakdowns": {
+       "age": {
+        "kind": "not_named"
+       },
+       "sex": {
+        "kind": "not_named"
+       },
+       "citizen": {
+        "kind": "not_named"
+       },
+       "applicant": {
+        "kind": "not_named"
+       }
+      },
+      "confidence": 0.6,
+      "derivation": "none",
+      "measureCode": "migr_asyappctza|PER",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 7,
+     "tableId": "eurostat:migr_asyappctza",
+     "version": 1,
+     "question": null,
+     "selection": {
+      "named": [
+       {
+        "code": "A",
+        "dimension": "freq",
+        "memberTitle": "Annual",
+        "dimensionTitle": "Time frequency"
+       },
+       {
+        "code": "FR",
+        "dimension": "geo",
+        "memberTitle": "France",
+        "dimensionTitle": "Geopolitical entity (reporting)"
+       }
+      ],
+      "defaults": [
+       {
+        "code": "TOTAL",
+        "dimension": "citizen",
+        "memberTitle": "Total",
+        "dimensionTitle": "Country of citizenship"
+       },
+       {
+        "code": "TOTAL",
+        "dimension": "applicant",
+        "memberTitle": "Total",
+        "dimensionTitle": "Applicant type"
+       },
+       {
+        "code": "T",
+        "dimension": "sex",
+        "memberTitle": "Total",
+        "dimensionTitle": "Sex"
+       },
+       {
+        "code": "TOTAL",
+        "dimension": "age",
+        "memberTitle": "Total",
+        "dimensionTitle": "Age class"
+       }
+      ]
+     },
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7635,
+       "outputTokens": 240
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"migr_asyappctza|PER\",\"breakdowns\":[{\"dimension\":\"citizen\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"applicant\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"sex\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"age\",\"choice\":\"niet_genoemd\"}],\"period\":{\"kind\":\"year\",\"year\":2023},\"regions\":[{\"name\":\"Frankrijk\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.6,\"reading\":\"Aantal asielaanvragen (personen) in Frankrijk in 2023, totaal over alle uitsplitsingen.\"}",
+      "requestHash": "e64001a53f7437f98fee7d9eac832900"
+     },
+     "selectionNote": "Selectie: Time frequency: Annual; Geopolitical entity (reporting): France · Uitgangspunt: Country of citizenship: Total; Applicant type: Total; Sex: Total; Age class: Total",
+     "sliceFilterKey": "{\"measures\":[\"migr_asyappctza|PER\"],\"members\":{\"age\":[\"TOTAL\"],\"applicant\":[\"TOTAL\"],\"citizen\":[\"TOTAL\"],\"freq\":[\"A\"],\"geo\":[\"FR\"],\"sex\":[\"T\"]},\"periods\":[\"2023JJ00\"]}",
+     "fromCachedSlice": false,
+     "offeredMenuHash": "c60228c4d95de255e06b6d53ad22109e0656e42ed1b4b894b01c5b8489c315e2",
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "webSection": null,
+    "suggestions": [],
+    "schemaVersion": 1,
+    "chartAlternates": [],
+    "sourceSelection": null,
+    "stalenessWarning": null
+   },
+   "finalText": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person in Frankrijk was in 2023 167.055 Person.\n\nBron: Eurostat, dataset migr_asyappctza — Asylum applicants by type, citizenship, age and sex - annual aggregated data. Gegevens gesynchroniseerd op 2026-10-02. Licentie: CC BY 4.0.",
+   "intent": {
+    "period": {
+     "kind": "codes",
+     "codes": [
+      "2023JJ00"
+     ]
+    },
+    "target": {
+     "dims": {
+      "age": "TOTAL",
+      "sex": "T",
+      "freq": "A",
+      "citizen": "TOTAL",
+      "applicant": "TOTAL"
+     },
+     "kind": "explicit",
+     "measure": "migr_asyappctza|PER",
+     "tableId": "eurostat:migr_asyappctza"
+    },
+    "regions": [
+     "FR"
+    ],
+    "derivation": "none",
+    "schemaVersion": 1
+   },
+   "intentHash": "579e1e2b241afaa2bf9f94eff8781078",
+   "refusalReason": null,
+   "resultIds": [
+    "eurostat:migr_asyappctza:migr_asyappctza|PER:FR:2023JJ00:age=TOTAL;applicant=TOTAL;citizen=TOTAL;freq=A;sex=T"
+   ],
+   "tableIds": [
+    "eurostat:migr_asyappctza"
+   ],
+   "tables": [
+    {
+     "tableId": "eurostat:migr_asyappctza",
+     "syncedAt": "2026-10-02T06:26:24.612Z",
+     "tableVersion": 1
+    }
+   ],
+   "answerSource": "template",
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7635,
+     "outputTokens": 240
+    }
+   ],
+   "inputTokens": 7635,
+   "outputTokens": 240,
+   "latencyMs": 12
+  },
+  {
+   "id": 8,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.63+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "9c8d9d25-a26e-45c7-8bfe-dd35bcd7cc77",
+   "kind": "refusal",
+   "question": "Hoeveel verkeersdoden waren er in 2023 in Beieren?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "refusal",
+    "text": "Ik weet niet zeker welk cijfer uit Eurostat-tabel \"Persons killed in road accidents by age, sex and category of persons involved\" je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.",
+    "offer": null,
+    "parse": null,
+    "reason": "table_lane_unsure",
+    "guidance": null,
+    "question": "Hoeveel verkeersdoden waren er in 2023 in Beieren?",
+    "freshness": null,
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2023
+      },
+      "reading": "Aantal verkeersdoden (totaal) in Beieren in 2023, maar deze Eurostat-tabel is dit niet zeker ondersteunt Duitse deelstaten als regio.'",
+      "regions": [
+       {
+        "kind": "onbekend",
+        "name": "Beieren"
+       }
+      ],
+      "breakdowns": {
+       "age": {
+        "kind": "not_named"
+       },
+       "sex": {
+        "kind": "not_named"
+       },
+       "pers_cat": {
+        "kind": "not_named"
+       }
+      },
+      "confidence": 0.55,
+      "derivation": "none",
+      "measureCode": "tran_sf_roadus|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 8,
+     "tableId": "eurostat:tran_sf_roadus",
+     "version": 1,
+     "question": null,
+     "selection": null,
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7377,
+       "outputTokens": 246
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"tran_sf_roadus|NR\",\"breakdowns\":[{\"dimension\":\"sex\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"age\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"pers_cat\",\"choice\":\"niet_genoemd\"}],\"period\":{\"kind\":\"year\",\"year\":2023},\"regions\":[{\"name\":\"Beieren\",\"kind\":\"onbekend\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.55,\"reading\":\"Aantal verkeersdoden (totaal) in Beieren in 2023, maar deze Eurostat-tabel is dit niet zeker ondersteunt Duitse deelstaten als regio.'\"}",
+      "requestHash": "e6d4ba5cd197e8848b5a5200102667e1"
+     },
+     "selectionNote": null,
+     "sliceFilterKey": null,
+     "fromCachedSlice": false,
+     "offeredMenuHash": null,
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "onboarding": null,
+    "webSection": null,
+    "suggestions": [],
+    "internalNote": "parse confidence 0.55 is below 0.6",
+    "queryRefusal": null,
+    "schemaVersion": 1,
+    "sourceSelection": null
+   },
+   "finalText": "Ik weet niet zeker welk cijfer uit Eurostat-tabel \"Persons killed in road accidents by age, sex and category of persons involved\" je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.",
+   "intent": null,
+   "intentHash": null,
+   "refusalReason": "table_lane_unsure",
+   "resultIds": [],
+   "tableIds": [],
+   "tables": [],
+   "answerSource": null,
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7377,
+     "outputTokens": 246
+    }
+   ],
+   "inputTokens": 7377,
+   "outputTokens": 246,
+   "latencyMs": 2
+  },
+  {
+   "id": 9,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.64+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "86d3b7b3-9f85-41c2-9f0f-de9b0671b8c3",
+   "kind": "refusal",
+   "question": "Hoeveel inbraken registreerde de politie in 2022 in Turkije?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "refusal",
+    "text": "De plaats of regio die je noemt, staat niet in Eurostat-tabel \"Police-recorded offences by offence category\". Controleer de naam of noem een andere plaats.",
+    "offer": null,
+    "parse": null,
+    "reason": "region_unknown",
+    "guidance": null,
+    "question": "Hoeveel inbraken registreerde de politie in 2022 in Turkije?",
+    "freshness": null,
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2022
+      },
+      "reading": "Aantal geregistreerde inbraken (ICCS0501) door de politie in Turkije in 2022.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Turkije"
+       }
+      ],
+      "breakdowns": {
+       "iccs": {
+        "code": "ICCS0501",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.85,
+      "derivation": "none",
+      "measureCode": "crim_off_cat|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 9,
+     "tableId": "eurostat:crim_off_cat",
+     "version": 1,
+     "question": null,
+     "selection": null,
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7601,
+       "outputTokens": 161
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"crim_off_cat|NR\",\"breakdowns\":[{\"dimension\":\"iccs\",\"choice\":\"ICCS0501\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"regions\":[{\"name\":\"Turkije\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.85,\"reading\":\"Aantal geregistreerde inbraken (ICCS0501) door de politie in Turkije in 2022.\"}",
+      "requestHash": "71c2443aee446d446c08a6efb93493d6"
+     },
+     "selectionNote": null,
+     "sliceFilterKey": null,
+     "fromCachedSlice": false,
+     "offeredMenuHash": null,
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "onboarding": null,
+    "webSection": null,
+    "suggestions": [],
+    "internalNote": "no member of 'geo' matches the named place 'Turkije'",
+    "queryRefusal": null,
+    "schemaVersion": 1,
+    "sourceSelection": null
+   },
+   "finalText": "De plaats of regio die je noemt, staat niet in Eurostat-tabel \"Police-recorded offences by offence category\". Controleer de naam of noem een andere plaats.",
+   "intent": null,
+   "intentHash": null,
+   "refusalReason": "region_unknown",
+   "resultIds": [],
+   "tableIds": [],
+   "tables": [],
+   "answerSource": null,
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7601,
+     "outputTokens": 161
+    }
+   ],
+   "inputTokens": 7601,
+   "outputTokens": 161,
+   "latencyMs": 2
+  },
+  {
+   "id": 10,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.65+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "7b4aac41-f305-4e28-8cbe-ab877386ee4c",
+   "kind": "refusal",
+   "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2030 in Denemarken ingezameld?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "refusal",
+    "text": "Eurostat-tabel \"Municipal waste by waste management operations\" heeft geen cijfer voor de gevraagde periode. De meest recente periode in deze tabel is 2024.",
+    "offer": null,
+    "parse": null,
+    "reason": "table_lane_period_missing",
+    "guidance": null,
+    "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2030 in Denemarken ingezameld?",
+    "freshness": null,
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2030
+      },
+      "reading": "Hoeveelheid ingezameld huishoudelijk afval (gegenereerd) in kilogram per inwoner in Denemarken in 2030.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Denemarken"
+       }
+      ],
+      "breakdowns": {
+       "wst_oper": {
+        "code": "GEN",
+        "kind": "member"
+       }
+      },
+      "confidence": 0.75,
+      "derivation": "none",
+      "measureCode": "env_wasmun|KG_HAB",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 10,
+     "tableId": "eurostat:env_wasmun",
+     "version": 1,
+     "question": null,
+     "selection": null,
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7332,
+       "outputTokens": 179
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"env_wasmun|KG_HAB\",\"breakdowns\":[{\"dimension\":\"wst_oper\",\"choice\":\"GEN\"}],\"period\":{\"kind\":\"year\",\"year\":2030},\"regions\":[{\"name\":\"Denemarken\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.75,\"reading\":\"Hoeveelheid ingezameld huishoudelijk afval (gegenereerd) in kilogram per inwoner in Denemarken in 2030.\"}",
+      "requestHash": "5f34dc19ea7d95b3cb16a70ce6bd813c"
+     },
+     "selectionNote": null,
+     "sliceFilterKey": null,
+     "fromCachedSlice": false,
+     "offeredMenuHash": null,
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "onboarding": null,
+    "webSection": null,
+    "suggestions": [],
+    "internalNote": "period 2030JJ00 is not published in this table (latest JJ period: 2024JJ00)",
+    "queryRefusal": null,
+    "schemaVersion": 1,
+    "sourceSelection": null
+   },
+   "finalText": "Eurostat-tabel \"Municipal waste by waste management operations\" heeft geen cijfer voor de gevraagde periode. De meest recente periode in deze tabel is 2024.",
+   "intent": null,
+   "intentHash": null,
+   "refusalReason": "table_lane_period_missing",
+   "resultIds": [],
+   "tableIds": [],
+   "tables": [],
+   "answerSource": null,
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7332,
+     "outputTokens": 179
+    }
+   ],
+   "inputTokens": 7332,
+   "outputTokens": 179,
+   "latencyMs": 2
+  },
+  {
+   "id": 11,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.662+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "a2fd9ba2-b471-4a40-8750-731aa5900398",
+   "kind": "refusal",
+   "question": "Hoeveel verkeersongevallen met alleen blikschade waren er in 2023 in Polen?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "refusal",
+    "text": "In Eurostat-tabel \"Persons killed in road accidents by age, sex and category of persons involved\" staat geen cijfer dat precies bij deze vraag past.",
+    "offer": null,
+    "parse": null,
+    "reason": "table_lane_no_measure",
+    "guidance": null,
+    "question": "Hoeveel verkeersongevallen met alleen blikschade waren er in 2023 in Polen?",
+    "freshness": null,
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2023
+      },
+      "reading": "Deze tabel meet dodelijke verkeersslachtoffers, niet ongevallen met alleen blikschade, dus geen geschikte maat gevonden.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Polen"
+       }
+      ],
+      "breakdowns": {
+       "age": {
+        "kind": "not_named"
+       },
+       "sex": {
+        "kind": "not_named"
+       },
+       "pers_cat": {
+        "kind": "not_named"
+       }
+      },
+      "confidence": 0.95,
+      "derivation": "none",
+      "measureCode": null,
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 11,
+     "tableId": "eurostat:tran_sf_roadus",
+     "version": 1,
+     "question": null,
+     "selection": null,
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7385,
+       "outputTokens": 219
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"geen\",\"breakdowns\":[{\"dimension\":\"sex\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"age\",\"choice\":\"niet_genoemd\"},{\"dimension\":\"pers_cat\",\"choice\":\"niet_genoemd\"}],\"period\":{\"kind\":\"year\",\"year\":2023},\"regions\":[{\"name\":\"Polen\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.95,\"reading\":\"Deze tabel meet dodelijke verkeersslachtoffers, niet ongevallen met alleen blikschade, dus geen geschikte maat gevonden.\"}",
+      "requestHash": "7c8b0aba18e796adfb4dfc371d4a54d1"
+     },
+     "selectionNote": null,
+     "sliceFilterKey": null,
+     "fromCachedSlice": false,
+     "offeredMenuHash": null,
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "onboarding": null,
+    "webSection": null,
+    "suggestions": [],
+    "internalNote": "no measure in this table answers the question",
+    "queryRefusal": null,
+    "schemaVersion": 1,
+    "sourceSelection": null
+   },
+   "finalText": "In Eurostat-tabel \"Persons killed in road accidents by age, sex and category of persons involved\" staat geen cijfer dat precies bij deze vraag past.",
+   "intent": null,
+   "intentHash": null,
+   "refusalReason": "table_lane_no_measure",
+   "resultIds": [],
+   "tableIds": [],
+   "tables": [],
+   "answerSource": null,
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7385,
+     "outputTokens": 219
+    }
+   ],
+   "inputTokens": 7385,
+   "outputTokens": 219,
+   "latencyMs": 3
+  },
+  {
+   "id": 12,
+   "schemaVersion": 1,
+   "createdAt": "2026-10-02T13:26:24.673+07:00",
+   "userId": "e4723e2c-8ad6-49ab-9325-f309c991cb12",
+   "sourceTag": "benchmark",
+   "requestId": "059ff678-be9d-4cea-93c5-92a03df7dfc8",
+   "kind": "refusal",
+   "question": "Hoeveel misdrijven registreerde de politie in 2022 in Oostenrijk?",
+   "referenceDate": "2026-10-02",
+   "replyText": null,
+   "pendingClarification": null,
+   "conversationContext": null,
+   "response": {
+    "kind": "refusal",
+    "text": "Ik weet niet zeker welk cijfer uit Eurostat-tabel \"Police-recorded offences by offence category\" je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.",
+    "offer": null,
+    "parse": null,
+    "reason": "table_lane_unsure",
+    "guidance": null,
+    "question": "Hoeveel misdrijven registreerde de politie in 2022 in Oostenrijk?",
+    "freshness": null,
+    "tableLane": {
+     "lang": "nl",
+     "parse": {
+      "period": {
+       "kind": "year",
+       "year": 2022
+      },
+      "reading": "Totaal aantal door de politie geregistreerde misdrijven (alle categorieën) in Oostenrijk in 2022.",
+      "regions": [
+       {
+        "kind": "land",
+        "name": "Oostenrijk"
+       }
+      ],
+      "breakdowns": {
+       "iccs": {
+        "kind": "other"
+       }
+      },
+      "confidence": 0.5,
+      "derivation": "none",
+      "measureCode": "crim_off_cat|NR",
+      "regionScope": null,
+      "periodGrainUnavailable": false
+     },
+     "rowId": 12,
+     "tableId": "eurostat:crim_off_cat",
+     "version": 1,
+     "question": null,
+     "selection": null,
+     "parseAudit": {
+      "model": "claude-sonnet-5",
+      "usage": {
+       "inputTokens": 7605,
+       "outputTokens": 168
+      },
+      "outputText": "{\"version\":2,\"measureCode\":\"crim_off_cat|NR\",\"breakdowns\":[{\"dimension\":\"iccs\",\"choice\":\"anders\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"regions\":[{\"name\":\"Oostenrijk\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.5,\"reading\":\"Totaal aantal door de politie geregistreerde misdrijven (alle categorieën) in Oostenrijk in 2022.\"}",
+      "requestHash": "e32d09f6e3c6ff5c37fe16e4d8d76930"
+     },
+     "selectionNote": null,
+     "sliceFilterKey": null,
+     "fromCachedSlice": false,
+     "offeredMenuHash": null,
+     "finderConfidence": 0.9,
+     "previousQuestion": null,
+     "parsePromptVersion": 4,
+     "parseSchemaVersion": 2
+    },
+    "onboarding": null,
+    "webSection": null,
+    "suggestions": [],
+    "internalNote": "parse confidence 0.5 is below 0.6",
+    "queryRefusal": null,
+    "schemaVersion": 1,
+    "sourceSelection": null
+   },
+   "finalText": "Ik weet niet zeker welk cijfer uit Eurostat-tabel \"Police-recorded offences by offence category\" je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.",
+   "intent": null,
+   "intentHash": null,
+   "refusalReason": "table_lane_unsure",
+   "resultIds": [],
+   "tableIds": [],
+   "tables": [],
+   "answerSource": null,
+   "chartEmitted": false,
+   "promptVersions": {
+    "intent": 7,
+    "clarify": 2,
+    "compose": 4,
+    "followup": 3
+   },
+   "llmCalls": [
+    {
+     "role": "table_parse",
+     "model": "claude-sonnet-5",
+     "inputTokens": 7605,
+     "outputTokens": 168
+    }
+   ],
+   "inputTokens": 7605,
+   "outputTokens": 168,
+   "latencyMs": 2
+  }
+ ]
+}

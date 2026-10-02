@@ -24,6 +24,25 @@ import { loadSchemaFixture } from '../tests/helpers/tablelane-bench-source.ts';
 export const TABLELANE_TASKS_PATH = fileURLToPath(new URL('../benchmark/tablelane-tasks.json', import.meta.url));
 export const TABLELANE_KEY_PATH = fileURLToPath(new URL('../benchmark/tablelane-answer-key.json', import.meta.url));
 
+/** Session 153 (#357 step 5): the benchmark has two frozen sets — CBS (the
+ * original) and Eurostat (its own tasks, key, snapshot and parser fixtures,
+ * its own gate), run by the same harness. Every loader takes the set; the
+ * default is CBS, so every existing caller is unchanged. */
+export type TableLaneSet = 'cbs' | 'eurostat';
+
+const SET_PATHS: Record<TableLaneSet, { tasks: string; key: string }> = {
+  cbs: { tasks: TABLELANE_TASKS_PATH, key: TABLELANE_KEY_PATH },
+  eurostat: {
+    tasks: fileURLToPath(new URL('../benchmark/tablelane-eurostat-tasks.json', import.meta.url)),
+    key: fileURLToPath(new URL('../benchmark/tablelane-eurostat-answer-key.json', import.meta.url)),
+  },
+};
+
+/** `--eurostat` on a benchmark script's command line selects the Eurostat set. */
+export function setFromArgv(argv: string[] = process.argv): TableLaneSet {
+  return argv.includes('--eurostat') ? 'eurostat' : 'cbs';
+}
+
 /** The task's expected parse — what a correct reading of the question is. The
  * canned mode feeds it to the real planner as the model's output; the snapshot
  * capture uses the slice it plans. Never used to score a recorded parse (the
@@ -106,7 +125,8 @@ export interface KeyCell {
 export interface TableLaneKeyEntry {
   table: string;
   cells: KeyCell[];
-  /** The OData URL that returns the key cell(s) — the independent check. */
+  /** The OData URL that returns the key cell(s) — the independent check
+   * (Eurostat: the statistics API JSON-stat URL with every dimension pinned). */
   verifyUrl: string;
 }
 
@@ -117,12 +137,12 @@ export interface TableLaneKeyFile {
   tasks: Record<string, TableLaneKeyEntry>;
 }
 
-export function loadTableLaneTasks(): TableLaneTaskFile {
-  return JSON.parse(readFileSync(TABLELANE_TASKS_PATH, 'utf8')) as TableLaneTaskFile;
+export function loadTableLaneTasks(set: TableLaneSet = 'cbs'): TableLaneTaskFile {
+  return JSON.parse(readFileSync(SET_PATHS[set].tasks, 'utf8')) as TableLaneTaskFile;
 }
 
-export function loadTableLaneKey(): TableLaneKeyFile {
-  return JSON.parse(readFileSync(TABLELANE_KEY_PATH, 'utf8')) as TableLaneKeyFile;
+export function loadTableLaneKey(set: TableLaneSet = 'cbs'): TableLaneKeyFile {
+  return JSON.parse(readFileSync(SET_PATHS[set].key, 'utf8')) as TableLaneKeyFile;
 }
 
 /** Tasks scored against the answer key (answer tasks + ask tasks' reply). */

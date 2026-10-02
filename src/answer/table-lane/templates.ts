@@ -13,6 +13,7 @@
 import type { BuiltRefusal } from '../respond/refusals.ts';
 import { periodCodeToNl } from '../respond/period-nl.ts';
 import { periodCodeToEn } from '../respond/english.ts';
+import { resolveSourceForTable } from '../../sources/registry.ts';
 import type { BreakdownQuestion } from '../../query/breakdowns.ts';
 import type { TableLaneRefusalReason } from './plan.ts';
 
@@ -37,42 +38,51 @@ function tableName(ctx: TableLaneTemplateContext): string {
   return title.length > 0 ? `"${title}"` : ctx.tableId;
 }
 
+/** Session 153 (#357 step 5): the source's own name in front of the table —
+ * "CBS-tabel" / "CBS table" for every CBS table (byte-identical to before),
+ * "Eurostat-tabel" / "Eurostat table" for a Eurostat dataset. A Eurostat table
+ * was called a CBS table in the first end-to-end Eurostat benchmark run. */
+function sourceName(ctx: TableLaneTemplateContext): string {
+  return resolveSourceForTable(ctx.tableId).displayName;
+}
+
 function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): Texts {
   const t = tableName(ctx);
+  const src = sourceName(ctx);
   switch (reason) {
     case 'table_lane_ineligible':
       return {
-        nl: `Ik kan CBS-tabel ${t} niet gebruiken om deze vraag te beantwoorden.`,
-        en: `I can't use CBS table ${t} to answer this question.`,
+        nl: `Ik kan ${src}-tabel ${t} niet gebruiken om deze vraag te beantwoorden.`,
+        en: `I can't use ${src} table ${t} to answer this question.`,
       };
     case 'table_lane_no_measure':
       return {
-        nl: `In CBS-tabel ${t} staat geen cijfer dat precies bij deze vraag past.`,
-        en: `CBS table ${t} has no figure that matches this question exactly.`,
+        nl: `In ${src}-tabel ${t} staat geen cijfer dat precies bij deze vraag past.`,
+        en: `${src} table ${t} has no figure that matches this question exactly.`,
       };
     case 'table_lane_unsure':
       return {
-        nl: `Ik weet niet zeker welk cijfer uit CBS-tabel ${t} je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
-        en: `I'm not sure which figure from CBS table ${t} you mean. Please ask a more specific question, for example naming the topic, the group or the period.`,
+        nl: `Ik weet niet zeker welk cijfer uit ${src}-tabel ${t} je bedoelt. Stel de vraag iets specifieker, bijvoorbeeld met het onderwerp, de groep of de periode.`,
+        en: `I'm not sure which figure from ${src} table ${t} you mean. Please ask a more specific question, for example naming the topic, the group or the period.`,
       };
     case 'table_lane_period_unsupported':
       return {
-        nl: `Dit soort periode kan ik in CBS-tabel ${t} nog niet opzoeken. Noem een jaar, kwartaal of maand, of een reeks jaren.`,
-        en: `I can't look up this kind of period in CBS table ${t} yet. Name a year, quarter or month, or a range of years.`,
+        nl: `Dit soort periode kan ik in ${src}-tabel ${t} nog niet opzoeken. Noem een jaar, kwartaal of maand, of een reeks jaren.`,
+        en: `I can't look up this kind of period in ${src} table ${t} yet. Name a year, quarter or month, or a range of years.`,
       };
     case 'table_lane_period_grain':
       return {
-        nl: `CBS-tabel ${t} heeft geen cijfers per jaar, kwartaal of maand zoals je vraagt. Probeer een andere periode-indeling.`,
-        en: `CBS table ${t} has no figures per year, quarter or month the way you ask. Try a different kind of period.`,
+        nl: `${src}-tabel ${t} heeft geen cijfers per jaar, kwartaal of maand zoals je vraagt. Probeer een andere periode-indeling.`,
+        en: `${src} table ${t} has no figures per year, quarter or month the way you ask. Try a different kind of period.`,
       };
     case 'table_lane_period_missing': {
       const latest = ctx.latestPeriodCode;
       return {
         nl:
-          `CBS-tabel ${t} heeft geen cijfer voor de gevraagde periode.` +
+          `${src}-tabel ${t} heeft geen cijfer voor de gevraagde periode.` +
           (latest !== undefined ? ` De meest recente periode in deze tabel is ${periodCodeToNl(latest)}.` : ''),
         en:
-          `CBS table ${t} has no figure for the period you asked about.` +
+          `${src} table ${t} has no figure for the period you asked about.` +
           (latest !== undefined ? ` The most recent period in this table is ${periodCodeToEn(latest)}.` : ''),
       };
     }
@@ -80,46 +90,46 @@ function texts(reason: TableLaneRefusalReason, ctx: TableLaneTemplateContext): T
       // Since 2026-10-01 (#340) a class IS answered — for one period, over
       // the table's own CBS region grouping; this text covers what is left.
       return {
-        nl: `Deze vraag over een hele groep regio's (zoals alle provincies of gemeenten) kan ik niet uit CBS-tabel ${t} beantwoorden. Dat lukt alleen voor één periode tegelijk, en alleen als de tabel die groep zelf indeelt. Noem één jaar, kwartaal of maand, of de plaats die je bedoelt.`,
-        en: `I can't answer this question about a whole group of regions (such as all provinces or municipalities) from CBS table ${t}. That only works for one period at a time, and only when the table groups those regions itself. Name one year, quarter or month, or the place you mean.`,
+        nl: `Deze vraag over een hele groep regio's (zoals alle provincies of gemeenten) kan ik niet uit ${src}-tabel ${t} beantwoorden. Dat lukt alleen voor één periode tegelijk, en alleen als de tabel die groep zelf indeelt. Noem één jaar, kwartaal of maand, of de plaats die je bedoelt.`,
+        en: `I can't answer this question about a whole group of regions (such as all provinces or municipalities) from ${src} table ${t}. That only works for one period at a time, and only when the table groups those regions itself. Name one year, quarter or month, or the place you mean.`,
       };
     case 'table_lane_single_period': {
       const only = ctx.latestPeriodCode;
       return {
         nl:
-          `Voor een verloop of een verandering zijn minstens twee perioden nodig, maar CBS-tabel ${t} heeft voor deze vraag maar één periode` +
+          `Voor een verloop of een verandering zijn minstens twee perioden nodig, maar ${src}-tabel ${t} heeft voor deze vraag maar één periode` +
           (only !== undefined ? ` (${periodCodeToNl(only)})` : '') +
           '. Vraag naar die ene periode, of noem een langere periode.',
         en:
-          `A trend or a change needs at least two periods, but CBS table ${t} has only one period for this question` +
+          `A trend or a change needs at least two periods, but ${src} table ${t} has only one period for this question` +
           (only !== undefined ? ` (${periodCodeToEn(only)})` : '') +
           '. Ask about that one period, or name a longer period.',
       };
     }
     case 'region_unknown':
       return {
-        nl: `De plaats of regio die je noemt, staat niet in CBS-tabel ${t}. Controleer de naam of noem een andere plaats.`,
-        en: `The place or region you name is not in CBS table ${t}. Check the name or name another place.`,
+        nl: `De plaats of regio die je noemt, staat niet in ${src}-tabel ${t}. Controleer de naam of noem een andere plaats.`,
+        en: `The place or region you name is not in ${src} table ${t}. Check the name or name another place.`,
       };
     case 'region_unavailable':
       return {
-        nl: `CBS-tabel ${t} heeft geen cijfers voor de plaats of regio die je noemt.`,
-        en: `CBS table ${t} has no figures for the place or region you name.`,
+        nl: `${src}-tabel ${t} heeft geen cijfers voor de plaats of regio die je noemt.`,
+        en: `${src} table ${t} has no figures for the place or region you name.`,
       };
     case 'table_lane_too_large':
       return {
-        nl: `Deze vraag vraagt te veel cijfers tegelijk uit CBS-tabel ${t}. Maak de vraag kleiner, bijvoorbeeld met één groep, één regio of minder jaren.`,
-        en: `This question asks for too many figures at once from CBS table ${t}. Make the question smaller, for example one group, one region or fewer years.`,
+        nl: `Deze vraag vraagt te veel cijfers tegelijk uit ${src}-tabel ${t}. Maak de vraag kleiner, bijvoorbeeld met één groep, één regio of minder jaren.`,
+        en: `This question asks for too many figures at once from ${src} table ${t}. Make the question smaller, for example one group, one region or fewer years.`,
       };
     case 'cbs_unreachable':
       return {
-        nl: 'CBS is op dit moment niet bereikbaar, dus ik kan dit cijfer nu niet ophalen. Probeer het later opnieuw.',
-        en: "CBS can't be reached right now, so I can't fetch this figure. Please try again later.",
+        nl: `${src} is op dit moment niet bereikbaar, dus ik kan dit cijfer nu niet ophalen. Probeer het later opnieuw.`,
+        en: `${src} can't be reached right now, so I can't fetch this figure. Please try again later.`,
       };
     case 'table_lane_failed':
       return {
-        nl: 'Het ophalen van deze CBS-tabel is niet gelukt. Je betaalt hier niets voor.',
-        en: "Fetching this CBS table didn't work. You won't be charged for this.",
+        nl: `Het ophalen van deze ${src}-tabel is niet gelukt. Je betaalt hier niets voor.`,
+        en: `Fetching this ${src} table didn't work. You won't be charged for this.`,
       };
   }
 }

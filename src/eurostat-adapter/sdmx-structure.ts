@@ -703,9 +703,19 @@ export function eurostatLayoutFromStructure(
  * src/ingestion/slice-cache.ts — not imported, the adapter sits below ingestion), so learning a dataset's
  * decimals never costs more than answering one question. */
 export const DECIMALS_PROBE_MAX_CELLS = 2_000;
-/** At most this many reads: the latest period, then the latest two, then three — each only for the units the
- * reads before it did not settle. */
-export const DECIMALS_PROBE_MAX_READS = 3;
+/** At most this many reads: the latest two periods, then three — the second only for the units the first did
+ * not settle. Session 153: the first read was the latest period alone, and the first real exercise of the
+ * table lane on a non-curated dataset (nrg_ind_ren) showed why that is too little: Eurostat publishes the newest
+ * year as a rounded estimate (Sweden 2025: 65.4) and every earlier year with 3 decimals (2023: 66.393), so one
+ * period registered 1 decimal and the next question was refused and the table quarantined. */
+export const DECIMALS_PROBE_MAX_READS = 2;
+/** Periods in the first decimals read (each later read adds one). */
+export const DECIMALS_PROBE_FIRST_PERIODS = 2;
+
+/** How many latest periods read number `read` (1-based) covers. */
+export function decimalsProbePeriods(read: number): number {
+  return DECIMALS_PROBE_FIRST_PERIODS + read - 1;
+}
 /** A unit is settled once a value with decimals was seen, or this many values (all whole numbers). Fewer whole
  * numbers could be JSON dropping trailing zeros (2.0 arrives as 2): measured on the four registered datasets'
  * captures, 9–10% of their one-decimal values arrive as whole numbers. */

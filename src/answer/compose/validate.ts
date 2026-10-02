@@ -704,7 +704,8 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
         )
       : window;
 
-  if (/^aantal$/i.test(unit.trim())) return [];
+  // A bare count needs no unit word: CBS 'aantal', Eurostat 'Number' (NR, session 153 — same meaning).
+  if (/^aantal$/i.test(unit.trim()) || unit.trim() === 'Number') return [];
 
   if (unit.trim() === '%') {
     // What sits IMMEDIATELY after the token decides %-vs-procentpunt — a

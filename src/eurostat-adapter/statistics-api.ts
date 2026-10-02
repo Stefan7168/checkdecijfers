@@ -34,6 +34,7 @@ import {
 import {
   DECIMALS_PROBE_MAX_READS,
   DECIMALS_PROBE_SETTLING_VALUES,
+  decimalsProbePeriods,
   decimalsProbeSlice,
   eurostatLayoutFromStructure,
   EurostatLayoutRefusalError,
@@ -572,9 +573,10 @@ export class StatisticsApiSource implements CbsSource {
 
   /**
    * #357 (a): each unit's decimals, from a small read of real values — Eurostat's structure never states them.
-   * Read 1 asks for every unit at the LATEST period; a unit it did not settle (no value with decimals and fewer
-   * than DECIMALS_PROBE_SETTLING_VALUES whole numbers — a sparse latest period, confidential cells) is asked
-   * again over the latest two periods, then three (DECIMALS_PROBE_MAX_READS).
+   * Read 1 asks for every unit over the LATEST TWO periods (a newest period is often a rounded estimate — see
+   * DECIMALS_PROBE_MAX_READS); a unit it did not settle (no value with decimals and fewer than
+   * DECIMALS_PROBE_SETTLING_VALUES whole numbers — sparse periods, confidential cells) is asked again over the
+   * latest three (DECIMALS_PROBE_MAX_READS).
    * Each read is bounded to DECIMALS_PROBE_MAX_CELLS cells (`decimalsProbeSlice`: licensed geography only, other
    * dimensions cut to their first codes, largest first). A unit's decimals = the most any value it saw
    * carries (`maxDecimals`, the download path's own rule). It goes through the SAME request path as a slice —
@@ -602,7 +604,7 @@ export class StatisticsApiSource implements CbsSource {
     for (let read = 1; read <= DECIMALS_PROBE_MAX_READS; read++) {
       const open = fit.unitCodes.filter((u) => !settled(u));
       if (open.length === 0) break;
-      const probe = decimalsProbeSlice(tableId, structure, fit, open, read);
+      const probe = decimalsProbeSlice(tableId, structure, fit, open, decimalsProbePeriods(read));
       if (probe === null) break;
       const url = buildRequestUrl(nativeCode, probe.slice);
       reads.push({ url, cells: probe.cells, periods: probe.slice.periodIn!.codes });

@@ -8,6 +8,11 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+00000. **The first end-to-end run of a generic path on a NEW source finds what unit tests on that source never did.**
+   Every Eurostat piece had its own tests (structure reader, decimals read, totals, plan) and all passed; the first
+   benchmark run through the whole lane found five defects in one go — decimals from one period, "CBS-tabel" on a Eurostat
+   refusal, the 'Number' unit failing R10, a base year read as a factor, a CBS-only scorer rule. Pick tables OUTSIDE the
+   curated set for such a run (the curated ones were tuned around the gaps), and run it before calling a source "ready".
 0000. **A change to answer TEXT needs the verification block WITH `--e2e`.** The latest-first template change was pushed
    after a block without browser tests; CI's e2e smoke pinned the old series wording and went red (`9c5742e4`, deploy
    skipped, production unharmed). The block's own header already says it: use `--e2e` whenever a change touches text an
