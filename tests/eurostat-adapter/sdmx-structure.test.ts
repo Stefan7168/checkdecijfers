@@ -7,6 +7,7 @@
 // labels, measure titles; more codes); geo levels come from Eurostat's LEVEL annotation and the licence rule
 // sits on top; a dataset without `unit` or with an unsupported grain is refused; malformed or unknown
 // structure fails closed; and `registerSchemaOnly` registers a Eurostat id from the structure alone.
+import { dutchDimensionTitle, dutchMemberTitle, dutchUnitLabel } from '../../src/eurostat-adapter/dutch-labels.ts';
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CbsSlice } from '../../src/cbs-adapter/types.ts';
@@ -137,19 +138,27 @@ describe('superset of today’s registration (the four registered datasets)', ()
       const layout = eurostatLayoutFromStructure(t.id, structureOf(t.code), (u) => decimals.get(u) ?? 1);
       if (!layout.ok) throw new Error(layout.summary);
 
+      // Session 153: the structure route carries the reviewed Dutch labels (dutch-labels.ts) where the download
+      // route keeps Eurostat's English; everything else is identical. Today's labels pass through the SAME list.
       // Same dimensions: names, kinds and titles, in the same order.
-      expect(layout.schema.dimensions).toEqual(today.schema.dimensions);
+      expect(layout.schema.dimensions).toEqual(
+        today.schema.dimensions.map((d) => (d.kind === 'TimeDimension' ? d : { ...d, title: dutchDimensionTitle(d.name, d.title) })),
+      );
       expect(layout.schema.title).toBe(today.schema.title);
       // Every measure today holds, identically (code, title, unit label; decimals are today's, see the reader).
       for (const m of today.schema.measures) {
-        expect(layout.schema.measures, m.code).toContainEqual(m);
+        const label = dutchUnitLabel(m.code.split('|')[1]!, m.unit);
+        const title = `${today.schema.title} — ${label.title}`;
+        expect(m.title).toBe(`${today.schema.title} — ${m.unit}`);
+        expect(layout.schema.measures, m.code).toContainEqual({ ...m, unit: label.unit, title });
       }
       expect(layout.schema.measures.length).toBeGreaterThanOrEqual(today.schema.measures.length);
       // Every code today holds, with the same title; the structure may hold more.
       for (const [dim, codes] of Object.entries(today.codeLists)) {
         const byCode = new Map(layout.codeLists[dim]!.map((c) => [c.code, c]));
         for (const c of codes) {
-          expect(byCode.get(c.code)?.title, `${dim} ${c.code}`).toBe(c.title);
+          const want = dim === 'time' || dim === 'geo' ? c.title : dutchMemberTitle(dim, c.code, c.title);
+          expect(byCode.get(c.code)?.title, `${dim} ${c.code}`).toBe(want);
           if (dim === 'time') expect(byCode.get(c.code)?.status, c.code).toBe(c.status);
         }
       }

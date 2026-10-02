@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-02T05:53:56.213Z",
+ "fetchedAt": "2026-10-02T07:49:07.697Z",
  "schema": {
   "tableId": "eurostat:migr_asyappctza",
   "title": "Asylum applicants by type, citizenship, age and sex - annual aggregated data",
@@ -12,7 +12,7 @@
    {
     "name": "citizen",
     "kind": "Dimension",
-    "title": "Country of citizenship"
+    "title": "Nationaliteit"
    },
    {
     "name": "applicant",
@@ -22,12 +22,12 @@
    {
     "name": "sex",
     "kind": "Dimension",
-    "title": "Sex"
+    "title": "Geslacht"
    },
    {
     "name": "age",
     "kind": "Dimension",
-    "title": "Age class"
+    "title": "Leeftijd"
    },
    {
     "name": "geo",
@@ -43,8 +43,8 @@
   "measures": [
    {
     "code": "migr_asyappctza|PER",
-    "title": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — Person",
-    "unit": "Person",
+    "title": "Asylum applicants by type, citizenship, age and sex - annual aggregated data — aantal personen",
+    "unit": "personen",
     "decimals": 0,
     "description": "",
     "dataType": "",
@@ -290,7 +290,7 @@
    },
    {
     "code": "TOTAL",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 32
@@ -299,7 +299,7 @@
   "applicant": [
    {
     "code": "TOTAL",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
@@ -322,28 +322,28 @@
   "sex": [
    {
     "code": "T",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
    },
    {
     "code": "M",
-    "title": "Males",
+    "title": "Mannen",
     "dimensionGroup": null,
     "status": null,
     "index": 1
    },
    {
     "code": "F",
-    "title": "Females",
+    "title": "Vrouwen",
     "dimensionGroup": null,
     "status": null,
     "index": 2
    },
    {
     "code": "UNK",
-    "title": "Unknown",
+    "title": "Onbekend",
     "dimensionGroup": null,
     "status": null,
     "index": 3
@@ -352,56 +352,56 @@
   "age": [
    {
     "code": "TOTAL",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
    },
    {
     "code": "Y_LT14",
-    "title": "Less than 14 years",
+    "title": "jonger dan 14 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 1
    },
    {
     "code": "Y14-17",
-    "title": "From 14 to 17 years",
+    "title": "14 tot en met 17 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 2
    },
    {
     "code": "Y_LT18",
-    "title": "Less than 18 years",
+    "title": "jonger dan 18 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 3
    },
    {
     "code": "Y18-34",
-    "title": "From 18 to 34 years",
+    "title": "18 tot en met 34 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 4
    },
    {
     "code": "Y35-64",
-    "title": "From 35 to 64 years",
+    "title": "35 tot en met 64 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 5
    },
    {
     "code": "Y_GE65",
-    "title": "65 years or over",
+    "title": "65 jaar of ouder",
     "dimensionGroup": null,
     "status": null,
     "index": 6
    },
    {
     "code": "UNK",
-    "title": "Unknown",
+    "title": "Onbekend",
     "dimensionGroup": null,
     "status": null,
     "index": 7

@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-02T05:53:53.976Z",
+ "fetchedAt": "2026-10-02T07:49:06.422Z",
  "schema": {
   "tableId": "eurostat:crim_off_cat",
   "title": "Police-recorded offences by offence category",
@@ -28,8 +28,8 @@
   "measures": [
    {
     "code": "crim_off_cat|NR",
-    "title": "Police-recorded offences by offence category — Number",
-    "unit": "Number",
+    "title": "Police-recorded offences by offence category — aantal",
+    "unit": "aantal",
     "decimals": 0,
     "description": "",
     "dataType": "",
@@ -37,8 +37,8 @@
    },
    {
     "code": "crim_off_cat|P_HTHAB",
-    "title": "Police-recorded offences by offence category — Per hundred thousand inhabitants",
-    "unit": "Per hundred thousand inhabitants",
+    "title": "Police-recorded offences by offence category — per 100 000 inwoners",
+    "unit": "per 100 000 inwoners",
     "decimals": 2,
     "description": "",
     "dataType": "",

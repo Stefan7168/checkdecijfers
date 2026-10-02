@@ -1,6 +1,6 @@
 {
  "tableId": "eurostat:env_wasmun",
- "capturedAt": "2026-10-02T05:54:04.066Z",
+ "capturedAt": "2026-10-02T07:49:16.223Z",
  "cbsModified": "2026-03-30T23:00:00+0200",
  "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/env_wasmun",
  "slices": [

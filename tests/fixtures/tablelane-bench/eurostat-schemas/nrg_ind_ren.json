@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-02T05:53:49.743Z",
+ "fetchedAt": "2026-10-02T07:49:02.752Z",
  "schema": {
   "tableId": "eurostat:nrg_ind_ren",
   "title": "Renewable energy share",
@@ -28,8 +28,8 @@
   "measures": [
    {
     "code": "nrg_ind_ren|PC",
-    "title": "Renewable energy share — Percentage",
-    "unit": "Percentage",
+    "title": "Renewable energy share — percentage",
+    "unit": "%",
     "decimals": 3,
     "description": "",
     "dataType": "",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T05:18:02.823Z",
+  "generatedAt": "2026-10-02T07:51:12.096Z",
   "mode": "replay",
   "totals": {
     "pass": 15,
@@ -8,10 +8,10 @@
   "results": [
     {
       "id": "E1",
-      "confidence": 0.65,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "173c258726e2c0a0e331f8318f59856f",
+      "requestHash": "e280b5746eae7077ea40ef13b097566e",
       "pass": true,
       "problems": []
     },
@@ -20,7 +20,7 @@
       "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "2b65b8fe7073213aed3d1d4c0e218c3f",
+      "requestHash": "c72e58343b55ec439a55166fd54fab1c",
       "pass": true,
       "problems": []
     },
@@ -29,36 +29,34 @@
       "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "424bc86c2a60726d143a40b32e87205a",
+      "requestHash": "67756bbbf2a8932393f610c4a54f8bb4",
       "pass": true,
       "problems": []
     },
     {
       "id": "E4",
-      "confidence": 0.8,
+      "confidence": 0.72,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "f87f8cbb5392e7dfd344f01fb4555bcc",
-      "pass": false,
-      "problems": [
-        "measure: expected une_rt_q|PC_ACT, got une_rt_q|THS_PER"
-      ]
+      "requestHash": "f83cb32312321e3853b75e150d2ee080",
+      "pass": true,
+      "problems": []
     },
     {
       "id": "E5",
       "confidence": 0.7,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "fd04ca11c79a640a16b55f3b65583d5a",
+      "requestHash": "1605ffa25a0397df9d39a7b0178b2f77",
       "pass": true,
       "problems": []
     },
     {
       "id": "E6",
-      "confidence": 0.6,
+      "confidence": 0.55,
       "periodGrainUnavailable": true,
       "errorClass": null,
-      "requestHash": "5867897398cd9675293135ffd9d2271c",
+      "requestHash": "493b340788896bb368c08ccb88b85df1",
       "pass": true,
       "problems": []
     },
@@ -67,7 +65,7 @@
       "confidence": 0.3,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3549121d621b7b40a0f46221706d3380",
+      "requestHash": "dc3f12d13e2d6b74666ea92c89719fa4",
       "pass": false,
       "problems": [
         "measure: expected une_rt_q|PC_ACT, got geen",
@@ -76,46 +74,48 @@
     },
     {
       "id": "E8",
-      "confidence": 0.6,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "e7de8400a6b4fc8c6af7f3054c03937b",
+      "requestHash": "a50490b0afc5cd5817fc2fc4f53cc358",
       "pass": true,
       "problems": []
     },
     {
       "id": "E9",
-      "confidence": 0.88,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "64a76e74f243b14e3dcc1b89c8900aac",
+      "requestHash": "d5f5c7e8a021101da3b3ce84c667d8bf",
       "pass": true,
       "problems": []
     },
     {
       "id": "E10",
-      "confidence": 0.75,
+      "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "62f0567a9180f21fbd84451789be99aa",
+      "requestHash": "fb1889988bde4bb1b4e2d2bdfd1ac857",
       "pass": true,
       "problems": []
     },
     {
       "id": "E11",
-      "confidence": 0.75,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "321a2455b3c5e33d85bbc005e2fc2186",
-      "pass": true,
-      "problems": []
+      "requestHash": "b05ab36dce50479d1870a1612091436e",
+      "pass": false,
+      "problems": [
+        "breakdown s_adj: expected SCA, got SA"
+      ]
     },
     {
       "id": "E12",
       "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "29d424973a17e16d01b219061341f6bf",
+      "requestHash": "e45a97817f89b88aad0ab4788822117d",
       "pass": true,
       "problems": []
     },
@@ -124,7 +124,7 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "010730a54c9416b4bde80f0d12fd2a18",
+      "requestHash": "d0ce160fceb50186da8622716de0ef5d",
       "pass": true,
       "problems": []
     },
@@ -133,7 +133,7 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "ca69eed2d4f7045fff825e6a778f60c8",
+      "requestHash": "68a0f61275d08155f17954296af317ae",
       "pass": true,
       "problems": []
     },
@@ -142,7 +142,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3025f16aa110e7ca135b61965263366f",
+      "requestHash": "883548adfea01b561e228dcc145a701c",
       "pass": true,
       "problems": []
     },
@@ -166,8 +166,8 @@
     }
   ],
   "benchmarkFixtures": {
-    "ok": 0,
-    "total": 0,
+    "ok": 12,
+    "total": 12,
     "failed": []
   },
   "history": [
@@ -697,6 +697,179 @@
       "benchmarkFixtures": {
         "ok": 0,
         "total": 0,
+        "failed": []
+      }
+    },
+    {
+      "generatedAt": "2026-10-02T07:51:12.096Z",
+      "mode": "replay",
+      "totals": {
+        "pass": 15,
+        "total": 17
+      },
+      "results": [
+        {
+          "id": "E1",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "e280b5746eae7077ea40ef13b097566e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E2",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c72e58343b55ec439a55166fd54fab1c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E3",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "67756bbbf2a8932393f610c4a54f8bb4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E4",
+          "confidence": 0.72,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "f83cb32312321e3853b75e150d2ee080",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E5",
+          "confidence": 0.7,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1605ffa25a0397df9d39a7b0178b2f77",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E6",
+          "confidence": 0.55,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "493b340788896bb368c08ccb88b85df1",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E7",
+          "confidence": 0.3,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "dc3f12d13e2d6b74666ea92c89719fa4",
+          "pass": false,
+          "problems": [
+            "measure: expected une_rt_q|PC_ACT, got geen",
+            "breakdown s_adj: expected SA, got niet_genoemd"
+          ]
+        },
+        {
+          "id": "E8",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a50490b0afc5cd5817fc2fc4f53cc358",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E9",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d5f5c7e8a021101da3b3ce84c667d8bf",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E10",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fb1889988bde4bb1b4e2d2bdfd1ac857",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E11",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b05ab36dce50479d1870a1612091436e",
+          "pass": false,
+          "problems": [
+            "breakdown s_adj: expected SCA, got SA"
+          ]
+        },
+        {
+          "id": "E12",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "e45a97817f89b88aad0ab4788822117d",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E13",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d0ce160fceb50186da8622716de0ef5d",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E14",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "68a0f61275d08155f17954296af317ae",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E15",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "883548adfea01b561e228dcc145a701c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E16",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "54c748db54555129d22ac1086eaa8d86",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E17",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "14eaa579458e7162e336af6544662f2b",
+          "pass": true,
+          "problems": []
+        }
+      ],
+      "benchmarkFixtures": {
+        "ok": 12,
+        "total": 12,
         "failed": []
       }
     }

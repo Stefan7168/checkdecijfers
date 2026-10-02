@@ -12,7 +12,7 @@ import { eurostatLayoutFromStructure, readEurostatStructure } from '../../src/eu
 import { buildTableParseSchema } from '../../src/answer/table-parse/input.ts';
 import { applySeasonalAdjustmentRule, TABLE_PARSE_SCHEMA_VERSION, type TableParseResult } from '../../src/answer/table-parse/parse.ts';
 import { planTableLane, type TableLaneTable } from '../../src/answer/table-lane/plan.ts';
-import { eurostatGrandTotal, findGrandTotal, grandTotalFor } from '../../src/query/breakdowns.ts';
+import { eurostatGrandTotal, grandTotalFor } from '../../src/query/breakdowns.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 
 const FIXTURES = new URL('../fixtures/eurostat-structure/', import.meta.url);
@@ -59,8 +59,8 @@ describe('Eurostat totals (step 4)', () => {
     const asylum = layout('migr_asyappctza');
     for (const dim of ['sex', 'age', 'applicant']) {
       const members = asylum.codeLists[dim]!.map((c) => ({ code: c.code, title: c.title }));
-      expect(findGrandTotal(members)).toBeNull();
-      expect(eurostatGrandTotal(members)?.title).toBe('Total');
+      // With the Dutch label the CBS title rule would also see "Totaal"; Eurostat tables use the Eurostat rule.
+      expect(eurostatGrandTotal(members)?.title).toBe('Totaal'); // the reviewed Dutch label (dutch-labels.ts)
     }
     const unemployment = layout('une_rt_q');
     expect(eurostatGrandTotal(unemployment.codeLists['s_adj']!.map((c) => ({ code: c.code, title: c.title })))).toBeNull();

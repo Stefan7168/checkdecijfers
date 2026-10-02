@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-02T05:53:51.182Z",
+ "fetchedAt": "2026-10-02T07:49:04.044Z",
  "schema": {
   "tableId": "eurostat:env_wasmun",
   "title": "Municipal waste by waste management operations",
@@ -28,8 +28,8 @@
   "measures": [
    {
     "code": "env_wasmun|KG_HAB",
-    "title": "Municipal waste by waste management operations — Kilograms per capita",
-    "unit": "Kilograms per capita",
+    "title": "Municipal waste by waste management operations — kg per inwoner",
+    "unit": "kg per inwoner",
     "decimals": 0,
     "description": "",
     "dataType": "",
@@ -37,8 +37,8 @@
    },
    {
     "code": "env_wasmun|THS_T",
-    "title": "Municipal waste by waste management operations — Thousand tonnes",
-    "unit": "Thousand tonnes",
+    "title": "Municipal waste by waste management operations — x 1 000 ton",
+    "unit": "x 1 000 ton",
     "decimals": 0,
     "description": "",
     "dataType": "",

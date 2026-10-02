@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-02T05:53:48.286Z",
+ "fetchedAt": "2026-10-02T07:49:00.643Z",
  "schema": {
   "tableId": "eurostat:tran_sf_roadus",
   "title": "Persons killed in road accidents by age, sex and category of persons involved",
@@ -12,12 +12,12 @@
    {
     "name": "sex",
     "kind": "Dimension",
-    "title": "Sex"
+    "title": "Geslacht"
    },
    {
     "name": "age",
     "kind": "Dimension",
-    "title": "Age class"
+    "title": "Leeftijd"
    },
    {
     "name": "pers_cat",
@@ -38,8 +38,8 @@
   "measures": [
    {
     "code": "tran_sf_roadus|NR",
-    "title": "Persons killed in road accidents by age, sex and category of persons involved — Number",
-    "unit": "Number",
+    "title": "Persons killed in road accidents by age, sex and category of persons involved — aantal",
+    "unit": "aantal",
     "decimals": 0,
     "description": "",
     "dataType": "",
@@ -47,8 +47,8 @@
    },
    {
     "code": "tran_sf_roadus|P_MHAB",
-    "title": "Persons killed in road accidents by age, sex and category of persons involved — Per million inhabitants",
-    "unit": "Per million inhabitants",
+    "title": "Persons killed in road accidents by age, sex and category of persons involved — per miljoen inwoners",
+    "unit": "per miljoen inwoners",
     "decimals": 0,
     "description": "",
     "dataType": "",
@@ -70,28 +70,28 @@
   "sex": [
    {
     "code": "T",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
    },
    {
     "code": "M",
-    "title": "Males",
+    "title": "Mannen",
     "dimensionGroup": null,
     "status": null,
     "index": 1
    },
    {
     "code": "F",
-    "title": "Females",
+    "title": "Vrouwen",
     "dimensionGroup": null,
     "status": null,
     "index": 2
    },
    {
     "code": "UNK",
-    "title": "Unknown",
+    "title": "Onbekend",
     "dimensionGroup": null,
     "status": null,
     "index": 3
@@ -100,56 +100,56 @@
   "age": [
    {
     "code": "TOTAL",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
    },
    {
     "code": "Y_LT15",
-    "title": "Less than 15 years",
+    "title": "jonger dan 15 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 1
    },
    {
     "code": "Y15-17",
-    "title": "From 15 to 17 years",
+    "title": "15 tot en met 17 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 2
    },
    {
     "code": "Y18-24",
-    "title": "From 18 to 24 years",
+    "title": "18 tot en met 24 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 3
    },
    {
     "code": "Y25-49",
-    "title": "From 25 to 49 years",
+    "title": "25 tot en met 49 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 4
    },
    {
     "code": "Y50-64",
-    "title": "From 50 to 64 years",
+    "title": "50 tot en met 64 jaar",
     "dimensionGroup": null,
     "status": null,
     "index": 5
    },
    {
     "code": "Y_GE65",
-    "title": "65 years or over",
+    "title": "65 jaar of ouder",
     "dimensionGroup": null,
     "status": null,
     "index": 6
    },
    {
     "code": "UNK",
-    "title": "Unknown",
+    "title": "Onbekend",
     "dimensionGroup": null,
     "status": null,
     "index": 7
@@ -158,7 +158,7 @@
   "pers_cat": [
    {
     "code": "TOTAL",
-    "title": "Total",
+    "title": "Totaal",
     "dimensionGroup": null,
     "status": null,
     "index": 0
@@ -186,7 +186,7 @@
    },
    {
     "code": "UNK",
-    "title": "Unknown",
+    "title": "Onbekend",
     "dimensionGroup": null,
     "status": null,
     "index": 4

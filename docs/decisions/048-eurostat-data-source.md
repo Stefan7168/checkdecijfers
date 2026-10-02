@@ -1155,3 +1155,10 @@ lower bound: a deeper period with more decimals still refuses (never rounds). **
 source ("Eurostat-tabel"); Eurostat's count unit `Number` is a bare count like `aantal` (template and R10); a base year
 in parentheses in a unit label is not a factor. **Scorer** — the provisional rule is the source's own
 (`isProvisionalStatus`).
+
+**Dutch labels on the structure route (same day).** `src/eurostat-adapter/dutch-labels.ts`: a reviewed list keyed by
+Eurostat code, applied in `eurostatLayoutFromStructure` only when Eurostat's own English label is exactly the listed
+one (a reused code keeps English, never a wrong Dutch label); units keep their meaning ('%' only for a plain
+percentage, the qualification moves to the measure title; factors stay factors). The download route is untouched, so
+the four curated datasets keep their registrations; when they move to structure mode ((b), a re-baseline) their labels
+change with it. Measured on re-recording: benchmark refuse/ask 3/6 → 5/6, calibration 15/17 (one miss swapped).

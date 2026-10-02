@@ -1,6 +1,6 @@
 {
  "tableId": "eurostat:crim_off_cat",
- "capturedAt": "2026-10-02T05:54:06.993Z",
+ "capturedAt": "2026-10-02T07:49:19.267Z",
  "cbsModified": "2026-04-29T11:00:00+0200",
  "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/crim_off_cat",
  "slices": [

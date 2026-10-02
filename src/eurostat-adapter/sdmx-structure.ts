@@ -16,6 +16,7 @@
 // Everything here is pure (no I/O). Unknown or malformed structure throws `EurostatStructureError`; a dataset
 // that reads cleanly but does not fit today's rules gets a typed refusal (`EurostatLayoutRefusal`) — never a
 // mapping by guesswork (principle c).
+import { dutchDimensionTitle, dutchMemberTitle, dutchUnitLabel } from './dutch-labels.ts';
 import type { CbsCode, CbsDimension, CbsMeasure, CbsSlice, CbsTableSchema } from '../cbs-adapter/types.ts';
 import {
   EU_EFTA_LICENSED_AGGREGATE_CODES,
@@ -648,10 +649,12 @@ export function eurostatLayoutFromStructure(
           'state it and none was observed, and a guess could round a published figure.',
       );
     }
+    // Session 153: reviewed Dutch labels (dutch-labels.ts) — an unlisted code keeps Eurostat's English label.
+    const label = dutchUnitLabel(u.code, u.label);
     measures.push({
       code: `${nativeCode}|${u.code}`,
-      title: `${structure.title} — ${u.label}`,
-      unit: u.label,
+      title: `${structure.title} — ${label.title}`,
+      unit: label.unit,
       decimals,
       description: '',
       dataType: '',
@@ -663,7 +666,7 @@ export function eurostatLayoutFromStructure(
   const dimensions: CbsDimension[] = coordinateDims.map((d) => ({
     name: d.name,
     kind: d.isTime ? 'TimeDimension' : d.name === 'geo' ? 'GeoDimension' : 'Dimension',
-    title: d.label,
+    title: d.isTime ? d.label : dutchDimensionTitle(d.name, d.label),
   }));
 
   const licensedByDimension = new Map(fit.geo.map((g) => [g.dimension, new Set(g.licensed)]));
@@ -681,7 +684,13 @@ export function eurostatLayoutFromStructure(
     } else {
       const licensed = licensedByDimension.get(d.name);
       const kept = licensed === undefined ? d.codes : d.codes.filter((c) => licensed.has(c.code));
-      codeLists[d.name] = kept.map((c, i) => ({ code: c.code, title: c.label, dimensionGroup: null, status: null, index: i }));
+      codeLists[d.name] = kept.map((c, i) => ({
+        code: c.code,
+        title: dutchMemberTitle(d.name, c.code, c.label),
+        dimensionGroup: null,
+        status: null,
+        index: i,
+      }));
     }
   }
 
