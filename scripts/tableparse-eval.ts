@@ -43,7 +43,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../src/cbs-adapter/types.ts';
-import { buildTableParseSchema } from '../src/answer/table-parse/input.ts';
+import { buildTableParseSchema, totalRuleFor } from '../src/answer/table-parse/input.ts';
+import { eurostatLayoutFromStructure, readEurostatStructure } from '../src/eurostat-adapter/sdmx-structure.ts';
 import { isTotalPick } from '../src/answer/table-parse/bridge.ts';
 import type { TableParseSchema } from '../src/answer/table-parse/input.ts';
 import {
@@ -65,9 +66,25 @@ import {
 import { loadTableLaneTasks, taskParseRequest } from './tablelane-bench-lib.ts';
 
 const SCHEMAS_DIR = fileURLToPath(new URL('../tests/fixtures/tableparse/schemas', import.meta.url));
-const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tableparse', import.meta.url));
-const SET_PATH = fileURLToPath(new URL('../benchmark/tableparse-labelled-set.json', import.meta.url));
-const REPORT_PATH = fileURLToPath(new URL('../benchmark/tableparse-calibration-report.json', import.meta.url));
+const EUROSTAT_STRUCTURES_DIR = fileURLToPath(new URL('../tests/fixtures/eurostat-structure', import.meta.url));
+
+/** Session 153 (#357 step 4): `--eurostat` runs the same eval over a separate
+ * Eurostat labelled set, recorded into its own fixture directory with its own
+ * report, so the CBS set, fixtures and report are never touched. The table-
+ * lane benchmark requests are CBS-only and are left out of a Eurostat run. */
+const EUROSTAT_RUN = process.argv.includes('--eurostat');
+const FIXTURES_DIR = fileURLToPath(
+  new URL(EUROSTAT_RUN ? '../tests/fixtures/llm/tableparse-eurostat' : '../tests/fixtures/llm/tableparse', import.meta.url),
+);
+const SET_PATH = fileURLToPath(
+  new URL(EUROSTAT_RUN ? '../benchmark/eurostat-tableparse-set.json' : '../benchmark/tableparse-labelled-set.json', import.meta.url),
+);
+const REPORT_PATH = fileURLToPath(
+  new URL(
+    EUROSTAT_RUN ? '../benchmark/eurostat-tableparse-report.json' : '../benchmark/tableparse-calibration-report.json',
+    import.meta.url,
+  ),
+);
 
 /** measureCode value for "the fitting measures are indistinguishable" —
  * the validator must throw TableParseAmbiguousMeasureError. */
@@ -155,6 +172,7 @@ export function loadLabelledSet(): LabelledSet {
  * shape buildTableParseSchema takes everywhere else in this feature (Task
  * 2/3's own tests, the labelled-set integrity test). */
 export function loadTableFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
+  if (tableId.startsWith('eurostat:')) return loadEurostatFixture(tableId);
   const path = `${SCHEMAS_DIR}/${tableId}.json`;
   return JSON.parse(readFileSync(path, 'utf8')) as { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> };
 }
@@ -170,6 +188,17 @@ export function caseParseInput(c: LabelledCase): { input: TableParseSchema; requ
   const previousQuestion = c.previousQuestion ?? null;
   const input = buildTableParseSchema(schema, codeLists, tableParsePrefilterText(c.question, previousQuestion));
   return { input, request: buildTableParseRequest(c.question, input, { previousQuestion }) };
+}
+
+/** A Eurostat table's layout, built by the production structure reader from
+ * the captured dataflow + constraint (tests/fixtures/eurostat-structure/) —
+ * the same layout the job builds from the live structure. */
+function loadEurostatFixture(tableId: string): { schema: CbsTableSchema; codeLists: Record<string, CbsCode[]> } {
+  const code = tableId.slice('eurostat:'.length);
+  const read = (suffix: string) => readFileSync(`${EUROSTAT_STRUCTURES_DIR}/${code}.${suffix}.xml`, 'utf8');
+  const layout = eurostatLayoutFromStructure(tableId, readEurostatStructure(code, read('dataflow'), read('constraint')), () => 1);
+  if (!('schema' in layout)) throw new Error(`Eurostat fixture ${tableId} has no usable layout: ${JSON.stringify(layout)}`);
+  return { schema: layout.schema, codeLists: layout.codeLists };
 }
 
 export interface DryRunRow {
@@ -255,6 +284,7 @@ export interface BenchRequest {
 }
 
 export function benchmarkRequests(): BenchRequest[] {
+  if (EUROSTAT_RUN) return [];
   return loadTableLaneTasks().tasks.map((t) => ({ id: `${BENCH_LABEL_PREFIX}${t.id}`, table: t.table, request: taskParseRequest(t) }));
 }
 
@@ -338,7 +368,7 @@ interface ScoredCase {
 export function isExplicitGrandTotalPick(table: string, dim: string, expected: string, got: string): boolean {
   if (expected !== 'niet_genoemd') return false;
   const codes = loadTableFixture(table).codeLists[dim] ?? [];
-  return isTotalPick(codes.map((m) => ({ code: m.code, title: m.title })), got);
+  return isTotalPick(codes.map((m) => ({ code: m.code, title: m.title })), got, totalRuleFor(table));
 }
 
 function choiceLabel(choice: { kind: 'member' | 'not_named' | 'other'; code?: string } | undefined): string {

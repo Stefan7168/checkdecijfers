@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { eurostatLayoutFromStructure, readEurostatStructure } from '../../src/eurostat-adapter/sdmx-structure.ts';
 import { buildTableParseSchema } from '../../src/answer/table-parse/input.ts';
-import { TABLE_PARSE_SCHEMA_VERSION } from '../../src/answer/table-parse/parse.ts';
+import { applySeasonalAdjustmentRule, TABLE_PARSE_SCHEMA_VERSION, type TableParseResult } from '../../src/answer/table-parse/parse.ts';
 import { planTableLane, type TableLaneTable } from '../../src/answer/table-lane/plan.ts';
 import { eurostatGrandTotal, findGrandTotal, grandTotalFor } from '../../src/query/breakdowns.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
@@ -103,8 +103,46 @@ describe('planTableLane on a Eurostat table (step 4, hermetic)', () => {
     expect(unknown.kind).toBe('refuse');
   });
 
-  it('no seasonal-adjustment choice and no total → the reader is asked (principle c)', async () => {
+  it('a quarter question that says nothing about adjustment gets the seasonally adjusted series', async () => {
     const p = await plan(une, question, { ...base, breakdowns: { age: 'Y15-74' } });
+    expect(p.kind).toBe('fetch');
+    if (p.kind !== 'fetch') return;
+    expect(p.slice.members).toMatchObject({ s_adj: ['SA'] });
+  });
+
+  it('no age class named and no total → the reader is asked (principle c)', async () => {
+    const p = await plan(une, question, { ...base, breakdowns: { s_adj: 'SA' } });
     expect(p.kind).toBe('ask');
+  });
+});
+
+describe('the seasonal rule on a Eurostat s_adj dimension (step 4)', () => {
+  const gdp = layout('namq_10_gdp');
+  const input = buildTableParseSchema(gdp.schema, gdp.codeLists, 'bbp');
+  const result = (choice: TableParseResult['breakdowns'][string], period: TableParseResult['period']): TableParseResult => ({
+    measureCode: 'namq_10_gdp|CLV_PCH_PRE',
+    breakdowns: Object.fromEntries(input.breakdowns.map((b) => [b.name, b.name === 's_adj' ? choice : { kind: 'not_named' }])),
+    period,
+    regions: [],
+    regionScope: null,
+    derivation: 'none',
+    confidence: 0.9,
+    reading: 'test',
+    periodGrainUnavailable: false,
+  } as TableParseResult);
+  const quarter = { kind: 'quarter', year: 2025, quarter: 1 } as TableParseResult['period'];
+  const sAdj = (r: TableParseResult) => r.breakdowns['s_adj'];
+
+  it('quarter, nothing said → seasonally AND calendar adjusted (the headline series)', () => {
+    expect(sAdj(applySeasonalAdjustmentRule('Hoeveel groeide het bbp in het eerste kwartaal van 2025?', result({ kind: 'not_named' }, quarter), input))).toEqual({ kind: 'member', code: 'SCA' });
+  });
+
+  it('the question asks for unadjusted figures → NSA', () => {
+    expect(sAdj(applySeasonalAdjustmentRule('Het niet-seizoengecorrigeerde bbp in het eerste kwartaal van 2025?', result({ kind: 'not_named' }, quarter), input))).toEqual({ kind: 'member', code: 'NSA' });
+  });
+
+  it('a member the model chose is kept; a year question takes the unadjusted series', () => {
+    expect(sAdj(applySeasonalAdjustmentRule('bbp', result({ kind: 'member', code: 'CA' }, quarter), input))).toEqual({ kind: 'member', code: 'CA' });
+    expect(sAdj(applySeasonalAdjustmentRule('bbp in 2024', result({ kind: 'not_named' }, { kind: 'year', year: 2024 } as TableParseResult['period']), input))).toEqual({ kind: 'member', code: 'NSA' });
   });
 });

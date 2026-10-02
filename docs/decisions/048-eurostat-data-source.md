@@ -1125,3 +1125,16 @@ the full question, recall does not. (v) The CBS questions keep their places with
 their shortlists. Caveat: the CBS mirror here is the 83-row fixture, not production's 4,858 rows.
 Tests: `tests/catalog/eurostat-finder.test.ts`, `tests/eurostat-adapter/jsonstat.test.ts` (breadcrumb, one entry per
 code, status), `tests/sources/registry.test.ts`, `tests/eurostat-adapter/statistics-api.test.ts`.
+
+### Addendum (2026-10-02, session 153) — the table lane reads a Eurostat dataset (#357 study step 4)
+
+Built dark (flag `EUROSTAT_FINDER_ENABLED`): Eurostat totals found by label/code (exactly one `TOTAL`/`T`/"Total …",
+position-free; the CBS rule unchanged), a one-member dimension as its own default, `freq` set from the resolved period
+grain (never offered to the model), Dutch country names via the reviewed list, and a per-table source in the table-lane
+job (Eurostat only for a `eurostat:` id while the flag is on). Seasonal adjustment is a dimension on Eurostat (`s_adj`),
+not twin measures: a reading that leaves it open is filled by code from the question's words, else the period
+(month/quarter → `SCA`, else `SA`; year → `NSA`) — the CBS rule's decision, no prompt change. Recorded with the owner
+(mid tier, ~$0.50): 17 Dutch questions over five captured structures, **13/17, 0 invented numbers**
+(`benchmark/eurostat-tableparse-set.json`, replay pinned in `tests/answer/table-parse/eurostat-calibration-replay.test.ts`).
+Finding: the licence rule's restrictive reading withholds `TOTAL` in `CITIZEN`, so `migr_asyappctza` cannot give a
+country's total applications — owner decision [#365](../open-questions.md).

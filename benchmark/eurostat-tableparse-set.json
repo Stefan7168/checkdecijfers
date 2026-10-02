@@ -1,0 +1,301 @@
+{
+  "note": "Session 153 (#357 study step 4): Eurostat labelled set for the table-scoped parser, same shape and rules as benchmark/tableparse-labelled-set.json. Tables are 'eurostat:<code>' and are laid out by the production structure reader from tests/fixtures/eurostat-structure/. Labels are scored AFTER the code's seasonal rule (an s_adj the reading leaves open is filled from the period: month/quarter → SCA, else SA; year → NSA). Run: npm run tableparse:eval -- --eurostat [--replay|--record].",
+  "cases": [
+    {
+      "id": "E1",
+      "table": "eurostat:une_rt_q",
+      "question": "Hoe hoog was de werkloosheid in Duitsland in het tweede kwartaal van 2024?",
+      "note": "unemployment RATE = share of the labour force; s_adj filled by the code rule (quarter → SA)",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "SA",
+          "age": "niet_genoemd",
+          "sex": "niet_genoemd"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Duitsland"
+        ]
+      }
+    },
+    {
+      "id": "E2",
+      "table": "eurostat:une_rt_q",
+      "question": "Hoeveel werklozen waren er in Spanje in het eerste kwartaal van 2025?",
+      "note": "a count → thousand persons",
+      "expect": {
+        "measureCode": "une_rt_q|THS_PER",
+        "breakdowns": {
+          "s_adj": "SA",
+          "age": "niet_genoemd",
+          "sex": "niet_genoemd"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Spanje"
+        ]
+      }
+    },
+    {
+      "id": "E3",
+      "table": "eurostat:une_rt_q",
+      "question": "Wat was de werkloosheid onder jongeren van 15 tot 25 jaar in Italië in het vierde kwartaal van 2024?",
+      "note": "an age class named in words → Y15-24",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "SA",
+          "age": "Y15-24",
+          "sex": "niet_genoemd"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Italië"
+        ]
+      }
+    },
+    {
+      "id": "E4",
+      "table": "eurostat:une_rt_q",
+      "question": "Hoe hoog was de niet-seizoengecorrigeerde werkloosheid onder vrouwen in Frankrijk in het derde kwartaal van 2024?",
+      "note": "unadjusted asked in words; sex F",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "NSA",
+          "age": "niet_genoemd",
+          "sex": "F"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Frankrijk"
+        ]
+      }
+    },
+    {
+      "id": "E5",
+      "table": "eurostat:une_rt_q",
+      "question": "Wat was de werkloosheid per geslacht in Nederland in het tweede kwartaal van 2024?",
+      "note": "\"per geslacht\" = across members → anders",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "SA",
+          "age": "niet_genoemd",
+          "sex": "anders"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Nederland"
+        ]
+      }
+    },
+    {
+      "id": "E6",
+      "table": "eurostat:une_rt_q",
+      "question": "Hoe hoog was de werkloosheid in Duitsland in 2023?",
+      "note": "a year on a quarterly table: the period is kept as asked (the code decides); the rule picks the unadjusted series for a year",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "NSA",
+          "age": "niet_genoemd",
+          "sex": "niet_genoemd"
+        },
+        "periodKind": "year",
+        "regions": [
+          "Duitsland"
+        ]
+      }
+    },
+    {
+      "id": "E7",
+      "table": "eurostat:une_rt_q",
+      "question": "Hoe hoog was de werkloosheid in Beieren in het eerste kwartaal van 2025?",
+      "note": "a region below country level is named as written; the code refuses it",
+      "expect": {
+        "measureCode": "une_rt_q|PC_ACT",
+        "breakdowns": {
+          "s_adj": "SA",
+          "age": "niet_genoemd",
+          "sex": "niet_genoemd"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Beieren"
+        ]
+      }
+    },
+    {
+      "id": "E8",
+      "table": "eurostat:migr_asyappctza",
+      "question": "Hoeveel asielaanvragen kreeg Duitsland in 2024?",
+      "note": "the RECEIVING country is the place (geo), never the citizenship member DE",
+      "expect": {
+        "measureCode": "migr_asyappctza|PER",
+        "breakdowns": {
+          "citizen": "niet_genoemd",
+          "applicant": "niet_genoemd",
+          "sex": "niet_genoemd",
+          "age": "niet_genoemd"
+        },
+        "periodKind": "year",
+        "regions": [
+          "Duitsland"
+        ]
+      }
+    },
+    {
+      "id": "E9",
+      "table": "eurostat:migr_asyappctza",
+      "question": "Hoeveel eerste asielaanvragen werden er in 2023 in Nederland gedaan?",
+      "note": "first-time applicant",
+      "expect": {
+        "measureCode": "migr_asyappctza|PER",
+        "breakdowns": {
+          "citizen": "niet_genoemd",
+          "applicant": "FRST",
+          "sex": "niet_genoemd",
+          "age": "niet_genoemd"
+        },
+        "periodKind": "year",
+        "regions": [
+          "Nederland"
+        ]
+      }
+    },
+    {
+      "id": "E10",
+      "table": "eurostat:migr_asyappctza",
+      "question": "Hoeveel minderjarige asielzoekers vroegen in 2024 asiel aan in België?",
+      "note": "minors = Less than 18 years",
+      "expect": {
+        "measureCode": "migr_asyappctza|PER",
+        "breakdowns": {
+          "citizen": "niet_genoemd",
+          "applicant": "niet_genoemd",
+          "sex": "niet_genoemd",
+          "age": "Y_LT18"
+        },
+        "periodKind": "year",
+        "regions": [
+          "België"
+        ]
+      }
+    },
+    {
+      "id": "E11",
+      "table": "eurostat:namq_10_gdp",
+      "question": "Hoeveel groeide de economie van Frankrijk in het eerste kwartaal van 2025 ten opzichte van het kwartaal ervoor?",
+      "note": "quarter-on-quarter volume growth of GDP; s_adj → SCA by the code rule",
+      "expect": {
+        "measureCode": "namq_10_gdp|CLV_PCH_PRE",
+        "breakdowns": {
+          "s_adj": "SCA",
+          "na_item": "B1GQ"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Frankrijk"
+        ]
+      }
+    },
+    {
+      "id": "E12",
+      "table": "eurostat:namq_10_gdp",
+      "question": "Hoe groot was het bbp van Nederland in het vierde kwartaal van 2024, in miljoenen euro?",
+      "note": "size in million euro at current prices",
+      "expect": {
+        "acceptableMeasureCodes": [
+          "namq_10_gdp|CP_MEUR"
+        ],
+        "breakdowns": {
+          "s_adj": "SCA",
+          "na_item": "B1GQ"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Nederland"
+        ]
+      }
+    },
+    {
+      "id": "E13",
+      "table": "eurostat:namq_10_gdp",
+      "question": "Hoeveel groeide het bbp van Spanje in het tweede kwartaal van 2024 vergeleken met hetzelfde kwartaal een jaar eerder?",
+      "note": "year-on-year growth",
+      "expect": {
+        "measureCode": "namq_10_gdp|CLV_PCH_SM",
+        "breakdowns": {
+          "s_adj": "SCA",
+          "na_item": "B1GQ"
+        },
+        "periodKind": "quarter",
+        "regions": [
+          "Spanje"
+        ]
+      }
+    },
+    {
+      "id": "E14",
+      "table": "eurostat:prc_hicp_minr",
+      "question": "Hoe hoog was de inflatie in België in maart 2025?",
+      "note": "inflation = annual rate of change; the all-items TOTAL pick scores as niet_genoemd",
+      "expect": {
+        "measureCode": "prc_hicp_minr|RCH_A",
+        "breakdowns": {
+          "coicop18": "niet_genoemd"
+        },
+        "periodKind": "month",
+        "regions": [
+          "België"
+        ]
+      }
+    },
+    {
+      "id": "E15",
+      "table": "eurostat:prc_hicp_minr",
+      "question": "Hoeveel stegen de consumentenprijzen in Oostenrijk in januari 2025 ten opzichte van de maand ervoor?",
+      "note": "month-on-month rate",
+      "expect": {
+        "measureCode": "prc_hicp_minr|RCH_M",
+        "breakdowns": {
+          "coicop18": "niet_genoemd"
+        },
+        "periodKind": "month",
+        "regions": [
+          "Oostenrijk"
+        ]
+      }
+    },
+    {
+      "id": "E16",
+      "table": "eurostat:tipsbd30",
+      "question": "Wat was de tier-1-kapitaalratio van de banken in Italië in 2023?",
+      "note": "single-measure table, no breakdowns",
+      "expect": {
+        "measureCode": "tipsbd30|PC_RWA",
+        "breakdowns": {},
+        "periodKind": "year",
+        "regions": [
+          "Italië"
+        ]
+      }
+    },
+    {
+      "id": "E17",
+      "table": "eurostat:tipsbd30",
+      "question": "Hoeveel banken zijn er in Spanje?",
+      "note": "a count of banks is not a capital ratio → geen",
+      "expect": {
+        "measureCode": "geen",
+        "breakdowns": {},
+        "periodKind": "none",
+        "regions": [
+          "Spanje"
+        ]
+      }
+    }
+  ]
+}

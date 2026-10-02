@@ -840,6 +840,7 @@ export function applySeasonalAdjustmentRule(
   input: TableParseSchema,
 ): TableParseResult {
   if (result.measureCode === null) return result;
+  if (input.tableId.startsWith(EUROSTAT_TABLE_PREFIX)) return applyEurostatSeasonalRule(question, result, input);
   const chosen = input.measures.find((m) => m.code === result.measureCode)!;
   const title = chosen.title.trim().toLowerCase();
   if (title !== SEASONAL_TITLE && title !== NOT_SEASONAL_TITLE) return result;
@@ -859,6 +860,43 @@ export function applySeasonalAdjustmentRule(
   }
   if (wantSeasonal === null || wantSeasonal === (title === SEASONAL_TITLE)) return result;
   return { ...result, measureCode: twins[0]!.code };
+}
+
+const EUROSTAT_TABLE_PREFIX = 'eurostat:';
+/** Eurostat's standard SDMX dimension for seasonal adjustment. */
+export const EUROSTAT_SEASONAL_DIMENSION = 's_adj';
+/** Preference order per wish. Adjusted: Eurostat's headline series —
+ * seasonally AND calendar adjusted where published (GDP), else seasonally
+ * adjusted (unemployment). Unadjusted: the raw series. */
+const EUROSTAT_SEASONAL_PREFERENCE: Record<'adjusted' | 'unadjusted', readonly string[]> = {
+  adjusted: ['SCA', 'SA'],
+  unadjusted: ['NSA'],
+};
+
+/**
+ * Session 153 (#357 step 4): the same rule for a Eurostat table, where
+ * seasonal adjustment is a DIMENSION (`s_adj`) rather than twin measures. It
+ * only ever fills a dimension the reading left open ('niet_genoemd') — a
+ * member the model chose (because the question named it) is kept. Without
+ * this, every Eurostat month/quarter question would stop to ask "which
+ * adjustment?", because `s_adj` has no total. Same decision as for CBS: the
+ * question's own words first, else the period (month/quarter → adjusted,
+ * year → unadjusted), else unchanged (the resolver asks).
+ */
+function applyEurostatSeasonalRule(question: string, result: TableParseResult, input: TableParseSchema): TableParseResult {
+  const dim = input.breakdowns.find((b) => b.name === EUROSTAT_SEASONAL_DIMENSION);
+  if (dim === undefined || result.breakdowns[dim.name]?.kind !== 'not_named') return result;
+  let wish: 'adjusted' | 'unadjusted' | null;
+  if (ASKS_NOT_SEASONAL.test(question)) wish = 'unadjusted';
+  else if (ASKS_SEASONAL.test(question)) wish = 'adjusted';
+  else {
+    const grain = result.period.kind === 'date_range' ? null : requiredGrain(result.period);
+    wish = grain === 'MM' || grain === 'KW' ? 'adjusted' : grain === 'JJ' ? 'unadjusted' : null;
+  }
+  if (wish === null) return result;
+  const code = EUROSTAT_SEASONAL_PREFERENCE[wish].find((c) => dim.members.some((m) => m.code === c));
+  if (code === undefined) return result;
+  return { ...result, breakdowns: { ...result.breakdowns, [dim.name]: { kind: 'member', code } } };
 }
 
 /**
