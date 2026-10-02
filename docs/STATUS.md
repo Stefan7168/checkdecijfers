@@ -61,6 +61,7 @@
   Dutch Eurostat labels built (reviewed list, no AI): benchmark refuse/ask now 5/6. Texts next to an answer now follow
   the table's source (CBS byte-identical). Next (owner): sign the public-claim draft
   (docs/session-briefs/2026-10-02-eurostat-public-claim-sweep-draft.md), then flip the Eurostat finder with it.
+  The English search step is wired into the live finder (dark): Dutch Eurostat questions top-5 8/12, shortlist 10/12.
 
 **▶ SESSION 153, part 2 — THE FRONT DOOR ([#362](open-questions.md), ADR 062 "As built — the front door"):** the owner's
   live check after the flip ("Hoeveel bestelauto's werden er in 2024 gesloopt?") was refused as out of scope — the curated

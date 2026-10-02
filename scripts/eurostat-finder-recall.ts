@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { FixtureSource, loadCatalogFixture } from '../src/cbs-adapter/fixture-source.ts';
 import { EurostatFixtureSource, loadEurostatCatalogFixture } from '../src/eurostat-adapter/fixture-source.ts';
 import { ALIAS_HINTS, expandTopicTerms, ingestCatalog, recallCandidates } from '../src/catalog/index.ts';
-import { quotaMerge, RECALL_LIMIT } from '../src/catalog/recall.ts';
+import { quotaMerge, recallPhrases, RECALL_LIMIT } from '../src/catalog/recall.ts';
 import { buildIsCurrentPredicate } from '../src/catalog/current-status.ts';
 import type { CatalogCandidate } from '../src/catalog/types.ts';
 import type { Db } from '../src/db/types.ts';
@@ -154,16 +154,8 @@ function bridgeTerms(): Record<string, string[]> {
 async function bridgedShortlist(db: Db, c: FinderCase, terms: Record<string, string[]>): Promise<CatalogCandidate[]> {
   const words = terms[c.id];
   if (c.lang === 'nl' && c.expectSource === 'eurostat' && words !== undefined && words.length > 0) {
-    // Each suggested term as its own phrase search (the finder's default mode), merged by rank —
-    // a phrase like "unemployment rate" is sharper than its words searched one by one.
-    const best = new Map<string, CatalogCandidate>();
-    for (const term of words) {
-      for (const cand of await recallCandidates(db, term, { includeEurostat: true })) {
-        const seen = best.get(cand.tableId);
-        if (seen === undefined || cand.rank > seen.rank) best.set(cand.tableId, cand);
-      }
-    }
-    return [...best.values()].sort((a, b) => b.rank - a.rank || (a.tableId < b.tableId ? -1 : 1)).slice(0, RECALL_LIMIT);
+    // The production function itself (src/catalog/recall.ts recallPhrases), so the measurement is the product.
+    return recallPhrases(db, words);
   }
   return recallCandidates(db, c.topic, { includeEurostat: true });
 }

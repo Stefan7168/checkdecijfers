@@ -14,10 +14,10 @@ import type { LlmClient } from '../answer/llm/client.ts';
 import type { OnboardingRouting, TableFinder } from '../answer/intent/policy.ts';
 import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
-import { suggestSearchTerms } from '../catalog/search-terms.ts';
+import { suggestEnglishSearchTerms, suggestSearchTerms } from '../catalog/search-terms.ts';
 import { candidateWalk } from '../catalog/walk.ts';
 import type { FindTableConfig, RerankFn } from '../catalog/types.ts';
-import type { RecallOptions } from '../catalog/recall.ts';
+import { recallPhrases, type RecallOptions } from '../catalog/recall.ts';
 import type { Db } from '../db/types.ts';
 import { alreadyIngestedSet } from './onboarding.ts';
 import { findActiveRequest } from './onboarding-store.ts';
@@ -49,6 +49,12 @@ export interface OnboardingFinderDeps {
    * proposes for the question (src/catalog/search-terms.ts). Set only for the
    * question finder; absent → no extra call, byte-identical. */
   searchTermsClient?: LlmClient;
+  /** Session 153 (#357 step 5, the Dutch → English bridge): when set, a search that is STILL not confident
+   * after the Dutch retry gets one more: English search words for Eurostat's English catalogue
+   * (suggestEnglishSearchTerms), each searched as a phrase and merged (recallPhrases), reranked against the
+   * reader's own question. web/app/actions.ts sets it ONLY while EUROSTAT_FINDER_ENABLED is on; absent → no
+   * extra call, byte-identical. */
+  englishSearchTermsClient?: LlmClient;
 }
 
 /** Produces the TableFinder the answer pipeline injects. Absent injection →
@@ -83,6 +89,14 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
         const terms = await suggestSearchTerms(question, deps.searchTermsClient);
         if (terms.length > 0) {
           const retry = await findTable(deps.db, { topic: terms.join(' '), question }, findOptions);
+          if (retry.kind === 'confident') outcome = retry;
+        }
+      }
+      if (outcome.kind !== 'confident' && deps.englishSearchTermsClient) {
+        const terms = await suggestEnglishSearchTerms(question, deps.englishSearchTermsClient);
+        const shortlist = terms.length > 0 ? await recallPhrases(deps.db, terms, deps.recall) : [];
+        if (shortlist.length > 0) {
+          const retry = await findTable(deps.db, { topic: terms.join(' '), question }, { ...findOptions, shortlist });
           if (retry.kind === 'confident') outcome = retry;
         }
       }

@@ -87,6 +87,33 @@ export function eurostatFinderEnabled(): boolean {
 }
 
 /**
+ * Session 153 (#357 step 5, the Dutch → English bridge in the live finder): one shortlist from several
+ * English search terms — each term searched as its own phrase (the default mode, Eurostat rows included),
+ * then taken IN TURN (each term's best, then each term's second, …), first sighting wins, cut to the usual
+ * shortlist size. Not a global sort by rank: ranks saturate, and one broad term ("labour force", dozens of
+ * perfect hits) then pushed every table of the precise term ("unemployment") out of the shortlist — found
+ * by this function's own test. The measuring script (scripts/eurostat-finder-recall.ts variant 'bridged')
+ * calls this same function. Called only while the Eurostat finder is on.
+ */
+export async function recallPhrases(db: Db, terms: readonly string[], options: RecallOptions = {}): Promise<CatalogCandidate[]> {
+  const limit = options.limit ?? RECALL_LIMIT;
+  const lists: CatalogCandidate[][] = [];
+  for (const term of terms) lists.push(await recallCandidates(db, term, { ...options, mode: 'all', includeEurostat: true }));
+  const out: CatalogCandidate[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; out.length < limit && lists.some((l) => i < l.length); i++) {
+    for (const list of lists) {
+      const cand = list[i];
+      if (cand === undefined || seen.has(cand.tableId)) continue;
+      seen.add(cand.tableId);
+      out.push(cand);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/**
  * The candidate shortlist for a topic, ranked by Dutch full-text relevance.
  * Empty when nothing matches (the topic isn't in CBS's catalog, or is all
  * stopwords) — the honest "we can't even find a candidate" signal.

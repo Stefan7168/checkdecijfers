@@ -28,6 +28,9 @@ export interface FindTableOptions {
   rerank: RerankFn;
   config?: FindTableConfig;
   recall?: RecallOptions;
+  /** Session 153: a shortlist already recalled by the caller (the English bridge, recallPhrases) — recall is
+   * skipped; everything after it (rerank against the reader's question, routing) is unchanged. */
+  shortlist?: CatalogCandidate[];
 }
 
 export async function findTable(
@@ -35,7 +38,7 @@ export async function findTable(
   query: FindTableQuery,
   options: FindTableOptions,
 ): Promise<FindTableOutcome> {
-  const shortlist = await recallCandidates(db, query.topic, options.recall ?? {});
+  const shortlist = options.shortlist ?? (await recallCandidates(db, query.topic, options.recall ?? {}));
   if (shortlist.length === 0) {
     return { kind: 'none', reason: 'no_recall' };
   }

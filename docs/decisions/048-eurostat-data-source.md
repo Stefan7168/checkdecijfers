@@ -1162,3 +1162,10 @@ one (a reused code keeps English, never a wrong Dutch label); units keep their m
 percentage, the qualification moves to the measure title; factors stay factors). The download route is untouched, so
 the four curated datasets keep their registrations; when they move to structure mode ((b), a re-baseline) their labels
 change with it. Measured on re-recording: benchmark refuse/ask 3/6 → 5/6, calibration 15/17 (one miss swapped).
+
+**The Dutch → English bridge in the live finder (same day).** `buildOnboardingFinder` gets an optional
+`englishSearchTermsClient`, set by `web/app/actions.ts` only while `EUROSTAT_FINDER_ENABLED` is on: after the Dutch
+search and the Dutch meaning step are both not confident, English words (`suggestEnglishSearchTerms`) are searched as
+phrases and taken in turn per term (`recallPhrases`, `src/catalog/recall.ts`), then reranked against the reader's
+question (`findTable`'s new `shortlist` option skips its own recall). Measured with the recorded words through the same
+function: Dutch Eurostat questions shortlist 10/12, top-5 8/12, top-1 5/12; CBS cases unchanged (6/6).

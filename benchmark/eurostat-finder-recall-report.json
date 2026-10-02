@@ -1506,8 +1506,8 @@
       "summary": {
         "eurostat-nl": {
           "cases": 12,
-          "top1": 3,
-          "top5": 6,
+          "top1": 5,
+          "top5": 8,
           "inShortlist": 10
         },
         "eurostat-en": {
@@ -1518,8 +1518,8 @@
         },
         "eurostat-all": {
           "cases": 24,
-          "top1": 9,
-          "top5": 15,
+          "top1": 11,
+          "top5": 17,
           "inShortlist": 20
         },
         "cbs-nl": {
@@ -1534,7 +1534,7 @@
           "id": "unemployment-nl",
           "lang": "nl",
           "expectSource": "eurostat",
-          "position": 3,
+          "position": 6,
           "hit": "eurostat:teilm020",
           "shortlistSize": 24,
           "eurostatInShortlist": 24
@@ -1552,7 +1552,7 @@
           "id": "inflation-nl",
           "lang": "nl",
           "expectSource": "eurostat",
-          "position": 14,
+          "position": 5,
           "hit": "eurostat:tec00118",
           "shortlistSize": 15,
           "eurostatInShortlist": 15
@@ -1570,8 +1570,8 @@
           "id": "gdp-nl",
           "lang": "nl",
           "expectSource": "eurostat",
-          "position": 18,
-          "hit": "eurostat:nama_10_gdp",
+          "position": 2,
+          "hit": "eurostat:namq_10_gdp",
           "shortlistSize": 24,
           "eurostatInShortlist": 24
         },
@@ -1660,7 +1660,7 @@
           "id": "house-prices-nl",
           "lang": "nl",
           "expectSource": "eurostat",
-          "position": 6,
+          "position": 1,
           "hit": "eurostat:prc_hpi_a",
           "shortlistSize": 24,
           "eurostatInShortlist": 24
@@ -1732,7 +1732,7 @@
           "id": "electricity-prices-nl",
           "lang": "nl",
           "expectSource": "eurostat",
-          "position": 5,
+          "position": 1,
           "hit": "eurostat:nrg_pc_204_c",
           "shortlistSize": 24,
           "eurostatInShortlist": 24
