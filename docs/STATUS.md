@@ -22,8 +22,9 @@
   copies kept fresh. Work, in order, and nothing else:
   1. **CBS: switch on the any-table route** (ADR 062 table lane) — reader recorded + calibrated and the table-lane benchmark
      PASSED and the route is LIVE (session 153); `37789ksz` evicted 2026-10-02 — no CBS table is a whole copy any more.
-  2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way (built,
-     dark), fetch only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5).
+  2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way, fetch
+     only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5). **Built end to end,
+     DARK (session 153):** the switch `EUROSTAT_FINDER_ENABLED` + the owner-signed public wording are all that remain.
   3. **Stop:** converting, refreshing, curating or polishing specific tables/datasets. The four Eurostat datasets are NOT converted or
      refreshed by hand any more; they go when the Eurostat route answers. Storage work only as far as the two routes need it.
   The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
@@ -136,10 +137,13 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-10-01, session 153 — verify against `git log` / Actions runs before trusting this).
-The CBS any-table route is LIVE (`TABLE_LANE_ENABLED=1`, CI gate enforced). Single priority: widen the front door —
-the front door is at 27/32 (`npm run frontdoor:eval`, [#362](open-questions.md)); the owner's live re-check of the vans
-question PASSED 2026-10-02 (9.517, 85245NED); `37789ksz` is evicted. Next: the remaining front-door misses (#362), then the Eurostat route.
+**▶ NEXT SESSION STARTS HERE (written 2026-10-02, session 153 wrap — verify against `git log` / Actions runs before trusting this).
+The CBS any-table route is LIVE. The Eurostat route is BUILT and DARK (finder, English bridge, table reader, Dutch labels,
+per-answer source wording; Eurostat benchmark real model: answers 6/6, 0 invented, refuse/ask 5/6). Single priority:
+the owner signs [the public-claim draft](session-briefs/2026-10-02-eurostat-public-claim-sweep-draft.md), then — owner present —
+apply that wording AND set `EUROSTAT_FINDER_ENABLED=1` in one change (ADR 048 D3(d)), then a live check with real Dutch
+questions. Open, measure first: an EU-country question can land on a CBS table before the bridge runs (#357).
+Kickoff: [session-briefs/2026-10-02-session-154-kickoff.md](session-briefs/2026-10-02-session-154-kickoff.md).
 The older bullets below are history.**
 
 - **⚑ DATA IS FRESH AS OF 2026-09-29 (session 148, [#355](open-questions.md)):** `npm run ingest:freshness` reads 0 of 20 CBS tables

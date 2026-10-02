@@ -1,5 +1,33 @@
 # STATUS archive — the session log
 
+**Session 153 (2026-10-01 → 2026-10-02 on the machine's +07 clock; owner present throughout, partly "continue autonomously";
+AI spend ≈$11.5 of the $50 roof; no DDL; production env: `TABLE_LANE_ENABLED=1` added; production data: `37789ksz` evicted).**
+
+1. **Table reader recorded + calibrated (owner GO, #360 "add all"):** cheap model failed (26/50) → mid tier `claude-sonnet-5`;
+   five structural fixes; threshold 0.6; labelled 44/50, table-lane benchmark 12/14 + 9/9 + 0 invented on both recordings
+   (`97abef4d`). Owner GO: gate enforced in CI + `TABLE_LANE_ENABLED=1` live (`00932e1f`).
+2. **Front door (#362):** the owner's first live question was refused as out of scope → whole-question search, the question
+   finder's own 0.7 bar, the meaning step (`c8833d31`, `110ff687`, `30da8abd`), catalogue-common words + Dutch plurals
+   (`900ce153`, `c3942447`); tuning set 31/32, frozen held-out set 27/30 (`b94e019b`; old path 1/30), 0 non-questions routed.
+3. **Live fixes after the owner's ChatGPT side-by-side (#363, #364):** kick fallback host (`5f103506`), R11 forecast wording +
+   trend by default (`22e5c746`), latest-first series (`9c5742e4`; CI red on the e2e pin, fixed `8ecb50c9`), bars for gapped
+   series, a faster, more informative waiting bubble (`e76d80d4`); `37789ksz` evicted after a welfare rehearsal (`681bac8a`).
+   Owner's live re-check PASSED: vans 9.517 from 85245NED (`e1af5838`); the sentence now names what was counted —
+   "In 2024 kwamen 9.517 bestelauto's voor sloop vrij." (`54f60bf4`, phrasing `subject`, curated payloads byte-identical).
+4. **Eurostat route, all dark (#357 study steps 3–5):** Dutch → English search bridge measured 0/12 → 10/12 (`776fa95a`);
+   the lane plans Eurostat (`6df27c30`); the job reads `eurostat:` tables from Eurostat (`6917aa19`); table reader recorded
+   on Eurostat 13/17 (`2d829245`); #365 owner GO — the all-citizenships TOTAL kept → 15/17 (`936e5906`); Eurostat set in the
+   table-lane benchmark over six NON-curated datasets, first end-to-end run, five defects fixed (decimals from two periods,
+   "CBS-tabel" naming, 'Number' unit, base year read as factor, CBS-only scorer rule) (`d0c62fd2`); Dutch labels by a
+   reviewed list → refuse/ask 3/6 → 5/6 (`be183ad6`); texts next to an answer follow the table's source, CBS byte-identical,
+   and the public-claim sweep DRAFTED for owner sign-off (`4269bf72`); the English bridge wired into the live finder,
+   round-robin merge, top-5 6 → 8/12 (`1ef29d0c`). Final Eurostat benchmark (real model): answers 6/6, 0 invented, refuse/ask 5/6.
+5. Verification: every pushed commit green in CI incl. deploy (12 runs checked at wrap). Last full block (`1ef29d0c` tree):
+   backend 296 files / 5,344 + 2 load timeouts that pass solo (32/32), benchmark PASS, web 3,532, build; the block before ran
+   40/40 e2e. `audit:verify 296–346`: the 14 problems are the known #359 rows, identical before and after this session's changes.
+6. Machine note: another project (Glaibaan) ran its own vitest agents on this machine for hours; the verify block's machine-wide
+   mutex waited behind them and several tests timed out under load (all passed solo). Run the block detached (RUNBOOK).
+
 **Session 152 (2026-09-30 → 2026-10-01 on the machine's +07 clock; 2026-09-30 UTC; owner present; zero AI spend; no DDL; production data
 written: 17 CBS tables converted to slice storage, 2 WP16 tables evicted).**
 

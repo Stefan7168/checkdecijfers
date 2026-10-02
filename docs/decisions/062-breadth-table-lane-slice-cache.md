@@ -8,7 +8,7 @@ the owner approved the design ("Yes, write the plan (Recommended)"). Design:
 the workspace chat, DARK behind `TABLE_LANE_ENABLED`) built** — see the "As built" sections. **Step 6's harness (the
 table-lane benchmark: frozen tasks, key, hermetic runner + scorer, CI test) built 2026-09-30** — its measured run waits
 for step 4's recording + calibration run (after 2026-10-01), which now records the benchmark's parse requests too; the
-flag flip comes after both. The parser has still never called the AI.
+flag flip comes after both. **Superseded 2026-10-01 (session 153): recorded + calibrated, gate PASSED and enforced, `TABLE_LANE_ENABLED=1` LIVE — see "As built — recording + calibration".**
 
 **Decision 1 superseded 2026-09-30 (session 151) by ADR [065](065-retire-whole-table-copies-one-route.md):** the curated
 whole-table set does not stay as a permanent fast lane; this slice cache becomes the only way data enters, with the pinned

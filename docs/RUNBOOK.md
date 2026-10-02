@@ -2128,6 +2128,12 @@ per-machine cache:
    `=== DONE` marker: `nohup scripts/verify-block.sh <dir> <log> >/dev/null 2>&1 & disown`. Measured
    2026-09-03 on an idle machine: ~8 minutes per block (three PRs: 8:07, 7:37, 7:31) — the 1,423 s of
    session 70 was the same suite under parallel-agent load, not its natural length.
+   **Session 153 addition — the mutex is MACHINE-wide:** `wait_for_vitest` waits for ANY node vitest process, including
+   the sibling project's (Glaibaan runs its own vitest agents on this machine). On 2026-10-02 a block waited ~25 minutes
+   before its backend suite started and a background tool call holding it was killed at its time limit. So: always
+   start the block detached (`nohup … & disown`, as above) and wait on its `=== DONE` line in ≤30-minute loops; under that
+   load a few slow tests time out (convert, slice-build parity, two web tests) — rerun them solo (`--maxWorkers=1`) before
+   calling it red. `uptime` shows the load; never kill the sibling project's processes.
    **Session 130 additions:** a third argument `--e2e` (`verify-block.sh <dir> <log> --e2e`) also runs the
    Playwright smoke (`web/e2e/`, dev harness) after the build — off by default because the harness + Chromium are
    heavy on the 8 GB machine; use it on a quiet machine when a change touches text a chart/card shows (CI always
@@ -2830,7 +2836,7 @@ re-record, run `npm run tablelane:bench:run && npm run tablelane:bench:score` an
 
 **Session 145 (2026-09-29): the one-session plan for THIS run plus the regional Part 2 and Eurostat step 0 recordings — order, commands, measured cost basis (~$4.35 budget), pass/fail gates, owner decisions — is [session-briefs/2026-10-01-recording-run-plan.md](session-briefs/2026-10-01-recording-run-plan.md). Follow that on the day; this section stays the reference for the table-parser piece.**
 
-The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") has never called the AI. Its first
+**✅ First recording DONE 2026-10-01 (session 153; mid tier, 44/50 labelled; ADR 062 "As built — recording + calibration"); a Eurostat set runs with `-- --eurostat` (own fixtures, session 153). Original text:** The table-scoped parser (`src/answer/table-parse/`, ADR 062 "As built — step 4/4b/5") had never called the AI. Its first
 recording turns the 39 labelled questions (`benchmark/tableparse-labelled-set.json`, now including the follow-up cases;
 prompt version 3 since breadth step 5) into replayable fixtures and a calibration report, and in the same run records the
 23 table-lane benchmark requests (ADR 062 step 6; labelled `bench:L1`…`bench:L23`, not scored by the calibration).

@@ -8,6 +8,14 @@ on top.
 
 ## Session 153 — the table reader's first live recording
 
+000000. **Merging search results by score lets one broad word crowd out the precise one.** The English bridge's first
+   merge sorted all terms' hits by rank; ranks saturate at 1.0, so "labour force" (dozens of perfect hits) pushed every
+   "unemployment" table out of the shortlist. The new test caught it; taking each term's results in turn fixed it AND
+   raised top-5 6 → 8/12. When a measuring script re-implements production logic, make it call the production function —
+   the script's own copy had hidden this.
+0000000. **On a shared machine, "the verification block timed out" can be someone else's load.** The block's mutex waits
+   for any vitest on the machine; the sibling project ran agents for hours, so blocks waited 25 minutes and tests timed
+   out at load ~20. Check `uptime` and `ps` before suspecting the code; run the block detached and rerun timeouts solo.
 00000. **The first end-to-end run of a generic path on a NEW source finds what unit tests on that source never did.**
    Every Eurostat piece had its own tests (structure reader, decimals read, totals, plan) and all passed; the first
    benchmark run through the whole lane found five defects in one go — decimals from one period, "CBS-tabel" on a Eurostat
