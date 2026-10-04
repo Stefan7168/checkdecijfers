@@ -32,7 +32,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 2. **(b) CBS data is bulk-ingested into our own database** — never queried live from the frontend or the request path. (ADR [003](docs/decisions/003-cbs-access-layer.md).)
 3. **(c) When data is missing, ambiguous, or stale: refuse or ask for clarification. Never guess.** A fabricated number is the worst possible bug in this product — worse than downtime.
 
-**Public-claim rule** (confirmed in the same interview): the public claim is **"every number traceable to an official CBS cell, with source and date shown"** — never absolute slogans like "0% hallucination".
+**Public-claim rule** (confirmed in the same interview): the public claim is **"every number traceable to an official CBS cell, with source and date shown"** — never absolute slogans like "0% hallucination". **Widened 2026-10-04 (session 154, owner-signed Eurostat sweep, ADR 048 D3(d)), the day Eurostat started answering: "every number traceable to an official table from CBS or Eurostat, with source and date".**
 
 ## Conventions
 

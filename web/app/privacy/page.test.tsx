@@ -44,9 +44,13 @@ describe('PrivacyPage — nl (default)', () => {
     expect(screen.getByText(/Stripe/)).toBeInTheDocument();
   });
 
-  it('never names Eurostat or another source as available', async () => {
+  // Owner-signed Eurostat sweep (2026-10-04, ADR 048 D3(d)): Eurostat answers now, so the page names CBS
+  // and Eurostat — and still no other source.
+  it('names CBS and Eurostat as the sources, and no other', async () => {
     render(await PrivacyPage());
-    expect(document.body.textContent?.toLowerCase()).not.toContain('eurostat');
+    const body = document.body.textContent?.toLowerCase() ?? '';
+    expect(body).toContain('eurostat');
+    expect(body).not.toMatch(/oecd|imf|world bank|wereldbank|ecb/);
   });
 });
 
