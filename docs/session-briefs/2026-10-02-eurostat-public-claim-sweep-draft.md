@@ -1,6 +1,13 @@
 # Eurostat public-claim sweep — DRAFT for owner sign-off (ADR 048 D3(d), #357 step 5)
 
-Session 153, 2026-10-02. **Nothing here is applied.** ADR 048 D3(d) says the public wording changes from
+> **SIGNED by the owner 2026-10-04 (session 154, in chat, four questions):** (1) the general wording, items 1–9 and
+> 11–13, **signed as proposed**; (2) item 10, the source chips: **Eurostat gets its OWN chip** (not riding with CBS) — a
+> reader can pick CBS only, Eurostat only, or both; the table search follows the selection; (3) model prompts: **change
+> them and re-record** (owner chose this over the session's "leave them, no spend" recommendation; ~$5 approved);
+> (4) **GO** for the flag flip `EUROSTAT_FINDER_ENABLED=1` in Production together with the wording, then a live check of
+> real Dutch Eurostat questions against Eurostat's own site (~2 cents each), switching off again if any number is wrong.
+
+Session 153, 2026-10-02. **Nothing here is applied (as of the draft; see the signed block above).** ADR 048 D3(d) says the public wording changes from
 "official CBS" to "official sources" **in the same change** that switches the first Eurostat answers on, owner-signed —
 never before. This page is the list to sign, with a proposed wording per item, so that change can be made in one go.
 
