@@ -1169,3 +1169,27 @@ search and the Dutch meaning step are both not confident, English words (`sugges
 phrases and taken in turn per term (`recallPhrases`, `src/catalog/recall.ts`), then reranked against the reader's
 question (`findTable`'s new `shortlist` option skips its own recall). Measured with the recorded words through the same
 function: Dutch Eurostat questions shortlist 10/12, top-5 8/12, top-1 5/12; CBS cases unchanged (6/6).
+
+### Addendum (2026-10-04, session 154) — D3(d) carried out: Eurostat is LIVE, with its own source chip
+
+Owner signed the public-claim sweep (session-briefs/2026-10-02-eurostat-public-claim-sweep-draft.md, signed block) and
+gave GO. In ONE change (`5267643e`…`b98b0db7`, CI run 37193394891 green incl. deploy) together with
+`EUROSTAT_FINDER_ENABLED=1` in Vercel Production:
+- **Wording** (items 1–9, 11–13): every general claim names CBS and Eurostat; footer adds "© Europese Unie, Eurostat
+  (CC BY 4.0)"; coverage disclosure groups rows by source; /systeemoverzicht has a Eurostat card; three curated
+  clarification questions and the waiting text are source-neutral (clarify fixtures re-recorded 7/7). Region-set
+  coverage lines stay CBS (region sets are CBS-only). Audit re-derivation: refusal/meta/clarification texts are not
+  rebuilt by the verifier, so no stored row diverges.
+- **Item 10, owner decision: Eurostat gets its OWN chip.** `liveChatSourceKeys()` (chatSelectable AND the flag) feeds
+  both the chip row and the server's selection check. CBS only → finders search CBS rows only, no English bridge;
+  Eurostat only → finders search Eurostat rows only and a curated (CBS) reading is never answered: it is re-routed
+  through the Eurostat-only whole-question finder, else the new `no_eurostat_table` refusal
+  (`src/answer/respond/source-override.ts`, every ParseOutcome kind decided); neither → the old refusal.
+  Selection absent (benchmark/tests/CLI) → byte-identical.
+- **Prompts (owner chose re-record over the session's no-spend advice):** table reader v5 + rerank v3 name
+  graphmaker.studio and both sources. The wording-only re-record let Eurostat E4/E5 slip back to "x 1 000 personen"
+  for "hoe hoog was de werkloosheid"; one general MAAT line (a level question that asks no count takes the
+  percentage when the table offers both; examples outside the labelled sets) fixed it. Measured: CBS calibration
+  44/50 (all six misses refuse/ask), Eurostat 15/17 (E3 asks, E11 SA vs SCA), CBS table-lane benchmark 14/14 + 9/9 +
+  0 invented (was 12/14), Eurostat lane 6/6 + 5/6 + 0 invented, table finder 11/11, front door 31/32 tuning, 25/30
+  held-out (was 27/30; one change from the unchanged intent parse, one a neighbouring household table).

@@ -30,6 +30,14 @@
   The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
   mistake as pinning one welfare table (CLAUDE.md "Breadth comes from the layer").
 
+**▶ SESSION 154 (2026-10-04, owner present) — EUROSTAT IS LIVE ([#357](open-questions.md), ADR 048 D3(d) addendum):** owner signed the
+  public-claim sweep and gave GO. Wording names CBS and Eurostat everywhere; Eurostat has its OWN source chip (CBS only / Eurostat only /
+  both — the table search follows the choice); table-reader + rerank prompts name both sources and were re-recorded (+ one headline-figure
+  rule after E4/E5 slipped to a count): CBS lane benchmark 14/14 + 9/9 + 0 invented, Eurostat 6/6 + 5/6 + 0 invented. `EUROSTAT_FINDER_ENABLED=1`
+  in Production; CI 37193394891 green incl. deploy. **Open: the owner's live check of three Dutch Eurostat questions against Eurostat's own
+  figures (Poland road deaths 2023 = 1,893; Denmark municipal waste 2022 = 759 kg/inh; France asylum 2023 = 167,055 total / 145,160 first-time).**
+  A Claude Design workspace mockup was rejected by the owner ("not good at all") and dropped — nothing built.
+
 **▶ SESSION 153 (2026-10-01, owner present) — THE ANY-TABLE ROUTE PASSES ITS GATE; THE FLIP WAITS FOR THE OWNER'S GO
   ([#338](open-questions.md), [#360](open-questions.md), [#361](open-questions.md), ADR 062 "As built — recording + calibration"):**
   owner decided #360 "add all" and approved the spend. The table reader was recorded live for the first time. The cheap
