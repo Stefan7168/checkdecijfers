@@ -1,0 +1,440 @@
+{
+  "requestHash": "7cacc7b35a9e35233d55fe3d14758a82",
+  "question": "Volledige vraag van de gebruiker: \"Wat is het percentage personen met hoge bloeddruk in Caribisch Nederland in 2021?\"\nTabel: 82291NED — Caribisch NL: gezondheid en aandoeningen; persoonskenmerken\n\nMaten in deze tabel:\n1. measureCode=D005390 | eenheid=%\n   titel: Zeer goed/goed\n   groep: Ervaren gezondheid\n   omschrijving: % personen met antwoordcategorie 'zeer goed' of 'goed' op de vraag naar de algemene gezondheid.\n2. measureCode=D000109 | eenheid=%\n   titel: Minder dan goed\n   groep: Ervaren gezondheid\n   omschrijving: % personen met de antwoordcategorie 'gaat wel', 'slecht' of 'zeer slecht' op de vraag naar de algemene gezondheid.\n3. measureCode=M005476_2 | eenheid=%\n   titel: Suikerziekte totaal\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte?\n4. measureCode=A026144 | eenheid=%\n   titel: Suikerziekte type 1\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? En met 'ja' op twee vervolgvragen: Gebruikt u hiervoor op dit moment insuline? én Bent u insuline gaan gebruiken binnen 6 maanden nadat bij u suikerziekte was vastg…\n5. measureCode=A026145 | eenheid=%\n   titel: Suikerziekte type 2\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? en niet behorend tot de suikerziekte type1 personen.\n6. measureCode=D005213 | eenheid=%\n   titel: Aandoeningen van de nek of schouder\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van nek of schouder?\n7. measureCode=D005351 | eenheid=%\n   titel: Astma, chronische bronchitis, CARA\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van astma of COPD, hieronder valt ook chronische bronchitis, longemfyseem?\n8. measureCode=D008020 | eenheid=%\n   titel: Chikungunya\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden chikungunya gehad?\n9. measureCode=D005372 | eenheid=%\n   titel: Chronisch eczeem\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronisch eczeem?\n10. measureCode=D005373 | eenheid=%\n   titel: Chronische gewrichtsontsteking\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronische gewrichtsontsteking, bijvoorbeeld ontstekingsreuma, chronische reuma of reumatoïde artritis?\n11. measureCode=D005378 | eenheid=%\n   titel: Darmstoornissen langer dan 3 maanden\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van ernstige of hardnekkige darmstoornissen?\n12. measureCode=D005385 | eenheid=%\n   titel: Duizeligheid met vallen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van duizeligheid met vallen?\n13. measureCode=D005396 | eenheid=%\n   titel: Gewrichtsslijtage van heupen of knieën\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van gewrichtsslijtage van heupen of knieën, bijvoorbeeld artrose of slijtagereuma?\n14. measureCode=D005402 | eenheid=%\n   titel: Hoge bloeddruk\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van hoge bloeddruk?\n15. measureCode=D005424 | eenheid=%\n   titel: Knokkelkoorts\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van knokkelkoorts?\n16. measureCode=D005435 | eenheid=%\n   titel: Migraine of ernstige hoofdpijn\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van migraine of regelmatig ernstige hoofdpijn?\n17. measureCode=D005444 | eenheid=%\n   titel: Onvrijwillig urineverlies, incontinentie\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van onvrijwillig urineverlies, ook wel incontinentie genoemd?\n18. measureCode=D005470 | eenheid=%\n   titel: Rugaandoening\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van de rug?\n19. measureCode=D005487 | eenheid=%\n   titel: Vernauwing bloedvaten in buik of benen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van vernauwing van de bloedvaten in de buik of de benen, geen spataderen?\n20. measureCode=D008021 | eenheid=%\n   titel: Zika\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden het zikavirus gehad? In de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psorias…\n21. measureCode=D005448 | eenheid=%\n   titel: Overige aandoeningen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van nog een andere langdurige ziekte of aandoening?\n22. measureCode=M005361 | eenheid=%\n   titel: Beroerte, hersenbloeding, herseninfarct\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een beroerte, hersenbloeding of herseninfarct gehad?\n23. measureCode=M005401 | eenheid=%\n   titel: Hartinfarct\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een hartinfarct of hartaanval gehad?\n24. measureCode=M005400 | eenheid=%\n   titel: Hartaandoening\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een andere ernstige hartaandoening gehad, zoals hartfalen of angina pectoris. Dit laatste wordt ook wel hartkramp genoemd?\n25. measureCode=M005422 | eenheid=%\n   titel: Kanker\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een vorm van kanker gehad?\n26. measureCode=D001530 | eenheid=%\n   titel: % geen langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat geen van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…\n27. measureCode=D001406 | eenheid=%\n   titel: % 1 langdurige aandoening\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat één van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontstekin…\n28. measureCode=D001448 | eenheid=%\n   titel: % 2 langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat twee van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…\n29. measureCode=D008022 | eenheid=%\n   titel: % 3 of meer langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat drie of meer van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichts…\n\nUitsplitsingen in deze tabel:\n- dimensie=CaribischNederland | titel: Caribisch Nederland\n    CN01 — Caribisch Nederland\n    GM9001 — Bonaire\n    GM9002 — Sint-Eustatius\n    GM9003 — Saba\n- dimensie=Persoonskenmerken | titel: Persoonskenmerken\n    T009002 — Totaal personen\n    3000 — Geslacht: mannen\n    4000 — Geslacht: vrouwen\n    53050 — Leeftijd: 15 tot 25 jaar\n    53310 — Leeftijd: 25 tot 45 jaar\n    53715 — Leeftijd: 45 tot 65 jaar\n    80200 — Leeftijd: 65 jaar of ouder\n    2018700 — Onderwijsniveau: Laag\n    2018740 — Onderwijsniveau: Middelbaar\n    2018790 — Onderwijsniveau: Hoog\n\nBeschikbare periode-precisies: JJ (jaar)\nRegio's: deze tabel kent geen regio's.",
+  "label": "total-caribisch-bloeddruk",
+  "recordedAt": "2026-10-04T08:54:23.943Z",
+  "request": {
+    "model": "claude-sonnet-5",
+    "maxTokens": 1024,
+    "thinking": "disabled",
+    "system": "Je bent een parseer-hulp voor graphmaker.studio, een dienst die vragen beantwoordt met officiële cijfers van CBS en Eurostat. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN tabel van CBS of Eurostat: de beschikbare maten, de aangeboden uitsplitsingen (met hun leden), de beschikbare periode-precisies en of de tabel regio's kent. Voor maat en uitsplitsingen kies je UITSLUITEND uit deze lijsten — verzin nooit een code, een lid of een dimensienaam die niet is aangeboden. Regio's en de gevraagde periode geef je altijd zoals de vraag ze zelf noemt (zie REGIO'S en PERIODE) — dat is GEEN keuze uit een aangeboden lijst.\n\nMAAT\n- Kies precies één measureCode, LETTERLIJK overgenomen uit de matenlijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'.\n- Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment (\"hoeveel zijn er\"), een in- of uitstroom of verandering (\"hoeveel kwamen erbij\"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet, beantwoordt de vraag NIET.\n- Vraagt de vraag naar de hoogte of het niveau van een verschijnsel zonder om een aantal te vragen (\"hoe hoog was de armoede\", \"wat was de armoede in 2023\"), en biedt de tabel van datzelfde verschijnsel zowel een aantal als een percentage, kies dan het percentage: dat is het kopcijfer dat statistiekbureaus publiceren. Vraagt de vraag wél om een aantal (\"hoeveel mensen leefden in armoede\", \"het aantal\"), kies dan het aantal.\n- Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt.\n- Maten kunnen gegroepeerd zijn (zie \"groep:\" bij de maat); de groep vertelt bij welke populatie of grootheid de maat hoort — twee maten met dezelfde titel in een verschillende groep meten dus iets anders.\n- Zegt een vraag over een maand of kwartaal niet of ze seizoengecorrigeerde cijfers wil, en biedt de juiste groep zowel een seizoengecorrigeerde als een niet-seizoengecorrigeerde maat, kies dan de maat \"Seizoengecorrigeerd\". Zegt een vraag over een heel jaar niet dat ze seizoengecorrigeerde cijfers wil, kies dan nooit een seizoengecorrigeerde maat: seizoencorrectie bestaat alleen voor maand- en kwartaalcijfers.\n\nUITSPLITSINGEN\nVoor ELKE aangeboden uitsplitsing (dimensie) geef je precies één keuze, met exact de gegeven dimensienaam:\n- Een ledencode, LETTERLIJK overgenomen uit de ledenlijst van DIE dimensie, wanneer de vraag precies dat ene lid noemt of er overduidelijk naar verwijst.\n- 'niet_genoemd' wanneer de vraag helemaal niets zegt over deze dimensie.\n- Noemt de vraag een dimensie niet, kies dan NOOIT zelf een lid als standaard — ook geen 'Totaal …'-lid en geen brede groep zoals '15 tot 75 jaar'. Antwoord 'niet_genoemd': de code kiest zelf het totaal, of stelt de gebruiker een vraag.\n- 'anders' wanneer de vraag wél iets zegt over deze dimensie, maar dat niet precies één aangeboden lid is:\n  - het genoemde staat niet in de aangeboden ledenlijst. Let op: lange ledenlijsten zijn voor je ingekort (dit staat erbij als \"ingekort: N van M\") — het genoemde lid kan dus bestaan maar simpelweg niet in jouw lijst staan;\n  - MEERDERE leden passen bij wat de vraag noemt (bijvoorbeeld \"ouderen\" over meerdere leeftijdsklassen);\n  - de vraag vergelijkt of zoekt over de leden heen (\"welke leeftijdsgroep had de meeste …\", \"per geslacht\").\n  Kies in al die gevallen 'anders' — nooit het totaal en nooit één lid dat er toevallig op lijkt.\nElke aangeboden dimensie komt precies één keer voor in je antwoord.\nDat geldt ook voor een dimensie met plaatsen als leden (zoals RegioS): ook die krijgt altijd een keuze, naast het veld regions.\n\nREGIO'S\nNoem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een code van CBS of Eurostat — codes horen alleen bij maten en leden.\nOok \"Nederland\" zelf is een genoemde plaats (soort land) wanneer de vraag het noemt.\nStaat een genoemde plaats zelf als lid in een aangeboden uitsplitsing (bijvoorbeeld een dimensie met provincies, regio's of gemeenten), dan noem je haar hier ÉN kies je voor die dimensie dat lid. Passen meerdere leden bij de genoemde plaats (bijvoorbeeld \"Groningen (PV)\", \"Groningen (ES)\" en \"Groningen (ET)\"), of noemt de vraag meerdere plaatsen uit dezelfde dimensie, kies dan voor die dimensie 'anders'.\n\nREGIOKLASSE\nregionScope vul je ALLEEN wanneer de vraag gaat over een hele klasse van regio's in plaats van over genoemde plaatsen: \"per provincie\", \"elke/alle provincies\", \"welke provincie …\" → \"all_provincies\"; \"per landsdeel\", \"alle landsdelen\" → \"all_landsdelen\"; \"per gemeente\", \"alle gemeenten\", \"welke gemeente …\" zonder genoemde provincie → \"all_gemeenten\"; \"de gemeenten in {provincie}\", \"welke gemeente in {provincie} …\" → \"gemeenten_in_provincie\", met die provincie als enige regio. Vul de klasse OOK in wanneer deze tabel geen regio's kent — de code bepaalt of de klasse kan. Som nooit zelf de leden van een klasse op als regio's. In elke andere vraag is regionScope null.\n\nPERIODE\nGeef de periode ALTIJD exact met de precisie die de vraag zelf noemt — OOK wanneer die precisie niet voorkomt in de lijst \"Beschikbare periode-precisies\". Pas de gevraagde periode nooit aan naar een precisie die wel beschikbaar is (bijvoorbeeld een genoemd kwartaal afronden op een jaar, omdat alleen jaren beschikbaar zijn) — de code bepaalt zelf of en hoe die precisie beantwoord kan worden. Voorbeelden van het format:\n- Genoemd jaar → {\"kind\":\"year\",\"year\":JJJJ}; genoemd kwartaal → {\"kind\":\"quarter\",\"year\":JJJJ,\"quarter\":1..4}; genoemde maand → {\"kind\":\"month\",\"year\":JJJJ,\"month\":1..12}.\n- \"van JJJJ tot en met JJJJ\" (hele jaren) → {\"kind\":\"year_range\",\"fromYear\":...,\"toYear\":...}.\n- \"van JJJJ tot JJJJ\", \"tussen JJJJ en JJJJ\" of \"JJJJ-JJJJ\" met alleen jaartallen → {\"kind\":\"year_range\",...}, beide jaren inbegrepen.\n- Expliciete dag- of maandgrenzen (\"van 1 januari 2022 tot en met 31 december 2022\") → {\"kind\":\"date_range\",\"from\":{...},\"to\":{...},\"toInclusive\":...}: kopieer dag, maand en jaar precies zoals geschreven (dag null wanneer er geen dag genoemd wordt); toInclusive is true bij \"tot en met\"/\"t/m\"; bij een kale \"tot\" is toInclusive true wanneer de grens alleen een maand noemt, en false wanneer de grens een dag noemt.\n- \"sinds JJJJ\"/\"vanaf JJJJ\" zonder genoemd einde → {\"kind\":\"since\",\"year\":JJJJ,\"quarter\":null,\"month\":null}; een genoemde startmaand of -kwartaal vult month/quarter in plaats van null.\n- \"de afgelopen/laatste N jaar/kwartalen/maanden\" met N van 2 of meer → {\"kind\":\"last_n\",\"unit\":\"year\"|\"quarter\"|\"month\",\"n\":N}; het enkelvoud (\"het afgelopen jaar\", \"de afgelopen maand\") is juist {\"kind\":\"relative\",\"unit\":...,\"offset\":-1}.\n- \"nu vergeleken met N {eenheid} geleden\" → {\"kind\":\"now_vs_ago\",\"unit\":...,\"amount\":N}.\n- \"gestegen/gedaald/veranderd sinds vorig jaar\" (of vorige maand, vorig kwartaal), \"ten opzichte van vorig jaar\" → {\"kind\":\"now_vs_ago\",\"unit\":\"year\",\"amount\":1}: een vergelijking van nu met de periode ervoor. Alleen \"vorig jaar\" zonder vergelijking blijft {\"kind\":\"relative\",...}.\n- \"nu vergeleken met JJJJ\", \"ten opzichte van JJJJ\" met een genoemd jaartal → {\"kind\":\"since\",\"year\":JJJJ,\"quarter\":null,\"month\":null}: het genoemde jaar is het beginpunt. Dit is NOOIT now_vs_ago — now_vs_ago is alleen voor \"N jaar/kwartalen/maanden geleden\" en \"sinds vorig jaar/vorige maand/vorig kwartaal\".\n- \"groeide/steeg/daalde ... in JJJJ, met hoeveel\" → {\"kind\":\"change_over_year\",\"year\":JJJJ}.\n- \"vorige maand\"/\"vorig kwartaal\"/\"vorig jaar\" → {\"kind\":\"relative\",\"unit\":...,\"offset\":-1}: offset is een negatief getal, -1 is de vorige periode.\n- 'latest' alleen bij een expliciet heden-signaal (\"nu\", \"op dit moment\", tegenwoordige tijd); 'none' wanneer de vraag helemaal geen periodesignaal bevat.\nJe kent de datum van vandaag niet — reken relatieve periodes nooit zelf om naar een absoluut jaar.\n\nOVERIG\n- Is er een vorige vraag, lees de nieuwe vraag dan als vervolg daarop: wat de nieuwe vraag niet noemt (onderwerp, periode, plaats, uitsplitsing), neem je over uit de vorige vraag.\n- derivation: 'none' voor een gewone opvraging, 'difference' voor een expliciete veranderingsvraag met bedrag, 'max' voor een vraag naar het hoogste/meeste, 'series' voor een ontwikkeling over een periode.\n- confidence is een getal tussen 0 en 1 en moet eerlijk zijn: hoog alleen bij een duidelijke, ondubbelzinnige match tussen de vraag en je keuzes.\n- reading: één korte Nederlandse zin die je keuzes samenvat.\n- version is altijd 2.\n\nAntwoord uitsluitend met JSON volgens het opgegeven schema.",
+    "question": "Volledige vraag van de gebruiker: \"Wat is het percentage personen met hoge bloeddruk in Caribisch Nederland in 2021?\"\nTabel: 82291NED — Caribisch NL: gezondheid en aandoeningen; persoonskenmerken\n\nMaten in deze tabel:\n1. measureCode=D005390 | eenheid=%\n   titel: Zeer goed/goed\n   groep: Ervaren gezondheid\n   omschrijving: % personen met antwoordcategorie 'zeer goed' of 'goed' op de vraag naar de algemene gezondheid.\n2. measureCode=D000109 | eenheid=%\n   titel: Minder dan goed\n   groep: Ervaren gezondheid\n   omschrijving: % personen met de antwoordcategorie 'gaat wel', 'slecht' of 'zeer slecht' op de vraag naar de algemene gezondheid.\n3. measureCode=M005476_2 | eenheid=%\n   titel: Suikerziekte totaal\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte?\n4. measureCode=A026144 | eenheid=%\n   titel: Suikerziekte type 1\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? En met 'ja' op twee vervolgvragen: Gebruikt u hiervoor op dit moment insuline? én Bent u insuline gaan gebruiken binnen 6 maanden nadat bij u suikerziekte was vastg…\n5. measureCode=A026145 | eenheid=%\n   titel: Suikerziekte type 2\n   groep: Suikerziekte\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u suikerziekte? en niet behorend tot de suikerziekte type1 personen.\n6. measureCode=D005213 | eenheid=%\n   titel: Aandoeningen van de nek of schouder\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van nek of schouder?\n7. measureCode=D005351 | eenheid=%\n   titel: Astma, chronische bronchitis, CARA\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van astma of COPD, hieronder valt ook chronische bronchitis, longemfyseem?\n8. measureCode=D008020 | eenheid=%\n   titel: Chikungunya\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden chikungunya gehad?\n9. measureCode=D005372 | eenheid=%\n   titel: Chronisch eczeem\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronisch eczeem?\n10. measureCode=D005373 | eenheid=%\n   titel: Chronische gewrichtsontsteking\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van chronische gewrichtsontsteking, bijvoorbeeld ontstekingsreuma, chronische reuma of reumatoïde artritis?\n11. measureCode=D005378 | eenheid=%\n   titel: Darmstoornissen langer dan 3 maanden\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van ernstige of hardnekkige darmstoornissen?\n12. measureCode=D005385 | eenheid=%\n   titel: Duizeligheid met vallen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van duizeligheid met vallen?\n13. measureCode=D005396 | eenheid=%\n   titel: Gewrichtsslijtage van heupen of knieën\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van gewrichtsslijtage van heupen of knieën, bijvoorbeeld artrose of slijtagereuma?\n14. measureCode=D005402 | eenheid=%\n   titel: Hoge bloeddruk\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van hoge bloeddruk?\n15. measureCode=D005424 | eenheid=%\n   titel: Knokkelkoorts\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van knokkelkoorts?\n16. measureCode=D005435 | eenheid=%\n   titel: Migraine of ernstige hoofdpijn\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van migraine of regelmatig ernstige hoofdpijn?\n17. measureCode=D005444 | eenheid=%\n   titel: Onvrijwillig urineverlies, incontinentie\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van onvrijwillig urineverlies, ook wel incontinentie genoemd?\n18. measureCode=D005470 | eenheid=%\n   titel: Rugaandoening\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van een ernstige of hardnekkige aandoening van de rug?\n19. measureCode=D005487 | eenheid=%\n   titel: Vernauwing bloedvaten in buik of benen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van vernauwing van de bloedvaten in de buik of de benen, geen spataderen?\n20. measureCode=D008021 | eenheid=%\n   titel: Zika\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden het zikavirus gehad? In de cijfers over 2013 en over 2017/2018 zijn chikungunya en het zikavirus niet meegenomen. In de cijfers over 2013 telde psorias…\n21. measureCode=D005448 | eenheid=%\n   titel: Overige aandoeningen\n   groep: Aandoeningen afgelopen 12 maanden\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u in de afgelopen 12 maanden last gehad van nog een andere langdurige ziekte of aandoening?\n22. measureCode=M005361 | eenheid=%\n   titel: Beroerte, hersenbloeding, herseninfarct\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een beroerte, hersenbloeding of herseninfarct gehad?\n23. measureCode=M005401 | eenheid=%\n   titel: Hartinfarct\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een hartinfarct of hartaanval gehad?\n24. measureCode=M005400 | eenheid=%\n   titel: Hartaandoening\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een andere ernstige hartaandoening gehad, zoals hartfalen of angina pectoris. Dit laatste wordt ook wel hartkramp genoemd?\n25. measureCode=M005422 | eenheid=%\n   titel: Kanker\n   groep: Langdurige aandoeningen, ooit gehad\n   omschrijving: % personen met de antwoordcategorie 'ja' op de vraag: Heeft u ooit een vorm van kanker gehad?\n26. measureCode=D001530 | eenheid=%\n   titel: % geen langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat geen van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…\n27. measureCode=D001406 | eenheid=%\n   titel: % 1 langdurige aandoening\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat één van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontstekin…\n28. measureCode=D001448 | eenheid=%\n   titel: % 2 langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat twee van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichtsontsteki…\n29. measureCode=D008022 | eenheid=%\n   titel: % 3 of meer langdurige aandoeningen\n   groep: % personen met aandoeningen\n   omschrijving: Het percentage personen dat drie of meer van de volgende aandoeningen heeft of in de laatste 12 maanden heeft gehad: -Ernstige of hardnekkige aandoening van nek of schouder -Astma of COPD -Chikungunya -Chronisch eczeem -Chronische gewrichts…\n\nUitsplitsingen in deze tabel:\n- dimensie=CaribischNederland | titel: Caribisch Nederland\n    CN01 — Caribisch Nederland\n    GM9001 — Bonaire\n    GM9002 — Sint-Eustatius\n    GM9003 — Saba\n- dimensie=Persoonskenmerken | titel: Persoonskenmerken\n    T009002 — Totaal personen\n    3000 — Geslacht: mannen\n    4000 — Geslacht: vrouwen\n    53050 — Leeftijd: 15 tot 25 jaar\n    53310 — Leeftijd: 25 tot 45 jaar\n    53715 — Leeftijd: 45 tot 65 jaar\n    80200 — Leeftijd: 65 jaar of ouder\n    2018700 — Onderwijsniveau: Laag\n    2018740 — Onderwijsniveau: Middelbaar\n    2018790 — Onderwijsniveau: Hoog\n\nBeschikbare periode-precisies: JJ (jaar)\nRegio's: deze tabel kent geen regio's.",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 2
+        },
+        "measureCode": {
+          "type": "string"
+        },
+        "breakdowns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dimension": {
+                "type": "string"
+              },
+              "choice": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "dimension",
+              "choice"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "period": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "year"
+                },
+                "year": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "year"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "quarter"
+                },
+                "year": {
+                  "type": "number"
+                },
+                "quarter": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "year",
+                "quarter"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "month"
+                },
+                "year": {
+                  "type": "number"
+                },
+                "month": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "year",
+                "month"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "year_range"
+                },
+                "fromYear": {
+                  "type": "number"
+                },
+                "toYear": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "fromYear",
+                "toYear"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "since"
+                },
+                "year": {
+                  "type": "number"
+                },
+                "quarter": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "month": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "year",
+                "quarter",
+                "month"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "last_n"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "month",
+                    "quarter",
+                    "year"
+                  ]
+                },
+                "n": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "unit",
+                "n"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "now_vs_ago"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "month",
+                    "quarter",
+                    "year"
+                  ]
+                },
+                "amount": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "unit",
+                "amount"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "change_over_year"
+                },
+                "year": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "year"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "date_range"
+                },
+                "from": {
+                  "type": "object",
+                  "properties": {
+                    "year": {
+                      "type": "number"
+                    },
+                    "month": {
+                      "type": "number"
+                    },
+                    "day": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "year",
+                    "month",
+                    "day"
+                  ],
+                  "additionalProperties": false
+                },
+                "to": {
+                  "type": "object",
+                  "properties": {
+                    "year": {
+                      "type": "number"
+                    },
+                    "month": {
+                      "type": "number"
+                    },
+                    "day": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "year",
+                    "month",
+                    "day"
+                  ],
+                  "additionalProperties": false
+                },
+                "toInclusive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "from",
+                "to",
+                "toInclusive"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "relative"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "month",
+                    "quarter",
+                    "year"
+                  ]
+                },
+                "offset": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "unit",
+                "offset"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "latest"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "none"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "land",
+                  "landsdeel",
+                  "provincie",
+                  "gemeente",
+                  "onbekend"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "regionScope": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "all_provincies",
+                "all_landsdelen",
+                "all_gemeenten",
+                "gemeenten_in_provincie"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "derivation": {
+          "type": "string",
+          "enum": [
+            "none",
+            "difference",
+            "max",
+            "series"
+          ]
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "measureCode",
+        "breakdowns",
+        "period",
+        "regions",
+        "regionScope",
+        "derivation",
+        "confidence",
+        "reading"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":2,\"measureCode\":\"D005402\",\"breakdowns\":[{\"dimension\":\"CaribischNederland\",\"choice\":\"CN01\"},{\"dimension\":\"Persoonskenmerken\",\"choice\":\"niet_genoemd\"}],\"period\":{\"kind\":\"year\",\"year\":2021},\"regions\":[{\"name\":\"Caribisch Nederland\",\"kind\":\"land\"}],\"regionScope\":null,\"derivation\":\"none\",\"confidence\":0.9,\"reading\":\"Percentage personen met hoge bloeddruk in Caribisch Nederland in 2021.\"}",
+    "model": "claude-sonnet-5",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 11490,
+      "outputTokens": 185
+    }
+  }
+}

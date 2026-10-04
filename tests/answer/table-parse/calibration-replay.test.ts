@@ -13,11 +13,13 @@
 // precedent.
 //
 // The six known misses are pinned BY NAME, so a change in either direction
-// is visible. None of them shows a number (measured, session 153): two are
-// 'geen' refusals with a breakdown or period mismatch, three read "op 1
-// januari JJJJ" as a one-day date range (refused as an unsupported period),
-// one names "Caribisch Nederland" as a land (refused), and the gross/net
-// labour-participation case sits under the 0.6 accept threshold (refused).
+// is visible. None of them shows a number (re-measured session 154, prompt v5):
+// three read "op 1 januari JJJJ" as a one-day date range (refused as an
+// unsupported period), one names "Caribisch Nederland" as a land (refused),
+// one returns a misspelt member ('niet_genomend') the validator refuses, and
+// the gross/net labour-participation case picks the net measure at exactly
+// 0.6 — accepted, but its seasonally adjusted yearly cell is CBS 'Impossible'
+// (null), so the job refuses rather than answer.
 import { describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../../src/answer/llm/client.ts';
 import { loadLabelledSet, scoreCase } from '../../../scripts/tableparse-eval.ts';
@@ -28,8 +30,8 @@ const FIXTURES_DIR = fileURLToPath(new URL('../../fixtures/llm/tableparse', impo
 const KNOWN_MISSES = [
   'followup-bevolking-plaats',
   'followup-onderwerpwissel-geen',
-  'geen-water-afval',
-  'region-amsterdam-bevolking',
+  'nototal-hernieuwbaar-regio',
+  'regionclass-bevolking-gemeente-in-utrecht',
   'total-arbeidsdeelname-generiek',
   'total-caribisch-bloeddruk',
 ];

@@ -91,8 +91,18 @@ function tableParseSampling(model: string): Pick<LlmRequest, 'temperature' | 'th
  * and "gestegen sinds vorig jaar" is now_vs_ago (1 unit) — plus, after the
  * first live calibration (15/50), three lines the model visibly needed:
  * never pick a default member for an unmentioned dimension, a place-member
- * dimension still gets a choice, and "Nederland" is a named place. */
-export const TABLE_PARSE_PROMPT_VERSION = 4;
+ * dimension still gets a choice, and "Nederland" is a named place.
+ * Bumped to 5 (session 154, owner-signed Eurostat public-claim sweep,
+ * ADR 048 D3(d)): the role line names graphmaker.studio and both sources
+ * (CBS and Eurostat) instead of "checkdecijfers.nl … officiële CBS-cijfers
+ * … ÉÉN CBS-tabel", and the region rule forbids a code of either source.
+ * Plus ONE MAAT line (same session, after the re-record showed the #357
+ * rate-vs-count slip recurring: "hoe hoog was de werkloosheid" read as
+ * thousand persons on Eurostat une_rt_q, calibration E4/E5): a question about
+ * the level of a phenomenon that asks no count takes the percentage when the
+ * table offers both. Its examples (armoede) are deliberately outside the
+ * labelled sets. */
+export const TABLE_PARSE_PROMPT_VERSION = 5;
 
 /** Breadth step 5, Task 7: the one system-prompt rule for a follow-up in the
  * same conversation (the only change to the system prompt in version 3). */
@@ -609,11 +619,12 @@ function checkRegionsOnRegionlessTable(
 // buildMeasureFitSystemPrompt's structure and tone.
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `Je bent een parseer-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN CBS-tabel: de beschikbare maten, de aangeboden uitsplitsingen (met hun leden), de beschikbare periode-precisies en of de tabel regio's kent. Voor maat en uitsplitsingen kies je UITSLUITEND uit deze lijsten — verzin nooit een code, een lid of een dimensienaam die niet is aangeboden. Regio's en de gevraagde periode geef je altijd zoals de vraag ze zelf noemt (zie REGIO'S en PERIODE) — dat is GEEN keuze uit een aangeboden lijst.
+const SYSTEM_PROMPT = `Je bent een parseer-hulp voor graphmaker.studio, een dienst die vragen beantwoordt met officiële cijfers van CBS en Eurostat. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN tabel van CBS of Eurostat: de beschikbare maten, de aangeboden uitsplitsingen (met hun leden), de beschikbare periode-precisies en of de tabel regio's kent. Voor maat en uitsplitsingen kies je UITSLUITEND uit deze lijsten — verzin nooit een code, een lid of een dimensienaam die niet is aangeboden. Regio's en de gevraagde periode geef je altijd zoals de vraag ze zelf noemt (zie REGIO'S en PERIODE) — dat is GEEN keuze uit een aangeboden lijst.
 
 MAAT
 - Kies precies één measureCode, LETTERLIJK overgenomen uit de matenlijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'.
 - Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment ("hoeveel zijn er"), een in- of uitstroom of verandering ("hoeveel kwamen erbij"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet, beantwoordt de vraag NIET.
+- Vraagt de vraag naar de hoogte of het niveau van een verschijnsel zonder om een aantal te vragen ("hoe hoog was de armoede", "wat was de armoede in 2023"), en biedt de tabel van datzelfde verschijnsel zowel een aantal als een percentage, kies dan het percentage: dat is het kopcijfer dat statistiekbureaus publiceren. Vraagt de vraag wél om een aantal ("hoeveel mensen leefden in armoede", "het aantal"), kies dan het aantal.
 - Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt.
 - Maten kunnen gegroepeerd zijn (zie "groep:" bij de maat); de groep vertelt bij welke populatie of grootheid de maat hoort — twee maten met dezelfde titel in een verschillende groep meten dus iets anders.
 - Zegt een vraag over een maand of kwartaal niet of ze seizoengecorrigeerde cijfers wil, en biedt de juiste groep zowel een seizoengecorrigeerde als een niet-seizoengecorrigeerde maat, kies dan de maat "Seizoengecorrigeerd". Zegt een vraag over een heel jaar niet dat ze seizoengecorrigeerde cijfers wil, kies dan nooit een seizoengecorrigeerde maat: seizoencorrectie bestaat alleen voor maand- en kwartaalcijfers.
@@ -632,7 +643,7 @@ Elke aangeboden dimensie komt precies één keer voor in je antwoord.
 Dat geldt ook voor een dimensie met plaatsen als leden (zoals RegioS): ook die krijgt altijd een keuze, naast het veld regions.
 
 REGIO'S
-Noem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een CBS-code — codes horen alleen bij maten en leden.
+Noem ALTIJD elke plaats die de vraag noemt, precies zoals de gebruiker haar schreef, elk met een soort (land, landsdeel, provincie, gemeente, of onbekend als het type niet duidelijk is uit de vraag) — OOK wanneer deze tabel helemaal geen regio's kent. Dit is geen keuze uit een lijst: de code bepaalt zelf of de genoemde plaats op deze tabel kan, en wijst de vraag anders eerlijk af. Het is NOOIT aan jou om een genoemde plaats daarom weg te laten of de vraag te negeren — een weggelaten plaats zou hier lijken op een vraag over heel Nederland, terwijl de vraag over één plaats ging. Noemt de vraag geen enkele plaats, dan blijft dit veld leeg. Verzin nooit een plaats die de vraag niet noemt, en gebruik nooit een code van CBS of Eurostat — codes horen alleen bij maten en leden.
 Ook "Nederland" zelf is een genoemde plaats (soort land) wanneer de vraag het noemt.
 Staat een genoemde plaats zelf als lid in een aangeboden uitsplitsing (bijvoorbeeld een dimensie met provincies, regio's of gemeenten), dan noem je haar hier ÉN kies je voor die dimensie dat lid. Passen meerdere leden bij de genoemde plaats (bijvoorbeeld "Groningen (PV)", "Groningen (ES)" en "Groningen (ET)"), of noemt de vraag meerdere plaatsen uit dezelfde dimensie, kies dan voor die dimensie 'anders'.
 

@@ -9,8 +9,12 @@ import type { CatalogCandidate, FindTableQuery } from './types.ts';
  *  user question rides along with the topic, and the rules weigh the QUESTION's
  *  shape (stock vs flow, level vs change) over topic-word overlap. This
  *  constant is documentation; the fixture re-record is forced by the prompt
- *  BYTES being hashed, not by this number. */
-export const RERANK_PROMPT_VERSION = 2;
+ *  BYTES being hashed, not by this number.
+ *  v3 (session 154, owner-signed Eurostat public-claim sweep, ADR 048 D3(d)):
+ *  the role line names graphmaker.studio and both sources, the candidate list
+ *  is "uit de catalogus van CBS (en, waar aangeboden, Eurostat)". Wording
+ *  only — no rule changed. */
+export const RERANK_PROMPT_VERSION = 3;
 
 /** Per-candidate blurb budget in the prompt — caps tokens over a ~20-table
  *  shortlist while leaving enough text to disambiguate. */
@@ -19,7 +23,7 @@ const SUMMARY_MAX = 240;
 // NOTE the "version is altijd 1" rule below refers to the OUTPUT schema's
 // version literal (RERANK_SCHEMA_VERSION, validated by z.literal) — NOT to
 // RERANK_PROMPT_VERSION above. Changing either side alone breaks every rerank.
-const SYSTEM_PROMPT = `Je bent een classificatie-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands), het ONDERWERP dat daaruit is gehaald, en een genummerde lijst KANDIDAAT-TABELLEN uit de CBS-catalogus. Kies de tabel die deze vraag het best kan beantwoorden.
+const SYSTEM_PROMPT = `Je bent een classificatie-hulp voor graphmaker.studio, een dienst die vragen beantwoordt met officiële cijfers van CBS en Eurostat. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands), het ONDERWERP dat daaruit is gehaald, en een genummerde lijst KANDIDAAT-TABELLEN uit de catalogus van CBS (en, waar aangeboden, Eurostat). Kies de tabel die deze vraag het best kan beantwoorden.
 
 Regels:
 - Kies precies één table_id, LETTERLIJK overgenomen uit de lijst (inclusief hoofd-/kleine letters). Verzin nooit een id dat niet in de lijst staat.

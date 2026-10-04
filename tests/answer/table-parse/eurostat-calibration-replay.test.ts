@@ -8,11 +8,13 @@
 // (`TABLEPARSE_RECORD_OK=1 npm run tableparse:record -- --eurostat`).
 //
 // The two known misses are pinned BY NAME. None shows an invented number:
-// E7 (Beieren, below country level) reads 'geen' → refused; E11 picked the
-// seasonally adjusted GDP series (SA) where the headline is seasonally AND
-// calendar adjusted (SCA) — a real, labelled cell. Re-recorded 2026-10-02 with
-// the Dutch labels (dutch-labels.ts): E4 (rate vs count for "hoe hoog was de
-// werkloosheid") now passes — "% van de beroepsbevolking" vs "x 1 000 personen".
+// E3 (youth unemployment, 15–25) reads the age as 'anders' → a button question;
+// E11 picked the seasonally adjusted GDP series (SA) where the headline is
+// seasonally AND calendar adjusted (SCA) — a real, labelled cell. Re-recorded
+// 2026-10-04 (session 154, prompt v5 — the owner-signed wording + the headline-
+// figure MAAT line): E4/E5 (rate vs count for "hoe hoog was de werkloosheid")
+// pass — they had slipped back to "x 1 000 personen" under the wording-only v5;
+// E7 (Beieren) now passes too.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -26,7 +28,7 @@ const SET = JSON.parse(
 
 // E8–E10 (asylum) were misses until #365 kept the all-citizenships TOTAL;
 // re-recorded 2026-10-02, all three pass.
-const KNOWN_MISSES = ['E11', 'E7'];
+const KNOWN_MISSES = ['E11', 'E3'];
 
 describe('Eurostat table-parse calibration — replay of the recorded set', () => {
   it('replays every case; exactly the pinned known misses fail', async () => {

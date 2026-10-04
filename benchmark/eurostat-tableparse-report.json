@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-02T07:51:12.096Z",
-  "mode": "replay",
+  "generatedAt": "2026-10-04T08:58:25.192Z",
+  "mode": "record",
   "totals": {
     "pass": 15,
     "total": 17
@@ -11,34 +11,36 @@
       "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "e280b5746eae7077ea40ef13b097566e",
+      "requestHash": "b847670daaefe44607127c67d8e4daf9",
       "pass": true,
       "problems": []
     },
     {
       "id": "E2",
-      "confidence": 0.8,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "c72e58343b55ec439a55166fd54fab1c",
+      "requestHash": "8659321b3df6c3295295c05d4b38b607",
       "pass": true,
       "problems": []
     },
     {
       "id": "E3",
-      "confidence": 0.75,
+      "confidence": 0.65,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "67756bbbf2a8932393f610c4a54f8bb4",
-      "pass": true,
-      "problems": []
+      "requestHash": "c0088f8e70c2a0d5d3387272fb46790e",
+      "pass": false,
+      "problems": [
+        "breakdown age: expected Y15-24, got anders"
+      ]
     },
     {
       "id": "E4",
       "confidence": 0.72,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "f83cb32312321e3853b75e150d2ee080",
+      "requestHash": "b614182a0d67bdbfd50cedec09064c37",
       "pass": true,
       "problems": []
     },
@@ -47,37 +49,34 @@
       "confidence": 0.7,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "1605ffa25a0397df9d39a7b0178b2f77",
+      "requestHash": "0f884e6a1eb553fd92be47f99db574db",
       "pass": true,
       "problems": []
     },
     {
       "id": "E6",
-      "confidence": 0.55,
+      "confidence": 0.72,
       "periodGrainUnavailable": true,
       "errorClass": null,
-      "requestHash": "493b340788896bb368c08ccb88b85df1",
+      "requestHash": "4a80724711b6c5b51b9db7cfe2a4cf8a",
       "pass": true,
       "problems": []
     },
     {
       "id": "E7",
-      "confidence": 0.3,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "dc3f12d13e2d6b74666ea92c89719fa4",
-      "pass": false,
-      "problems": [
-        "measure: expected une_rt_q|PC_ACT, got geen",
-        "breakdown s_adj: expected SA, got niet_genoemd"
-      ]
+      "requestHash": "8506816fe5c75e26c4c21acabebb992c",
+      "pass": true,
+      "problems": []
     },
     {
       "id": "E8",
       "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "a50490b0afc5cd5817fc2fc4f53cc358",
+      "requestHash": "c16adb735338127b95417fe4b31cb7f7",
       "pass": true,
       "problems": []
     },
@@ -86,7 +85,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "d5f5c7e8a021101da3b3ce84c667d8bf",
+      "requestHash": "c03dfbe7d0d0d9ee538e8eebe6e4fcc6",
       "pass": true,
       "problems": []
     },
@@ -95,16 +94,16 @@
       "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "fb1889988bde4bb1b4e2d2bdfd1ac857",
+      "requestHash": "46064dd6e721af68f981f3602bcfa716",
       "pass": true,
       "problems": []
     },
     {
       "id": "E11",
-      "confidence": 0.85,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "b05ab36dce50479d1870a1612091436e",
+      "requestHash": "c7cda20a71d6aaedeefba3cfd3c55f3d",
       "pass": false,
       "problems": [
         "breakdown s_adj: expected SCA, got SA"
@@ -112,19 +111,19 @@
     },
     {
       "id": "E12",
-      "confidence": 0.8,
+      "confidence": 0.82,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "e45a97817f89b88aad0ab4788822117d",
+      "requestHash": "704b701d58d035a155c98a2d2b2d0168",
       "pass": true,
       "problems": []
     },
     {
       "id": "E13",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "d0ce160fceb50186da8622716de0ef5d",
+      "requestHash": "a84525258c9952476ece838987f04e8e",
       "pass": true,
       "problems": []
     },
@@ -133,7 +132,7 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "68a0f61275d08155f17954296af317ae",
+      "requestHash": "dde355287a9e1e4ee7d150d7b882ad6c",
       "pass": true,
       "problems": []
     },
@@ -142,16 +141,16 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "883548adfea01b561e228dcc145a701c",
+      "requestHash": "20f162dc42e94194932f406b148b5ef5",
       "pass": true,
       "problems": []
     },
     {
       "id": "E16",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "54c748db54555129d22ac1086eaa8d86",
+      "requestHash": "af9d9861ee120a6c404d8de667bf5a99",
       "pass": true,
       "problems": []
     },
@@ -160,7 +159,7 @@
       "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "14eaa579458e7162e336af6544662f2b",
+      "requestHash": "7b38ebd257d7c581d67cc283353398e1",
       "pass": true,
       "problems": []
     }
@@ -863,6 +862,355 @@
           "periodGrainUnavailable": false,
           "errorClass": null,
           "requestHash": "14eaa579458e7162e336af6544662f2b",
+          "pass": true,
+          "problems": []
+        }
+      ],
+      "benchmarkFixtures": {
+        "ok": 12,
+        "total": 12,
+        "failed": []
+      }
+    },
+    {
+      "generatedAt": "2026-10-04T08:46:42.318Z",
+      "mode": "record",
+      "totals": {
+        "pass": 13,
+        "total": 17
+      },
+      "results": [
+        {
+          "id": "E1",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "44cc5181ecd258d83da41f7e69f81d32",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E2",
+          "confidence": 0.82,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5206d154c4f5b0e4a3a84eeac5869ff6",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E3",
+          "confidence": 0.6,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "da0940ece463b5f983ae7f500e52d56d",
+          "pass": false,
+          "problems": [
+            "breakdown age: expected Y15-24, got anders"
+          ]
+        },
+        {
+          "id": "E4",
+          "confidence": 0.72,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c9b242193dc1ac4885ee2103955e6c5f",
+          "pass": false,
+          "problems": [
+            "measure: expected une_rt_q|PC_ACT, got une_rt_q|THS_PER",
+            "breakdown age: expected niet_genoemd, got anders"
+          ]
+        },
+        {
+          "id": "E5",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b4aca9f8fe19e414a2f0127fe98311fc",
+          "pass": false,
+          "problems": [
+            "measure: expected une_rt_q|PC_ACT, got une_rt_q|THS_PER"
+          ]
+        },
+        {
+          "id": "E6",
+          "confidence": 0.65,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "7d2b74b1e8b9155531a5774d0d59e3ac",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E7",
+          "confidence": 0.65,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "16ab80edbebd0d8f906cc9ac5bab72fa",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E8",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "ce01bc48739c0400953be19bf73ed3d5",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E9",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d3fc8c564d40a2960e20eb0939f27b04",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E10",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8cf22460b403b49e9a78b9cc89cf427f",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E11",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseValidationError",
+          "requestHash": "f179470a42ffe69454be9ab08376285f",
+          "pass": false,
+          "problems": [
+            "expected a parse, got TableParseValidationError (the job would refuse): the question names the year 2025, but the parse reads the period as 'now_vs_ago' (counted back from now) — the named year would be lost, so the reading is not trusted"
+          ]
+        },
+        {
+          "id": "E12",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0347684c5453151f447c0c4cf137bf10",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E13",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "115724997c92290a71872bf88ac758e1",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E14",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "3b2ddf6c16af49abf8ccb7c029743ed3",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E15",
+          "confidence": 0.92,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a2c5c629482bc1962b7c80ae3e54d44b",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E16",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "77be34ba0dedf804231e5e321aff3102",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E17",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "4a44ba70b731e9ef995235e5f45abdb3",
+          "pass": true,
+          "problems": []
+        }
+      ],
+      "benchmarkFixtures": {
+        "ok": 12,
+        "total": 12,
+        "failed": []
+      }
+    },
+    {
+      "generatedAt": "2026-10-04T08:58:25.192Z",
+      "mode": "record",
+      "totals": {
+        "pass": 15,
+        "total": 17
+      },
+      "results": [
+        {
+          "id": "E1",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b847670daaefe44607127c67d8e4daf9",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E2",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8659321b3df6c3295295c05d4b38b607",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E3",
+          "confidence": 0.65,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c0088f8e70c2a0d5d3387272fb46790e",
+          "pass": false,
+          "problems": [
+            "breakdown age: expected Y15-24, got anders"
+          ]
+        },
+        {
+          "id": "E4",
+          "confidence": 0.72,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b614182a0d67bdbfd50cedec09064c37",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E5",
+          "confidence": 0.7,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0f884e6a1eb553fd92be47f99db574db",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E6",
+          "confidence": 0.72,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "4a80724711b6c5b51b9db7cfe2a4cf8a",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E7",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8506816fe5c75e26c4c21acabebb992c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E8",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c16adb735338127b95417fe4b31cb7f7",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E9",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c03dfbe7d0d0d9ee538e8eebe6e4fcc6",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E10",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "46064dd6e721af68f981f3602bcfa716",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E11",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c7cda20a71d6aaedeefba3cfd3c55f3d",
+          "pass": false,
+          "problems": [
+            "breakdown s_adj: expected SCA, got SA"
+          ]
+        },
+        {
+          "id": "E12",
+          "confidence": 0.82,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "704b701d58d035a155c98a2d2b2d0168",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E13",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a84525258c9952476ece838987f04e8e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E14",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "dde355287a9e1e4ee7d150d7b882ad6c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E15",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "20f162dc42e94194932f406b148b5ef5",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E16",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "af9d9861ee120a6c404d8de667bf5a99",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "E17",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "7b38ebd257d7c581d67cc283353398e1",
           "pass": true,
           "problems": []
         }

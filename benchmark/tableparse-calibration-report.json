@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-01T04:17:14.392Z",
-  "mode": "replay",
+  "generatedAt": "2026-10-04T08:57:05.219Z",
+  "mode": "record",
   "totals": {
     "pass": 44,
     "total": 50
@@ -8,19 +8,19 @@
   "results": [
     {
       "id": "geen-population-income",
-      "confidence": 0.9,
+      "confidence": 0.05,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "615a3ea721c915525325c4b7c4f888fd",
+      "requestHash": "d3b35eadc6bf0cfcc57d4f6fb578789c",
       "pass": true,
       "problems": []
     },
     {
       "id": "geen-klimaat-werkgelegenheid",
-      "confidence": 0.05,
+      "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "82b546f31e41d1569385745d59d6e89a",
+      "requestHash": "8233e52e09d8c01946120caad5bc53fc",
       "pass": true,
       "problems": []
     },
@@ -29,7 +29,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "fe0dd18d07ca86882e47235b26f08de1",
+      "requestHash": "bbdf209f5193606e46188730d21ab73e",
       "pass": true,
       "problems": []
     },
@@ -38,7 +38,7 @@
       "confidence": 0.4,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3e35366930813245c69fd6cce46c940e",
+      "requestHash": "a29e8a46021f90c4bebb263d95226409",
       "pass": true,
       "problems": []
     },
@@ -47,18 +47,16 @@
       "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "aab39b1bb7d0cbd4485e7c08b59b5799",
-      "pass": false,
-      "problems": [
-        "breakdown Watergebruikers: expected niet_genoemd, got anders"
-      ]
+      "requestHash": "3f48183d83288a941c72a4a6cbc3de83",
+      "pass": true,
+      "problems": []
     },
     {
       "id": "geen-caribisch-inwoners",
-      "confidence": 0.3,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "4c4c395bb547a6b81c361a0597c81ef4",
+      "requestHash": "a8656c96cb0d9df7f918c0ef5d8c5ef2",
       "pass": true,
       "problems": []
     },
@@ -67,16 +65,16 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "1514808d10cba0adb6a55551a0180526",
+      "requestHash": "1fb284f4e8664add5dda1a9dc3627804",
       "pass": true,
       "problems": []
     },
     {
       "id": "total-ziekenhuis-generiek",
-      "confidence": 0.8,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "7e29f4439446e40e48298d7cb0b56303",
+      "requestHash": "c3268027a20ade9322f345035a247ec4",
       "pass": true,
       "problems": []
     },
@@ -85,7 +83,7 @@
       "confidence": null,
       "periodGrainUnavailable": null,
       "errorClass": "TableParseRegionUnavailableError",
-      "requestHash": "bff8f34b375001b24bb4e82b2d82bd96",
+      "requestHash": "7cacc7b35a9e35233d55fe3d14758a82",
       "pass": false,
       "problems": [
         "expected a parse, got TableParseRegionUnavailableError (the job would refuse): table-parse named region 'Caribisch Nederland' as a land on table '82291NED', but no offered region-coded member with that name is a land (matching: CN01)"
@@ -93,10 +91,10 @@
     },
     {
       "id": "total-arbeidsdeelname-generiek",
-      "confidence": 0.55,
+      "confidence": 0.6,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "4739f7caf8d8e6f5d9f606e1d1ee58bf",
+      "requestHash": "f86404035cc0dfa945ebcca5204cfdcc",
       "pass": false,
       "problems": [
         "measure: expected M006335, got M005036"
@@ -107,7 +105,7 @@
       "confidence": 0.6,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "b2d1dc662b41561851a210912757f368",
+      "requestHash": "b87f9d9d5381617cd8fb686b5859b118",
       "pass": true,
       "problems": []
     },
@@ -116,63 +114,63 @@
       "confidence": 0.55,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "19f8c4150cd5133305244ab7b13e2b7d",
+      "requestHash": "5464de7623cffab3292bf8594cac0e15",
       "pass": true,
       "problems": []
     },
     {
       "id": "anders-water-meubelmakers",
-      "confidence": 0.5,
+      "confidence": 0.55,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "1563b1874b8115e0f543ee100c6bb7f9",
+      "requestHash": "59bc8f66a29e9dc7ee5f7a67542a1d6c",
       "pass": true,
       "problems": []
     },
     {
       "id": "nototal-ziekenhuis-leeftijd",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "c02ac64f24617bb2d851c5ace828f03e",
+      "requestHash": "f95a5608d2554e75b5469ed72eb0107a",
       "pass": true,
       "problems": []
     },
     {
       "id": "nototal-hernieuwbaar-regio",
-      "confidence": 0.95,
-      "periodGrainUnavailable": false,
-      "errorClass": null,
-      "requestHash": "1aa4d4fd0133f40cd544d94cae208bad",
-      "pass": true,
-      "problems": []
+      "confidence": null,
+      "periodGrainUnavailable": null,
+      "errorClass": "TableParseValidationError",
+      "requestHash": "2ca3f44d7498c347d4ab178e86c71b46",
+      "pass": false,
+      "problems": [
+        "expected a parse, got TableParseValidationError (the job would refuse): table-parse chose member 'niet_genomend' for dimension 'RegioS', which is not in the OFFERED member list for that dimension (<empty>) and is not 'niet_genoemd'/'anders' — a real member the pre-filter cut must be answered as 'anders', never guessed"
+      ]
     },
     {
       "id": "nototal-caribisch-migraine",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "8474505e957a951d7c12ed88f19039c5",
+      "requestHash": "1be578b004dbf4a3b1a1be61ca3a4aac",
       "pass": true,
       "problems": []
     },
     {
       "id": "region-amsterdam-bevolking",
-      "confidence": 0.85,
+      "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "11e193be9e6ce42559f93b4067fa89c5",
-      "pass": false,
-      "problems": [
-        "period kind: expected year, got date_range"
-      ]
+      "requestHash": "7a29d51a7c607eb1039a839699fbccf7",
+      "pass": true,
+      "problems": []
     },
     {
       "id": "region-zeeland-gemiddeld",
-      "confidence": 0.9,
+      "confidence": 0.93,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "6ed61a120e215cd2a0be340236eccfbc",
+      "requestHash": "4cf6fff2683c2f8cddb247bd7608f4e5",
       "pass": true,
       "problems": []
     },
@@ -181,7 +179,7 @@
       "confidence": 0.8,
       "periodGrainUnavailable": true,
       "errorClass": null,
-      "requestHash": "18b70f418bd962376d2e9a51280356d6",
+      "requestHash": "0d3e1e78625b5f8818e70353dfb92832",
       "pass": true,
       "problems": []
     },
@@ -190,7 +188,7 @@
       "confidence": 0.6,
       "periodGrainUnavailable": true,
       "errorClass": null,
-      "requestHash": "ada2da56318331f027c3c603dd6dab78",
+      "requestHash": "695cb3d4cafc0fafa032d9ad187f4bc1",
       "pass": true,
       "problems": []
     },
@@ -199,7 +197,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "745ff90bbaedc8c27a8b5c14f72770e2",
+      "requestHash": "52ed88bea9c2c9ecd83183072815a20b",
       "pass": true,
       "problems": []
     },
@@ -208,7 +206,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "283b21550870cbcc40e7aa6fd01df24e",
+      "requestHash": "5b38d95dfb1e64ab194d0159f1c53b3f",
       "pass": true,
       "problems": []
     },
@@ -217,7 +215,7 @@
       "confidence": 0.55,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "2ec57503f8c6819d86ac9b3c47fcd6cf",
+      "requestHash": "0ede2712c72a860e85ea1ce13a2e38d3",
       "pass": true,
       "problems": []
     },
@@ -226,25 +224,25 @@
       "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3774e40979501cebef0cb83e1785dd4c",
+      "requestHash": "4ac37335eac505142f45a6a5f6b6c5a4",
       "pass": true,
       "problems": []
     },
     {
       "id": "general-voertuigen-diesel",
-      "confidence": 0.9,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "93264b9de791579d6741b22184b89cda",
+      "requestHash": "4146846613d2fbe723b5819cc30c2ecb",
       "pass": true,
       "problems": []
     },
     {
       "id": "general-hernieuwbaar-windenergie",
-      "confidence": 0.94,
+      "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3316b033e0b21831b20390f65e95d262",
+      "requestHash": "1421f9c92ec3a9c1d52d84d642c206a3",
       "pass": true,
       "problems": []
     },
@@ -253,16 +251,16 @@
       "confidence": 0.5,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "5a7c1f5d8fbb53aac441a2738da62c91",
+      "requestHash": "d97fdca9f8a00f1718b5c2db82224e1c",
       "pass": true,
       "problems": []
     },
     {
       "id": "general-water-drinkwater-huishoudens",
-      "confidence": 0.88,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "66a646851593bb2144f23381af06d85c",
+      "requestHash": "b61943bd199e847dfa778973281ecf41",
       "pass": true,
       "problems": []
     },
@@ -271,7 +269,7 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "aadd36ab586b788e8e53051a340f2cb4",
+      "requestHash": "8508eb6e884b31a4fb47bc0e5ee9b0a5",
       "pass": true,
       "problems": []
     },
@@ -280,7 +278,7 @@
       "confidence": 0.88,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "8e3bdcb01e5e973ccb518f759f007906",
+      "requestHash": "fd9798dacfb3ea2eff50725ab224b5e4",
       "pass": true,
       "problems": []
     },
@@ -289,25 +287,25 @@
       "confidence": 0.82,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "e3569317720db02a3e257fcb53030b4c",
+      "requestHash": "24925431cf74e42faf34cc2645d036f4",
       "pass": true,
       "problems": []
     },
     {
       "id": "anders-ziekenhuis-leeftijdsgroep-meeste",
-      "confidence": 0.8,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "2b85c23e550960bbf47a267a95ebd2cf",
+      "requestHash": "0a04a7a75b883fe5345c54ba5943dc5a",
       "pass": true,
       "problems": []
     },
     {
       "id": "ambiguous-arbeid-werklozen",
-      "confidence": 0.95,
+      "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "4427be3fab55d0f5e86fe0f745cdb943",
+      "requestHash": "47116a4f12d2355e622d4c85daec7533",
       "pass": true,
       "problems": []
     },
@@ -316,7 +314,7 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "a26854ca4fcb3d29562b153026aa96ac",
+      "requestHash": "d40b14bd224b3e519215812e45970157",
       "pass": true,
       "problems": []
     },
@@ -325,7 +323,7 @@
       "confidence": null,
       "periodGrainUnavailable": null,
       "errorClass": "TableParseRegionUnavailableError",
-      "requestHash": "cc52c5a16408324ba3886f8ab0c803fa",
+      "requestHash": "712523688caed32952aa0ec0f63c872c",
       "pass": true,
       "problems": []
     },
@@ -334,7 +332,7 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "ef0525f9306ecc1bde107c386467ac0d",
+      "requestHash": "4ed8efb4475942babac577ba1dc82845",
       "pass": true,
       "problems": []
     },
@@ -343,16 +341,16 @@
       "confidence": 0.9,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "117cea1111c4cff1cbc428283218428a",
+      "requestHash": "3d443f3de70871c2d9b4465287c7eaab",
       "pass": true,
       "problems": []
     },
     {
       "id": "followup-bevolking-plaats",
-      "confidence": 0.65,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "3c544fd8e45d919dce6f03ca998f7086",
+      "requestHash": "d23c4ccbaabd7c51e79a929a9d07408f",
       "pass": false,
       "problems": [
         "period kind: expected year, got date_range"
@@ -363,7 +361,7 @@
       "confidence": 0.15,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "b83d309b706e735e85a2199683959c9a",
+      "requestHash": "004846b1512e7a0199b68cbcd17c18e8",
       "pass": false,
       "problems": [
         "period kind: expected year, got date_range"
@@ -371,10 +369,10 @@
     },
     {
       "id": "period-klimaat-gestegen-sinds-vorigjaar",
-      "confidence": 0.8,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "02f0c9f5016b8db05300f05acedb33e6",
+      "requestHash": "5138cab00e52d7ae63ff1bc90c626794",
       "pass": true,
       "problems": []
     },
@@ -383,25 +381,25 @@
       "confidence": 0.95,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "6278f11e2016811369784010b0d201e3",
+      "requestHash": "f692439808f4c7378a8496b386742ae4",
       "pass": true,
       "problems": []
     },
     {
       "id": "period-klimaat-vorigjaar-control",
-      "confidence": 0.8,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "9706455c8c7145d752189b031f04bddd",
+      "requestHash": "28d0c14edeed99f7a22eae2e8ced62e7",
       "pass": true,
       "problems": []
     },
     {
       "id": "period-klimaat-nu-vs-2015",
-      "confidence": 0.8,
+      "confidence": 0.75,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "89667fed4b11719c3aaee679c64bbc1b",
+      "requestHash": "706d32abd119d204c4a885e443f53661",
       "pass": true,
       "problems": []
     },
@@ -410,16 +408,16 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "ab9f9302353b6b2da22a0025a795225f",
+      "requestHash": "dd96b4916ef74380c5d076c4d2fbfba1",
       "pass": true,
       "problems": []
     },
     {
       "id": "regionclass-bevolking-elke-provincie",
-      "confidence": 0.9,
+      "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "48c863465f3564c2a06e51868eb0b9df",
+      "requestHash": "08c068b9b5e2509aec6621322b34804c",
       "pass": true,
       "problems": []
     },
@@ -428,43 +426,45 @@
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "94b817f85c6b155644084a76b27034cf",
-      "pass": true,
-      "problems": []
+      "requestHash": "a6d3edb34acba3cbb964a70c8ab1c50b",
+      "pass": false,
+      "problems": [
+        "period kind: expected year, got date_range"
+      ]
     },
     {
       "id": "regionclass-ziekenhuis-welke-provincie",
       "confidence": 0.85,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "57ad2592fa8a469ce249f8c63057cf76",
+      "requestHash": "a1492d94698d41c9b1ca693741cb2ceb",
       "pass": true,
       "problems": []
     },
     {
       "id": "period-bevolking-5jaar-geleden",
-      "confidence": 0.85,
+      "confidence": 0.88,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "85948291d8b1e7064a099af8e38f747e",
+      "requestHash": "ef224739c38b97c0f44ecd6b9c76cc5d",
       "pass": true,
       "problems": []
     },
     {
       "id": "period-water-datumbereik",
-      "confidence": 0.75,
+      "confidence": 0.8,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "1b06c719b12e09d39d44f7d7a7e00187",
+      "requestHash": "8f50651a538df0517cba580e6055ad38",
       "pass": true,
       "problems": []
     },
     {
       "id": "period-voertuigen-vorigjaar",
-      "confidence": 0.9,
+      "confidence": 0.92,
       "periodGrainUnavailable": false,
       "errorClass": null,
-      "requestHash": "79240ec83e915f29470cc83f205434ec",
+      "requestHash": "a054de76c79af2231d8c3bbbc9384e6c",
       "pass": true,
       "problems": []
     }
@@ -6964,6 +6964,960 @@
           "periodGrainUnavailable": false,
           "errorClass": null,
           "requestHash": "79240ec83e915f29470cc83f205434ec",
+          "pass": true,
+          "problems": []
+        }
+      ],
+      "benchmarkFixtures": {
+        "ok": 23,
+        "total": 23,
+        "failed": []
+      }
+    },
+    {
+      "generatedAt": "2026-10-04T08:44:19.868Z",
+      "mode": "record",
+      "totals": {
+        "pass": 44,
+        "total": 50
+      },
+      "results": [
+        {
+          "id": "geen-population-income",
+          "confidence": 0.05,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a827c7875c0f8fb7cf71c44872e0b83e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-klimaat-werkgelegenheid",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "6f4a84cf8e26dcadff25db9a2ece32e3",
+          "pass": false,
+          "problems": [
+            "breakdown Klimaatsectoren: expected niet_genoemd, got anders"
+          ]
+        },
+        {
+          "id": "geen-ziekenhuis-ligduur",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5f5bb0941fb984745921a168e077f31f",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-voertuigen-verkoop",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fb10828a612ffc73973ae39b3a6fccea",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-water-afval",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a92af2f993a244b2a54df9391f67992c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-caribisch-inwoners",
+          "confidence": 0.05,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "01d0951d7eb1f5ff5206910a8a91457e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-emissies-elektriciteit",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "f70ae26fa9ab02862e449864c3b036e6",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-ziekenhuis-generiek",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "6e27c2796cf2a930faf60d911f7ca9fc",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-caribisch-bloeddruk",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseRegionUnavailableError",
+          "requestHash": "f4fe88c195bb8430c7e426ba518fc56f",
+          "pass": false,
+          "problems": [
+            "expected a parse, got TableParseRegionUnavailableError (the job would refuse): table-parse named region 'Caribisch Nederland' as a land on table '82291NED', but no offered region-coded member with that name is a land (matching: CN01)"
+          ]
+        },
+        {
+          "id": "total-arbeidsdeelname-generiek",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "6859d2d71b5006f5016a9548f8bb8835",
+          "pass": false,
+          "problems": [
+            "measure: expected M006335, got M005036"
+          ]
+        },
+        {
+          "id": "anders-klimaat-cokesovens",
+          "confidence": 0.6,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "aa6c92f788b926155af142dd16477dda",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-diagnose-huidkanker",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "53be137521c70d8906ccedbd9022b9dd",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-water-meubelmakers",
+          "confidence": 0.6,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c716335ba21586d01df422a40d9005c2",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "nototal-ziekenhuis-leeftijd",
+          "confidence": 0.92,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "e9e04a58ccf805c18029e32b1b85ce93",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "nototal-hernieuwbaar-regio",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d8768fad180cc342b5e8b509aca6f728",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "nototal-caribisch-migraine",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fbac110b987f7f7e73ec85b5a4c3cc11",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "region-amsterdam-bevolking",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "cebbc61942848e8c4ff90d289889946d",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "region-zeeland-gemiddeld",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "cfb5aa100f0ab244c8ad69353178c2e9",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "grain-voertuigen-kwartaal",
+          "confidence": 0.8,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "aeae5e6be36e8795ff3448ece5df3cc2",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "grain-water-maand",
+          "confidence": 0.6,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "e7db161043c98e686bb98e8bf0305e37",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-bevolking-gescheiden-mannen",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0d8fbac0923e7359d2784d4a98119fce",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-bevolking-verweduwd",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "41cd4a4d2d2b0d6202a54551344d45a6",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-ziekenhuis-kanker-vrouwen",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "7724e0f6dc9835a01f951e746ce0c2ba",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-voertuigen-personenauto",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "14511ea9801eab4e4bdaa81cd63ea846",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-voertuigen-diesel",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "cbb48705bab787b65fd261c7cbe5790c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-hernieuwbaar-windenergie",
+          "confidence": 0.92,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "3da02ca6f550925c57c78bae56db43aa",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-hernieuwbaar-groningen",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5248b4502a7d2360c49e8c08ccc27312",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-water-drinkwater-huishoudens",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "7aa830ee0269431f8c8ac3db4526e30a",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-caribisch-bloeddruk-opleiding",
+          "confidence": 0.92,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fe159d1d4b40ef817dc9a11a2ba4ce84",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-arbeidsdeelname-vrouwen-kwartaal",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "eb988dd78424f691d5189fcf2884d523",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-arbeidsdeelname-jongeren-maand",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "7fe296ce86bc780d9f25e58fb655a525",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-ziekenhuis-leeftijdsgroep-meeste",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "66fe396a7abdb246927491d235cd84db",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "ambiguous-arbeid-werklozen",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "35deedfedd0511be794d2375891dc088",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "seizoen-default-arbeid-werklozen",
+          "confidence": 0.7,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1c9df53cc7ab8bb8a6bf6f0818ed0420",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionunavailable-klimaat-utrecht",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseRegionUnavailableError",
+          "requestHash": "22334ffdae3b58b73a239832215ae821",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-ziekenhuis-vrouwen",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1cd98166acd25a90ae8c5b0fef4fa859",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-bevolking-jaar",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "099bf319a22fe69f332dcf176d697294",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-bevolking-plaats",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fc8e2f030734fb0bba4d5e62c386497e",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "followup-onderwerpwissel-geen",
+          "confidence": 0.2,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0de916a657af3669ed35262375375e2f",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "period-klimaat-gestegen-sinds-vorigjaar",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "95fb3b5bfaaf579a9dc0f496c1651bc9",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-arbeid-werkloosheid-tov-vorigemaand",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "961608a5009de97d7def2a6d821d13e2",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-vorigjaar-control",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "838ba1bbf244209bdbaf3c2e03ee5e08",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-nu-vs-2015",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "e5ee4b0aa0830c608ce4290eac8d5c34",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-2015-tot-2020",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d61bd3fb671a8b0cdcf71718a960bc89",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionclass-bevolking-elke-provincie",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8bbef4b71958d64a967f0d7d1f48666e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionclass-bevolking-gemeente-in-utrecht",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "11a88a367ba20f4bbce8f59efb2fabc3",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "regionclass-ziekenhuis-welke-provincie",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "e09b5087c5dd1ff8ca823dd8edce85ba",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-bevolking-5jaar-geleden",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d09ed9c7c1ef71650338c3c98a90504b",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-water-datumbereik",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "143196ef51d9b88852b6930bfe42ecb9",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-voertuigen-vorigjaar",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "763fd0fea4c7806db81a1433072d99bd",
+          "pass": true,
+          "problems": []
+        }
+      ],
+      "benchmarkFixtures": {
+        "ok": 23,
+        "total": 23,
+        "failed": []
+      }
+    },
+    {
+      "generatedAt": "2026-10-04T08:57:05.219Z",
+      "mode": "record",
+      "totals": {
+        "pass": 44,
+        "total": 50
+      },
+      "results": [
+        {
+          "id": "geen-population-income",
+          "confidence": 0.05,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d3b35eadc6bf0cfcc57d4f6fb578789c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-klimaat-werkgelegenheid",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8233e52e09d8c01946120caad5bc53fc",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-ziekenhuis-ligduur",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "bbdf209f5193606e46188730d21ab73e",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-voertuigen-verkoop",
+          "confidence": 0.4,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a29e8a46021f90c4bebb263d95226409",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-water-afval",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "3f48183d83288a941c72a4a6cbc3de83",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "geen-caribisch-inwoners",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a8656c96cb0d9df7f918c0ef5d8c5ef2",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-emissies-elektriciteit",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1fb284f4e8664add5dda1a9dc3627804",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-ziekenhuis-generiek",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "c3268027a20ade9322f345035a247ec4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "total-caribisch-bloeddruk",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseRegionUnavailableError",
+          "requestHash": "7cacc7b35a9e35233d55fe3d14758a82",
+          "pass": false,
+          "problems": [
+            "expected a parse, got TableParseRegionUnavailableError (the job would refuse): table-parse named region 'Caribisch Nederland' as a land on table '82291NED', but no offered region-coded member with that name is a land (matching: CN01)"
+          ]
+        },
+        {
+          "id": "total-arbeidsdeelname-generiek",
+          "confidence": 0.6,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "f86404035cc0dfa945ebcca5204cfdcc",
+          "pass": false,
+          "problems": [
+            "measure: expected M006335, got M005036"
+          ]
+        },
+        {
+          "id": "anders-klimaat-cokesovens",
+          "confidence": 0.6,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b87f9d9d5381617cd8fb686b5859b118",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-diagnose-huidkanker",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5464de7623cffab3292bf8594cac0e15",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-water-meubelmakers",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "59bc8f66a29e9dc7ee5f7a67542a1d6c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "nototal-ziekenhuis-leeftijd",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "f95a5608d2554e75b5469ed72eb0107a",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "nototal-hernieuwbaar-regio",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseValidationError",
+          "requestHash": "2ca3f44d7498c347d4ab178e86c71b46",
+          "pass": false,
+          "problems": [
+            "expected a parse, got TableParseValidationError (the job would refuse): table-parse chose member 'niet_genomend' for dimension 'RegioS', which is not in the OFFERED member list for that dimension (<empty>) and is not 'niet_genoemd'/'anders' — a real member the pre-filter cut must be answered as 'anders', never guessed"
+          ]
+        },
+        {
+          "id": "nototal-caribisch-migraine",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1be578b004dbf4a3b1a1be61ca3a4aac",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "region-amsterdam-bevolking",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "7a29d51a7c607eb1039a839699fbccf7",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "region-zeeland-gemiddeld",
+          "confidence": 0.93,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "4cf6fff2683c2f8cddb247bd7608f4e5",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "grain-voertuigen-kwartaal",
+          "confidence": 0.8,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "0d3e1e78625b5f8818e70353dfb92832",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "grain-water-maand",
+          "confidence": 0.6,
+          "periodGrainUnavailable": true,
+          "errorClass": null,
+          "requestHash": "695cb3d4cafc0fafa032d9ad187f4bc1",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-bevolking-gescheiden-mannen",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "52ed88bea9c2c9ecd83183072815a20b",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-bevolking-verweduwd",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5b38d95dfb1e64ab194d0159f1c53b3f",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-ziekenhuis-kanker-vrouwen",
+          "confidence": 0.55,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0ede2712c72a860e85ea1ce13a2e38d3",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-voertuigen-personenauto",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "4ac37335eac505142f45a6a5f6b6c5a4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-voertuigen-diesel",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "4146846613d2fbe723b5819cc30c2ecb",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-hernieuwbaar-windenergie",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "1421f9c92ec3a9c1d52d84d642c206a3",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-hernieuwbaar-groningen",
+          "confidence": 0.5,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d97fdca9f8a00f1718b5c2db82224e1c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-water-drinkwater-huishoudens",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "b61943bd199e847dfa778973281ecf41",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-caribisch-bloeddruk-opleiding",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8508eb6e884b31a4fb47bc0e5ee9b0a5",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-arbeidsdeelname-vrouwen-kwartaal",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "fd9798dacfb3ea2eff50725ab224b5e4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "general-arbeidsdeelname-jongeren-maand",
+          "confidence": 0.82,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "24925431cf74e42faf34cc2645d036f4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "anders-ziekenhuis-leeftijdsgroep-meeste",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "0a04a7a75b883fe5345c54ba5943dc5a",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "ambiguous-arbeid-werklozen",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "47116a4f12d2355e622d4c85daec7533",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "seizoen-default-arbeid-werklozen",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d40b14bd224b3e519215812e45970157",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionunavailable-klimaat-utrecht",
+          "confidence": null,
+          "periodGrainUnavailable": null,
+          "errorClass": "TableParseRegionUnavailableError",
+          "requestHash": "712523688caed32952aa0ec0f63c872c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-ziekenhuis-vrouwen",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "4ed8efb4475942babac577ba1dc82845",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-bevolking-jaar",
+          "confidence": 0.9,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "3d443f3de70871c2d9b4465287c7eaab",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "followup-bevolking-plaats",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "d23c4ccbaabd7c51e79a929a9d07408f",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "followup-onderwerpwissel-geen",
+          "confidence": 0.15,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "004846b1512e7a0199b68cbcd17c18e8",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "period-klimaat-gestegen-sinds-vorigjaar",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "5138cab00e52d7ae63ff1bc90c626794",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-arbeid-werkloosheid-tov-vorigemaand",
+          "confidence": 0.95,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "f692439808f4c7378a8496b386742ae4",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-vorigjaar-control",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "28d0c14edeed99f7a22eae2e8ced62e7",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-nu-vs-2015",
+          "confidence": 0.75,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "706d32abd119d204c4a885e443f53661",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-klimaat-2015-tot-2020",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "dd96b4916ef74380c5d076c4d2fbfba1",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionclass-bevolking-elke-provincie",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "08c068b9b5e2509aec6621322b34804c",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "regionclass-bevolking-gemeente-in-utrecht",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a6d3edb34acba3cbb964a70c8ab1c50b",
+          "pass": false,
+          "problems": [
+            "period kind: expected year, got date_range"
+          ]
+        },
+        {
+          "id": "regionclass-ziekenhuis-welke-provincie",
+          "confidence": 0.85,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a1492d94698d41c9b1ca693741cb2ceb",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-bevolking-5jaar-geleden",
+          "confidence": 0.88,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "ef224739c38b97c0f44ecd6b9c76cc5d",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-water-datumbereik",
+          "confidence": 0.8,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "8f50651a538df0517cba580e6055ad38",
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "period-voertuigen-vorigjaar",
+          "confidence": 0.92,
+          "periodGrainUnavailable": false,
+          "errorClass": null,
+          "requestHash": "a054de76c79af2231d8c3bbbc9384e6c",
           "pass": true,
           "problems": []
         }

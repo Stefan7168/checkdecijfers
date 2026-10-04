@@ -1,12 +1,12 @@
 {
   "summary": {
-    "generatedAt": "2026-10-01T18:46:55.605Z",
+    "generatedAt": "2026-10-04T09:14:28.377Z",
     "live": true,
     "cases": 35,
     "positives": 30,
     "recallOnShortlist": "19/30",
-    "beforeReachesRightTable": "1/30",
-    "afterReachesRightTable": "27/30",
+    "beforeReachesRightTable": "2/30",
+    "afterReachesRightTable": "25/30",
     "negativesRoutedToATable": "0/5"
   },
   "rows": [
@@ -127,7 +127,7 @@
       "shortlist": 24,
       "parseKind": "out_of_scope",
       "outcome": "onboarding",
-      "picked": "85472NED",
+      "picked": "85846NED",
       "viaOutOfScope": true,
       "hit": true
     },
@@ -170,10 +170,10 @@
       "recallRank": -1,
       "shortlist": 24,
       "parseKind": "data_query",
-      "outcome": "onboarding",
-      "picked": "81071ned",
-      "viaOutOfScope": true,
-      "hit": true
+      "outcome": "clarification",
+      "picked": null,
+      "viaOutOfScope": false,
+      "hit": false
     },
     {
       "id": "daily-internet-users",
@@ -224,7 +224,7 @@
       "positive": true,
       "recallRank": 6,
       "shortlist": 24,
-      "parseKind": "out_of_scope",
+      "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "85998NED",
       "viaOutOfScope": true,
@@ -270,16 +270,16 @@
       "shortlist": 24,
       "parseKind": "data_query",
       "outcome": "onboarding",
-      "picked": "83834NED",
+      "picked": "85887NED",
       "viaOutOfScope": true,
-      "hit": true
+      "hit": false
     },
     {
       "id": "sea-containers-handled",
       "positive": true,
       "recallRank": 0,
       "shortlist": 23,
-      "parseKind": "data_query",
+      "parseKind": "out_of_scope",
       "outcome": "onboarding",
       "picked": "85601NED",
       "viaOutOfScope": true,
@@ -326,7 +326,7 @@
       "parseKind": "data_query",
       "outcome": "onboarding",
       "picked": "85630NED",
-      "viaOutOfScope": true,
+      "viaOutOfScope": false,
       "hit": true
     },
     {

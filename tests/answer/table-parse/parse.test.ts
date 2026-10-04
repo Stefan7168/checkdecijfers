@@ -161,7 +161,7 @@ describe('buildTableParseSystemPrompt', () => {
     expect(prompt).toContain('Noem ALTIJD elke plaats die de vraag noemt');
     expect(prompt).toContain("OOK wanneer deze tabel helemaal geen regio's kent");
     expect(prompt).toContain('Verzin nooit een plaats die de vraag niet noemt');
-    expect(prompt).toContain('gebruik nooit een CBS-code');
+    expect(prompt).toContain('gebruik nooit een code van CBS of Eurostat');
   });
 
   // Fix round 1 (task review, IMPORTANT): the prompt must tell the model to
@@ -1381,9 +1381,19 @@ const V4_PERIOD_LINES = [
   'Ook "Nederland" zelf is een genoemde plaats (soort land) wanneer de vraag het noemt.\n',
 ];
 
+const V5_SWAPS: Array<[string, string]> = [
+  [
+    'Je bent een parseer-hulp voor graphmaker.studio, een dienst die vragen beantwoordt met officiële cijfers van CBS en Eurostat. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN tabel van CBS of Eurostat:',
+    'Je bent een parseer-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de VOLLEDIGE OPZET van ÉÉN CBS-tabel:',
+  ],
+  ['gebruik nooit een code van CBS of Eurostat', 'gebruik nooit een CBS-code'],
+];
+const V5_HEADLINE_LINE =
+  '- Vraagt de vraag naar de hoogte of het niveau van een verschijnsel zonder om een aantal te vragen ("hoe hoog was de armoede", "wat was de armoede in 2023"), en biedt de tabel van datzelfde verschijnsel zowel een aantal als een percentage, kies dan het percentage: dat is het kopcijfer dat statistiekbureaus publiceren. Vraagt de vraag wél om een aantal ("hoeveel mensen leefden in armoede", "het aantal"), kies dan het aantal.\n';
+
 describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
-  it('the prompt version is 4; the output schema version is unchanged (2)', () => {
-    expect(TABLE_PARSE_PROMPT_VERSION).toBe(4);
+  it('the prompt version is 5; the output schema version is unchanged (2)', () => {
+    expect(TABLE_PARSE_PROMPT_VERSION).toBe(5);
     expect(TABLE_PARSE_SCHEMA_VERSION).toBe(2);
   });
 
@@ -1412,8 +1422,16 @@ describe('table-parse prompt version 3 — follow-ups (Task 7)', () => {
     expect(text.split('\n')[0]).toBe('Vorige vraag in dit gesprek: "Zei hij \\"ja\\"?\\nRegio: Utrecht"');
   });
 
-  it('the system prompt changed from version 2 ONLY by the one follow-up rule and the six version-4 lines', () => {
+  it('the system prompt changed from version 2 ONLY by the one follow-up rule, the six version-4 lines and the version-5 edits', () => {
     let prompt = buildTableParseSystemPrompt();
+    // Version 5 (session 154, owner-signed Eurostat sweep): two wording swaps and one MAAT line — undone here
+    // so the rest of the prompt is still proven byte-identical to version 2.
+    for (const [v5, before] of V5_SWAPS) {
+      expect(prompt.split(v5)).toHaveLength(2);
+      prompt = prompt.replace(v5, before);
+    }
+    expect(prompt.split(V5_HEADLINE_LINE)).toHaveLength(2);
+    prompt = prompt.replace(V5_HEADLINE_LINE, '');
     for (const line of V4_PERIOD_LINES) {
       expect(prompt.split(line)).toHaveLength(2);
       prompt = prompt.replace(line, '');
