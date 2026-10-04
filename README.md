@@ -8,11 +8,11 @@
 you get a chart you would publish, and the AI never does the math.** ([ADR 063](docs/decisions/063-chart-first-refocus-look-is-the-gate.md),
 the current direction, 2026-09-29; positioning detail in [ADR 047](docs/decisions/047-repositioning-embedded-sourced-chart.md).) A user asks a question in plain Dutch; deterministic code
 computes the answer from CBS data ingested into our own database; the AI only parses the question
-and phrases the result. Every number is traceable to an official CBS cell, with source table and
-freshness date shown. When data is missing, ambiguous, or stale, the product refuses or asks — it
+and phrases the result. Every number is traceable to an official table from CBS or Eurostat (since
+2026-10-04, ADR 048 D3(d)), with source table and freshness date shown. When data is missing, ambiguous, or stale, the product refuses or asks — it
 never guesses. CBS is the primary source; Eurostat is a second data source built as an internal,
-flag-gated adapter (`EUROSTAT_EXPLORER_ENABLED`, [ADR 048](docs/decisions/048-eurostat-data-source.md)) —
-not yet reachable from the public chat. Country comparisons via Eurostat (a reader-clicked confirm chip,
+flag-gated adapter ([ADR 048](docs/decisions/048-eurostat-data-source.md)) — **reachable from the public chat since
+2026-10-04** through the general table lane (`EUROSTAT_FINDER_ENABLED`, its own source chip; any of ~7,600 datasets). Country comparisons via Eurostat (a reader-clicked confirm chip,
 slice E2a) are built and staged but switched off behind `EUROSTAT_SIBLINGS_ENABLED` until the owner's
 step-6 flip. The interface itself is bilingual (a Dutch/English switch
 in the header); a reader on the English interface gets answers translated into English (ADR 058, LIVE since 2026-09-26),

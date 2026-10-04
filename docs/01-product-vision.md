@@ -15,7 +15,8 @@ for the first chart.
 for journalists, the September "embedded, sourced chart" tool, and the graphmaker.studio general chart maker) collapse
 into this one. The ICP section below is kept as the detailed segment order and the July paragraph as history; where
 they differ from this block, this block wins. The public claim ("every number traceable to an official CBS cell, with
-source and date shown") and principles (a)/(b)/(c) are unchanged.
+source and date shown") and principles (a)/(b)/(c) are unchanged — **widened 2026-10-04 (session 154, owner-signed, ADR 048
+D3(d)) when Eurostat started answering: "every number traceable to an official table from CBS or Eurostat, with source and date".**
 
 **The gate to inviting people:** the owner says "I would share this" about the answer chart, the Edit popup and the
 homepage. Until then, no new feature work — see [STATUS.md](STATUS.md) and the "The Look" work package in
@@ -36,7 +37,7 @@ A user gets, per question:
 3. **A simple chart** when the question is about a trend or comparison.
 4. **A refusal or a clarifying question** when the data is missing, ambiguous, or stale. The product never guesses.
 
-The core promise, in one sentence: **every number traceable to an official CBS cell, with source and date shown.** This is the claim we make publicly (interview Q5). The notes' slogans ("0% hallucinatiegarantie", "De AI die niet liegt") overpromise in absolute terms and were set aside as the public claim; whether they ever appear in marketing is Stefan's call after legal/comms review ([open-questions.md](open-questions.md) #8).
+The core promise, in one sentence: **every number traceable to an official CBS cell, with source and date shown.** (Widened 2026-10-04 to "an official table from CBS or Eurostat" — see the block above.) This is the claim we make publicly (interview Q5). The notes' slogans ("0% hallucinatiegarantie", "De AI die niet liegt") overpromise in absolute terms and were set aside as the public claim; whether they ever appear in marketing is Stefan's call after legal/comms review ([open-questions.md](open-questions.md) #8).
 
 Out of scope for v1 but deliberately kept alive (see [06-roadmap.md](06-roadmap.md) and the "Future-build seams" section of [04-architecture.md](04-architecture.md)): social-format exports, interactive chart studio, shareable answer pages with OpenGraph images (programmatic SEO), embeds, alerts, enterprise house-style charts.
 

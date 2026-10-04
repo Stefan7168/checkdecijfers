@@ -1193,3 +1193,16 @@ gave GO. In ONE change (`5267643e`…`b98b0db7`, CI run 37193394891 green incl. 
   44/50 (all six misses refuse/ask), Eurostat 15/17 (E3 asks, E11 SA vs SCA), CBS table-lane benchmark 14/14 + 9/9 +
   0 invented (was 12/14), Eurostat lane 6/6 + 5/6 + 0 invented, table finder 11/11, front door 31/32 tuning, 25/30
   held-out (was 27/30; one change from the unchanged intent parse, one a neighbouring household table).
+- **Same day, after the flip (owner's first live question refused):** production `cbs_catalog` held **0 Eurostat
+  rows** — every finder measurement had run on fixture catalogues. `catalog:refresh -- --source eurostat` (new CLI
+  option, prune scoped to the source) loaded 7,561 datasets (`e81cc977`); the owner's re-ask then answered Poland road
+  deaths 2023 = 1,893 from `tran_sf_roadro`, Eurostat's own figure. Refreshing this index is a monthly hand step
+  (RUNBOOK); a daily refresh was proposed, not decided.
+- **Live read-only probe** (`scripts/eurostat-live-probe.ts`, production DB opened read-only, lane on local PGlite with
+  the live adapter and the real reader, each number checked against Eurostat's API; ~$0.38): 9 Dutch questions → 5
+  answered, 5/5 match, 0 wrong; 2 button questions (age group for `une_rt_a`, counterpart sector for `gov_10dd_ggd`),
+  1 honest refusal after a weak finder pick (waste per inhabitant), 1 false "unreachable". Fixed (`53a99429`): a
+  permanent source error (`retryable === false`, incl. `EurostatLayoutRefusalError`) is not retried and refuses as
+  `table_lane_ineligible`; the number check accepts the upper bound of a hyphenated range copied from a title
+  ("aged 15-24") — `audit:verify -- 1 349` byte-identical before/after. Also (`83563029`): onboarding acknowledgments
+  name Eurostat for a Eurostat pick, and a Eurostat pick never falls back to the CBS-only paid onboarding offer.

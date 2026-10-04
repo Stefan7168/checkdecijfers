@@ -23,8 +23,8 @@
   1. **CBS: switch on the any-table route** (ADR 062 table lane) — reader recorded + calibrated and the table-lane benchmark
      PASSED and the route is LIVE (session 153); `37789ksz` evicted 2026-10-02 — no CBS table is a whole copy any more.
   2. **Eurostat: the same route** — find across the whole Eurostat catalogue, read a dataset's structure the connector's way, fetch
-     only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5). **Built end to end,
-     DARK (session 153):** the switch `EUROSTAT_FINDER_ENABLED` + the owner-signed public wording are all that remain.
+     only what the question needs ([study](session-briefs/2026-09-30-eurostat-mcp-deep-study.md) §5.4 steps 3–5). **LIVE since 2026-10-04
+     (session 154):** owner-signed wording + `EUROSTAT_FINDER_ENABLED=1` + the Eurostat table index loaded (7,561 tables).
   3. **Stop:** converting, refreshing, curating or polishing specific tables/datasets. The four Eurostat datasets are NOT converted or
      refreshed by hand any more; they go when the Eurostat route answers. Storage work only as far as the two routes need it.
   The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
@@ -34,9 +34,15 @@
   public-claim sweep and gave GO. Wording names CBS and Eurostat everywhere; Eurostat has its OWN source chip (CBS only / Eurostat only /
   both — the table search follows the choice); table-reader + rerank prompts name both sources and were re-recorded (+ one headline-figure
   rule after E4/E5 slipped to a count): CBS lane benchmark 14/14 + 9/9 + 0 invented, Eurostat 6/6 + 5/6 + 0 invented. `EUROSTAT_FINDER_ENABLED=1`
-  in Production; CI 37193394891 green incl. deploy. **Open: the owner's live check of three Dutch Eurostat questions against Eurostat's own
-  figures (Poland road deaths 2023 = 1,893; Denmark municipal waste 2022 = 759 kg/inh; France asylum 2023 = 167,055 total / 145,160 first-time).**
-  A Claude Design workspace mockup was rejected by the owner ("not good at all") and dropped — nothing built.
+  in Production; CI 37193394891 green incl. deploy. **The owner's first live question was refused:** production had 0 Eurostat
+  rows in the table index (all measurements had used fixture catalogues). Fixed: `catalog:refresh -- --source eurostat` loaded 7,561
+  datasets (`e81cc977`); the re-ask answered **1.893** (Poland road deaths 2023, `tran_sf_roadro`) = Eurostat. Refusals no longer list
+  curated topics ("ik vond bij CBS en Eurostat geen tabel…", owner: "a door to the data"). **Live read-only probe** (9 questions, ~$0.38):
+  5 answered, **5/5 match Eurostat, 0 wrong**; two defects fixed (`53a99429`: permanent table error no longer "unreachable"; title
+  range "aged 15-24" no longer a false alarm), plus onboarding texts name Eurostat (`83563029`). EU-country questions: 8/8 reach a
+  fitting table. Open (owner picks): button questions for age / counterpart sector, the waste finder pick, English measure titles
+  inside Dutch answers, a daily refresh of the Eurostat index. A Claude Design workspace mockup was rejected ("not good at all") and
+  dropped. The owner said he is getting sceptical about the app — a ChatGPT side-by-side was offered, not run. AI spend ~$5–6.
 
 **▶ SESSION 153 (2026-10-01, owner present) — THE ANY-TABLE ROUTE PASSES ITS GATE; THE FLIP WAITS FOR THE OWNER'S GO
   ([#338](open-questions.md), [#360](open-questions.md), [#361](open-questions.md), ADR 062 "As built — recording + calibration"):**
@@ -145,7 +151,16 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-10-02, session 153 wrap — verify against `git log` / Actions runs before trusting this).
+**▶ NEXT SESSION STARTS HERE (written 2026-10-04, session 154 wrap — verify against `git log` / Actions runs before trusting this).
+CBS AND Eurostat any-table routes are LIVE (`TABLE_LANE_ENABLED=1`, `EUROSTAT_FINDER_ENABLED=1`; Eurostat index 7,561 datasets).
+The owner is sceptical about the product's value — start by asking what he wants; the session-154 recommendation is an honest
+side-by-side of ~10 everyday questions against ChatGPT (where we are better, where worse), then the most visible Eurostat
+quality item: English measure titles inside Dutch answer sentences. Other open items (owner picks, none decided): the button
+questions for age group / counterpart sector, the Danish waste finder pick, a daily refresh of the Eurostat index.
+Kickoff: [session-briefs/2026-10-04-session-155-kickoff.md](session-briefs/2026-10-04-session-155-kickoff.md).
+The older bullets below are history.**
+
+**▶ (history) NEXT SESSION STARTS HERE (written 2026-10-02, session 153 wrap — verify against `git log` / Actions runs before trusting this).
 The CBS any-table route is LIVE. The Eurostat route is BUILT and DARK (finder, English bridge, table reader, Dutch labels,
 per-answer source wording; Eurostat benchmark real model: answers 6/6, 0 invented, refuse/ask 5/6). Single priority:
 the owner signs [the public-claim draft](session-briefs/2026-10-02-eurostat-public-claim-sweep-draft.md), then — owner present —

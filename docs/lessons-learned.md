@@ -6,6 +6,27 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 154 — Eurostat goes live (and the first live question is refused)
+
+1. **Before flipping a feature on, count the production rows it depends on.** Every Eurostat finder measurement ran
+   on fixture catalogues; production `cbs_catalog` had 0 Eurostat rows, so the owner's first live question was
+   refused minutes after the flip. One read-only `select count(*)` would have caught it. A "built and measured" claim
+   is about the code; a go-live checklist also needs "the data the code reads exists in production".
+2. **A wording-only prompt change still moves the model's picks.** Renaming the service and sources in the table
+   reader's role line (no rule change) flipped two Eurostat cases from rate to count. Re-record after any prompt edit
+   and diff per case against the saved old report, not just totals — and save the old fixtures/report aside first.
+3. **A read-only live probe is the cheapest way to test the real path end to end.** Production DB opened with
+   `default_transaction_read_only=on` (abort unless a test write is refused), the lane on a local PGlite DB, the live
+   source adapter and the real reader, and each number checked against the source's own API: 9 questions for ~$0.38
+   found two defects no benchmark had (a permanent table error reported as "unreachable", a false validator alarm).
+4. **When the product framing changes, sweep the refusal texts too.** The out-of-scope refusal still listed the
+   curated topics as "what my sources cover" — the owner read it as the old curated product. Public-claim sweeps must
+   include deterministic refusal and meta-answer templates, not only marketing copy.
+5. **`npm run audit:verify` needs a row range** (`-- 1 <max id>`); without it the script throws on argument parsing,
+   which is easy to mistake for a verification failure.
+6. **Don't design a screen you haven't seen.** A Claude Design mockup of the workspace built from a code inventory
+   (login-only screen) was rejected outright. Get the real screen first (owner screenshot or the local harness).
+
 ## Session 153 — the table reader's first live recording
 
 000000. **Merging search results by score lets one broad word crowd out the precise one.** The English bridge's first

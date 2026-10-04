@@ -1,5 +1,33 @@
 # STATUS archive — the session log
 
+**Session 154 (2026-10-04; owner present throughout; AI spend ≈$5–6 of the $50 roof; no DDL; production env:
+`EUROSTAT_FINDER_ENABLED=1` added; production data: 7,561 Eurostat rows added to `cbs_catalog`).**
+
+1. **Owner signed the Eurostat public-claim sweep** (four answers, `973b9fbd`): wording as proposed; Eurostat gets its OWN source
+   chip; model prompts change and are re-recorded (owner chose this over the no-spend advice); GO for the flag.
+2. **Built in parallel (two cheap-tier agents in worktrees, reviewed and merged):** wording items 1–9/11–13 (`044851c0`); the
+   Eurostat chip + source-following search + Eurostat-only override with the `no_eurostat_table` refusal (`232e4d19`).
+   Prompts: table reader v5 + rerank v3 name both sources; one headline-figure MAAT line after E4/E5 slipped to a count
+   (`5267643e`): CBS calibration 44/50 (all misses refuse/ask), Eurostat 15/17, CBS lane benchmark 14/14 + 9/9 + 0 invented
+   (was 12/14), Eurostat lane 6/6 + 5/6 + 0, table finder 11/11, front door 31/32 tuning / 25/30 held-out (was 27/30).
+   Clarifications + waiting text + own-data refusal (`1444832b`, clarify fixtures 7/7), privacy test + CLAUDE.md claim
+   (`b98b0db7`). Verification block green (backend 299 files / 5,385 tests, benchmark 14/14 + 6/6 + 0, web 3,555, build,
+   40 e2e); `/code-review` LOW 0 findings; CI 37193394891 green incl. deploy.
+3. **Flag flipped** (`EUROSTAT_FINDER_ENABLED=1`, Vercel Production, before the push so the deploy carried both).
+4. **The owner's first live question was refused:** production `cbs_catalog` had 0 Eurostat rows. `catalog:refresh -- --source
+   eurostat` (new option) loaded 7,561 (`e81cc977`, prune scoped to the source); re-ask answered 1.893 (Poland road deaths
+   2023, `tran_sf_roadro`) = Eurostat. Owner's framing ("a door to the data of CBS and Eurostat"): the out-of-scope / causal
+   refusals and the capabilities answer no longer present curated topics as the limit (same commit).
+5. **Onboarding texts follow the picked table; a Eurostat pick never falls back to the CBS-only paid offer** (`83563029`).
+   EU-country questions measured live read-only: 8/8 reach a fitting table (7 Eurostat, inflation France → CBS HICP Europe).
+6. **Live read-only answer probe** (`753f557e`, `scripts/eurostat-live-probe.ts`, ~$0.38): 9 questions → 5 answered,
+   5/5 match Eurostat's API, 0 wrong; fixed (`53a99429`): a permanent table error refuses as `table_lane_ineligible`
+   instead of "unreachable"; the title range "aged 15-24" no longer trips R3 (audit:verify 1–349 byte-identical before/after:
+   269/313 clean, 3 pinned, 36/36 redacted). Merged `3e9679c3`, CI green.
+7. **Also:** RUNBOOK flag row + Eurostat catalogue step (`1fc33d48`, `e81cc977`); the owner topped up 200 credits himself via
+   Stripe test mode (the ledger has no honest manual-grant reason). A Claude Design workspace mockup was rejected and
+   dropped. The owner voiced scepticism about the app; a ChatGPT side-by-side was offered, not run.
+
 **Session 153 (2026-10-01 → 2026-10-02 on the machine's +07 clock; owner present throughout, partly "continue autonomously";
 AI spend ≈$11.5 of the $50 roof; no DDL; production env: `TABLE_LANE_ENABLED=1` added; production data: `37789ksz` evicted).**
 
