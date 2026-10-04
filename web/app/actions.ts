@@ -788,7 +788,11 @@ export async function askQuestion(
     // never fabricates: it only reads a refusal the pipeline already produced
     // and audited, and its own failure (secret unset) degrades to an honest
     // "not available right now" with nothing charged or queued.
-    const { gated: finalGated, offer } = dormantLinkFailure
+    // Session 154: the confirm-first onboarding fetch (WP16) only knows how to fetch from CBS, so a
+    // Eurostat pick that did not reach the table lane (routing failed, or the lane is switched off)
+    // gets the lane's own free failure text — never a paid offer to fetch a Eurostat table from CBS.
+    const eurostatPick = sourceKeyForTableId(tableLaneRoutable(laneGated)?.tableId ?? '') === EUROSTAT_SOURCE_KEY;
+    const { gated: finalGated, offer } = dormantLinkFailure || eurostatPick
       ? { gated: withTableLaneFailedText(laneGated), offer: null }
       : await maybeTriggerOnboarding(laneGated, {
           userId,

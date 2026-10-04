@@ -6,7 +6,7 @@
 // and QueryRefusal, neither of which carries a cell value, so a fabricated
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
-import { provisionalNoteFor, resolveSource, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
+import { EUROSTAT_SOURCE_KEY, provisionalNoteFor, resolveSource, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
 import { EUROSTAT_SIBLING_MEASURES_REVIEWED } from '../../sources/eurostat-siblings.ts';
 import {
   freshestForCanonical,
@@ -525,6 +525,17 @@ export const ONBOARDING_OFFER_UNAVAILABLE_TEXT =
 export const ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN =
   "That topic isn't in our database yet, and fetching it automatically isn't available right now. Please try again later, or ask a different question.";
 
+/** Session 154: Eurostat siblings of the two acknowledgments above, used ONLY when the picked table is a
+ * Eurostat table (the routing turn of a Eurostat question that goes to the table lane; that turn is stored,
+ * not shown — the chat shows the lane's own waiting bubble). CBS picks keep the verbatim copies, byte for
+ * byte. No digits, like their CBS siblings. */
+export const ONBOARDING_PENDING_TEXT_EUROSTAT =
+  'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij Eurostat en controleren ze — meestal een kwestie van minuten. Heb je ondertussen nog een andere vraag?';
+export const ONBOARDING_PENDING_TEXT_EUROSTAT_EN =
+  "That topic isn't in our database yet. We're now automatically requesting the figures from Eurostat and checking them — usually a matter of minutes. Do you have another question in the meantime?";
+export const ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT = 'Deze cijfers worden al voor je opgehaald bij Eurostat.';
+export const ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT_EN = 'These figures are already being fetched from Eurostat for you.';
+
 /** The onboarding acknowledgment builder (design §2). `already` picks between
  * the two verbatim copies; only the first-ask ('onboarding_pending') carries
  * the structured `onboarding` envelope the web action triggers on. */
@@ -532,17 +543,18 @@ export function buildOnboardingRefusal(
   onboarding: OnboardingEnvelope,
   already: boolean,
 ): BuiltRefusal {
+  const eurostat = sourceKeyForTableId(onboarding.tableId) === EUROSTAT_SOURCE_KEY;
   if (already) {
     return {
       reason: 'onboarding_already_pending',
-      text: ONBOARDING_ALREADY_PENDING_TEXT,
+      text: eurostat ? ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT : ONBOARDING_ALREADY_PENDING_TEXT,
       offer: null,
       guidance: null,
       freshness: null,
       internalNote: null,
       onboarding: null,
       en: {
-        text: ONBOARDING_ALREADY_PENDING_TEXT_EN,
+        text: eurostat ? ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT_EN : ONBOARDING_ALREADY_PENDING_TEXT_EN,
         offer: null,
         guidance: null,
         untranslated: [],
@@ -551,14 +563,14 @@ export function buildOnboardingRefusal(
   }
   return {
     reason: 'onboarding_pending',
-    text: ONBOARDING_PENDING_TEXT,
+    text: eurostat ? ONBOARDING_PENDING_TEXT_EUROSTAT : ONBOARDING_PENDING_TEXT,
     offer: null,
     guidance: null,
     freshness: null,
     internalNote: null,
     onboarding,
     en: {
-      text: ONBOARDING_PENDING_TEXT_EN,
+      text: eurostat ? ONBOARDING_PENDING_TEXT_EUROSTAT_EN : ONBOARDING_PENDING_TEXT_EN,
       offer: null,
       guidance: null,
       untranslated: [],

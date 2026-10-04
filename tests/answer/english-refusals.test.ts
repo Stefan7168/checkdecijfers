@@ -33,6 +33,11 @@ import {
 import type { BuiltRefusal } from '../../src/answer/respond/index.ts';
 import {
   buildOnboardingRefusal,
+  ONBOARDING_PENDING_TEXT,
+  ONBOARDING_PENDING_TEXT_EUROSTAT,
+  ONBOARDING_PENDING_TEXT_EUROSTAT_EN,
+  ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT,
+  ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT_EN,
   INTERNAL_REFUSAL_TEXT_EN,
   ONBOARDING_ALREADY_PENDING_TEXT_EN,
   ONBOARDING_PENDING_TEXT_EN,
@@ -416,6 +421,20 @@ describe('English refusal siblings — structural belt over every remaining buil
     // Neither onboarding text is wrapped in assertNotAQuestion (by design,
     // same as the Dutch originals) — no additional shape assertion needed
     // beyond the byte-exact checks above.
+  });
+
+  it('onboarding texts follow the picked table: a Eurostat pick names Eurostat, a CBS pick keeps the verbatim copy (session 154)', () => {
+    const cbs = buildOnboardingRefusal({ tableId: '82610NED', topicTerm: 'x', confidence: 0.9, candidateIds: ['82610NED'] }, false);
+    expect(cbs.text).toBe(ONBOARDING_PENDING_TEXT);
+    const eu = { tableId: 'eurostat:tran_sf_roadus', topicTerm: 'x', confidence: 0.9, candidateIds: ['eurostat:tran_sf_roadus'] };
+    const pending = buildOnboardingRefusal(eu, false);
+    expect(pending.text).toBe(ONBOARDING_PENDING_TEXT_EUROSTAT);
+    expect(pending.text).toContain('Eurostat');
+    expect(pending.text).not.toContain('CBS');
+    expect(pending.en.text).toBe(ONBOARDING_PENDING_TEXT_EUROSTAT_EN);
+    const already = buildOnboardingRefusal(eu, true);
+    expect(already.text).toBe(ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT);
+    expect(already.en.text).toBe(ONBOARDING_ALREADY_PENDING_TEXT_EUROSTAT_EN);
   });
 
   it('outside_loaded_slice with no nearestAlternative: no offer', () => {

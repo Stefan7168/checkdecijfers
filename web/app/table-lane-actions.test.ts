@@ -431,6 +431,32 @@ describe('askQuestion — flag on: routed to the table lane', () => {
   });
 });
 
+// Session 154: the confirm-first onboarding fetch only knows CBS. A Eurostat pick that does not reach the lane
+// (here: the queue insert fails) must end in the lane's own free failure text — never a paid offer to fetch a
+// Eurostat table from CBS.
+describe('askQuestion — a Eurostat pick never falls back to the CBS onboarding offer (session 154)', () => {
+  beforeEach(() => {
+    vi.stubEnv('TABLE_LANE_ENABLED', '1');
+  });
+
+  it('a failing queue insert for a eurostat: table gives the free failure text and no offer', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const eurostatRouting = {
+      ...routingRefusal(),
+      onboarding: { ...ONBOARDING, tableId: 'eurostat:tran_sf_roadus' },
+    } as unknown as ComposedResponse;
+    drive(eurostatRouting, 11);
+    store.createTableLaneRequest.mockRejectedValue(new Error('queue down'));
+    const outcome = await askQuestion('Hoeveel verkeersdoden in Polen?', RID, null, undefined, null);
+    expect(outcome.onboardingOffer).toBeNull();
+    expect(outcome.gated.kind).toBe('ok');
+    if (outcome.gated.kind !== 'ok') throw new Error('unreachable');
+    expect(outcome.gated.response.text).not.toBe(ONBOARDING_OFFER_TEXT);
+    expect(outcome.gated.response.text).not.toContain('CBS');
+    spy.mockRestore();
+  });
+});
+
 // Breadth step 5, Task 7: a follow-up in the same conversation reuses the
 // previous table-lane ANSWER's table. The link (6th argument, the previous
 // row id) is validated before the pipeline runs — owned, done, an answer, in
