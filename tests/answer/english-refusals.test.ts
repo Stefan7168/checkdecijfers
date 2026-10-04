@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import {
+  buildNoEurostatTableRefusal,
   buildNoSourcesRefusal,
   buildParseRefusal,
   buildQueryRefusal,
@@ -480,8 +481,16 @@ describe('English refusal siblings — structural belt over every remaining buil
 
   it('web_only', () => {
     const built = buildWebOnlyRefusal();
-    expect(built.en.text).toMatch(/^You've turned off CBS data for this question/);
+    expect(built.en.text).toMatch(/^You've turned off the official data sources for this question/);
     assertEnglishSibling(built, 'web_only');
+  });
+
+  it('no_eurostat_table', () => {
+    const built = buildNoEurostatTableRefusal();
+    expect(built.en.text).toBe(
+      'I found no Eurostat table that answers this question. Switch CBS on as well if you want to use Dutch figures.',
+    );
+    assertEnglishSibling(built, 'no_eurostat_table');
   });
 
   it('toInternalRefusal: the exported INTERNAL_REFUSAL_TEXT_EN constant is produced next to the Dutch text, not wired into the envelope', () => {

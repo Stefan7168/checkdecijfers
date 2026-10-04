@@ -18,7 +18,7 @@ import type { ReactNode } from 'react';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { AccountPanel } from './account-panel.tsx';
-import { Chat } from './chat.tsx';
+import { Chat, type ChatWebsearch } from './chat.tsx';
 
 export function Dashboard({
   initialBalance,
@@ -42,7 +42,7 @@ export function Dashboard({
    * (page.tsx reads the add-on price behind the flag). Threaded into Chat's
    * `pricing` prop — its presence is what renders the source chips + the
    * "Internet" chip; absent ⇒ the chat is byte-identical to today. */
-  websearch?: { enabled: true; addonPrice: number };
+  websearch?: ChatWebsearch;
 }) {
   const router = useRouter();
   const t = useT();

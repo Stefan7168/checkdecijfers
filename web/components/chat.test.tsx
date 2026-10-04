@@ -1882,16 +1882,60 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(screen.getByRole('button', { name: 'Internet', pressed: false })).toBeInTheDocument();
   });
 
-  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): the source registry now
-  // has a SECOND real entry (eurostat, chatSelectable:false). Without this
-  // fix, this row's `Object.keys(SOURCES).map(...)` would render an
-  // "Eurostat data" chip and default-select it purely because the entry
-  // exists — before Eurostat can answer anything. This test proves the live
-  // chat UI stays byte-identical (one chip only) through E1.
-  it('never renders a chip for a registered-but-chat-dormant source (Eurostat, E1)', () => {
+  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix) + owner decision 2026-10-04: the source registry has a
+  // SECOND real entry (eurostat). The chip row renders only the keys the server sent
+  // (websearch.sourceKeys); with none sent it is CBS only. This test proves the live chat UI stays
+  // byte-identical (one chip) until the server says Eurostat is live.
+  it('never renders a chip for a registered source the server did not list (Eurostat, flag off)', () => {
     render(<Chat pricing={pricing} />);
     expect(screen.queryByRole('button', { name: /Eurostat/ })).toBeNull();
     expect(screen.getAllByRole('button', { name: /data$/ })).toHaveLength(1);
+  });
+
+  // Owner decision 2026-10-04 (the Eurostat chip): the chip row is exactly the live source keys the SERVER
+  // sends (websearch.sourceKeys, liveChatSourceKeys()); the client never reads env.
+  describe('the Eurostat chip (server-supplied sourceKeys)', () => {
+    const withKeys = (sourceKeys: string[]) => ({
+      simple: 20,
+      clarification: 10,
+      balance: 100,
+      websearch: { enabled: true as const, addonPrice: 10, sourceKeys },
+    });
+
+    it('shows a pre-selected Eurostat chip next to CBS when the server lists it', () => {
+      render(<Chat pricing={withKeys(['cbs', 'eurostat'])} />);
+      expect(screen.getByRole('button', { name: 'CBS data', pressed: true })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Eurostat data', pressed: true })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Internet', pressed: false })).toBeInTheDocument();
+    });
+
+    it('shows no Eurostat chip when the server lists only CBS (flag off) — the row is what it was', () => {
+      render(<Chat pricing={withKeys(['cbs'])} />);
+      expect(screen.queryByRole('button', { name: /Eurostat/ })).toBeNull();
+      expect(screen.getAllByRole('button', { name: /data$/ })).toHaveLength(1);
+    });
+
+    it('ignores an unknown key (the registry stays the display authority)', () => {
+      render(<Chat pricing={withKeys(['cbs', 'nope'])} />);
+      expect(screen.getAllByRole('button', { name: /data$/ })).toHaveLength(1);
+    });
+
+    it('rides the choice in the payload: both, then Eurostat only', async () => {
+      askQuestion.mockResolvedValue(outcome(fakeAnswer('Antwoord.')));
+      render(<Chat pricing={withKeys(['cbs', 'eurostat'])} />);
+      await submit('Hoeveel werklozen zijn er?');
+      expect(askQuestion).toHaveBeenLastCalledWith('Hoeveel werklozen zijn er?', expect.any(String), null, {
+        sources: ['cbs', 'eurostat'],
+        web: false,
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'CBS data' }));
+      expect(screen.getByRole('button', { name: 'CBS data', pressed: false })).toBeInTheDocument();
+      await submit('En in Frankrijk?');
+      expect(askQuestion).toHaveBeenLastCalledWith('En in Frankrijk?', expect.any(String), null, {
+        sources: ['eurostat'],
+        web: false,
+      });
+    });
   });
 
   it('toggles the chips (aria-pressed) on click', () => {

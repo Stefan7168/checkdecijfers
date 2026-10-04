@@ -233,14 +233,12 @@ describe('WP30c/E1 (ADR 048 D6/D7; Amendment B1 superseded by #251): the eurosta
     expect(resolveSource(EUROSTAT_SOURCE_KEY).currentCatalogStatuses).not.toContain(EUROSTAT_CATALOG_POSSIBLY_FROZEN);
   });
 
-  // Integration fix (found in this brief's own whole-branch pass, not by
-  // either adversarial review round): chatSelectable is the ONLY thing
-  // keeping this registered-but-dormant source out of the live chat chip
-  // UI (web/components/chat.tsx) and out of the server's untrusted-payload
-  // validator (web/app/actions.ts's validateSelection) — see chatSelectable's
-  // own doc comment on SourceInfo for why it is load-bearing, not decorative.
-  it('D3(b)/(c): chatSelectable is false — CBS stays the only chat-selectable source in E1', () => {
-    expect(resolveSource(EUROSTAT_SOURCE_KEY).chatSelectable).toBe(false);
+  // Owner decision 2026-10-04 (the Eurostat chip): chatSelectable is now only the FIRST half of the gate
+  // (the registry says "may ever be selected"); the runtime flag is the second, applied in one place by
+  // liveChatSourceKeys() (tests/catalog/live-chat-sources.test.ts). Both sources may be selected; a NEW
+  // source would start false until its own sweep.
+  it('chatSelectable: both registered sources may be selected — the runtime flag, not the registry, keeps Eurostat dark', () => {
+    expect(resolveSource(EUROSTAT_SOURCE_KEY).chatSelectable).toBe(true);
     expect(resolveSource(CBS_SOURCE_KEY).chatSelectable).toBe(true);
   });
 });

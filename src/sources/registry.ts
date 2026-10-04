@@ -62,19 +62,23 @@ export interface SourceInfo {
    * CBS row (pinned; find-replay's request hashes prove the shortlist never
    * moved). */
   currentCatalogStatuses: readonly string[];
-  /** WP30c/E1 (ADR 048 D3(b)/(c) integration fix, found in this brief's
-   * whole-branch pass, not by either adversarial review round): whether this
-   * source may appear as a selectable chip in the LIVE chat UI (WP129+130,
-   * `web/components/chat.tsx`'s `Object.keys(SOURCES).map(...)`). That chip
-   * row iterates every REGISTERED source with no other gate — a new registry
-   * entry alone, with zero other code touched, would surface a brand-new
-   * source (and PRE-select it, matching the WP129 default-all-on behavior)
-   * to every real user, which is exactly the "never announced before it
-   * answers" rule D3 exists to enforce. `false` here is therefore load-
-   * bearing, not decorative: it is the ONLY thing keeping a registered-but-
-   * dormant source out of the public chat UI. Flip to `true` only in the
-   * source's own owner-signed E2/public sweep (D3(d)), in the same change
-   * that makes it actually answerable. */
+  /** Whether this source may EVER appear as a selectable chip in the live chat UI and be accepted by the
+   * server as a chosen source. It is the first half of a TWO-PART gate; the second half is the source's
+   * runtime switch, applied in one place — `liveChatSourceKeys()` (src/catalog/live-chat-sources.ts):
+   * a source is live in chat only when `chatSelectable` is true AND its runtime flag is on (Eurostat:
+   * `EUROSTAT_FINDER_ENABLED`, `eurostatFinderEnabled()`; CBS has none). The chat page hands that list to
+   * the chat component as a prop (the client never reads env) and `validateSelection` in
+   * web/app/actions.ts filters the reader's untrusted selection through the SAME function, so what the
+   * screen offers and what the server accepts cannot drift.
+   *
+   * History: WP30c/E1 (ADR 048 D3(b)/(c)) had this `false` for Eurostat as the ONLY thing keeping a
+   * registered-but-dormant source out of the public chat — the chip row iterated every registered source
+   * with no other gate, so a new registry entry alone would have surfaced (and pre-selected) a brand-new
+   * source before it could answer ("never announced before it answers", D3). Owner decision 2026-10-04:
+   * Eurostat gets its OWN chip next to CBS when it goes live; this flag is therefore `true` and the
+   * "not yet" role moved to the runtime flag, so the source can only appear once Eurostat actually answers
+   * (the finder flag is what makes it answerable). A NEW source starts `false` here until its own
+   * owner-signed sweep, exactly as before. */
   chatSelectable: boolean;
   /** #357 (a): the source states no number of decimals per measure, so the registered decimals are learned from
    * observed values (Eurostat: the most a unit's values carried) — a lower bound. When true, a slice fetch
@@ -131,9 +135,9 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     currentCatalogStatuses: ['Regulier'],
     chatSelectable: true,
   },
-  // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2): second source, registered
-  // but still inert in live chat (chatSelectable) — see that field-level
-  // comment before changing it. currentCatalogStatuses was the other E1 gate;
+  // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2): second source. Selectable
+  // in live chat only while its runtime flag is on — see the chatSelectable
+  // field-level comment. currentCatalogStatuses was the other E1 gate;
   // #357 step 3 filled it (its own comment below). The THIRD E1 limitation, Amendment B1's "every cell
   // provisional, unconditionally", was lifted by #251 in session 109: per-cell
   // statuses now reach isProvisionalStatus for real.
@@ -213,11 +217,10 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     // row reaches the finder unless EUROSTAT_FINDER_ENABLED=1
     // (src/catalog/recall.ts).
     currentCatalogStatuses: ['current'],
-    // D3(b)/(c) (this brief's integration fix): NEVER true in E1 — this is
-    // the sole gate keeping "Eurostat data" out of the live chat chip row
-    // (see the field's own doc comment above). Flips only in E2's
-    // owner-signed sweep, in the same change that makes Eurostat answerable.
-    chatSelectable: false,
+    // Owner decision 2026-10-04: its own chip next to CBS. `true` only says Eurostat MAY be selected; it
+    // shows (and validates) only while EUROSTAT_FINDER_ENABLED=1 — see the field's doc comment and
+    // liveChatSourceKeys().
+    chatSelectable: true,
     // #357 (a): Eurostat's structure states no decimals; they are observed (see the field's doc comment).
     decimalsFromObservedValues: true,
   },

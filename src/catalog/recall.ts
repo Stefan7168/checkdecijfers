@@ -47,7 +47,7 @@ import type { Db } from '../db/types.ts';
 import type { CatalogCandidate } from './types.ts';
 import { ALIAS_HINTS, expandTopicTerms, type AliasHint } from './aliases.ts';
 import { buildIsCurrentPredicate } from './current-status.ts';
-import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 
 /** Regulier-first shortlist quotas (WP27 amendment A2, owner-approved
  *  2026-07-08). MEASURED driver: on the live 4,858-row mirror the raw top-20
@@ -78,6 +78,32 @@ export interface RecallOptions {
   mode?: 'all' | 'any';
   /** #357 step 3: let Eurostat catalogue rows into the shortlist. Absent: eurostatFinderEnabled(). */
   includeEurostat?: boolean;
+  /** Owner decision 2026-10-04 (the Eurostat chip): restrict the search to the source keys the reader has
+   * switched on. Absent ⇒ no restriction at all — the pre-chip behaviour, byte for byte (the benchmark,
+   * tests, CLI and a websearch-off chat). Present ⇒ a source NOT in the set contributes no rows: without
+   * 'cbs' only Eurostat rows can match (filtered IN the query, so the per-class quota is spent on
+   * Eurostat rows, never starved by CBS rows dropped afterwards); without 'eurostat' no Eurostat row is
+   * let in, whatever the flag or `includeEurostat` say. It narrows; it never widens (Eurostat rows still
+   * need the flag or an explicit `includeEurostat`). */
+  sources?: ReadonlySet<string>;
+}
+
+/** The two inclusion switches the SQL needs, from the options. `includeEurostat` keeps its pre-chip
+ * meaning (explicit option, else the flag) and is then ANDed with the reader's source choice;
+ * `includeCbs` is true unless a source restriction leaves CBS out. */
+function sourceInclusion(options: RecallOptions): { includeCbs: boolean; includeEurostat: boolean } {
+  const sources = options.sources;
+  return {
+    includeCbs: sources === undefined || sources.has(CBS_SOURCE_KEY),
+    includeEurostat:
+      (options.includeEurostat ?? eurostatFinderEnabled()) && (sources === undefined || sources.has(EUROSTAT_SOURCE_KEY)),
+  };
+}
+
+/** CBS left out by the reader's choice ⇒ only Eurostat's id-prefixed rows may match. Empty when CBS is in
+ * (the pre-chip query, byte for byte). A literal — no bind parameter, so no placeholder numbering moves. */
+function eurostatOnlyClause(includeCbs: boolean): string {
+  return includeCbs ? '' : `and table_id like '${EUROSTAT_SOURCE_KEY}:%'`;
 }
 
 /** #357 step 3: the Eurostat-finder switch. Exactly '1' ⇒ on; unset or anything else ⇒ off (the
@@ -124,8 +150,12 @@ export async function recallCandidates(
   options: RecallOptions = {},
 ): Promise<CatalogCandidate[]> {
   const limit = options.limit ?? RECALL_LIMIT;
-  const includeEurostat = options.includeEurostat ?? eurostatFinderEnabled();
-  if (options.mode === 'any') return recallAnyWords(db, topic, limit, includeEurostat, options.aliasHints ?? ALIAS_HINTS);
+  const { includeCbs, includeEurostat } = sourceInclusion(options);
+  // Neither source is in play (a restriction that leaves nothing the flag allows): nothing to search.
+  if (!includeCbs && !includeEurostat) return [];
+  if (options.mode === 'any') {
+    return recallAnyWords(db, topic, limit, includeEurostat, includeCbs, options.aliasHints ?? ALIAS_HINTS);
+  }
   const terms = expandTopicTerms(topic, options.aliasHints ?? ALIAS_HINTS).filter(
     (t) => t.trim().length > 0,
   );
@@ -161,6 +191,7 @@ export async function recallCandidates(
        where cbs_catalog.tsv @@ q.tsq
          and (dataset_type is null or dataset_type <> 'Text')
          and ${languageClause}
+         ${eurostatOnlyClause(includeCbs)}
     )
     select table_id, title, summary, status, dataset_type, rank, is_current
       from ranked
@@ -304,6 +335,7 @@ async function recallAnyWords(
   text: string,
   limit: number,
   includeEurostat: boolean,
+  includeCbs: boolean,
   aliasHints: AliasHint[],
 ): Promise<CatalogCandidate[]> {
   const allWords = contentWords(text);
@@ -343,6 +375,7 @@ async function recallAnyWords(
        where cbs_catalog.tsv @@ q.tsq
          and (dataset_type is null or dataset_type <> 'Text')
          and ${languageClause}
+         ${eurostatOnlyClause(includeCbs)}
     )
     select table_id, title, summary, status, dataset_type, rank, is_current
       from ranked
