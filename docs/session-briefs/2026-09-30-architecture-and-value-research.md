@@ -32,7 +32,7 @@ tasks; three are outside our loaded tables. Ground truth: `benchmark/answer-key.
 - **Limits of this test (say them whenever it is quoted):** one run, n = 10, no chart was requested, the assistant was told
   to be careful and to find the CBS figure, and its fetch tool can open any address. A consumer chat used casually answers
   from search snippets and news. It is an upper bound on what a skilled user gets, not a measurement of the average user.
-  ChatGPT was not tested.
+  ChatGPT was not tested here; it was in session 155 ([side-by-side](2026-10-04-chatgpt-side-by-side.md), #366).
 
 ## 2. What exists (web research, same day; key items re-checked by the session)
 

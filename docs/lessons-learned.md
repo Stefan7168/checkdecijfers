@@ -6,6 +6,17 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 155 — side-by-side vs ChatGPT
+
+1. **Run the comparison the owner asked for on the real surfaces, not a proxy.** Logged-out ChatGPT in the Claude browser
+   pane and production in the owner's own account gave a result the owner can trust; session 151 had only tested an
+   agent-with-web-search stand-in ("ChatGPT not tested"). Logged-out ChatGPT needs no account and answered every question in ~15 s.
+2. **An e-mail login link opens in the default browser, not the Claude pane.** Asking the owner to "log in in the panel" failed
+   silently; offer "Continue with Google" inside the pane, or use Claude in Chrome (with his OK) where he is already logged in.
+3. **Measure refusals as hard as wrong numbers.** Our accuracy edge (7/7 exact) is invisible when 5/12 everyday questions are
+   refused, and two refusal texts stated something false. Every benchmark so far counted invented numbers and pass rates on
+   curated phrasing; none measured the answer rate on everyday phrasing.
+
 ## Session 154 — Eurostat goes live (and the first live question is refused)
 
 1. **Before flipping a feature on, count the production rows it depends on.** Every Eurostat finder measurement ran

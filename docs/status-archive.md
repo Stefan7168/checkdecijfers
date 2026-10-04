@@ -1,5 +1,20 @@
 # STATUS archive — the session log
 
+**Session 155 (2026-10-04; owner present; no code changed; no DDL; no flags; AI spend: 130 of the owner's app credits on
+production questions, plus one cheap-tier ground-truth agent).**
+
+1. **Owner chose the recommended side-by-side.** 12 everyday Dutch questions, written before running, each in a fresh chat:
+   ChatGPT logged out in the Claude browser pane; our production app in the owner's own Chrome account (the pane login did not
+   take — an e-mail login link opens in the default browser); ground truth from the CBS OData and Eurostat APIs (cheap-tier agent).
+2. **Result:** ChatGPT 12/12 answered, we 7/12 (one after a follow-up click); all 7 of ours equal the official cell; ChatGPT had
+   2 figures not traceable to the official table (bankruptcies 3,636; electric cars 569,144) and 3 national figures that differ
+   from Eurostat (Spain, Poland, France). Our refusals: Poland population + highest EU debt ("no table found"), care workers (picked
+   "Zorginstellingen; financiën en personeel"), electric cars "op 1 januari 2025" (#361; text says "name a year"), Netherlands in
+   2040 (text falsely says CBS publishes no forecasts). Spain unemployment: 35-option age question, then 10.5% (2025) from a
+   by-citizenship table with an English title. Timing not measured to the second (~25–30 s ours vs ~15 s ChatGPT).
+3. **Recorded:** [brief](session-briefs/2026-10-04-chatgpt-side-by-side.md) + open-questions #366 (`0f2392a4`). Recommendation
+   (owner GO pending): fix the false forecast refusal text, freeze a ~50-question everyday set, then fix the layer by failure class.
+
 **Session 154 (2026-10-04; owner present throughout; AI spend ≈$5–6 of the $50 roof; no DDL; production env:
 `EUROSTAT_FINDER_ENABLED=1` added; production data: 7,561 Eurostat rows added to `cbs_catalog`).**
 

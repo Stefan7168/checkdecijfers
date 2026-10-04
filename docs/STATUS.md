@@ -30,6 +30,14 @@
   The owner said "you completely lost the plot" when the session proposed refreshing and converting four Eurostat datasets — the same
   mistake as pinning one welfare table (CLAUDE.md "Breadth comes from the layer").
 
+**▶ SESSION 155 (2026-10-04, owner present) — SIDE-BY-SIDE vs CHATGPT ([#366](open-questions.md),
+  [brief](session-briefs/2026-10-04-chatgpt-side-by-side.md)):** 12 everyday Dutch questions (7 CBS, 5 Eurostat) to production and to
+  ChatGPT (logged out), ground truth read from the CBS/Eurostat APIs. **ChatGPT answered 12/12, we answered 7/12; all 7 of ours equal the
+  official cell;** ChatGPT had 2 figures not traceable to the official table and 3 national figures that differ from Eurostat. Our 5
+  refusals: Poland population + highest EU debt (finder: no table), care workers (wrong table), electric cars "op 1 januari 2025" (#361;
+  refusal says "name a year"), Netherlands 2040 (refusal FALSELY says CBS publishes no forecasts — 86244NED exists). Spain unemployment asks
+  for an age group (35 options) and answers with an English title. No code changed; 130 of the owner's credits; no DDL, no flags.
+
 **▶ SESSION 154 (2026-10-04, owner present) — EUROSTAT IS LIVE ([#357](open-questions.md), ADR 048 D3(d) addendum):** owner signed the
   public-claim sweep and gave GO. Wording names CBS and Eurostat everywhere; Eurostat has its OWN source chip (CBS only / Eurostat only /
   both — the table search follows the choice); table-reader + rerank prompts name both sources and were re-recorded (+ one headline-figure
@@ -42,7 +50,7 @@
   range "aged 15-24" no longer a false alarm), plus onboarding texts name Eurostat (`83563029`). EU-country questions: 8/8 reach a
   fitting table. Open (owner picks): button questions for age / counterpart sector, the waste finder pick, English measure titles
   inside Dutch answers, a daily refresh of the Eurostat index. A Claude Design workspace mockup was rejected ("not good at all") and
-  dropped. The owner said he is getting sceptical about the app — a ChatGPT side-by-side was offered, not run. AI spend ~$5–6.
+  dropped. The owner said he is getting sceptical about the app — a ChatGPT side-by-side was offered (run in session 155, #366). AI spend ~$5–6.
 
 **▶ SESSION 153 (2026-10-01, owner present) — THE ANY-TABLE ROUTE PASSES ITS GATE; THE FLIP WAITS FOR THE OWNER'S GO
   ([#338](open-questions.md), [#360](open-questions.md), [#361](open-questions.md), ADR 062 "As built — recording + calibration"):**
@@ -151,7 +159,15 @@
   → `tests/fixtures/attachments/sheets/`) with the real AI (~$0.3 of the $2 OK'd). Verified: 4650 root + 3475 web tests, benchmark PASS,
   build, 10 e2e. The 1 October recording run below is UNCHANGED and still the next scheduled item.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-10-04, session 154 wrap — verify against `git log` / Actions runs before trusting this).
+**▶ NEXT SESSION STARTS HERE (written 2026-10-04, session 155 wrap — verify against `git log` / Actions runs before trusting this).
+Both any-table routes are LIVE. The ChatGPT side-by-side ran (#366): we answer 7 of 12 everyday questions (all exact), ChatGPT 12 of 12.
+Recommendation awaiting the owner's GO: (1) fix the false forecast refusal text (cheap); (2) freeze a ~50-question everyday set
+(CBS + Eurostat) and measure answer rate + wrong numbers; (3) fix the LAYER by failure class — finder misses, Eurostat defaults +
+Dutch titles, forecasts, ranking questions, "1 januari" (#361). Never curate single tables.
+Kickoff: [session-briefs/2026-10-04-session-156-kickoff.md](session-briefs/2026-10-04-session-156-kickoff.md).
+The older bullets below are history.**
+
+**▶ (history) NEXT SESSION STARTS HERE (written 2026-10-04, session 154 wrap — verify against `git log` / Actions runs before trusting this).
 CBS AND Eurostat any-table routes are LIVE (`TABLE_LANE_ENABLED=1`, `EUROSTAT_FINDER_ENABLED=1`; Eurostat index 7,561 datasets).
 The owner is sceptical about the product's value — start by asking what he wants; the session-154 recommendation is an honest
 side-by-side of ~10 everyday questions against ChatGPT (where we are better, where worse), then the most visible Eurostat

@@ -1434,3 +1434,12 @@ recommendation taken): (a) built** — the daily cron (`/api/onboarding-cron`) r
 (`maybeAlertNewCbsData`; RUNBOOK "New-CBS-data alert"). Read-only, no AI. **(b) auto-syncing the SAFE tables stays NOT built** — no unattended
 production writes; revisit only if the monthly manual run proves a chore. Known lag: the gallery's 30-minute shared cache shows old charts
 for up to ~30 min after a sync.
+
+## Everyday-question answer rate ([#366](open-questions.md), found session 155, 2026-10-04) — CANDIDATE, OWNER GO PENDING
+
+The ChatGPT side-by-side ([brief](session-briefs/2026-10-04-chatgpt-side-by-side.md)) found that we answer 7 of 12 everyday
+questions (all exact) and ChatGPT answers 12 of 12. **Proposed scope:** (1) fix the false forecast refusal text; (2) freeze a
+~50-question everyday set (CBS + Eurostat) and measure the answer rate, wrong numbers and refusals that state something false;
+(3) fix the layer by failure class: finder misses → Eurostat defaults + Dutch titles → forecasts → ranking questions → "1 januari"
+(#361). **Invariants:** principles (a)/(b)/(c), THE PLOT (no per-table pins), refusal texts never state false facts.
+**Done when:** the frozen set's answer rate is measured before and after each class, with 0 wrong numbers.
