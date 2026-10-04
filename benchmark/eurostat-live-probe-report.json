@@ -1,0 +1,1169 @@
+{
+ "generatedAt": "2026-10-04T12:02:11.131Z",
+ "referenceDate": "2026-10-04",
+ "note": "Read-only against production (default_transaction_read_only=on); the lane ran against a local PGlite store with the live Eurostat adapter and the real table reader; compose = deterministic template. Cost = estimated list prices.",
+ "cost": {
+  "thisRunUsd": 0,
+  "cumulativeRealUsd": 0.381,
+  "byModel": {
+   "claude-haiku-4-5-20251001": {
+    "calls": 0,
+    "cacheHits": 48,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cost": 0
+   },
+   "claude-sonnet-5": {
+    "calls": 0,
+    "cacheHits": 8,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cost": 0
+   }
+  }
+ },
+ "summary": {
+  "questions": 9,
+  "answered": 5,
+  "match": 5,
+  "mismatch": 0,
+  "notApplicable": 4
+ },
+ "rows": [
+  {
+   "n": 1,
+   "question": "Hoe hoog was de werkloosheid in Duitsland in 2024?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoe hoog was de werkloosheid in Duitsland in 2024?",
+    "tableId": "eurostat:une_rt_a",
+    "confidence": 0.75,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "clarification",
+    "reason": null,
+    "text": "Welke Leeftijd bedoel je?",
+    "tableTitle": null,
+    "selection": null,
+    "members": null,
+    "cells": [],
+    "askedDimension": "age",
+    "questionOptions": [
+     "15 tot en met 24 jaar",
+     "15 tot en met 29 jaar",
+     "15 tot en met 74 jaar",
+     "20 tot en met 64 jaar",
+     "25 tot en met 54 jaar",
+     "25 tot en met 74 jaar",
+     "55 tot en met 74 jaar"
+    ],
+    "questionTotalOptions": 7,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2024
+     },
+     "reading": "Werkloosheidspercentage (% van de beroepsbevolking) in Duitsland in 2024.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Duitsland"
+      }
+     ],
+     "breakdowns": {
+      "age": {
+       "kind": "not_named"
+      },
+      "sex": {
+       "kind": "not_named"
+      }
+     },
+     "confidence": 0.75,
+     "derivation": "none",
+     "measureCode": "une_rt_a|PC_ACT",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": null
+   },
+   "eurostat": null,
+   "verdict": "n.a.",
+   "line": "Q1 Hoe hoog was de werkloosheid in Duitsland in 2024? | clarification (asks age) | eurostat:une_rt_a | - | - | - | n.a."
+  },
+  {
+   "n": 2,
+   "question": "Hoeveel inwoners had België in 2024?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel inwoners had België in 2024?",
+    "tableId": "eurostat:demo_pjangroup",
+    "confidence": 0.85,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "answer",
+    "reason": null,
+    "text": "Population on 1 January by age group and sex — aantal in België was in 2024 11.817.096. Bron: Eurostat, dataset demo_pjangroup — Population on 1 January by age group and sex. Gegevens gesynchroniseerd op 2026-10-04. Licentie: CC BY 4.0.",
+    "tableTitle": "Population on 1 January by age group and sex",
+    "selection": {
+     "named": [
+      {
+       "code": "A",
+       "dimension": "freq",
+       "memberTitle": "Annual",
+       "dimensionTitle": "Time frequency"
+      },
+      {
+       "code": "BE",
+       "dimension": "geo",
+       "memberTitle": "Belgium",
+       "dimensionTitle": "Geopolitical entity (reporting)"
+      }
+     ],
+     "defaults": [
+      {
+       "code": "T",
+       "dimension": "sex",
+       "memberTitle": "Totaal",
+       "dimensionTitle": "Geslacht"
+      },
+      {
+       "code": "TOTAL",
+       "dimension": "age",
+       "memberTitle": "Totaal",
+       "dimensionTitle": "Leeftijd"
+      }
+     ]
+    },
+    "members": "measure=Population on 1 January by age group and sex — aantal [demo_pjangroup|NR]; age=Totaal; sex=Totaal; freq=Annual; geo=België [BE]; period=2024JJ00",
+    "cells": [
+     {
+      "measure": "demo_pjangroup|NR",
+      "measureTitle": "Population on 1 January by age group and sex — aantal",
+      "regionCode": "BE",
+      "regionLabel": "België",
+      "periodCode": "2024JJ00",
+      "dims": {
+       "age": "TOTAL",
+       "sex": "T",
+       "freq": "A"
+      },
+      "dimLabels": {
+       "age": "Totaal",
+       "sex": "Totaal",
+       "freq": "Annual"
+      },
+      "value": 11817096,
+      "unit": "aantal",
+      "decimals": 0
+     }
+    ],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2024
+     },
+     "reading": "Totaal aantal inwoners van België op 1 januari 2024, beide geslachten en alle leeftijden.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "België"
+      }
+     ],
+     "breakdowns": {
+      "age": {
+       "code": "TOTAL",
+       "kind": "member"
+      },
+      "sex": {
+       "code": "T",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.9,
+     "derivation": "none",
+     "measureCode": "demo_pjangroup|NR",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A"
+       },
+       "unit": "aantal",
+       "grain": "JJ",
+       "value": 11817096,
+       "status": "Published",
+       "batchId": 1,
+       "measure": "demo_pjangroup|NR",
+       "tableId": "eurostat:demo_pjangroup",
+       "decimals": 0,
+       "resultId": "eurostat:demo_pjangroup:demo_pjangroup|NR:BE:2024JJ00:age=TOTAL;freq=A;sex=T",
+       "dimLabels": {
+        "age": "Totaal",
+        "sex": "Totaal",
+        "freq": "Annual"
+       },
+       "periodCode": "2024JJ00",
+       "regionCode": "BE",
+       "periodLabel": "2024",
+       "provisional": false,
+       "regionLabel": "België",
+       "measureTitle": "Population on 1 January by age group and sex — aantal",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2024JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "TOTAL",
+        "sex": "T",
+        "freq": "A"
+       },
+       "kind": "explicit",
+       "measure": "demo_pjangroup|NR",
+       "tableId": "eurostat:demo_pjangroup"
+      },
+      "regions": [
+       "BE"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-04T12:01:45.283Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:demo_pjangroup",
+      "syncedAt": "2026-10-04T12:01:45.283Z",
+      "tableTitle": "Population on 1 January by age group and sex",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2024JJ00",
+       "from": "2024JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    }
+   },
+   "eurostat": {
+    "reads": [
+     {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjangroup?format=JSON&lang=EN&geo=BE&time=2024&unit=NR&age=TOTAL&sex=T&freq=A",
+      "value": 11817096,
+      "flag": null,
+      "note": null,
+      "cell": "BE 2024JJ00"
+     }
+    ]
+   },
+   "verdict": "MATCH",
+   "line": "Q2 Hoeveel inwoners had België in 2024? | answer | eurostat:demo_pjangroup | measure=Population on 1 January by age group and sex — aantal [demo_pjangroup|NR]; age=Totaal; sex=Totaal; freq=Annual; geo=België [BE]; period=2024JJ00 | 11817096 aantal | 11817096 | MATCH"
+  },
+  {
+   "n": 3,
+   "question": "Hoeveel groeide de economie van Spanje in 2023?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel groeide de economie van Spanje in 2023?",
+    "tableId": "eurostat:tec00115",
+    "confidence": 0.85,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "answer",
+    "reason": null,
+    "text": "Real GDP growth rate - volume — Chain linked volumes, percentage change on previous period in Spanje was in 2023 2,4 (Chain linked volumes, percentage change on previous period). Bron: Eurostat, dataset tec00115 — Real GDP growth rate - volume. Gegevens gesynchroniseerd op 2026-10-04. Licentie: CC BY 4.0.",
+    "tableTitle": "Real GDP growth rate - volume",
+    "selection": {
+     "named": [
+      {
+       "code": "A",
+       "dimension": "freq",
+       "memberTitle": "Annual",
+       "dimensionTitle": "Time frequency"
+      },
+      {
+       "code": "B1GQ",
+       "dimension": "na_item",
+       "memberTitle": "Gross domestic product at market prices",
+       "dimensionTitle": "National accounts indicator (ESA 2010)"
+      },
+      {
+       "code": "ES",
+       "dimension": "geo",
+       "memberTitle": "Spain",
+       "dimensionTitle": "Geopolitical entity (reporting)"
+      }
+     ],
+     "defaults": []
+    },
+    "members": "measure=Real GDP growth rate - volume — Chain linked volumes, percentage change on previous period [tec00115|CLV_PCH_PRE]; freq=Annual; na_item=Gross domestic product at market prices; geo=Spanje [ES]; period=2023JJ00",
+    "cells": [
+     {
+      "measure": "tec00115|CLV_PCH_PRE",
+      "measureTitle": "Real GDP growth rate - volume — Chain linked volumes, percentage change on previous period",
+      "regionCode": "ES",
+      "regionLabel": "Spanje",
+      "periodCode": "2023JJ00",
+      "dims": {
+       "freq": "A",
+       "na_item": "B1GQ"
+      },
+      "dimLabels": {
+       "freq": "Annual",
+       "na_item": "Gross domestic product at market prices"
+      },
+      "value": 2.4,
+      "unit": "Chain linked volumes, percentage change on previous period",
+      "decimals": 1
+     }
+    ],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2023
+     },
+     "reading": "Groei (percentage verandering) van het bbp van Spanje in 2023.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Spanje"
+      }
+     ],
+     "breakdowns": {
+      "na_item": {
+       "code": "B1GQ",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.9,
+     "derivation": "none",
+     "measureCode": "tec00115|CLV_PCH_PRE",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "na_item": "B1GQ"
+       },
+       "unit": "Chain linked volumes, percentage change on previous period",
+       "grain": "JJ",
+       "value": 2.4,
+       "status": "Published",
+       "batchId": 2,
+       "measure": "tec00115|CLV_PCH_PRE",
+       "tableId": "eurostat:tec00115",
+       "decimals": 1,
+       "resultId": "eurostat:tec00115:tec00115|CLV_PCH_PRE:ES:2023JJ00:freq=A;na_item=B1GQ",
+       "dimLabels": {
+        "freq": "Annual",
+        "na_item": "Gross domestic product at market prices"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "ES",
+       "periodLabel": "2023",
+       "provisional": false,
+       "regionLabel": "Spanje",
+       "measureTitle": "Real GDP growth rate - volume — Chain linked volumes, percentage change on previous period",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "na_item": "B1GQ"
+       },
+       "kind": "explicit",
+       "measure": "tec00115|CLV_PCH_PRE",
+       "tableId": "eurostat:tec00115"
+      },
+      "regions": [
+       "ES"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-04T12:01:48.705Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tec00115",
+      "syncedAt": "2026-10-04T12:01:48.705Z",
+      "tableTitle": "Real GDP growth rate - volume",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    }
+   },
+   "eurostat": {
+    "reads": [
+     {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tec00115?format=JSON&lang=EN&geo=ES&time=2023&unit=CLV_PCH_PRE&freq=A&na_item=B1GQ",
+      "value": 2.4,
+      "flag": null,
+      "note": null,
+      "cell": "ES 2023JJ00"
+     }
+    ]
+   },
+   "verdict": "MATCH",
+   "line": "Q3 Hoeveel groeide de economie van Spanje in 2023? | answer | eurostat:tec00115 | measure=Real GDP growth rate - volume — Chain linked volumes, percentage change on previous period [tec00115|CLV_PCH_PRE]; freq=Annual; na_item=Gross domestic product at market prices; geo=Spanje [ES]; period=2023JJ00 | 2.4 Chain linked volumes, percentage change on previous period | 2.4 | MATCH"
+  },
+  {
+   "n": 4,
+   "question": "Hoeveel verkeersdoden waren er in Italië in 2022?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel verkeersdoden waren er in Italië in 2022?",
+    "tableId": "eurostat:tran_sf_roadro",
+    "confidence": 0.85,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "answer",
+    "reason": null,
+    "text": "Persons killed in road accidents by type of road — aantal in Italië was in 2022 3.159. Bron: Eurostat, dataset tran_sf_roadro — Persons killed in road accidents by type of road. Gegevens gesynchroniseerd op 2026-10-04. Licentie: CC BY 4.0.",
+    "tableTitle": "Persons killed in road accidents by type of road",
+    "selection": {
+     "named": [
+      {
+       "code": "A",
+       "dimension": "freq",
+       "memberTitle": "Annual",
+       "dimensionTitle": "Time frequency"
+      },
+      {
+       "code": "IT",
+       "dimension": "geo",
+       "memberTitle": "Italy",
+       "dimensionTitle": "Geopolitical entity (reporting)"
+      }
+     ],
+     "defaults": [
+      {
+       "code": "TOTAL",
+       "dimension": "tra_infr",
+       "memberTitle": "Totaal",
+       "dimensionTitle": "Transport infrastructure"
+      }
+     ]
+    },
+    "members": "measure=Persons killed in road accidents by type of road — aantal [tran_sf_roadro|NR]; freq=Annual; tra_infr=Totaal; geo=Italië [IT]; period=2022JJ00",
+    "cells": [
+     {
+      "measure": "tran_sf_roadro|NR",
+      "measureTitle": "Persons killed in road accidents by type of road — aantal",
+      "regionCode": "IT",
+      "regionLabel": "Italië",
+      "periodCode": "2022JJ00",
+      "dims": {
+       "freq": "A",
+       "tra_infr": "TOTAL"
+      },
+      "dimLabels": {
+       "freq": "Annual",
+       "tra_infr": "Totaal"
+      },
+      "value": 3159,
+      "unit": "aantal",
+      "decimals": 0
+     }
+    ],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2022
+     },
+     "reading": "Aantal verkeersdoden (totaal, alle wegtypen) in Italië in 2022.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Italië"
+      }
+     ],
+     "breakdowns": {
+      "tra_infr": {
+       "code": "TOTAL",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.85,
+     "derivation": "none",
+     "measureCode": "tran_sf_roadro|NR",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "tra_infr": "TOTAL"
+       },
+       "unit": "aantal",
+       "grain": "JJ",
+       "value": 3159,
+       "status": "Published",
+       "batchId": 3,
+       "measure": "tran_sf_roadro|NR",
+       "tableId": "eurostat:tran_sf_roadro",
+       "decimals": 0,
+       "resultId": "eurostat:tran_sf_roadro:tran_sf_roadro|NR:IT:2022JJ00:freq=A;tra_infr=TOTAL",
+       "dimLabels": {
+        "freq": "Annual",
+        "tra_infr": "Totaal"
+       },
+       "periodCode": "2022JJ00",
+       "regionCode": "IT",
+       "periodLabel": "2022",
+       "provisional": false,
+       "regionLabel": "Italië",
+       "measureTitle": "Persons killed in road accidents by type of road — aantal",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2022JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "tra_infr": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadro|NR",
+       "tableId": "eurostat:tran_sf_roadro"
+      },
+      "regions": [
+       "IT"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-04T12:01:51.943Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tran_sf_roadro",
+      "syncedAt": "2026-10-04T12:01:51.943Z",
+      "tableTitle": "Persons killed in road accidents by type of road",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2022JJ00",
+       "from": "2022JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    }
+   },
+   "eurostat": {
+    "reads": [
+     {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tran_sf_roadro?format=JSON&lang=EN&geo=IT&time=2022&unit=NR&freq=A&tra_infr=TOTAL",
+      "value": 3159,
+      "flag": null,
+      "note": null,
+      "cell": "IT 2022JJ00"
+     }
+    ]
+   },
+   "verdict": "MATCH",
+   "line": "Q4 Hoeveel verkeersdoden waren er in Italië in 2022? | answer | eurostat:tran_sf_roadro | measure=Persons killed in road accidents by type of road — aantal [tran_sf_roadro|NR]; freq=Annual; tra_infr=Totaal; geo=Italië [IT]; period=2022JJ00 | 3159 aantal | 3159 | MATCH"
+  },
+  {
+   "n": 5,
+   "question": "Wat was de jeugdwerkloosheid in Spanje in 2023?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Wat was de jeugdwerkloosheid in Spanje in 2023?",
+    "tableId": "eurostat:tipslm80",
+    "confidence": 0.85,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "answer",
+    "reason": null,
+    "text": "Youth unemployment rate - % of active population aged 15-24 — % van de beroepsbevolking in Spanje was in 2023 28,7% (afwijkende definitie). Bron: Eurostat, dataset tipslm80 — Youth unemployment rate - % of active population aged 15-24. Gegevens gesynchroniseerd op 2026-10-04. Licentie: CC BY 4.0.",
+    "tableTitle": "Youth unemployment rate - % of active population aged 15-24",
+    "selection": {
+     "named": [
+      {
+       "code": "A",
+       "dimension": "freq",
+       "memberTitle": "Annual",
+       "dimensionTitle": "Time frequency"
+      },
+      {
+       "code": "Y15-24",
+       "dimension": "age",
+       "memberTitle": "15 tot en met 24 jaar",
+       "dimensionTitle": "Leeftijd"
+      },
+      {
+       "code": "ES",
+       "dimension": "geo",
+       "memberTitle": "Spain",
+       "dimensionTitle": "Geopolitical entity (reporting)"
+      }
+     ],
+     "defaults": [
+      {
+       "code": "T",
+       "dimension": "sex",
+       "memberTitle": "Totaal",
+       "dimensionTitle": "Geslacht"
+      }
+     ]
+    },
+    "members": "measure=Youth unemployment rate - % of active population aged 15-24 — % van de beroepsbevolking [tipslm80|PC_ACT]; age=15 tot en met 24 jaar; sex=Totaal; freq=Annual; geo=Spanje [ES]; period=2023JJ00",
+    "cells": [
+     {
+      "measure": "tipslm80|PC_ACT",
+      "measureTitle": "Youth unemployment rate - % of active population aged 15-24 — % van de beroepsbevolking",
+      "regionCode": "ES",
+      "regionLabel": "Spanje",
+      "periodCode": "2023JJ00",
+      "dims": {
+       "age": "Y15-24",
+       "sex": "T",
+       "freq": "A"
+      },
+      "dimLabels": {
+       "age": "15 tot en met 24 jaar",
+       "sex": "Totaal",
+       "freq": "Annual"
+      },
+      "value": 28.7,
+      "unit": "%",
+      "decimals": 1
+     }
+    ],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2023
+     },
+     "reading": "Jeugdwerkloosheidspercentage (15-24 jaar) in Spanje in 2023.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Spanje"
+      }
+     ],
+     "breakdowns": {
+      "age": {
+       "code": "Y15-24",
+       "kind": "member"
+      },
+      "sex": {
+       "code": "T",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.95,
+     "derivation": "none",
+     "measureCode": "tipslm80|PC_ACT",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "age": "Y15-24",
+        "sex": "T",
+        "freq": "A"
+       },
+       "unit": "%",
+       "grain": "JJ",
+       "value": 28.7,
+       "status": "d",
+       "batchId": 4,
+       "measure": "tipslm80|PC_ACT",
+       "tableId": "eurostat:tipslm80",
+       "decimals": 1,
+       "resultId": "eurostat:tipslm80:tipslm80|PC_ACT:ES:2023JJ00:age=Y15-24;freq=A;sex=T",
+       "dimLabels": {
+        "age": "15 tot en met 24 jaar",
+        "sex": "Totaal",
+        "freq": "Annual"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "ES",
+       "periodLabel": "2023",
+       "provisional": true,
+       "regionLabel": "Spanje",
+       "measureTitle": "Youth unemployment rate - % of active population aged 15-24 — % van de beroepsbevolking",
+       "valueAttribute": "d"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "age": "Y15-24",
+        "sex": "T",
+        "freq": "A"
+       },
+       "kind": "explicit",
+       "measure": "tipslm80|PC_ACT",
+       "tableId": "eurostat:tipslm80"
+      },
+      "regions": [
+       "ES"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-04T12:01:54.763Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tipslm80",
+      "syncedAt": "2026-10-04T12:01:54.763Z",
+      "tableTitle": "Youth unemployment rate - % of active population aged 15-24",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    }
+   },
+   "eurostat": {
+    "reads": [
+     {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tipslm80?format=JSON&lang=EN&geo=ES&time=2023&unit=PC_ACT&age=Y15-24&sex=T&freq=A",
+      "value": 28.7,
+      "flag": "d",
+      "note": null,
+      "cell": "ES 2023JJ00"
+     }
+    ]
+   },
+   "verdict": "MATCH",
+   "line": "Q5 Wat was de jeugdwerkloosheid in Spanje in 2023? | answer | eurostat:tipslm80 | measure=Youth unemployment rate - % of active population aged 15-24 — % van de beroepsbevolking [tipslm80|PC_ACT]; age=15 tot en met 24 jaar; sex=Totaal; freq=Annual; geo=Spanje [ES]; period=2023JJ00 | 28.7 % | 28.7 [d] | MATCH"
+  },
+  {
+   "n": 6,
+   "question": "Hoeveel asielaanvragen kreeg Duitsland in 2023?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel asielaanvragen kreeg Duitsland in 2023?",
+    "tableId": "eurostat:tps00191",
+    "confidence": 0.75,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "refusal",
+    "reason": "cbs_unreachable",
+    "text": "Eurostat is op dit moment niet bereikbaar, dus ik kan dit cijfer nu niet ophalen. Probeer het later opnieuw.",
+    "tableTitle": null,
+    "selection": null,
+    "members": null,
+    "cells": [],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": null,
+    "result": null
+   },
+   "eurostat": null,
+   "verdict": "n.a.",
+   "line": "Q6 Hoeveel asielaanvragen kreeg Duitsland in 2023? | refusal:cbs_unreachable | eurostat:tps00191 | - | - | - | n.a."
+  },
+  {
+   "n": 7,
+   "question": "Hoe hoog was de staatsschuld van Griekenland in 2023?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoe hoog was de staatsschuld van Griekenland in 2023?",
+    "tableId": "eurostat:gov_10dd_ggd",
+    "confidence": 0.92,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "clarification",
+    "reason": null,
+    "text": "Welke Counterpart sector bedoel je? (of typ een andere naam uit de lijst van 14)",
+    "tableTitle": null,
+    "selection": null,
+    "members": null,
+    "cells": [],
+    "askedDimension": "sector2",
+    "questionOptions": [
+     "Total economy and rest of the world",
+     "Total economy",
+     "Non-financial corporations; households; non-profit institutions serving households",
+     "Non-financial corporations",
+     "Other financial corporations (ESA 2010 subsectors S.124 + S.125 + S.126 + S.127 + S.128 + S.129)",
+     "Financial corporations",
+     "Central bank",
+     "Deposit-taking corporations except the central bank and money market funds",
+     "Central government",
+     "State government",
+     "Local government",
+     "Social security funds"
+    ],
+    "questionTotalOptions": 14,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2023
+     },
+     "reading": "Staatsschuld van Griekenland (overheidsschuld als percentage van bbp) in 2023.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Griekenland"
+      }
+     ],
+     "breakdowns": {
+      "sector": {
+       "code": "S13",
+       "kind": "member"
+      },
+      "na_item": {
+       "code": "GD",
+       "kind": "member"
+      },
+      "sector2": {
+       "kind": "not_named"
+      },
+      "maturity": {
+       "code": "TOTAL",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.85,
+     "derivation": "none",
+     "measureCode": "gov_10dd_ggd|PC_GDP",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": null
+   },
+   "eurostat": null,
+   "verdict": "n.a.",
+   "line": "Q7 Hoe hoog was de staatsschuld van Griekenland in 2023? | clarification (asks sector2) | eurostat:gov_10dd_ggd | - | - | - | n.a."
+  },
+  {
+   "n": 8,
+   "question": "Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld?",
+    "tableId": "eurostat:ten00110",
+    "confidence": 0.75,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "refusal",
+    "reason": "table_lane_no_measure",
+    "text": "In Eurostat-tabel \"Waste generated by households by year and waste category\" staat geen cijfer dat precies bij deze vraag past.",
+    "tableTitle": null,
+    "selection": null,
+    "members": null,
+    "cells": [],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2022
+     },
+     "reading": "Deze tabel biedt alleen tonnages huishoudelijk afval, geen kilo's per inwoner, dus er is geen passende maat beschikbaar.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Denemarken"
+      }
+     ],
+     "breakdowns": {
+      "waste": {
+       "kind": "not_named"
+      },
+      "hazard": {
+       "kind": "not_named"
+      },
+      "nace_r2": {
+       "code": "EP_HH",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.3,
+     "derivation": "none",
+     "measureCode": null,
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": null
+   },
+   "eurostat": null,
+   "verdict": "n.a.",
+   "line": "Q8 Hoeveel kilo huishoudelijk afval per inwoner werd er in 2022 in Denemarken ingezameld? | refusal:table_lane_no_measure | eurostat:ten00110 | - | - | - | n.a."
+  },
+  {
+   "n": 9,
+   "question": "Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+   "find": {
+    "kind": "onboarding",
+    "detail": "topicTerm=Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen?",
+    "tableId": "eurostat:tran_sf_roadro",
+    "confidence": 0.85,
+    "viaOutOfScope": true
+   },
+   "lane": {
+    "kind": "answer",
+    "reason": null,
+    "text": "Persons killed in road accidents by type of road — aantal in Polen was in 2023 1.893. Bron: Eurostat, dataset tran_sf_roadro — Persons killed in road accidents by type of road. Gegevens gesynchroniseerd op 2026-10-04. Licentie: CC BY 4.0.",
+    "tableTitle": "Persons killed in road accidents by type of road",
+    "selection": {
+     "named": [
+      {
+       "code": "A",
+       "dimension": "freq",
+       "memberTitle": "Annual",
+       "dimensionTitle": "Time frequency"
+      },
+      {
+       "code": "PL",
+       "dimension": "geo",
+       "memberTitle": "Poland",
+       "dimensionTitle": "Geopolitical entity (reporting)"
+      }
+     ],
+     "defaults": [
+      {
+       "code": "TOTAL",
+       "dimension": "tra_infr",
+       "memberTitle": "Totaal",
+       "dimensionTitle": "Transport infrastructure"
+      }
+     ]
+    },
+    "members": "measure=Persons killed in road accidents by type of road — aantal [tran_sf_roadro|NR]; freq=Annual; tra_infr=Totaal; geo=Polen [PL]; period=2023JJ00",
+    "cells": [
+     {
+      "measure": "tran_sf_roadro|NR",
+      "measureTitle": "Persons killed in road accidents by type of road — aantal",
+      "regionCode": "PL",
+      "regionLabel": "Polen",
+      "periodCode": "2023JJ00",
+      "dims": {
+       "freq": "A",
+       "tra_infr": "TOTAL"
+      },
+      "dimLabels": {
+       "freq": "Annual",
+       "tra_infr": "Totaal"
+      },
+      "value": 1893,
+      "unit": "aantal",
+      "decimals": 0
+     }
+    ],
+    "askedDimension": null,
+    "questionOptions": null,
+    "questionTotalOptions": null,
+    "parse": {
+     "period": {
+      "kind": "year",
+      "year": 2023
+     },
+     "reading": "Aantal verkeersdoden in Polen in 2023, totaal over alle wegtypen.",
+     "regions": [
+      {
+       "kind": "land",
+       "name": "Polen"
+      }
+     ],
+     "breakdowns": {
+      "tra_infr": {
+       "code": "TOTAL",
+       "kind": "member"
+      }
+     },
+     "confidence": 0.85,
+     "derivation": "none",
+     "measureCode": "tran_sf_roadro|NR",
+     "regionScope": null,
+     "periodGrainUnavailable": false
+    },
+    "result": {
+     "ok": true,
+     "cells": [
+      {
+       "dims": {
+        "freq": "A",
+        "tra_infr": "TOTAL"
+       },
+       "unit": "aantal",
+       "grain": "JJ",
+       "value": 1893,
+       "status": "Published",
+       "batchId": 5,
+       "measure": "tran_sf_roadro|NR",
+       "tableId": "eurostat:tran_sf_roadro",
+       "decimals": 0,
+       "resultId": "eurostat:tran_sf_roadro:tran_sf_roadro|NR:PL:2023JJ00:freq=A;tra_infr=TOTAL",
+       "dimLabels": {
+        "freq": "Annual",
+        "tra_infr": "Totaal"
+       },
+       "periodCode": "2023JJ00",
+       "regionCode": "PL",
+       "periodLabel": "2023",
+       "provisional": false,
+       "regionLabel": "Polen",
+       "measureTitle": "Persons killed in road accidents by type of road — aantal",
+       "valueAttribute": "None"
+      }
+     ],
+     "shape": "single",
+     "intent": {
+      "period": {
+       "kind": "codes",
+       "codes": [
+        "2023JJ00"
+       ]
+      },
+      "target": {
+       "dims": {
+        "freq": "A",
+        "tra_infr": "TOTAL"
+       },
+       "kind": "explicit",
+       "measure": "tran_sf_roadro|NR",
+       "tableId": "eurostat:tran_sf_roadro"
+      },
+      "regions": [
+       "PL"
+      ],
+      "derivation": "none",
+      "schemaVersion": 1
+     },
+     "registry": {
+      "lastSyncAt": "2026-10-04T12:02:10.822Z",
+      "updateCadence": null
+     },
+     "attribution": {
+      "source": "eurostat",
+      "license": "CC BY 4.0",
+      "tableId": "eurostat:tran_sf_roadro",
+      "syncedAt": "2026-10-04T12:02:10.822Z",
+      "tableTitle": "Persons killed in road accidents by type of road",
+      "tableVersion": 1,
+      "coveredPeriods": {
+       "to": "2023JJ00",
+       "from": "2023JJ00"
+      },
+      "definitionText": null,
+      "definitionLabel": null,
+      "periodSemantics": null
+     },
+     "derivations": [],
+     "schemaVersion": 1
+    }
+   },
+   "eurostat": {
+    "reads": [
+     {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tran_sf_roadro?format=JSON&lang=EN&geo=PL&time=2023&unit=NR&freq=A&tra_infr=TOTAL",
+      "value": 1893,
+      "flag": null,
+      "note": null,
+      "cell": "PL 2023JJ00"
+     }
+    ]
+   },
+   "verdict": "MATCH",
+   "line": "Q9 Hoeveel mensen kwamen in 2023 om bij verkeersongevallen in Polen? | answer | eurostat:tran_sf_roadro | measure=Persons killed in road accidents by type of road — aantal [tran_sf_roadro|NR]; freq=Annual; tra_infr=Totaal; geo=Polen [PL]; period=2023JJ00 | 1893 aantal | 1893 | MATCH"
+  }
+ ]
+}
