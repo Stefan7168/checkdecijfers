@@ -131,7 +131,7 @@ export async function respondToDatasetQuestion(
       ? noLlmCallOutcome(refusal(question, 'empty_question'))
       : looksLikeCbsComparison(trimmedQuestion)
         ? noLlmCallOutcome(
-            refusal(question, 'compare_with_cbs', 'Ask the CBS chat separately to compare with official figures.'),
+            refusal(question, 'compare_with_cbs', 'Ask the main chat separately to compare with official figures.'),
           )
         : looksLikeExportRequest(trimmedQuestion)
           ? noLlmCallOutcome(refusal(question, 'export_hint'))

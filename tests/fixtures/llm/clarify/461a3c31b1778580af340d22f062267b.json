@@ -2,7 +2,7 @@
   "requestHash": "461a3c31b1778580af340d22f062267b",
   "question": "{\"original_question\":\"Wat is de gemiddelde huizenprijs in mijn buurt?\",\"clarification_question\":\"Die cijfers heb ik alleen voor heel Nederland, niet per gemeente of buurt — wil je het landelijke cijfer?\",\"options\":[\"heel Nederland\"],\"reply\":\"Utrecht\"}",
   "label": "c-b16-utrecht",
-  "recordedAt": "2026-09-27T00:28:09.134Z",
+  "recordedAt": "2026-10-04T09:19:25.597Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -525,12 +525,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":4,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"average_existing_home_sale_price\",\"regions\":[{\"name\":\"Utrecht\",\"kind\":\"onbekend\"}],\"regionScope\":null,\"period\":{\"kind\":\"latest\"},\"derivation\":\"none\",\"confidence\":0.72,\"reading\":\"gemiddelde verkoopprijs van bestaande koopwoningen in Utrecht (gemeente of provincie)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"Gebruiker antwoordde 'Utrecht' op vraag naar heel Nederland; Utrecht kan gemeente of provincie zijn. De vraag naar 'mijn buurt' kan niet worden ingelost (buurt is niet in de CBS-geografie), maar Utrecht is een plausibele interpretatie van wat de gebruiker bedoelde.\"}",
+    "outputText": "{\"version\":4,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"average_existing_home_sale_price\",\"regions\":[{\"name\":\"Utrecht\",\"kind\":\"onbekend\"}],\"regionScope\":null,\"period\":{\"kind\":\"latest\"},\"derivation\":\"none\",\"confidence\":0.72,\"reading\":\"gemiddelde verkoopprijs van bestaande koopwoningen in Utrecht (gemeente of provincie)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"Gebruiker antwoordde 'Utrecht' op vraag naar heel Nederland; Utrecht kan gemeente of provincie zijn. De vraag naar 'mijn buurt' kan niet worden ingelost (buurt is niet in de regio-granulariteit van deze maat), maar Utrecht is een duidelijke vervolgkeuze. Confidence verlaagd omdat de gebruiker niet op de aangeboden optie 'heel Nederland' inging.\"}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 10446,
-      "outputTokens": 195
+      "outputTokens": 221
     }
   }
 }

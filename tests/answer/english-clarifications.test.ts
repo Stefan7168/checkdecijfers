@@ -214,7 +214,7 @@ describe('English clarification siblings (ADR 058 phase 2, #332, Task 3)', () =>
   it('unknown_canonical_key: exact English', async () => {
     const top = failure('unknown_canonical_key', 0.9, []);
     const outcome = asClarification(await decide(context(), [top], config, alwaysServable));
-    expect(outcome.question_en).toBe('Which topic from the official CBS figures do you mean exactly?');
+    expect(outcome.question_en).toBe('Which topic from the official figures (CBS and Eurostat) do you mean exactly?');
     assertClarificationEnglishInvariants(outcome);
   });
 

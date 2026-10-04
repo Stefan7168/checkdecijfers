@@ -102,7 +102,7 @@ function failureQuestion(failure: ResolutionFailure): string {
     case 'period_invalid':
       return 'Welke periode bedoel je precies?';
     case 'unknown_canonical_key':
-      return 'Welk onderwerp uit de officiële CBS-cijfers bedoel je precies?';
+      return 'Welk onderwerp uit de officiële cijfers (CBS en Eurostat) bedoel je precies?';
     // Eurostat E2a (§4.4, owner-approved copy, session 125): names the
     // SOURCE the answer will use — never framed as "CBS heeft geen cijfer"
     // (the product draws on several sources, not just CBS asked-and-refused)
@@ -207,7 +207,7 @@ function failureQuestionEn(failure: ResolutionFailure): string {
     case 'period_invalid':
       return 'Which exact period do you mean?';
     case 'unknown_canonical_key':
-      return 'Which topic from the official CBS figures do you mean exactly?';
+      return 'Which topic from the official figures (CBS and Eurostat) do you mean exactly?';
     case 'other_source_available':
       return (
         `For this answer we use Eurostat: ${failure.siblingDefinitionLabel ?? ''}. ` +
@@ -439,8 +439,8 @@ export function buildUnmatchedClarification(context: OutcomeContext): ParseOutco
     nearestEn.length > 0
       ? nearestEn
       : [...definitionLabelByKey.keys()].slice(0, 3).map((key) => englishMeasureLabel(key));
-  const lead = `Ik heb geen CBS-cijfers over "${term}" geladen`;
-  const leadEn = `I don't have any CBS figures about "${termEn}" loaded`;
+  const lead = `Ik heb geen officiële cijfers (CBS en Eurostat) over "${term}" geladen`;
+  const leadEn = `I don't have any official figures (CBS and Eurostat) about "${termEn}" loaded`;
   const question =
     nearest.length > 0
       ? `${lead} — bedoel je misschien ${joinOf(nearest)}, en zo ja voor welke regio en periode?`
@@ -599,8 +599,8 @@ function echoUnservableClarification(
     kind: 'clarification',
     ...context,
     axes: ['measure'],
-    question_nl: `Zo kan ik dit niet leveren uit de geladen CBS-cijfers. Kun je aangeven wat je precies wilt weten over ${subject}?`,
-    question_en: `I can't give you this from the loaded CBS figures. Could you specify exactly what you want to know about ${subjectEn}?`,
+    question_nl: `Zo kan ik dit niet leveren uit de geladen officiële cijfers (CBS en Eurostat). Kun je aangeven wat je precies wilt weten over ${subject}?`,
+    question_en: `I can't give you this from the loaded official figures (CBS and Eurostat). Could you specify exactly what you want to know about ${subjectEn}?`,
     options: [],
     options_en: [],
     untranslated_en: [],

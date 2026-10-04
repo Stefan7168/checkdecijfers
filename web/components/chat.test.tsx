@@ -2000,7 +2000,7 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Vraag?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
     expect(
-      await screen.findByText('Bezig met het doorzoeken van CBS-cijfers en het web…'),
+      await screen.findByText('Bezig met het doorzoeken van officiële cijfers en het web…'),
     ).toBeInTheDocument();
     resolveAsk(outcome(fakeAnswer('Klaar.')));
     await screen.findByText('Klaar.');
@@ -2024,7 +2024,7 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Nog een?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
     expect(
-      await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…'),
+      await screen.findByText('Bezig met het doorzoeken van officiële cijfers…'),
     ).toBeInTheDocument();
   });
 
@@ -2033,7 +2033,7 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     render(<Chat pricing={pricing} />);
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel inwoners?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
-    await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…');
+    await screen.findByText('Bezig met het doorzoeken van officiële cijfers…');
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 

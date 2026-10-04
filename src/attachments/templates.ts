@@ -87,7 +87,7 @@ const REFUSAL_TEXT: Record<
     "I can't calculate totals, averages, or other summaries yet — only show values that are already in your file.",
   computation: "I can't do that calculation yet — only show values that are already in your file.",
   compare_with_cbs:
-    "I can't combine your own data with official CBS figures in one chart. Ask the CBS chat separately for that comparison.",
+    "I can't combine your own data with official figures from CBS or Eurostat in one chart. Ask the main chat separately for that comparison.",
   not_chartable: "I can't turn that into a chart from this file.",
   other: "I can't do that with your data right now.",
   too_many_points: 'That chart would have too many points to draw clearly — try filtering to a smaller set first.',

@@ -93,9 +93,9 @@ const nl = {
   'chat.dockedChipCard': 'Kaart in het paneel →',
   // The owner-mandated busy-text honesty distinction (CBS vs web vs both) —
   // byte-identical to the strings this replaces; see CLAUDE.md/brief.
-  'chat.busyBoth': 'Bezig met het doorzoeken van CBS-cijfers en het web…',
+  'chat.busyBoth': 'Bezig met het doorzoeken van officiële cijfers en het web…',
   'chat.busyWebOnly': 'Bezig met het doorzoeken van het web…',
-  'chat.busyCbsOnly': 'Bezig met het doorzoeken van CBS-cijfers…',
+  'chat.busyCbsOnly': 'Bezig met het doorzoeken van officiële cijfers…',
   'chat.staleDeployPrefix':
     'De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits afgeschreven).',
   'chat.staleDeployButton': 'Ververs de pagina',
@@ -1713,9 +1713,9 @@ const en: Messages = {
   'tableLane.replyGone': 'This question is no longer open. Please ask your question again.',
   'chat.dockedChipChart': 'Chart in panel →',
   'chat.dockedChipCard': 'Card in panel →',
-  'chat.busyBoth': 'Searching CBS figures and the web…',
+  'chat.busyBoth': 'Searching official figures and the web…',
   'chat.busyWebOnly': 'Searching the web…',
-  'chat.busyCbsOnly': 'Searching CBS figures…',
+  'chat.busyCbsOnly': 'Searching official figures…',
   'chat.staleDeployPrefix':
     'The site was just updated, so this question was not sent (no credits were charged).',
   'chat.staleDeployButton': 'Refresh the page',

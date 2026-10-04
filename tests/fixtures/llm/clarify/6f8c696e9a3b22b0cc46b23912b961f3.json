@@ -2,7 +2,7 @@
   "requestHash": "6f8c696e9a3b22b0cc46b23912b961f3",
   "question": "{\"original_question\":\"Wat is de gemiddelde huizenprijs in mijn buurt?\",\"clarification_question\":\"Die cijfers heb ik alleen voor heel Nederland, niet per gemeente of buurt — wil je het landelijke cijfer?\",\"options\":[\"heel Nederland\"],\"reply\":\"het landelijke cijfer, voor 2024\"}",
   "label": "c-b16-national",
-  "recordedAt": "2026-09-27T00:28:11.043Z",
+  "recordedAt": "2026-10-04T09:19:27.323Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
