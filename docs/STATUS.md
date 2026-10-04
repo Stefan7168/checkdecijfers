@@ -36,7 +36,7 @@
   official cell;** ChatGPT had 2 figures not traceable to the official table and 3 national figures that differ from Eurostat. Our 5
   refusals: Poland population + highest EU debt (finder: no table), care workers (wrong table), electric cars "op 1 januari 2025" (#361;
   refusal says "name a year"), Netherlands 2040 (refusal FALSELY says CBS publishes no forecasts — 86244NED exists). Spain unemployment asks
-  for an age group (35 options) and answers with an English title. No code changed; 130 of the owner's credits; no DDL, no flags.
+  for an age group (35 options) and answers with an English title. No code changed; ~150 of the owner's credits; no DDL, no flags.
 
 **▶ SESSION 154 (2026-10-04, owner present) — EUROSTAT IS LIVE ([#357](open-questions.md), ADR 048 D3(d) addendum):** owner signed the
   public-claim sweep and gave GO. Wording names CBS and Eurostat everywhere; Eurostat has its OWN source chip (CBS only / Eurostat only /

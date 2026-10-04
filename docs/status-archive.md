@@ -1,6 +1,6 @@
 # STATUS archive — the session log
 
-**Session 155 (2026-10-04; owner present; no code changed; no DDL; no flags; AI spend: 130 of the owner's app credits on
+**Session 155 (2026-10-04; owner present; no code changed; no DDL; no flags; AI spend: ~150 of the owner's app credits (final balance not read) on
 production questions, plus one cheap-tier ground-truth agent).**
 
 1. **Owner chose the recommended side-by-side.** 12 everyday Dutch questions, written before running, each in a fresh chat:

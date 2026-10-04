@@ -9,7 +9,7 @@ five about Europe. Each question went into a fresh chat.
 - **Our app:** production (checkdecijfers.vercel.app), in the owner's own logged-in account, with the CBS and Eurostat
   chips on.
 - **Ground truth:** a cheap-tier agent read every figure directly from the CBS OData and Eurostat APIs the same day.
-- **Spend:** our app used 130 credits (the owner's balance went from 1,990 to 1,860). Wrong-answer refusals cost 0.
+- **Spend:** our app used about 150 credits: 1,990 before; 1,860 seen after question 8; question 10 answered after that (~20 credits); the final balance was not read. Refusals cost 0.
 - **Timing:** not measured to the second. ChatGPT answers were ready at about 15 s. Ours were ready at about 25–30 s;
   the session waited fixed intervals.
 
