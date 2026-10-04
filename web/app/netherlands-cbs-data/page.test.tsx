@@ -44,7 +44,7 @@ vi.mock('../../lib/seo-pages.ts', async (importOriginal) => {
 
 import NetherlandsCbsDataPage, { generateMetadata } from './page.tsx';
 
-const COVERAGE = { tables: [{ id: '86141NED', title: 'CPI', syncedOn: '2026-08-26', concepts: ['inflatie'], example: null }] };
+const COVERAGE = { tables: [{ id: '86141NED', title: 'CPI', sourceDisplayName: 'CBS', syncedOn: '2026-08-26', concepts: ['inflatie'], example: null }] };
 
 afterEach(() => {
   cleanup();

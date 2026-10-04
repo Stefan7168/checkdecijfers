@@ -15,6 +15,7 @@ function coverage(): CoverageDisclosure {
       {
         id: '86141NED',
         title: 'Consumentenprijzen; prijsindex 2015=100',
+        sourceDisplayName: 'CBS',
         syncedOn: '2026-07-03',
         concepts: ['inflatie (CPI)', 'consumentenprijsindex'],
         example: 'Wat was de inflatie in 2025?',
@@ -77,5 +78,47 @@ describe('CoverageDisclosureView — en', () => {
     expect(screen.getByText(/synced 2026-07-03/)).toBeInTheDocument();
     expect(screen.getByText('Other CBS topics we fetch on request.')).toBeInTheDocument();
     expect(screen.queryByText(/eurostat/i)).toBeNull();
+  });
+});
+
+// Owner-signed 2026-10-04 (session 154, #357 sweep item 6): rows are grouped
+// by each row's OWN source name — never one hard-coded "CBS" heading over
+// every row. Eurostat shows up only when a row says so.
+describe('CoverageDisclosureView — grouped by each row’s own source', () => {
+  function mixed(): CoverageDisclosure {
+    const cbs = coverage().tables[0]!;
+    return {
+      tables: [
+        cbs,
+        { ...cbs, id: '70072NED', title: 'Regionale kerncijfers', example: null },
+        {
+          id: 'eurostat:une_rt_m',
+          title: 'Unemployment by sex and age – monthly data',
+          sourceDisplayName: 'Eurostat',
+          syncedOn: '2026-10-01',
+          concepts: ['werkloosheid'],
+          example: null,
+        },
+      ],
+    };
+  }
+
+  it('renders one heading per source, with each row under its own source', () => {
+    render(<CoverageDisclosureView coverage={mixed()} />);
+    const headings = screen.getAllByText(/^(CBS|Eurostat)$/);
+    expect(headings.map((el) => el.textContent)).toEqual(['CBS', 'Eurostat']);
+    const cbsGroup = headings[0]!.parentElement!;
+    const eurostatGroup = headings[1]!.parentElement!;
+    expect(cbsGroup.textContent).toContain('Consumentenprijzen; prijsindex 2015=100');
+    expect(cbsGroup.textContent).toContain('Regionale kerncijfers');
+    expect(cbsGroup.textContent).not.toContain('Unemployment by sex and age');
+    expect(eurostatGroup.textContent).toContain('Unemployment by sex and age – monthly data');
+    expect(eurostatGroup.textContent).not.toContain('Consumentenprijzen');
+  });
+
+  it('shows no Eurostat heading when no row comes from Eurostat', () => {
+    render(<CoverageDisclosureView coverage={coverage()} />);
+    expect(screen.queryByText('Eurostat')).toBeNull();
+    expect(screen.getAllByText('CBS')).toHaveLength(1);
   });
 });

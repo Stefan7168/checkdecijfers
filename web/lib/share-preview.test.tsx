@@ -138,9 +138,10 @@ describe('NeutralPreviewCard', () => {
 });
 
 describe('shareTaglineFor (session 153, #357)', () => {
-  it('a Eurostat chart names Eurostat; a CBS chart keeps the public claim byte-identically', async () => {
+  it('a Eurostat chart names Eurostat; a CBS chart keeps its CBS line byte-identically; the neutral claim names both', async () => {
     const { shareTaglineFor, SHARE_PREVIEW_TAGLINE } = await import('./share-preview.tsx');
-    expect(shareTaglineFor('85245NED')).toBe(SHARE_PREVIEW_TAGLINE);
+    expect(shareTaglineFor('85245NED')).toBe('Elk getal herleidbaar tot een officiële CBS-tabel');
+    expect(SHARE_PREVIEW_TAGLINE).toBe('Elk getal herleidbaar tot een officiële tabel van CBS of Eurostat');
     expect(shareTaglineFor('eurostat:env_wasmun')).toBe('Elk getal herleidbaar tot een officiële Eurostat-tabel');
   });
 });

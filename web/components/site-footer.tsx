@@ -74,13 +74,15 @@ function useAboutTargetPresent(pathname: string | null): boolean {
 // alone wrapped to two lines on every screen, and the footer had no
 // background colour, so page content abutting the scroller's bottom edge
 // sat right up against the footer text. Splitting off the trailing clause
-// ("Elk getal herleidbaar…") and collapsing it below `sm` gets the sentence
-// down to one line on a phone while keeping the CBS/CC BY part — the
-// legally load-bearing half (R4 attribution) — visible at every width.
+// ("Elk getal herleidbaar…") and collapsing it below `sm` keeps the
+// attribution part — the legally load-bearing half (R4: the CBS CC BY line
+// AND, since the 2026-10-04 sweep #357 item 3, the Eurostat CC BY line) —
+// visible at every width. The clause is the LAST segment, so the split is at
+// the last separator (the attribution part may itself hold several segments).
 const FOOTER_ATTRIBUTION_SEPARATOR = ' · ';
 
 function splitAttribution(attribution: string): { main: string; clause: string } {
-  const separatorIndex = attribution.indexOf(FOOTER_ATTRIBUTION_SEPARATOR);
+  const separatorIndex = attribution.lastIndexOf(FOOTER_ATTRIBUTION_SEPARATOR);
   if (separatorIndex === -1) return { main: attribution, clause: '' };
   return {
     main: attribution.slice(0, separatorIndex),

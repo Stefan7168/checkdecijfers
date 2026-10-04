@@ -111,7 +111,7 @@ describe('the forecast misfire', () => {
     if (response.kind !== 'refusal') throw new Error('unreachable');
     // The classification and the honest text are UNTOUCHED.
     expect(response.reason).toBe('forecast');
-    expect(response.text).toContain('CBS publiceert gerealiseerde cijfers');
+    expect(response.text).toContain('Het CBS en Eurostat publiceren gerealiseerde cijfers');
     // ...and beside it, exactly one chip, naming the period it can serve.
     expect(response.suggestions).toHaveLength(1);
     expect(response.suggestions[0]).toContain('2024');

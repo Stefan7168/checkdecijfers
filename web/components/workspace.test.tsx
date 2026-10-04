@@ -91,7 +91,7 @@ vi.stubGlobal(
 );
 
 const FOOTER_EXACT =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project · Werkwijze · Privacy';
+  'Cijfers: CBS StatLine (CC BY 4.0) · Europese cijfers: © Europese Unie, Eurostat (CC BY 4.0) · Elk getal herleidbaar tot een officiële tabel van CBS of Eurostat · Over dit project · Werkwijze · Privacy';
 
 beforeEach(() => {
   actions.listMyThreads.mockResolvedValue([]);

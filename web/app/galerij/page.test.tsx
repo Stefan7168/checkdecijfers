@@ -38,7 +38,7 @@ describe('GaleryPage — nl', () => {
     expect(screen.getByRole('heading', { name: 'De galerij', level: 1 })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
+        'Elke kaart hieronder is gebouwd uit officiële cijfers van CBS en Eurostat, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Zelf inline insluiten komt binnenkort.')).toBeInTheDocument();
@@ -62,10 +62,17 @@ describe('GaleryPage — nl', () => {
     });
   });
 
-  it('never names Eurostat or any other future source (principle c: never claim what is not built)', async () => {
+  // ADR 048 D3 originally pinned "never names Eurostat" here; the owner signed the
+  // sweep on 2026-10-04 (session 154, #357 item 2), so the intro now names CBS and
+  // Eurostat — the two sources that actually answer — and still no other source.
+  it('names CBS and Eurostat in the intro and no other (future) source (principle c: never claim what is not built)', async () => {
     getLang.mockResolvedValue('nl');
     render(await GaleryPage());
-    expect(document.body.textContent?.toLowerCase()).not.toContain('eurostat');
+    const text = document.body.textContent?.toLowerCase() ?? '';
+    expect(text).toContain('officiële cijfers van cbs en eurostat');
+    for (const other of ['destatis', 'insee', 'oecd', 'imf', 'world bank', 'wereldbank']) {
+      expect(text).not.toContain(other);
+    }
   });
 });
 

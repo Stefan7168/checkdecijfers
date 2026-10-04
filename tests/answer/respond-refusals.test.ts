@@ -157,11 +157,11 @@ async function fullLabelAndFreshestWhitelist(): Promise<Set<number>> {
 // ---------------------------------------------------------------------------
 
 describe('buildParseRefusal — exhaustive over every ParseOutcome.refusalKind', () => {
-  it('forecast: names CBS realized-vs-forecast, refuses without a number', async () => {
+  it('forecast: names CBS and Eurostat realized-vs-forecast, refuses without a number', async () => {
     const built = await buildParseRefusal(db, parseRefusal('forecast'));
     expect(built.reason).toBe('forecast');
     expect(built.text).not.toMatch(/\?\s*$/);
-    expect(built.text).toContain('CBS publiceert gerealiseerde cijfers');
+    expect(built.text).toContain('Het CBS en Eurostat publiceren gerealiseerde cijfers');
   });
 
   it('forecast: offers the realized statistic when nearestCanonicalKeys resolves', async () => {
@@ -210,7 +210,8 @@ describe('buildParseRefusal — exhaustive over every ParseOutcome.refusalKind',
     const built = await buildParseRefusal(db, parseRefusal('out_of_scope'));
     // "say so explicitly" (docs/02 B17): the refusal must negate the asked
     // topic, not only list what IS covered.
-    expect(built.text).toMatch(/geen CBS-cijfers geladen/);
+    expect(built.text).toMatch(/geen officiële cijfers geladen/);
+    expect(built.text).toContain('officiële cijfers (CBS en Eurostat)');
     expect(built.offer).not.toBeNull();
     // The example is a quoted question naming a loaded everyday term...
     expect(built.offer).toMatch(/Vraag bijvoorbeeld: "Wat was de .+\?"/);
@@ -331,7 +332,8 @@ describe('meta-question templates (WP18/F3) — structural sweep over META_TEMPL
       missing_values: 'nooit zelf een schatting',
       reliability: 'vaste programmacode',
       freshness: 'hoe actueel het is',
-      sources: 'CBS StatLine',
+      // #357 sweep item 7: the sources template names BOTH sources and no longer claims "no other sources".
+      sources: 'de officiële tabellen van CBS (Nederland) en Eurostat (Europa)',
       capabilities: 'kan ik je helpen met cijfers over',
     };
     expect(Object.keys(FRAGMENT_BY_KEY).sort()).toEqual(META_TEMPLATES.map((t) => t.key).sort());
@@ -350,13 +352,24 @@ describe('meta-question templates (WP18/F3) — structural sweep over META_TEMPL
     }
   });
 
+  it('the sources template names both sources and no longer claims there are no other sources (#357 sweep item 7)', () => {
+    const sources = META_TEMPLATES.find((t) => t.key === 'sources')!;
+    const body = sources.buildBody({ topicsCompact: '' });
+    const bodyEn = sources.buildBodyEn({ topicsCompactEn: '' });
+    expect(body).toContain('CBS (Nederland)');
+    expect(body).toContain('Eurostat (Europa)');
+    expect(body).not.toMatch(/andere bronnen/);
+    expect(bodyEn).toContain('Eurostat (Europe)');
+    expect(bodyEn).not.toMatch(/any other sources/);
+  });
+
   it('greetings and non-meta smalltalk fall through to the generic template (reason "smalltalk")', async () => {
     const nonMeta = ['hallo', 'Goedemorgen!', 'dank je wel', 'test question', 'fijne dag verder'];
     for (const q of nonMeta) {
       expect(matchMetaTemplate(q), `matchMetaTemplate(${JSON.stringify(q)})`).toBeNull();
       const built = await buildParseRefusal(db, parseRefusal('smalltalk', {}, q));
       expect(built.reason, q).toBe('smalltalk');
-      expect(built.text).toMatch(/Ik beantwoord vragen over officiële CBS-cijfers/);
+      expect(built.text).toMatch(/Ik beantwoord vragen over officiële cijfers \(CBS en Eurostat\)/);
     }
   });
 

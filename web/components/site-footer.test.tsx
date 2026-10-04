@@ -101,5 +101,7 @@ describe('SiteFooter — phone layout (row 11)', () => {
     // The "CBS StatLine (CC BY 4.0)" segment must NOT be inside that hidden
     // wrapper — only the trailing clause collapses below sm.
     expect(clauseSpan!.textContent).not.toContain('CBS StatLine');
+    // Same for the Eurostat licence line (#357 item 3): both attributions stay visible at every width.
+    expect(clauseSpan!.textContent).not.toContain('Eurostat (CC BY 4.0)');
   });
 });

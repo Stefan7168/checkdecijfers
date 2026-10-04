@@ -60,7 +60,7 @@ describe('Landing — nl (default)', () => {
     render(await Landing());
     expect(screen.getByRole('heading', { name: 'Stel een vraag. Deel de grafiek.', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Begin met vragen' })).toBeInTheDocument();
-    expect(screen.getByText(/herleidbaar tot een officiële CBS-cel/)).toBeInTheDocument();
+    expect(screen.getByText(/herleidbaar tot een officiële tabel van CBS of Eurostat/)).toBeInTheDocument();
   });
 
   it('shows a REAL chart above the fold (HeroStory) and no frozen text example any more', async () => {
@@ -137,6 +137,7 @@ describe('Landing — coverage disclosure (WP-E, R4)', () => {
             {
               id: '86141NED',
               title: 'Consumentenprijzen; prijsindex 2015=100',
+              sourceDisplayName: 'CBS',
               syncedOn: '2026-07-03',
               concepts: ['inflatie (CPI)'],
               example: 'Wat was de inflatie in 2025?',

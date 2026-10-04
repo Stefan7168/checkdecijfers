@@ -3165,6 +3165,7 @@ describe('Chat — coverage disclosure (WP-E, R4)', () => {
             {
               id: '86141NED',
               title: 'Consumentenprijzen; prijsindex 2015=100',
+              sourceDisplayName: 'CBS',
               syncedOn: '2026-07-03',
               concepts: ['inflatie (CPI)'],
               example: 'Wat was de inflatie in 2025?',
