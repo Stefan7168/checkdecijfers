@@ -53,14 +53,15 @@ import type { GatedResponse, SplitDebitResult } from '../backend/billing/index.t
 // WP129+130 (#130, ADR 032): the Anthropic web-search client is constructed
 // HERE (server-only) and injected into the audited pipeline — the barrel is
 // the intended construction seam (its own comment says so). SourceSelection is
-// the validated structural payload; SOURCES gives the known registry keys the
+// the validated structural payload; liveChatSourceKeys() gives the live registry keys the
 // untrusted client payload is filtered against.
 import { AnthropicWebSearchClient } from '../backend/websearch/index.ts';
 import type { SourceSelection } from '../backend/websearch/index.ts';
-import { SOURCES } from '../backend/sources/registry.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../backend/sources/registry.ts';
+import { liveChatSourceKeys } from '../backend/catalog/live-chat-sources.ts';
 import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
 import { QUESTION_FINDER_CONFIG } from '../backend/catalog/types.ts';
-import { eurostatFinderEnabled } from '../backend/catalog/recall.ts';
+import { eurostatFinderEnabled, type RecallOptions } from '../backend/catalog/recall.ts';
 // #148: the 'started' branch below still uses the amount triggerOnboarding
 // actually debited (result.credits) for netCost, never a second independent
 // price read — that fix is unchanged. onboardingPrice IS imported again as of
@@ -330,16 +331,16 @@ function guardOnboardingOfferToken(token: string): void {
 // input (a Server Action argument — attacker-controlled, like every other one
 // here). It is coerced to a SourceSelection BEFORE the billing gate and NEVER
 // throws: any malformed shape degrades to `undefined` (the legacy no-selection
-// behavior, byte-identical to a pre-WP submit). `sources` is filtered to KNOWN,
-// chat-selectable registry keys — an unknown OR a registered-but-dormant key
-// (WP30c/E1: `chatSelectable: false`, e.g. 'eurostat') is dropped, never
-// trusted. This is the SAME gate `chat.tsx`'s chip UI uses (SourceInfo's
-// `chatSelectable`) — deliberately one load-bearing flag, not two independent
-// ones that could drift: a crafted payload naming a real-but-dormant source
-// key must be refused here even though the client UI never offers it, so a
-// future source's public exposure flips on in exactly one place (D3(d)'s
-// owner-signed sweep), never by accident via this validator alone continuing
-// to accept a key nothing else has decided is public yet. `web` is coerced to
+// behavior, byte-identical to a pre-WP submit). `sources` is filtered to the
+// LIVE chat source keys — liveChatSourceKeys(): a registry source that is
+// chatSelectable AND whose runtime switch is on (Eurostat: only while
+// EUROSTAT_FINDER_ENABLED=1; owner decision 2026-10-04, its own chip next to
+// CBS). An unknown key, a not-chatSelectable key, or a real source whose
+// switch is off is dropped, never trusted. The chat page computes the chips it
+// shows from the SAME function (server-side, passed down as a prop), so the
+// screen and this validator are one gate, never two that could drift: a
+// crafted payload naming 'eurostat' while the flag is off is refused here even
+// though the client never offers it. `web` is coerced to
 // a strict boolean. When WEBSEARCH_ENABLED !== '1' the whole selection is
 // FORCED to undefined (the server belt behind the dormant UI): a crafted
 // payload cannot reach the web path while the feature is dormant, so
@@ -349,7 +350,7 @@ function validateSelection(raw: unknown): SourceSelection | undefined {
   if (raw === null || typeof raw !== 'object') return undefined;
   const obj = raw as { sources?: unknown; web?: unknown };
   if (!Array.isArray(obj.sources)) return undefined;
-  const known = new Set(Object.keys(SOURCES).filter((key) => SOURCES[key]!.chatSelectable));
+  const known = new Set(liveChatSourceKeys());
   const sources = obj.sources.filter((s): s is string => typeof s === 'string' && known.has(s));
   return { sources, web: obj.web === true };
 }
@@ -568,7 +569,7 @@ export async function askQuestion(
   // (read-only, never throws). Flag off or not thread-aware ⇒ never read.
   const followUp =
     threadAware && tableLaneEnabled() && rawTableLaneFollowUp !== undefined
-      ? await validateTableLaneFollowUp(userId, requestId, rawTableLaneFollowUp, validatedThreadId)
+      ? await validateTableLaneFollowUp(userId, requestId, rawTableLaneFollowUp, validatedThreadId, selection)
       : null;
   // ⟨W4⟩ Upfront affordability (UX only, race-tolerated): a web-opted turn
   // transiently needs simple + web_addon = 30 in BOTH modes — the untouched
@@ -675,7 +676,12 @@ export async function askQuestion(
               tableFinder: tableLaneFollowUpFinder(
                 followUp,
                 process.env.ONBOARDING_ENABLED === '1'
-                  ? buildOnboardingFinder({ db: getDb(), userId, rerankClient: new AnthropicLlmClient() })
+                  ? buildOnboardingFinder({
+                      db: getDb(),
+                      userId,
+                      rerankClient: new AnthropicLlmClient(),
+                      ...finderRecall(selection),
+                    })
                   : undefined,
               ),
             }
@@ -685,6 +691,7 @@ export async function askQuestion(
                   db: getDb(),
                   userId,
                   rerankClient: new AnthropicLlmClient(),
+                  ...finderRecall(selection),
                 }),
               }
             : {}),
@@ -700,11 +707,14 @@ export async function askQuestion(
                 db: getDb(),
                 userId,
                 rerankClient: new AnthropicLlmClient(),
-                recall: { mode: 'any' },
+                ...finderRecall(selection, { mode: 'any' }),
                 findConfig: QUESTION_FINDER_CONFIG,
                 searchTermsClient: new AnthropicLlmClient(),
-                // #357 step 5: English search words for Eurostat's catalogue — only while its finder is on.
-                ...(eurostatFinderEnabled() ? { englishSearchTermsClient: new AnthropicLlmClient() } : {}),
+                // #357 step 5: English search words for Eurostat's catalogue — only while its finder is on,
+                // and (owner decision 2026-10-04) only when the reader has Eurostat switched on.
+                ...(eurostatFinderEnabled() && eurostatSearchable(selection)
+                  ? { englishSearchTermsClient: new AnthropicLlmClient() }
+                  : {}),
               }),
             }
           : {}),
@@ -1067,6 +1077,32 @@ function withTableLaneFailedText(gated: GatedResponse): GatedResponse {
   };
 }
 
+// Owner decision 2026-10-04 (the Eurostat chip): the table search follows the
+// reader's source choice. `selection` is the VALIDATED selection (undefined =
+// benchmark / tests / CLI / websearch off — then nothing is restricted and the
+// finders are exactly what they were before the chip existed).
+//
+// finderRecall: the `recall` dep for a finder — the sources the reader has
+// switched on (so a CBS-only reader's finder never sees Eurostat rows and a
+// Eurostat-only reader's never sees CBS rows) plus the finder's own mode.
+// Returns {} when there is nothing to say (no selection, no mode), so the
+// finder's deps stay exactly today's.
+function finderRecall(
+  selection: SourceSelection | undefined,
+  base: { mode?: 'all' | 'any' } = {},
+): { recall?: RecallOptions } {
+  if (selection === undefined) return Object.keys(base).length > 0 ? { recall: { ...base } } : {};
+  return { recall: { ...base, sources: new Set(selection.sources) } };
+}
+
+// Whether Eurostat rows may be searched for this reader: no selection = the
+// pre-chip rule (the finder flag alone decides); a selection = Eurostat must be
+// among the chosen sources. Gates the English search-word bridge, whose only
+// purpose is finding Eurostat tables.
+function eurostatSearchable(selection: SourceSelection | undefined): boolean {
+  return selection === undefined || selection.sources.includes(EUROSTAT_SOURCE_KEY);
+}
+
 // Breadth step 5 (Task 7): the follow-up link askQuestion received — the row
 // id of the previous table-lane ANSWER in this conversation, untrusted. Usable
 // only when it is the reader's own row (owner-scoped read), finished ('done')
@@ -1079,11 +1115,18 @@ async function validateTableLaneFollowUp(
   requestId: string,
   raw: unknown,
   validatedThreadId: number | null,
+  selection?: SourceSelection,
 ): Promise<TableLaneRow | null> {
   if (!isTableLaneRowId(raw) || validatedThreadId === null) return null;
   try {
     const row = await readTableLaneRequest(getDb(), raw, userId);
     if (row === null || row.status !== 'done' || row.outcomeKind !== 'answer' || row.threadId !== validatedThreadId) {
+      return null;
+    }
+    // Owner decision 2026-10-04 (the Eurostat chip): a link to a table of a source the reader has since
+    // switched off is ignored — the follow-up would otherwise answer from a deselected source. No
+    // selection (websearch off, benchmark, tests) = no restriction, exactly as before.
+    if (selection !== undefined && !selection.sources.includes(sourceKeyForTableId(row.tableId))) {
       return null;
     }
     return row;

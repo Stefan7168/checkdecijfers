@@ -26,7 +26,7 @@ import type { GatedResponse } from '../backend/billing/index.ts';
 // unverified-web outcome the message renders below the CBS body. Both are
 // imported from PURE LEAVES (registry.ts / websearch/types.ts) — never a
 // barrel that pulls the Anthropic SDK into the client bundle.
-import { SOURCES, sourceKeyForTableId } from '../backend/sources/registry.ts';
+import { CBS_SOURCE_KEY, SOURCES, sourceKeyForTableId } from '../backend/sources/registry.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { buildAnswerProof } from '../lib/answer-proof.ts';
 import { buildCitation } from '../lib/citation.ts';
@@ -131,7 +131,18 @@ export interface ChatPricing {
    * Its PRESENCE is what renders the source chips + the "Internet" chip and
    * makes the selection ride every submit; absent ⇒ no chips, no selection
    * payload, byte-identical to today. addonPrice drives the ⟨W4⟩ cost line. */
-  websearch?: { enabled: true; addonPrice: number };
+  websearch?: ChatWebsearch;
+}
+
+/** The `websearch` prop's shape. `sourceKeys` (owner decision 2026-10-04, the Eurostat chip) is the list of
+ * registry source keys the server says are LIVE as chips right now — computed on the server by
+ * liveChatSourceKeys() (registry `chatSelectable` AND, for Eurostat, EUROSTAT_FINDER_ENABLED), because the
+ * client never reads env. The chip row renders exactly these, all pre-selected. Absent ⇒ CBS only, the
+ * pre-chip row. */
+export interface ChatWebsearch {
+  enabled: true;
+  addonPrice: number;
+  sourceKeys?: readonly string[];
 }
 
 /** ADR 037 D10: the same presence-driven contract as `ChatPricing.websearch`
@@ -510,11 +521,11 @@ export function Chat({
   // channel defaults OFF (the cost gate). State is per-session and persists
   // across turns (owner's tag mental model).
   const websearch = pricing?.websearch;
-  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): only chatSelectable
-  // sources default on / render a chip — a registered-but-dormant source
-  // (e.g. Eurostat in E1) must never surface here, see SourceInfo's own
-  // chatSelectable doc comment for why this is the load-bearing gate.
-  const chatSelectableKeys = Object.keys(SOURCES).filter((key) => SOURCES[key]!.chatSelectable);
+  // WP30c/E1 (ADR 048 D3(b)/(c)) + owner decision 2026-10-04: the chips are exactly the live source keys
+  // the SERVER sent (websearch.sourceKeys = liveChatSourceKeys(): chatSelectable AND the source's runtime
+  // flag — Eurostat only while EUROSTAT_FINDER_ENABLED=1). A registered-but-dormant source never shows;
+  // no sourceKeys ⇒ CBS only. Unknown keys are dropped here too (SOURCES is the display authority).
+  const chatSelectableKeys = (websearch?.sourceKeys ?? [CBS_SOURCE_KEY]).filter((key) => SOURCES[key] !== undefined);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(
     () => new Set(chatSelectableKeys),
   );

@@ -135,6 +135,10 @@ export type RefusalReason =
    * CBS answer) with the unverified-web section rendered below it; NOT in the
    * skip-list (this reason is exactly where the web section belongs). */
   | 'web_only'
+  /** Owner decision 2026-10-04 (the Eurostat chip): CBS switched off, Eurostat kept, and the Eurostat-only
+   * whole-question search found no table (or could not run, e.g. a reply turn). Deterministic pre-answer
+   * refusal — the curated path is CBS-only and must not answer. Not in the ⟨W3⟩ skip-list. */
+  | 'no_eurostat_table'
   /** #196 (session 73): the table answering this question was evicted from
    * OUR store (the on-demand TTL, src/ingestion/eviction.ts) while the query
    * was in flight — a designed, benign race, not a pipeline fault: NOT the

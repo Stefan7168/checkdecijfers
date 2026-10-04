@@ -52,6 +52,7 @@ import { Dashboard } from '../../components/dashboard.tsx';
 import { QuestionHistory } from '../../components/question-history.tsx';
 import { Workspace } from '../../components/workspace.tsx';
 import { listThreads } from '../../backend/threads/index.ts';
+import { liveChatSourceKeys } from '../../backend/catalog/live-chat-sources.ts';
 import { getUserChartStyle } from '../../backend/chart/user-styles.ts';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
@@ -154,7 +155,15 @@ export default async function WorkspaceRoute({
         packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
         coverage={coverage}
         {...(websearchEnabled && wsWebAddonPrice !== null
-          ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
+          ? {
+              websearch: {
+                enabled: true as const,
+                addonPrice: wsWebAddonPrice,
+                // Owner decision 2026-10-04: the chips the chat shows, decided on the server by the SAME
+                // function the selection validator uses (the client never reads env).
+                sourceKeys: liveChatSourceKeys(),
+              },
+            }
           : {})}
         {...(attachmentsEnabled ? { attachments: { enabled: true as const } } : {})}
         {...(ownDataPublishEnabled ? { ownDataPublish: { enabled: true as const } } : {})}
@@ -187,7 +196,13 @@ export default async function WorkspaceRoute({
       history={<QuestionHistory items={history} />}
       purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
       {...(websearchEnabled && webAddonPrice !== null
-        ? { websearch: { enabled: true as const, addonPrice: webAddonPrice } }
+        ? {
+            websearch: {
+              enabled: true as const,
+              addonPrice: webAddonPrice,
+              sourceKeys: liveChatSourceKeys(),
+            },
+          }
         : {})}
     />
   );

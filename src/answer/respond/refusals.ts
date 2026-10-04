@@ -1290,17 +1290,45 @@ export function buildNoSourcesRefusal(): BuiltRefusal {
   };
 }
 
-/** CBS deselected but the "Internet" chip kept — the web-only mode (ADR 032
- * decision 3/Q4). The refusal names the honest consequence (no verified answer)
+/** No official data source selected but the "Internet" chip kept — the web-only mode (ADR 032
+ * decision 3/Q4; owner decision 2026-10-04: the text names the official sources neutrally, since CBS and
+ * Eurostat are each a chip of their own now). The refusal names the honest consequence (no verified answer)
  * and points below to the unverified-web section attachWebAugmentation renders.
  * NOT in the skip-list: this reason is exactly where the web section belongs. */
 export function buildWebOnlyRefusal(): BuiltRefusal {
   const body =
-    'Je hebt CBS-data uitgeschakeld voor deze vraag, dus ik geef geen geverifieerd antwoord. Hieronder staan alleen onbevestigde resultaten van het web.';
+    'Je hebt de officiële databronnen uitgeschakeld voor deze vraag, dus ik geef geen geverifieerd antwoord. Hieronder staan alleen onbevestigde resultaten van het web.';
   const bodyEn =
-    "You've turned off CBS data for this question, so I won't give a verified answer. Below are only unconfirmed results from the web.";
+    "You've turned off the official data sources for this question, so I won't give a verified answer. Below are only unconfirmed results from the web.";
   return {
     reason: 'web_only',
+    text: assertNotAQuestion(body),
+    offer: null,
+    guidance: null,
+    freshness: null,
+    internalNote: null,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
+  };
+}
+
+/** Owner decision 2026-10-04 (the Eurostat chip): the reader switched CBS off and kept Eurostat, but the
+ * whole-question search of Eurostat's catalogue found no table that answers the question (or no search
+ * could run on this turn). The curated answer path is CBS-only, so it must not answer here — this is the
+ * honest stop, pointing at the one switch that would change the outcome. Deterministic template, no data
+ * value, no model text; digit-free. NOT in the websearch skip list: if the Internet chip is on, its
+ * unverified section may still help, like any other data refusal. */
+export function buildNoEurostatTableRefusal(): BuiltRefusal {
+  const body =
+    'Ik vond bij Eurostat geen tabel die deze vraag beantwoordt. Zet ook CBS aan als je Nederlandse cijfers wilt gebruiken.';
+  const bodyEn =
+    'I found no Eurostat table that answers this question. Switch CBS on as well if you want to use Dutch figures.';
+  return {
+    reason: 'no_eurostat_table',
     text: assertNotAQuestion(body),
     offer: null,
     guidance: null,

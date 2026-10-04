@@ -13,6 +13,7 @@ export {
   buildParseRefusal,
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
+  buildNoEurostatTableRefusal,
   buildNoSourcesRefusal,
   buildWebOnlyRefusal,
   toRefusalResponse,

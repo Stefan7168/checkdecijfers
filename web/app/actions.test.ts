@@ -419,14 +419,13 @@ describe('askQuestion — selection validation (untrusted client payload)', () =
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });
   });
 
-  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): 'eurostat' is a REAL,
-  // registered key (not a typo like 'nope'/'wikipedia' above) — it must
-  // still be dropped, because it is chatSelectable:false. This is the
-  // server-side belt behind chat.tsx's chip UI never offering it: a crafted
-  // payload naming a real-but-dormant source must not reach the query path
-  // either. If this test were removed, a registered-but-dormant source
-  // would silently start being honored by this validator alone.
-  it('drops a registered-but-chat-dormant source key even though it is real (not a typo)', async () => {
+  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix) + owner decision 2026-10-04: 'eurostat' is a REAL,
+  // registered key (not a typo like 'nope'/'wikipedia' above) — while its runtime flag
+  // (EUROSTAT_FINDER_ENABLED) is off it must still be dropped. This is the server-side belt behind the
+  // chat page never offering the chip: a crafted payload naming a real-but-dormant source must not
+  // reach the query path either. (Flag ON accepts it: web/app/source-choice-actions.test.ts.)
+  it('drops a registered-but-dormant source key (Eurostat, flag off) even though it is real (not a typo)', async () => {
+    vi.stubEnv('EUROSTAT_FINDER_ENABLED', '');
     driveGate(fakeAnswer(), 1, 20);
     await askQuestion('q', RID, null, { sources: ['cbs', 'eurostat'], web: false });
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });

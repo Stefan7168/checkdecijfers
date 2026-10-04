@@ -33,6 +33,7 @@ import type { FreshIntentParseOptions } from '../intent/options.ts';
 import { MAX_CLICK_OPTIONS, RawParseValidationError, RAW_PARSE_VERSION } from '../intent/types.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
+  buildNoEurostatTableRefusal,
   buildNoSourcesRefusal,
   buildOnboardingRefusal,
   buildParseRefusal,
@@ -52,10 +53,11 @@ import {
 // refusal built inline below (this file's only BuiltRefusal that isn't built
 // in refusals.ts itself).
 import { englishMeasureLabel, periodCodeToEn, statusSuffixEn } from './english.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
+import { eurostatOnlyOverride, isEurostatOnly, memoizeFinder } from './source-override.ts';
 import { checkStaleness, namedTableNl } from './staleness.ts';
 import { buildScatterAnswerResponse, checkPairStaleness } from './scatter-answer.ts';
 import { buildAnswerChips, buildRefusalSuggestionsBoth } from './suggestions.ts';
@@ -120,9 +122,12 @@ export interface RespondOptions
   conversationContext?: ConversationContext | null;
   /** WP129+130 (#129/#130, ADR 032): the #129 source-tags selection, a
    * STRUCTURAL input (never prompt text). Present only when the web action
-   * wires it (flag on). When CBS is not selected it drives the deterministic
-   * pre-parse refusal below (web_only / no_sources); otherwise it is inert to
-   * the parse and rides through to the audit envelope via attachWebAugmentation.
+   * wires it (flag on). When no data source (CBS or Eurostat) is selected it
+   * drives the deterministic pre-parse refusal below (web_only / no_sources);
+   * when only Eurostat is selected the curated path is replaced after the
+   * parse by the Eurostat-only route (source-override.ts, owner decision
+   * 2026-10-04); otherwise it is inert to the parse and rides through to the
+   * audit envelope via attachWebAugmentation.
    * Absent everywhere else (benchmark, tests, CLI) → byte-identical pre-WP path.
    */
   sourceSelection?: SourceSelection;
@@ -361,21 +366,54 @@ function clickTakeOutcome(
 }
 
 /** WP129+130 (#129/#130, ADR 032): the source-selection pre-parse belt. When
- * CBS is not among the selected sources, no verified answer is possible: the
- * web-only mode ('web_only', with the web section rendered below by
- * attachWebAugmentation) if the Internet chip is on, else the empty-selection
- * refusal ('no_sources'). Emitted BEFORE any parse/LLM (zero prompt bytes, zero
- * cost). Absent selection (the benchmark/tests/CLI default) ⇒ null, byte-
- * identical to the pre-WP path. */
+ * no data source this layer can answer from is selected (neither CBS nor — since
+ * the owner's 2026-10-04 decision, its own chip — Eurostat), no verified answer
+ * is possible: the web-only mode ('web_only', with the web section rendered
+ * below by attachWebAugmentation) if the Internet chip is on, else the
+ * empty-selection refusal ('no_sources'). Emitted BEFORE any parse/LLM (zero
+ * prompt bytes, zero cost). Absent selection (the benchmark/tests/CLI default)
+ * ⇒ null, byte-identical to the pre-WP path. A selection with only CBS, or CBS
+ * and Eurostat, passes here as before; CBS off / Eurostat on is handled AFTER
+ * the parse (source-override.ts). */
 function sourceSelectionRefusal(
   question: string,
   selection: SourceSelection | undefined,
   lang?: 'nl' | 'en',
 ): RefusalResponse | null {
   if (selection === undefined) return null;
-  if (selection.sources.includes(CBS_SOURCE_KEY)) return null;
+  if (selection.sources.some((key) => key === CBS_SOURCE_KEY || key === EUROSTAT_SOURCE_KEY)) return null;
   const built = selection.web ? buildWebOnlyRefusal() : buildNoSourcesRefusal();
   return toRefusalResponse({ question, built, parse: null, queryRefusal: null, lang });
+}
+
+/** Owner decision 2026-10-04 (the Eurostat chip): with CBS off and Eurostat on, the curated path must not
+ * answer. Runs on every parse outcome right before it is turned into a response; a no-op unless the
+ * selection is Eurostat-only. Either hands back the outcome to continue with (the parse itself, or the
+ * 'onboarding' outcome of a confident Eurostat pick) or the finished `no_eurostat_table` refusal.
+ * `parse: null` on that refusal, like the other source-choice refusals: the discarded curated reading is
+ * not what the reader got, so it must not be recorded as the turn's resolved intent. The decision per
+ * ParseOutcome kind lives in source-override.ts. */
+async function applySourceChoice(
+  question: string,
+  parse: ParseOutcome,
+  options: { sourceSelection?: SourceSelection; lang?: 'nl' | 'en' },
+  questionFinder: RespondOptions['questionFinder'],
+): Promise<{ parse: ParseOutcome } | { refusal: RefusalResponse }> {
+  const selection = options.sourceSelection;
+  if (selection === undefined || !isEurostatOnly(selection)) return { parse };
+  const next = await eurostatOnlyOverride(parse, selection, questionFinder);
+  if (next === null) {
+    return {
+      refusal: toRefusalResponse({
+        question,
+        built: buildNoEurostatTableRefusal(),
+        parse: null,
+        queryRefusal: null,
+        lang: options.lang,
+      }),
+    };
+  }
+  return { parse: next };
 }
 
 /** docs/05 staleness row, recency-implying branch: the refusal served when
@@ -929,6 +967,10 @@ export async function respondToQuestion(
     // deselected-CBS turn refuses deterministically without any LLM call.
     const preParse = sourceSelectionRefusal(question, options.sourceSelection, options.lang);
     if (preParse !== null) return preParse;
+    // Owner decision 2026-10-04: in Eurostat-only mode the whole-question finder is consulted by the parse
+    // AND by the source override below; one memo per turn so the same paid search never runs twice.
+    const eurostatOnly = isEurostatOnly(options.sourceSelection);
+    const questionFinder = eurostatOnly ? memoizeFinder(options.questionFinder) : options.questionFinder;
     // ThreadedInto: every ParseQuestionOptions key must be named here — a new
     // intent-side field can't be silently dropped on this path (#176/#191).
     const parseOptions: ThreadedInto<ParseQuestionOptions> = {
@@ -945,7 +987,7 @@ export async function respondToQuestion(
       // is injected. Undefined when absent → B15 unchanged.
       tableFinder: options.tableFinder,
       // Session 153: the out_of_scope finder, same threading as tableFinder.
-      questionFinder: options.questionFinder,
+      questionFinder,
       // WP16 sub-part 2 delivery vocabulary (design §3.6): undefined/empty →
       // byte-identical Phase-0 prompt. The delivery re-run passes the
       // just-onboarded measure(s) so the parser can actually emit their
@@ -968,7 +1010,9 @@ export async function respondToQuestion(
     // is every production request and every non-harness test/runner.
     const injected = tryHarnessInjectedIntent(question);
     if (injected !== null) {
-      return await respondToParseOutcome(db, question, harnessParseOutcome(question, injected), options);
+      const guarded = await applySourceChoice(question, harnessParseOutcome(question, injected), options, questionFinder);
+      if ('refusal' in guarded) return guarded.refusal;
+      return await respondToParseOutcome(db, question, guarded.parse, options);
     }
     // WP15 (ADR 021): with a validated context, the parse runs in follow-up
     // mode — same downstream machinery, same thresholds, same one round of
@@ -978,7 +1022,10 @@ export async function respondToQuestion(
       context === null
         ? await parseQuestion(db, question, parseOptions)
         : await parseFollowUpQuestion(db, context, question, parseOptions);
-    return await respondToParseOutcome(db, question, parse, options);
+    // CBS off / Eurostat on: a curated reading never answers (source-override.ts).
+    const guarded = await applySourceChoice(question, parse, options, questionFinder);
+    if ('refusal' in guarded) return guarded.refusal;
+    return await respondToParseOutcome(db, question, guarded.parse, options);
   } catch (error) {
     return toInternalRefusal(question, internalNoteFor(error), options.lang);
   }
@@ -1013,7 +1060,10 @@ export async function respondToClarificationReply(
     // this is not a replay of a stored answer: respondToIntent re-runs the real
     // query. If it now refuses, the user gets the honest refusal and the normal
     // gate refunds — rare, and better than serving a stale promise.
-    if (options.clickOptionsEnabled === true) {
+    // Owner decision 2026-10-04: skipped in Eurostat-only mode — a stored click option is a CURATED (CBS)
+    // reading, and taking it would answer from CBS for a reader who switched CBS off. The reply then goes
+    // through the ordinary merge below, whose result the source override judges like any other parse.
+    if (options.clickOptionsEnabled === true && !isEurostatOnly(options.sourceSelection)) {
       const clicked = matchClickOption(pending, reply);
       // #178: that re-run query proves the CELL still exists — it does not
       // prove a "nu" option's stored period is still what "nu" means today. A
@@ -1087,7 +1137,12 @@ export async function respondToClarificationReply(
       // prompt + schema bytes unchanged (fixtures stay valid).
       extraCanonicalMeasures: options.extraCanonicalMeasures,
     };
-    const parse = await parseClarificationReply(db, pending, reply, clarifyOptions);
+    const merged = await parseClarificationReply(db, pending, reply, clarifyOptions);
+    // CBS off / Eurostat on: a curated merge result never answers (and no finder runs on a reply turn, so a
+    // curated intent/clarification ends in the no_eurostat_table refusal). Pending carries the ORIGINAL question.
+    const guarded = await applySourceChoice(pending.question, merged, options, undefined);
+    if ('refusal' in guarded) return guarded.refusal;
+    const parse = guarded.parse;
 
     if (parse.kind === 'refusal') {
       // WP18: parse.question echoes the ORIGINAL question here (clarify.ts);

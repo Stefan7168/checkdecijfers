@@ -23,7 +23,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
-import type { ChatPack } from './chat.tsx';
+import type { ChatPack, ChatWebsearch } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
@@ -118,7 +118,7 @@ export function Workspace({
   purchaseSuccess?: boolean;
   /** WP129+130: present ONLY when WEBSEARCH_ENABLED='1' (page.tsx reads the
    * add-on price behind the flag). Threaded into Chat's pricing prop. */
-  websearch?: { enabled: true; addonPrice: number };
+  websearch?: ChatWebsearch;
   /** ADR 037 D10/D14: present ONLY when ATTACHMENTS_ENABLED='1' — the same
    * dormancy pattern as `websearch` above. NOT wired from page.tsx yet (the
    * flag doesn't exist as of this commit, tracked as WP202a's own remaining
