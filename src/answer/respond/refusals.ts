@@ -327,8 +327,10 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
       : `I can show the underlying figures on ${definitionLabelEn}.`;
     if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   } else {
-    offer = `Ik heb hierover geen cijfers geladen — mijn bronnen dekken momenteel: ${loadedTopicsCompact()}.`;
-    offerEn = `I don't have figures loaded on this — my sources currently cover: ${loadedTopicsCompactEn()}.`;
+    // Session 154 (owner: "a door to the data of CBS and Eurostat"): no list of curated topics — the product
+    // searches every CBS and Eurostat table, so a fixed topic list understated it.
+    offer = 'Ik vond hierover geen tabel bij CBS of Eurostat.';
+    offerEn = 'I found no CBS or Eurostat table on this.';
   }
   return {
     reason: 'causal',
@@ -349,11 +351,13 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
 
 async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
   const body =
-    `Daarover heb ik geen officiële cijfers geladen — mijn bronnen dekken momenteel officiële cijfers (CBS en Eurostat) over: ${loadedTopicsCompact()}.`;
+    // Session 154 (owner: "a door to the data of CBS and Eurostat"): no list of curated topics — the product
+    // searches every CBS and Eurostat table; this refusal means that search found none.
+    'Ik vond bij CBS en Eurostat geen tabel die deze vraag beantwoordt. Omschrijf het onderwerp eventueel anders, of noem een land of regio en een jaar.';
   const example = await exampleQuestions(db);
   const offer = `Vraag bijvoorbeeld: ${example.nl}`;
   const bodyEn =
-    `I don't have any official figures loaded on that — my sources currently cover official figures (CBS and Eurostat) on: ${loadedTopicsCompactEn()}.`;
+    'I found no CBS or Eurostat table that answers this question. Try describing the topic differently, or name a country or region and a year.';
   const offerEn = `For example, ask: ${example.en}`;
   return {
     reason: 'scope',

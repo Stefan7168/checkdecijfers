@@ -508,7 +508,7 @@ describe('compound + smalltalk questions (labelled set)', () => {
     // genuinely asks what the product can do, so the deterministic router
     // now answers it with the capabilities template (reason 'meta').
     expect(smalltalkResponse.reason).toBe('meta');
-    expect(smalltalkResponse.text).toMatch(/kan ik je helpen met cijfers over/);
+    expect(smalltalkResponse.text).toMatch(/Ik zoek in alle tabellen van CBS en Eurostat/);
     assertNoUnbackedNumbers(smalltalkResponse, await whitelistForResponse(smalltalkResponse));
   });
 });

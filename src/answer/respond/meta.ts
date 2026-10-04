@@ -202,9 +202,9 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Welke onderwerpen ken je?',
     ],
     buildBody: (ctx) =>
-      `Ik beantwoord vragen over officiële cijfers van CBS (Nederland) en Eurostat (Europa), met bron en peildatum bij elk antwoord. Op dit moment kan ik je helpen met cijfers over: ${ctx.topicsCompact}.`,
+      `Ik beantwoord vragen over officiële cijfers van CBS (Nederland) en Eurostat (Europa), met bron en peildatum bij elk antwoord. Ik zoek in alle tabellen van CBS en Eurostat; veelgevraagd zijn bijvoorbeeld: ${ctx.topicsCompact}.`,
     buildBodyEn: (ctx) =>
-      `I answer questions about official figures from CBS (the Netherlands) and Eurostat (Europe), with a source and reference date on every answer. Right now I can help you with figures on: ${ctx.topicsCompactEn}.`,
+      `I answer questions about official figures from CBS (the Netherlands) and Eurostat (Europe), with a source and reference date on every answer. I search every CBS and Eurostat table; frequently asked topics include: ${ctx.topicsCompactEn}.`,
   },
 ];
 

@@ -194,24 +194,22 @@ describe('buildParseRefusal — exhaustive over every ParseOutcome.refusalKind',
 
     const withoutTopic = await buildParseRefusal(db, parseRefusal('causal', { nearestCanonicalKeys: [] }));
     expect(withoutTopic.offer).not.toBeNull();
-    // Guidance naming loaded topics when nothing matched.
-    expect(withoutTopic.offer).toMatch(/inwoners|bevolking/);
+    // Session 154 (the door framing): no curated topic list — it says no CBS or Eurostat table was found.
+    expect(withoutTopic.offer).toBe('Ik vond hierover geen tabel bij CBS of Eurostat.');
   });
 
-  it('out_of_scope: names the scope limit compactly (first everyday term per canonical measure)', async () => {
+  it('out_of_scope: says no CBS or Eurostat table was found — never a curated topic list (session 154)', async () => {
     const built = await buildParseRefusal(db, parseRefusal('out_of_scope'));
     expect(built.reason).toBe('scope');
-    for (const m of CANONICAL_MEASURES) {
-      expect(built.text).toContain(m.everydayTerms[0]);
-    }
+    expect(built.text).toMatch(/^Ik vond bij CBS en Eurostat geen tabel die deze vraag beantwoordt/);
+    expect(built.text).not.toContain('mijn bronnen dekken');
   });
 
   it('out_of_scope: says explicitly the topic is not loaded, and offers a genuinely answerable example question', async () => {
     const built = await buildParseRefusal(db, parseRefusal('out_of_scope'));
     // "say so explicitly" (docs/02 B17): the refusal must negate the asked
     // topic, not only list what IS covered.
-    expect(built.text).toMatch(/geen officiële cijfers geladen/);
-    expect(built.text).toContain('officiële cijfers (CBS en Eurostat)');
+    expect(built.text).toMatch(/geen tabel die deze vraag beantwoordt/);
     expect(built.offer).not.toBeNull();
     // The example is a quoted question naming a loaded everyday term...
     expect(built.offer).toMatch(/Vraag bijvoorbeeld: "Wat was de .+\?"/);
@@ -334,7 +332,7 @@ describe('meta-question templates (WP18/F3) — structural sweep over META_TEMPL
       freshness: 'hoe actueel het is',
       // #357 sweep item 7: the sources template names BOTH sources and no longer claims "no other sources".
       sources: 'de officiële tabellen van CBS (Nederland) en Eurostat (Europa)',
-      capabilities: 'kan ik je helpen met cijfers over',
+      capabilities: 'Ik zoek in alle tabellen van CBS en Eurostat',
     };
     expect(Object.keys(FRAGMENT_BY_KEY).sort()).toEqual(META_TEMPLATES.map((t) => t.key).sort());
     const topicsCompact = CANONICAL_MEASURES.map((m) => m.everydayTerms[0]).join(', ');

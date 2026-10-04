@@ -173,7 +173,7 @@ describe('English refusal siblings — exact text for the reasons the brief name
 
   it('causal: exact English body, and the no-topic offer names the English topic list', async () => {
     const built = await buildParseRefusal(db, parseRefusal('causal', { nearestCanonicalKeys: [] }));
-    const expectedOffer = `I don't have figures loaded on this — my sources currently cover: ${loadedTopicsCompactEn()}.`;
+    const expectedOffer = 'I found no CBS or Eurostat table on this.';
     expect(built.en.offer).toBe(expectedOffer);
     expect(built.en.text).toBe(
       "I can't assess a causal relationship — the figures from CBS and Eurostat describe what was measured, not why it happened. " +
@@ -383,8 +383,7 @@ describe('English refusal siblings — structural belt over every remaining buil
 
   it('out_of_scope', async () => {
     const built = await buildParseRefusal(db, parseRefusal('out_of_scope'));
-    expect(built.en.text).toMatch(/^I don't have any official figures loaded on that/);
-    expect(built.en.text).toContain('official figures (CBS and Eurostat)');
+    expect(built.en.text).toMatch(/^I found no CBS or Eurostat table that answers this question/);
     expect(built.en.offer).toMatch(/^For example, ask: "What was /);
     assertEnglishSibling(built, 'out_of_scope');
   });
