@@ -67,7 +67,7 @@ const CONTENT: Record<Lang, Content> = {
     statusLabels: { live: 'Live', frozen: 'Built, off', planned: 'Planned' },
     kicker: 'graphmaker.studio · System map',
     title: 'System map',
-    tagline: 'Chat with official CBS figures — every number traceable to a CBS table.',
+    tagline: 'Chat with official figures from CBS and Eurostat — every number traceable to an official table.',
     drawnOn: `Drawn from the repo docs on ${DRAWN_ON_DATE.en}.`,
     intro:
       'This page maps the whole system: the building blocks, every external service, how one question travels through the machine from arriving to being answered, and what is honestly live, built-but-off, or only planned. The colors below mean the same thing everywhere on this page — that is the one promise this page makes: if something is marked green, it is genuinely running today, not a plan or a wish.',
@@ -78,7 +78,7 @@ const CONTENT: Record<Lang, Content> = {
     ],
     diagramHeading: 'The big picture',
     diagramCaption:
-      "Every box is a real, separate piece of technology. Every arrow is something that genuinely happens today — except the dashed one, which shows that fetching from CBS is a separate process, never something that happens while a visitor is waiting for an answer.",
+      "Every box is a real, separate piece of technology. Every arrow is something that genuinely happens today — except the dashed one, which shows that fetching from CBS or Eurostat is a separate process, never something that happens while a visitor is waiting for an answer.",
     journeyHeading: 'The journey of one question',
     journeyIntro:
       "Without an account: 2 free questions. After that, or to keep asking, a free account (the same rule applies to everyone, paying or not: searching costs nothing, only an answered question costs credits — a refused answer is refunded).",
@@ -157,7 +157,7 @@ const CONTENT: Record<Lang, Content> = {
         name: 'Supabase',
         role: 'DATABASE & LOGIN',
         detail:
-          'One managed Postgres database holding all CBS figures, users, credits, and audit records, plus the login system (magic link by email).',
+          'One managed Postgres database holding all CBS and Eurostat figures, users, credits, and audit records, plus the login system (magic link by email).',
         why: 'One provider instead of stitching together separate database and login services.',
         cost: 'Free tier',
         status: 'live',
@@ -175,9 +175,18 @@ const CONTENT: Record<Lang, Content> = {
         name: 'CBS StatLine',
         role: 'THE OFFICIAL SOURCE',
         detail:
-          'All figures come from here. Tables are fetched and checked in advance by a separate process — never live while answering a question.',
-        why: 'The only source that matters: Statistics Netherlands (CBS) itself.',
+          'Dutch figures come from here. Tables are fetched and checked in advance by a separate process — never live while answering a question.',
+        why: 'The official source for Dutch figures: Statistics Netherlands (CBS) itself.',
         cost: 'Free, open data',
+        status: 'live',
+      },
+      {
+        name: 'Eurostat',
+        role: 'THE OFFICIAL SOURCE FOR EUROPE',
+        detail:
+          'European figures come from here, by the same route: a separate process fetches and checks a table and stores it in our database — the answer itself only ever comes from our own database.',
+        why: 'The statistical office of the European Union itself, so questions can reach beyond the Netherlands.',
+        cost: 'Free, open data (CC BY 4.0)',
         status: 'live',
       },
       {
@@ -245,7 +254,7 @@ const CONTENT: Record<Lang, Content> = {
       },
       {
         title: 'Chat with your own data',
-        body: 'Upload a CSV/TSV file and ask questions about it — a separate, clearly-marked kind of chart from the official CBS ones, built end to end but not yet turned on.',
+        body: 'Upload a CSV/TSV file and ask questions about it — a separate, clearly-marked kind of chart from the official CBS and Eurostat ones, built end to end but not yet turned on.',
       },
     ],
   },
@@ -253,7 +262,7 @@ const CONTENT: Record<Lang, Content> = {
     statusLabels: { live: 'Live', frozen: 'Gebouwd, uit', planned: 'Gepland' },
     kicker: 'graphmaker.studio · Systeemoverzicht',
     title: 'Systeemoverzicht',
-    tagline: 'Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.',
+    tagline: 'Chat met officiële cijfers van CBS en Eurostat — elk getal herleidbaar tot een officiële tabel.',
     drawnOn: `Getekend vanuit de repo-docs op ${DRAWN_ON_DATE.nl}.`,
     intro:
       'Deze pagina laat het hele systeem zien: de bouwstenen, elke externe dienst, hoe één vraag door de machine reist van binnenkomst tot antwoord, en wat daarvan écht live is, gebouwd-maar-uit, of nog alleen gepland. De kleuren hieronder betekenen overal op deze pagina hetzelfde — dat is de enige belofte die deze pagina doet: staat iets op groen, dan draait het vandaag echt, niet als plan of als wens.',
@@ -264,7 +273,7 @@ const CONTENT: Record<Lang, Content> = {
     ],
     diagramHeading: 'Het grote plaatje',
     diagramCaption:
-      'Elk blok is een echt, apart stukje techniek. Elke pijl is iets dat vandaag ook echt gebeurt — behalve de gestippelde, die laat zien dat het ophalen bij CBS een los proces is, nooit iets dat gebeurt terwijl een bezoeker op een antwoord wacht.',
+      'Elk blok is een echt, apart stukje techniek. Elke pijl is iets dat vandaag ook echt gebeurt — behalve de gestippelde, die laat zien dat het ophalen bij CBS of Eurostat een los proces is, nooit iets dat gebeurt terwijl een bezoeker op een antwoord wacht.',
     journeyHeading: 'De reis van één vraag',
     journeyIntro:
       'Zonder account: 2 gratis vragen. Daarna, of om te blijven vragen, een gratis account (voor wie liever niet betaalt geldt hetzelfde als voor iedereen: zoeken kost niets, alleen een beantwoorde vraag kost credits — een geweigerd antwoord wordt teruggeboekt).',
@@ -343,7 +352,7 @@ const CONTENT: Record<Lang, Content> = {
         name: 'Supabase',
         role: 'DATABASE & INLOGGEN',
         detail:
-          'Eén beheerde Postgres-database met alle CBS-cijfers, gebruikers, credits en audit-opnamen, plus het inlogsysteem (magic link via e-mail).',
+          'Eén beheerde Postgres-database met alle cijfers van CBS en Eurostat, gebruikers, credits en audit-opnamen, plus het inlogsysteem (magic link via e-mail).',
         why: 'Eén partij in plaats van losse database- en inlogdiensten aan elkaar knopen.',
         cost: 'Gratis tier',
         status: 'live',
@@ -361,9 +370,18 @@ const CONTENT: Record<Lang, Content> = {
         name: 'CBS StatLine',
         role: 'DE OFFICIËLE BRON',
         detail:
-          'Alle cijfers komen hiervandaan. Tabellen worden vooraf opgehaald en gecontroleerd door een los proces — nooit live tijdens het beantwoorden van een vraag.',
-        why: 'De enige bron die telt: het Centraal Bureau voor de Statistiek zelf.',
+          'Nederlandse cijfers komen hiervandaan. Tabellen worden vooraf opgehaald en gecontroleerd door een los proces — nooit live tijdens het beantwoorden van een vraag.',
+        why: 'De officiële bron voor Nederlandse cijfers: het Centraal Bureau voor de Statistiek zelf.',
         cost: 'Gratis, open data',
+        status: 'live',
+      },
+      {
+        name: 'Eurostat',
+        role: 'DE OFFICIËLE BRON VOOR EUROPA',
+        detail:
+          'Europese cijfers komen hiervandaan, via dezelfde route: een los proces haalt een tabel op, controleert die en slaat hem op in onze database — het antwoord zelf komt altijd uit onze eigen database.',
+        why: 'Het statistiekbureau van de Europese Unie zelf, zodat vragen verder kunnen reiken dan Nederland.',
+        cost: 'Gratis, open data (CC BY 4.0)',
         status: 'live',
       },
       {
@@ -431,7 +449,7 @@ const CONTENT: Record<Lang, Content> = {
       },
       {
         title: 'Chatten met je eigen data',
-        body: 'Upload een CSV/TSV-bestand en stel er vragen over — een apart, duidelijk gemarkeerd soort grafiek naast de officiële CBS-grafieken, helemaal gebouwd maar nog niet aangezet.',
+        body: 'Upload een CSV/TSV-bestand en stel er vragen over — een apart, duidelijk gemarkeerd soort grafiek naast de officiële CBS- en Eurostat-grafieken, helemaal gebouwd maar nog niet aangezet.',
       },
     ],
   },

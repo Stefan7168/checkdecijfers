@@ -286,8 +286,9 @@ async function buildForecastRefusal(db: Db, raw: { nearestCanonicalKeys: string[
       : `I can look up the most recent realized figure on ${definitionLabelEn} for you.`;
     if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   }
-  const body = 'CBS publiceert gerealiseerde cijfers, geen voorspellingen — ik kan geen toekomstig cijfer geven.';
-  const bodyEn = "CBS publishes realized figures, not forecasts — I can't give a future figure.";
+  // Owner-signed 2026-10-04 (session 154, #357 sweep item 9): both sources are named.
+  const body = 'Het CBS en Eurostat publiceren gerealiseerde cijfers, geen voorspellingen — ik kan geen toekomstig cijfer geven.';
+  const bodyEn = "CBS and Eurostat publish realized figures, not forecasts — I can't give a future figure.";
   return {
     reason: 'forecast',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -309,9 +310,9 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
   const nearestKey = raw.nearestCanonicalKeys[0];
   const definitionLabel = nearestKey ? definitionLabelByKey.get(nearestKey) : undefined;
   const body =
-    'Ik kan geen oorzakelijk verband beoordelen — CBS-cijfers beschrijven wát er is gemeten, niet waardóór het komt.';
+    'Ik kan geen oorzakelijk verband beoordelen — de cijfers van het CBS en Eurostat beschrijven wát er is gemeten, niet waardóór het komt.';
   const bodyEn =
-    "I can't assess a causal relationship — CBS figures describe what was measured, not why it happened.";
+    "I can't assess a causal relationship — the figures from CBS and Eurostat describe what was measured, not why it happened.";
   let offer: string | null = null;
   let offerEn: string | null = null;
   let offerChip: BuiltRefusal['offerChip'] = null;
@@ -348,11 +349,11 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
 
 async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
   const body =
-    `Daarover heb ik geen CBS-cijfers geladen — mijn bronnen dekken momenteel officiële CBS-cijfers over: ${loadedTopicsCompact()}.`;
+    `Daarover heb ik geen officiële cijfers geladen — mijn bronnen dekken momenteel officiële cijfers (CBS en Eurostat) over: ${loadedTopicsCompact()}.`;
   const example = await exampleQuestions(db);
   const offer = `Vraag bijvoorbeeld: ${example.nl}`;
   const bodyEn =
-    `I don't have any CBS figures loaded on that — my sources currently cover official CBS figures on: ${loadedTopicsCompactEn()}.`;
+    `I don't have any official figures loaded on that — my sources currently cover official figures (CBS and Eurostat) on: ${loadedTopicsCompactEn()}.`;
   const offerEn = `For example, ask: ${example.en}`;
   return {
     reason: 'scope',
@@ -426,8 +427,8 @@ async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRef
     };
   }
   const body =
-    'Ik beantwoord vragen over officiële CBS-cijfers en geef elk antwoord met bron en peildatum.';
-  const bodyEn = 'I answer questions about official CBS figures and give every answer with its source and reference date.';
+    'Ik beantwoord vragen over officiële cijfers (CBS en Eurostat) en geef elk antwoord met bron en peildatum.';
+  const bodyEn = 'I answer questions about official figures (CBS and Eurostat) and give every answer with its source and reference date.';
   return {
     reason: 'smalltalk',
     text: assertNotAQuestion(joinParts([body, offer])),

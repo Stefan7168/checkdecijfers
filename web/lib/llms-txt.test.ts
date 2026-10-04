@@ -61,7 +61,7 @@ function eurostatTable(): CoverageReport['tables'][number] {
 describe('renderLlmsTxt', () => {
   it('carries the public claim, the generated coverage with MEASURED sync dates, and the CC BY source block', () => {
     const text = renderLlmsTxt(report(), '2026-07-18T09:00:00.000Z');
-    expect(text).toContain('herleidbaar naar een officiële CBS-cel, met bron en datum getoond');
+    expect(text).toContain('herleidbaar tot een officiële tabel van CBS of Eurostat, met bron en datum getoond');
     expect(text).toContain('Gegenereerd op 2026-07-18');
     expect(text).toContain(
       '- CBS 86141NED — Consumentenprijzen; prijsindex 2015=100 (gesynchroniseerd 2026-07-03)',
@@ -69,6 +69,10 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain('begrippen: inflatie (CPI); consumentenprijsindex');
     expect(text).toContain('CC BY 4.0');
     expect(text).toContain('https://opendata.cbs.nl');
+    // Owner-signed 2026-10-04 (#357 sweep item 11): the intro and the licence block name BOTH sources.
+    expect(text).toContain('officiële statistieken van CBS en Eurostat');
+    expect(text).toContain('Europese cijfers: © Europese Unie, Eurostat — https://ec.europa.eu/eurostat. Licentie: CC BY 4.0.');
+    expect(text).not.toContain('Alle data: CBS');
   });
 
   it('EXCLUDES a quarantined table from the served coverage and says so honestly', () => {

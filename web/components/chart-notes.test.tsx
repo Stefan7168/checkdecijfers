@@ -15,12 +15,12 @@ const defaultProps = {
 describe('ChartNotes', () => {
   it('renders nothing when there are no notes and no pending click', () => {
     render(<ChartNotes notes={[]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
-    expect(screen.queryByText('Uw aantekeningen (geen CBS-data)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Uw aantekeningen (geen officiële data)')).not.toBeInTheDocument();
   });
 
-  it('lists existing notes with their point context, under a clear non-CBS heading', () => {
+  it('lists existing notes with their point context, under a clear non-official-data heading', () => {
     render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
-    expect(screen.getByText('Uw aantekeningen (geen CBS-data)')).toBeInTheDocument();
+    expect(screen.getByText('Uw aantekeningen (geen officiële data)')).toBeInTheDocument();
     expect(screen.getByText(/Nederland.*2020/)).toBeInTheDocument();
     expect(screen.getByText('Coronapiek')).toBeInTheDocument();
   });

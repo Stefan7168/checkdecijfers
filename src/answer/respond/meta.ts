@@ -92,19 +92,19 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Wat doe je als er een cijfer ontbreekt?',
     ],
     buildBody: () =>
-      'Als een cijfer ontbreekt of nog niet is gepubliceerd, zeg ik dat eerlijk — inclusief de reden die CBS zelf opgeeft, ' +
+      'Als een cijfer ontbreekt of nog niet is gepubliceerd, zeg ik dat eerlijk — inclusief de reden die de bron (CBS of Eurostat) zelf opgeeft, ' +
       'bijvoorbeeld dat het vertrouwelijk is of nog niet beschikbaar. ' +
       'Ik vul nooit zelf een schatting in: liever geen antwoord dan een onbetrouwbaar antwoord.',
     buildBodyEn: () =>
-      "If a figure is missing or not yet published, I say so honestly — including the reason CBS itself gives, " +
+      "If a figure is missing or not yet published, I say so honestly — including the reason the source (CBS or Eurostat) itself gives, " +
       "for example that it's confidential or not yet available. " +
       "I never fill in an estimate myself: I'd rather give no answer than an unreliable one.",
   },
   {
     key: 'reliability',
     // Public-claim rule (CLAUDE.md): the claim is "elk cijfer herleidbaar
-    // naar een officiële CBS-cel, met bron en peildatum" — never an absolute
-    // slogan. The body below is that claim, verbatim in spirit.
+    // naar een officiële tabel van CBS of Eurostat, met bron en peildatum"
+    // (owner-signed 2026-10-04, #357 sweep) — never an absolute slogan. The body below is that claim, verbatim in spirit.
     patterns: [
       /betrouwbaar|nauwkeurig|accuraat/,
       /verzin|hallucin/,
@@ -120,12 +120,12 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Is de bron die je gebruikt wel betrouwbaar of verzin je die?',
     ],
     buildBody: () =>
-      'Elk cijfer dat ik noem is herleidbaar naar een cel in een officiële CBS-tabel, met bron en peildatum erbij. ' +
+      'Elk cijfer dat ik noem is herleidbaar naar een cel in een officiële tabel van CBS of Eurostat, met bron en peildatum erbij. ' +
       'De berekeningen worden gedaan door vaste programmacode, niet door een taalmodel — het taalmodel formuleert alleen ' +
       'de uitleg, en elke formulering wordt gecontroleerd voordat je die ziet. ' +
       'Kan ik iets niet onderbouwen, dan zeg ik dat liever eerlijk dan dat ik gok.',
     buildBodyEn: () =>
-      'Every figure I state is traceable to a cell in an official CBS table, with its source and reference date. ' +
+      'Every figure I state is traceable to a cell in an official table from CBS or Eurostat, with its source and reference date. ' +
       'The calculations are done by fixed program code, not by a language model — the language model only phrases ' +
       "the explanation, and every phrasing is checked before you see it. " +
       "If I can't back something up, I'd rather say so honestly than guess.",
@@ -146,18 +146,18 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Zijn je bronnen actueel?',
     ],
     buildBody: () =>
-      'Bij elk antwoord staat een peildatum: de datum waarop wij de CBS-tabel voor het laatst hebben gesynchroniseerd, ' +
+      'Bij elk antwoord staat een peildatum: de datum waarop wij de tabel (van CBS of Eurostat) voor het laatst hebben gesynchroniseerd, ' +
       'plus de periode waarover het cijfer gaat. Zo zie je per antwoord precies hoe actueel het is; ' +
       'is een cijfer voorlopig, dan staat dat erbij. ' +
       // OQ-193 (measured 2026-08-07): 1,103 figures already marked
       // Definitief were later revised by CBS — soften the FAQ so Definitief
-      // reads as CBS's current publication status, not "final".
-      'Let op: ook cijfers die CBS als definitief publiceert, kan CBS later nog herzien. ' +
+      // reads as the source's current publication status, not "final".
+      'Let op: ook cijfers die de bron (CBS of Eurostat) als definitief publiceert, kan de bron later nog herzien. ' +
       'Zo\'n herziening nemen wij over bij de eerstvolgende synchronisatie — de peildatum bij het antwoord laat zien van wanneer onze versie is.',
     buildBodyEn: () =>
-      'Every answer shows a reference date: the date we last synchronized the CBS table, plus the period the figure ' +
+      'Every answer shows a reference date: the date we last synchronized the table (from CBS or Eurostat), plus the period the figure ' +
       "covers. That way you can see exactly how current each answer is; if a figure is provisional, that's shown too. " +
-      'Note: even figures CBS publishes as definitive can later be revised by CBS. ' +
+      'Note: even figures the source (CBS or Eurostat) publishes as definitive can later be revised by it. ' +
       "We pick up such a revision at our next synchronization — the reference date on the answer shows which version of ours you're seeing.",
   },
   {
@@ -178,13 +178,13 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Kun je vertellen welke bronnen je gebruikt?',
     ],
     buildBody: () =>
-      'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine — andere bronnen gebruik ik niet. ' +
-      'Die tabellen laden we vooraf in onze eigen database, en bij elk antwoord staat uit welke CBS-tabel het cijfer komt ' +
-      'en wanneer wij die tabel voor het laatst met CBS hebben gesynchroniseerd.',
+      'Mijn cijfers komen uit de officiële tabellen van CBS (Nederland) en Eurostat (Europa). ' +
+      'Die tabellen laden we vooraf in onze eigen database, en bij elk antwoord staat uit welke tabel het cijfer komt ' +
+      'en wanneer wij die tabel voor het laatst met de bron hebben gesynchroniseerd.',
     buildBodyEn: () =>
-      "All my figures come directly from official CBS StatLine tables — I don't use any other sources. " +
-      'We load those tables into our own database in advance, and every answer states which CBS table the figure ' +
-      'comes from and when we last synchronized that table with CBS.',
+      'My figures come from the official tables of CBS (the Netherlands) and Eurostat (Europe). ' +
+      'We load those tables into our own database in advance, and every answer states which table the figure ' +
+      'comes from and when we last synchronized that table with the source.',
   },
   {
     key: 'capabilities',
@@ -202,9 +202,9 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Welke onderwerpen ken je?',
     ],
     buildBody: (ctx) =>
-      `Ik beantwoord vragen over officiële CBS-cijfers, met bron en peildatum bij elk antwoord. Op dit moment kan ik je helpen met cijfers over: ${ctx.topicsCompact}.`,
+      `Ik beantwoord vragen over officiële cijfers van CBS (Nederland) en Eurostat (Europa), met bron en peildatum bij elk antwoord. Op dit moment kan ik je helpen met cijfers over: ${ctx.topicsCompact}.`,
     buildBodyEn: (ctx) =>
-      `I answer questions about official CBS figures, with a source and reference date on every answer. Right now I can help you with figures on: ${ctx.topicsCompactEn}.`,
+      `I answer questions about official figures from CBS (the Netherlands) and Eurostat (Europe), with a source and reference date on every answer. Right now I can help you with figures on: ${ctx.topicsCompactEn}.`,
   },
 ];
 

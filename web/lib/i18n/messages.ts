@@ -527,10 +527,10 @@ const nl = {
   'landing.step1Body': 'In gewone taal — “wat doet de inflatie?”, “hoe hard groeide de economie?”',
   'landing.step2Title': 'Code rekent',
   'landing.step2Body':
-    'Het antwoord komt uit onze database met officiële CBS-cijfers — deterministische berekening, geen taalmodel dat cijfers verzint.',
+    'Het antwoord komt uit onze database met officiële cijfers van CBS en Eurostat — deterministische berekening, geen taalmodel dat cijfers verzint.',
   'landing.step3Title': 'Bron erbij',
   'landing.step3Body':
-    'Elk getal met CBS-tabel, periode en publicatiestatus. Weten we het niet zeker, dan zeggen we dat — liever geen antwoord dan een verzonnen antwoord.',
+    'Elk getal met tabel (CBS of Eurostat), periode en publicatiestatus. Weten we het niet zeker, dan zeggen we dat — liever geen antwoord dan een verzonnen antwoord.',
   'landing.pricingHeading': 'Eerlijke prijs per vraag',
   'landing.pricingBody':
     'Je betaalt per vraag met credits — geen abonnement. Een account aanmaken is gratis en zo gebeurd: e-mailadres invullen, inloglink aanklikken, vragen maar.',
@@ -621,7 +621,8 @@ const nl = {
   // English page showing Dutch attribution copy read as unfinished. Both
   // languages must keep "CBS StatLine (CC BY 4.0)" verbatim (R4 attribution;
   // asserted in messages.test.ts).
-  'footer.attribution': 'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel',
+  'footer.attribution':
+    'Cijfers: CBS StatLine (CC BY 4.0) · Europese cijfers: © Europese Unie, Eurostat (CC BY 4.0) · Elk getal herleidbaar tot een officiële tabel van CBS of Eurostat',
   // Session 110 UX audit row 18 (ADR 048 addendum): the ONE internal page
   // that is entirely Eurostat data (web/app/eurostat-explorer/page.tsx) gets
   // its own source-correct footer line instead of the CBS one above — see
@@ -648,7 +649,7 @@ const nl = {
   // now lives here instead of a second file).
   'trial.heading': 'Probeer het direct',
   'trial.subheading':
-    'Twee gratis proefvragen, zonder account. Elk antwoord komt uit officiële CBS-cijfers, met bron en datum erbij.',
+    'Twee gratis proefvragen, zonder account. Elk antwoord komt uit officiële cijfers van CBS en Eurostat, met bron en datum erbij.',
   'trial.potEmpty': 'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.',
   'trial.unavailable':
     'De gratis proefvragen zijn nu even niet beschikbaar. Log in om verder te gaan — een account is gratis.',
@@ -683,7 +684,7 @@ const nl = {
 
   // app/layout.tsx metadata (generateMetadata).
   'meta.title': 'graphmaker.studio',
-  'meta.description': 'Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.',
+  'meta.description': 'Chat met officiële cijfers van CBS en Eurostat — elk getal herleidbaar tot een officiële tabel.',
 
   // WP218 phase 4 (#219), Task 4 (design §4): the chart card — chart.tsx,
   // chart-download.tsx, chart-notes.tsx, chart-small-multiples.tsx,
@@ -857,7 +858,7 @@ const nl = {
   'chart.table.value': 'Waarde',
 
   // chart-notes.tsx.
-  'chart.notes.heading': 'Uw aantekeningen (geen CBS-data)',
+  'chart.notes.heading': 'Uw aantekeningen (geen officiële data)',
   'chart.notes.delete': 'Verwijder',
   // #13 (session 110 UX audit pass 2): plain "Verwijder" on every note's
   // delete button reads as "Verwijder, Verwijder, Verwijder" with several
@@ -873,7 +874,7 @@ const nl = {
   'chart.notes.sessionOnly': 'Aantekeningen staan niet in downloads of embeds.',
 
   // chart-goal-line.tsx.
-  'chart.goalLine.heading': 'Uw doellijnen (geen CBS-data)',
+  'chart.goalLine.heading': 'Uw doellijnen (geen officiële data)',
   'chart.goalLine.add': 'Doellijn toevoegen',
   'chart.goalLine.valueLabel': 'Waarde',
   'chart.goalLine.textLabel': 'Label',
@@ -889,17 +890,17 @@ const nl = {
   // (chart.tsx, "Task 3 (phase 4)" block) — only the reader's own typed
   // label text stays outside it. What stays true, and is worth saying: it's
   // the reader's own annotation, never checked against a CBS cell.
-  'chart.goalLine.sessionOnly': 'Dit doel is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De lijn zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
+  'chart.goalLine.sessionOnly': 'Dit doel is jouw eigen aantekening, niet gecontroleerd aan officiële cijfers. De lijn zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
 
   // chart-era-shading.tsx.
-  'chart.eraShading.heading': 'Periode markeren (geen CBS-data)',
+  'chart.eraShading.heading': 'Periode markeren (geen officiële data)',
   'chart.eraShading.delete': 'Verwijder',
   'chart.eraShading.deleteAriaLabel': 'Verwijder de markering {period}',
   // Final-review fix I5: same correction as chart.goalLine.sessionOnly above
   // — the band (ReferenceArea) genuinely is inside the export (Task 3), and
   // a signed-in reader's era shadings persist across a reload the same way
   // goal lines do; only the typed label text stays out.
-  'chart.eraShading.sessionOnly': 'Deze markering is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De band zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
+  'chart.eraShading.sessionOnly': 'Deze markering is jouw eigen aantekening, niet gecontroleerd aan officiële cijfers. De band zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
   'chart.eraShading.trigger': 'Periode markeren',
   'chart.eraShading.fromLabel': 'Van',
   'chart.eraShading.toLabel': 'Tot',
@@ -1265,7 +1266,7 @@ const nl = {
   'chart.embed.chartTypeDefault': 'Standaard',
   'chart.embed.liveLabel': 'Live insluiten',
   'chart.embed.liveProOnly':
-    'Onderdeel van Pro. De ingesloten grafiek werkt zichzelf automatisch bij wanneer het CBS de cijfers corrigeert of aanvult.',
+    'Onderdeel van Pro. De ingesloten grafiek werkt zichzelf automatisch bij wanneer de bron de cijfers corrigeert of aanvult.',
   'chart.embed.proPrice': '€19 / maand',
   'chart.embed.proUpgradeCta': 'Interesse in Pro',
   'chart.embed.proUpgradeThanks': 'Bedankt! We laten het weten zodra Pro beschikbaar is.',
@@ -1290,25 +1291,25 @@ const nl = {
   'werkwijze.pageTitle': 'Werkwijze — graphmaker.studio',
   'werkwijze.heading': 'Hoe we werken',
   'werkwijze.publicClaim':
-    'Elk getal dat we tonen is herleidbaar naar een officiële CBS-cel, met bron en datum erbij getoond.',
+    'Elk getal dat we tonen is herleidbaar tot een officiële tabel van CBS of Eurostat, met bron en datum erbij getoond.',
   'werkwijze.step1Title': '1. Je stelt een vraag',
   'werkwijze.step1Body':
-    'Een taalmodel leest alleen wat je vraagt — het rekent nooit en verzint nooit een cijfer. Het herkent welk CBS-onderwerp, welke regio en welke periode je bedoelt.',
+    'Een taalmodel leest alleen wat je vraagt — het rekent nooit en verzint nooit een cijfer. Het herkent welk onderwerp (van CBS of Eurostat), welke regio en welke periode je bedoelt.',
   'werkwijze.step2Title': '2. Deterministische code haalt het cijfer op',
   'werkwijze.step2Body':
-    'De vraag wordt vertaald naar een exacte opzoeking in onze eigen database met vooraf ingeladen CBS-tabellen. Geen enkel getal komt uit het taalmodel zelf.',
+    'De vraag wordt vertaald naar een exacte opzoeking in onze eigen database met vooraf ingeladen tabellen van CBS en Eurostat. Geen enkel getal komt uit het taalmodel zelf.',
   'werkwijze.step3Title': '3. We tonen het antwoord met bron en datum',
   'werkwijze.step3Body':
-    'Elk antwoord vermeldt de CBS-tabel, de synchronisatiedatum en de licentie (CC BY 4.0), zodat je het zelf kunt naslaan.',
+    'Elk antwoord vermeldt de brontabel (van CBS of Eurostat), de synchronisatiedatum en de licentie (CC BY 4.0), zodat je het zelf kunt naslaan.',
   'werkwijze.provisionalHeading': 'Wat betekent "voorlopig"?',
   'werkwijze.provisionalBody':
-    'CBS publiceert sommige cijfers eerst als voorlopig of nader voorlopig voordat ze definitief worden. Als een cijfer niet definitief is, zeggen we dat er expliciet bij. Een definitief cijfer kan later alsnog door CBS worden herzien — dat gebeurt af en toe bij grote revisies.',
+    'CBS en Eurostat publiceren sommige cijfers eerst als voorlopig voordat ze definitief worden. Als een cijfer niet definitief is, zeggen we dat er expliciet bij. Een definitief cijfer kan later alsnog door de bron worden herzien — dat gebeurt af en toe bij grote revisies.',
   'werkwijze.refusalHeading': 'Wat betekent een weigering?',
   'werkwijze.refusalBody':
     'Als een vraag niet eenduidig is, buiten onze geladen gegevens valt, of om een voorspelling of mening vraagt, weigeren we liever te antwoorden dan te gokken. Je krijgt dan uitleg en, waar mogelijk, een bruikbaar alternatief.',
   'werkwijze.notCoveredHeading': 'Wat de claim niet dekt',
   'werkwijze.notCoveredBody':
-    'De herleidbaarheidsclaim geldt voor CBS-cijfers uit ons register. Ze geldt niet voor je eigen geüploade data, voor internetresultaten (apart gemarkeerd als niet geverifieerd), of voor andere bronnen — die kunnen in de toekomst worden toegevoegd, maar zijn dat vandaag niet.',
+    'De herleidbaarheidsclaim geldt voor cijfers van CBS en Eurostat uit ons register. Ze geldt niet voor je eigen geüploade data, voor internetresultaten (apart gemarkeerd als niet geverifieerd) of voor andere bronnen.',
   'privacy.pageTitle': 'Privacy — graphmaker.studio',
   'privacy.heading': 'Privacy',
   'privacy.storedHeading': 'Wat we bewaren',
@@ -1319,7 +1320,7 @@ const nl = {
     'Vraaggeschiedenis bij een account bewaren we 2 jaar; vragen van anonieme bezoekers (proefvragen) bewaren we 90 dagen. Je kunt je eigen vraaggeschiedenis altijd zelf verwijderen via het accountmenu.',
   'privacy.llmHeading': 'Verwerking door een taalmodel',
   'privacy.llmBody':
-    'Je vraag wordt verwerkt door een taalmodel van Anthropic om de vraag te begrijpen en het antwoord te verwoorden — nooit de ruwe CBS-cijfers zelf, die komen altijd uit onze eigen database.',
+    'Je vraag wordt verwerkt door een taalmodel van Anthropic om de vraag te begrijpen en het antwoord te verwoorden — nooit de ruwe cijfers van CBS of Eurostat zelf, die komen altijd uit onze eigen database.',
   'privacy.paymentHeading': 'Betalingen',
   'privacy.paymentBody': 'Stripe verwerkt betalingen als onze betaaldienstverlener. Wij slaan geen kaart- of bankgegevens op.',
   'privacy.cookiesHeading': 'Cookies',
@@ -1342,7 +1343,7 @@ const nl = {
   'about.heading': 'Over ons',
   'about.introHeading': 'Over graphmaker.studio',
   'about.introBody':
-    'graphmaker.studio beantwoordt vragen over officiële CBS-statistieken. Een taalmodel leest je vraag, maar rekent zelf nooit: elk cijfer komt uit een database met CBS-data en is te herleiden tot de brontabel en de datum. We maken het voor journalisten, onderzoekers en studenten die snel een betrouwbaar cijfer nodig hebben, met een bron die ze kunnen verantwoorden.',
+    'graphmaker.studio beantwoordt vragen over officiële statistieken van CBS en Eurostat. Een taalmodel leest je vraag, maar rekent zelf nooit: elk cijfer komt uit een database met data van CBS en Eurostat en is te herleiden tot de brontabel en de datum. We maken het voor journalisten, onderzoekers en studenten die snel een betrouwbaar cijfer nodig hebben, met een bron die ze kunnen verantwoorden.',
   'about.contactHeading': 'Contact',
   'about.contactIntro': 'Vragen, opmerkingen of feedback? Mail ons op',
 
@@ -1405,7 +1406,6 @@ const nl = {
   // example question are CONTENT (measured/registry-built), not chart-card
   // chrome, so they are exempt from the whole-card digit scan.
   'coverage.summary': 'Welke bronnen zijn ingebouwd?',
-  'coverage.cbsHeading': 'CBS',
   'coverage.syncedOn': 'gesynchroniseerd {date}',
   // The example question itself stays DUTCH in both languages: the answer
   // pipeline parses Dutch (CLAUDE.md language carve-out) — translating it
@@ -1424,7 +1424,7 @@ const nl = {
   // not ship on this branch (PR #9 not merged) — softened to what is
   // actually true today: a chart with its source shown, ready to share.
   'landing.heroSubtitleV2':
-    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een grafiek met bron erbij, klaar om te delen.',
+    'Stel je vraag in gewone taal en chat zo van officieel onderzoek van CBS en Eurostat naar een grafiek met bron erbij, klaar om te delen.',
   'landing.ctaGallery': 'Bekijk de galerij',
   // WP-LOOK part (c), session 144 (ADR 063): the homepage leads with a real
   // chart. The title says the product in one breath; the claim line is the
@@ -1434,7 +1434,7 @@ const nl = {
   'landing.heroTitleV3': 'Stel een vraag. Deel de grafiek.',
   'landing.heroLeadV3':
     'Vraag in gewone taal naar de officiële cijfers van Nederland. Je krijgt een grafiek met bron en datum erbij, klaar om te publiceren.',
-  'landing.heroClaim': 'Elk getal is herleidbaar tot een officiële CBS-cel, met bron en datum erbij.',
+  'landing.heroClaim': 'Elk getal is herleidbaar tot een officiële tabel van CBS of Eurostat, met bron en datum erbij.',
   'landing.heroExampleLabel': 'Echt antwoord, live uit onze database',
   'gallery.teaserHeading': 'Verhalen uit de galerij',
   'gallery.teaserAllLink': 'Alle verhalen',
@@ -1444,7 +1444,7 @@ const nl = {
   // what actually ships on this branch — built from real CBS-cijfers, with
   // bron en datum, never "gesourcet" or "echt" as vague marketing filler.
   'gallery.intro':
-    'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
+    'Elke kaart hieronder is gebouwd uit officiële cijfers van CBS en Eurostat, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
   'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
   // #3 (session 110 UX audit): shown instead of a silent empty grid while
   // getGalleryStories() is still building its cache (a cold read, #190) —
@@ -2051,10 +2051,10 @@ const en: Messages = {
   'landing.step1Body': 'In plain language — “what’s inflation doing?”, “how fast did the economy grow?”',
   'landing.step2Title': 'Code computes',
   'landing.step2Body':
-    'The answer comes from our database of official CBS figures — deterministic calculation, no language model inventing numbers.',
+    'The answer comes from our database of official figures from CBS and Eurostat — deterministic calculation, no language model inventing numbers.',
   'landing.step3Title': 'Source included',
   'landing.step3Body':
-    'Every figure comes with its CBS table, period and publication status. When we are not sure, we say so — no answer beats a made-up one.',
+    'Every figure comes with its table (CBS or Eurostat), period and publication status. When we are not sure, we say so — no answer beats a made-up one.',
   'landing.pricingHeading': 'Honest, per-question pricing',
   'landing.pricingBody':
     'You pay per question with credits — no subscription. Creating an account is free and takes seconds: enter your email, click the login link, start asking.',
@@ -2120,7 +2120,8 @@ const en: Messages = {
     "Signing up gets you {grant} credits once. An ordinary question costs {price} credits — so {grant} credits is good for about {questions} questions.",
   'account.explainerNoQuestions': 'Signing up gets you {grant} credits once. An ordinary question costs {price} credits.',
 
-  'footer.attribution': 'Figures: CBS StatLine (CC BY 4.0) · Every number traceable to an official CBS table',
+  'footer.attribution':
+    'Figures: CBS StatLine (CC BY 4.0) · European figures: © European Union, Eurostat (CC BY 4.0) · Every number traceable to an official table from CBS or Eurostat',
   'footer.attributionEurostat':
     'Figures: Eurostat (CC BY 4.0) · Every number traceable to an official Eurostat dataset',
   'footer.aboutLabel': 'About this project',
@@ -2135,7 +2136,7 @@ const en: Messages = {
 
   'trial.heading': 'Try it now',
   'trial.subheading':
-    'Two free trial questions, no account needed. Every answer comes from official CBS figures, with source and date shown.',
+    'Two free trial questions, no account needed. Every answer comes from official figures from CBS and Eurostat, with source and date shown.',
   'trial.potEmpty': 'The free trial pot is empty right now. Log in to continue — an account is free.',
   'trial.unavailable': 'The free trial questions are not available right now. Log in to continue — an account is free.',
   'trial.usedUp': 'You have used your free trial questions. Create a free account to continue.',
@@ -2164,7 +2165,7 @@ const en: Messages = {
   'themeToggle.system': 'System theme',
 
   'meta.title': 'graphmaker.studio',
-  'meta.description': 'Chat with official CBS statistics — every figure traceable to a CBS table.',
+  'meta.description': 'Chat with official figures from CBS and Eurostat — every figure traceable to an official table.',
 
   'chart.weergaveLabel': 'View',
   'chart.tabLine': 'Line',
@@ -2280,7 +2281,7 @@ const en: Messages = {
   'chart.table.region': 'Region',
   'chart.table.value': 'Value',
 
-  'chart.notes.heading': 'Your notes (not CBS data)',
+  'chart.notes.heading': 'Your notes (not official data)',
   'chart.notes.delete': 'Delete',
   'chart.notes.deleteAriaLabel': 'Delete the note at {series} · {period}',
   'chart.notes.draftLabel': 'Note at {series} · {period}',
@@ -2288,7 +2289,7 @@ const en: Messages = {
   'chart.notes.cancel': 'Cancel',
   'chart.notes.sessionOnly': 'Notes are not included in downloads or embeds.',
 
-  'chart.goalLine.heading': 'Your goal lines (not CBS data)',
+  'chart.goalLine.heading': 'Your goal lines (not official data)',
   'chart.goalLine.add': 'Add goal line',
   'chart.goalLine.valueLabel': 'Value',
   'chart.goalLine.textLabel': 'Label',
@@ -2301,13 +2302,13 @@ const en: Messages = {
   // signed-in reader on a saved chart (use-chart-edits.ts); only the typed
   // label text stays out of the export and is never checked against a CBS
   // cell.
-  'chart.goalLine.sessionOnly': 'This goal is your own note, not checked against CBS figures. The line itself shows up in downloads; the label you type does not, and neither appears in an embed.',
+  'chart.goalLine.sessionOnly': 'This goal is your own note, not checked against official figures. The line itself shows up in downloads; the label you type does not, and neither appears in an embed.',
 
-  'chart.eraShading.heading': 'Mark period ranges (not CBS data)',
+  'chart.eraShading.heading': 'Mark period ranges (not official data)',
   'chart.eraShading.delete': 'Delete',
   'chart.eraShading.deleteAriaLabel': 'Delete the marking {period}',
   // Final-review fix I5: see the `nl` entry's comment.
-  'chart.eraShading.sessionOnly': 'This marking is your own note, not checked against CBS figures. The band itself shows up in downloads; the label you type does not, and neither appears in an embed.',
+  'chart.eraShading.sessionOnly': 'This marking is your own note, not checked against official figures. The band itself shows up in downloads; the label you type does not, and neither appears in an embed.',
   'chart.eraShading.trigger': 'Mark period range',
   'chart.eraShading.fromLabel': 'From',
   'chart.eraShading.toLabel': 'To',
@@ -2564,7 +2565,7 @@ const en: Messages = {
   'chart.embed.chartTypeAsShown': 'As shown',
   'chart.embed.chartTypeDefault': 'Default',
   'chart.embed.liveLabel': 'Live embed',
-  'chart.embed.liveProOnly': 'Part of Pro. The embedded chart updates automatically when CBS corrects or extends the data.',
+  'chart.embed.liveProOnly': 'Part of Pro. The embedded chart updates automatically when the source corrects or extends the data.',
   'chart.embed.proPrice': '€19/month',
   'chart.embed.proUpgradeCta': "I'm interested in Pro",
   'chart.embed.proUpgradeThanks': "Thanks — we'll let you know once Pro is available.",
@@ -2585,25 +2586,25 @@ const en: Messages = {
   'werkwijze.pageTitle': 'How we work — graphmaker.studio',
   'werkwijze.heading': 'How we work',
   'werkwijze.publicClaim':
-    'Every number we show is traceable to an official CBS cell, with source and date shown alongside it.',
+    'Every number we show is traceable to an official table from CBS or Eurostat, with source and date shown alongside it.',
   'werkwijze.step1Title': '1. You ask a question',
   'werkwijze.step1Body':
-    'A language model only reads what you ask — it never calculates and never invents a number. It recognises which CBS topic, region and period you mean.',
+    'A language model only reads what you ask — it never calculates and never invents a number. It recognises which topic (from CBS or Eurostat), region and period you mean.',
   'werkwijze.step2Title': '2. Deterministic code looks up the number',
   'werkwijze.step2Body':
-    'The question is translated into an exact lookup in our own database of pre-loaded CBS tables. No number ever comes from the language model itself.',
+    'The question is translated into an exact lookup in our own database of pre-loaded tables from CBS and Eurostat. No number ever comes from the language model itself.',
   'werkwijze.step3Title': '3. We show the answer with source and date',
   'werkwijze.step3Body':
-    'Every answer states the CBS table, the sync date and the licence (CC BY 4.0), so you can look it up yourself.',
+    'Every answer states the source table (from CBS or Eurostat), the sync date and the licence (CC BY 4.0), so you can look it up yourself.',
   'werkwijze.provisionalHeading': 'What does "provisional" mean?',
   'werkwijze.provisionalBody':
-    'CBS first publishes some figures as provisional before they become definitive. When a figure is not definitive, we say so explicitly. A definitive figure can still be revised by CBS later — this happens occasionally with large revisions.',
+    'CBS and Eurostat first publish some figures as provisional before they become definitive. When a figure is not definitive, we say so explicitly. A definitive figure can still be revised by the source later — this happens occasionally with large revisions.',
   'werkwijze.refusalHeading': 'What does a refusal mean?',
   'werkwijze.refusalBody':
     'If a question is ambiguous, falls outside our loaded data, or asks for a prediction or opinion, we would rather refuse than guess. You get an explanation and, where possible, a usable alternative.',
   'werkwijze.notCoveredHeading': 'What the claim does not cover',
   'werkwijze.notCoveredBody':
-    'The traceability claim applies to CBS figures from our registry. It does not apply to your own uploaded data, to internet results (marked separately as unverified), or to other sources — those may be added later, but are not covered today.',
+    'The traceability claim applies to figures from CBS and Eurostat from our registry. It does not apply to your own uploaded data, to internet results (marked separately as unverified) or to other sources.',
   'privacy.pageTitle': 'Privacy — graphmaker.studio',
   'privacy.heading': 'Privacy',
   'privacy.storedHeading': 'What we store',
@@ -2614,7 +2615,7 @@ const en: Messages = {
     'Question history tied to an account is kept for 2 years; questions from anonymous visitors (trial questions) are kept for 90 days. You can always delete your own question history yourself via the account menu.',
   'privacy.llmHeading': 'Processing by a language model',
   'privacy.llmBody':
-    'Your question is processed by a language model from Anthropic to understand the question and phrase the answer — never the raw CBS figures themselves, which always come from our own database.',
+    'Your question is processed by a language model from Anthropic to understand the question and phrase the answer — never the raw figures from CBS or Eurostat themselves, which always come from our own database.',
   'privacy.paymentHeading': 'Payments',
   'privacy.paymentBody': 'Stripe processes payments as our payment provider. We do not store card or bank details.',
   'privacy.cookiesHeading': 'Cookies',
@@ -2629,7 +2630,7 @@ const en: Messages = {
   'about.heading': 'About us',
   'about.introHeading': 'About graphmaker.studio',
   'about.introBody':
-    'graphmaker.studio answers questions about official CBS statistics. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
+    'graphmaker.studio answers questions about official statistics from CBS and Eurostat. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS and Eurostat data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
   'about.contactHeading': 'Contact',
   'about.contactIntro': 'Questions, comments or feedback? Email us at',
 
@@ -2659,7 +2660,6 @@ const en: Messages = {
     "We couldn't produce a verified English version of this answer, so here is the original Dutch.",
   // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
   'coverage.summary': 'Which sources are built in?',
-  'coverage.cbsHeading': 'CBS',
   'coverage.syncedOn': 'synced {date}',
   'coverage.exampleLabel': 'e.g.: {question}',
   'coverage.onRequestLine': 'Other CBS topics we fetch on request.',
@@ -2668,12 +2668,12 @@ const en: Messages = {
   // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
   // originals (messages.test.ts's digit-parity rule).
   'landing.heroSubtitleV2':
-    'Ask your question in plain language and chat your way from official CBS research to a sourced chart, ready to share.',
+    'Ask your question in plain language and chat your way from official research by CBS and Eurostat to a sourced chart, ready to share.',
   'landing.ctaGallery': 'See the gallery',
   'landing.heroTitleV3': 'Ask a question. Share the chart.',
   'landing.heroLeadV3':
     "Ask in plain language about the Netherlands' official statistics. You get a chart with its source and date, ready to publish.",
-  'landing.heroClaim': 'Every number is traceable to an official CBS cell, with source and date shown.',
+  'landing.heroClaim': 'Every number is traceable to an official table from CBS or Eurostat, with source and date shown.',
   'landing.heroExampleLabel': 'A real answer, live from our database',
   'gallery.teaserHeading': 'Stories from the gallery',
   'gallery.teaserAllLink': 'All stories',
@@ -2683,7 +2683,7 @@ const en: Messages = {
   // real CBS figures, with source and date, never vague "real/sourced"
   // marketing filler.
   'gallery.intro':
-    'Every card below is built from official CBS figures, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
+    'Every card below is built from official figures from CBS and Eurostat, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
   'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
   // #3 (session 110 UX audit): see the nl entry's comment.
   'gallery.loadingNote': 'Loading the gallery — reload in a moment if it stays empty.',

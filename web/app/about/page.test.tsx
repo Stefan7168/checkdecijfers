@@ -25,7 +25,7 @@ describe('AboutPage — nl (default)', () => {
   it('renders an h1 heading and the about copy', async () => {
     render(await AboutPage());
     expect(screen.getByRole('heading', { name: 'Over ons', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/officiële CBS-statistieken/)).toBeInTheDocument();
+    expect(screen.getByText(/officiële statistieken van CBS en Eurostat/)).toBeInTheDocument();
   });
 
   it('links the real contact address as a mailto link', async () => {
@@ -40,7 +40,7 @@ describe('AboutPage — en', () => {
     getLang.mockResolvedValue('en');
     render(await AboutPage());
     expect(screen.getByRole('heading', { name: 'About us', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/official CBS statistics/)).toBeInTheDocument();
+    expect(screen.getByText(/official statistics from CBS and Eurostat/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'hi@checkdecijfers.nl' })).toHaveAttribute(
       'href',
       'mailto:hi@checkdecijfers.nl',

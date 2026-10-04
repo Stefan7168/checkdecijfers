@@ -31,6 +31,9 @@ const TTL_MS = 30 * 60 * 1000;
 export interface CoverageDisclosureTable {
   id: string;
   title: string;
+  /** The table's OWN source name from the registry ('CBS', 'Eurostat', …) — the disclosure groups rows by it
+   * (owner-signed 2026-10-04, #357 sweep item 6: no hard-coded "CBS" heading over every row). */
+  sourceDisplayName: string;
   /** 'YYYY-MM-DD', or null if this table has never synced. */
   syncedOn: string | null;
   concepts: string[];
@@ -91,6 +94,7 @@ async function buildDisclosure(): Promise<CoverageDisclosure> {
     served.map(async (table) => ({
       id: table.id,
       title: table.title,
+      sourceDisplayName: table.sourceDisplayName,
       syncedOn: dateOnly(table.lastSyncAt),
       // Only CURATED measures become concepts: an on-demand table's
       // uncurated measures fall back to raw CBS measure titles ("Een zeer

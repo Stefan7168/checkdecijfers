@@ -202,7 +202,7 @@ describe('B15-B20 end-to-end (respondToQuestion, replayed fixtures)', () => {
     expect(response.kind).toBe('refusal');
     if (response.kind !== 'refusal') throw new Error('unreachable');
     expect(response.reason).toBe('forecast');
-    expect(response.text).toContain('CBS publiceert gerealiseerde cijfers');
+    expect(response.text).toContain('Het CBS en Eurostat publiceren gerealiseerde cijfers');
     const cpiLabel = CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation')!.definitionLabel;
     expect(response.text).toContain(cpiLabel);
     // No number in the text may come from any cell value in ANY loaded

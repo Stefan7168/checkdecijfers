@@ -33,7 +33,7 @@ describe('WerkwijzePage — nl (default)', () => {
     expect(screen.getByRole('heading', { name: 'Hoe we werken', level: 1 })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Elk getal dat we tonen is herleidbaar naar een officiële CBS-cel, met bron en datum erbij getoond.',
+        'Elk getal dat we tonen is herleidbaar tot een officiële tabel van CBS of Eurostat, met bron en datum erbij getoond.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Concept — wordt nog nagekeken.')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('WerkwijzePage — en', () => {
     expect(screen.getByRole('heading', { name: 'How we work', level: 1 })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Every number we show is traceable to an official CBS cell, with source and date shown alongside it.',
+        'Every number we show is traceable to an official table from CBS or Eurostat, with source and date shown alongside it.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Draft — under review.')).toBeInTheDocument();

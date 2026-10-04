@@ -36,14 +36,17 @@ import { CBS_SOURCE_KEY, resolveSourceForTable } from '../backend/sources/regist
 
 export const SHARE_PREVIEW_SIZE = { width: 1200, height: 630 } as const;
 export const SHARE_PREVIEW_BRAND = 'graphmaker.studio';
-/** The public claim, digit-free (CLAUDE.md, public-claim rule). */
-export const SHARE_PREVIEW_TAGLINE = 'Elk getal herleidbaar tot een officiële CBS-tabel';
+/** The public claim, digit-free (CLAUDE.md, public-claim rule). Owner-signed 2026-10-04 (session 154, #357 sweep item 1):
+ * the NEUTRAL card names both sources, because the product now answers from CBS and Eurostat tables. */
+export const SHARE_PREVIEW_TAGLINE = 'Elk getal herleidbaar tot een officiële tabel van CBS of Eurostat';
+/** A chart whose table is a CBS table keeps its own, CBS-specific line byte-identically (it is per-chart source-aware). */
+const CBS_SHARE_TAGLINE = 'Elk getal herleidbaar tot een officiële CBS-tabel';
 
-/** Session 153 (#357): a chart's card names its table's OWN source; a CBS chart (and the neutral card) keeps
- * SHARE_PREVIEW_TAGLINE byte-identically. */
+/** Session 153 (#357): a chart's card names its table's OWN source; a CBS chart keeps its CBS line byte-identically
+ * (the neutral card, with no table behind it, carries SHARE_PREVIEW_TAGLINE). */
 export function shareTaglineFor(tableId: string): string {
   const source = resolveSourceForTable(tableId);
-  return source.key === CBS_SOURCE_KEY ? SHARE_PREVIEW_TAGLINE : `Elk getal herleidbaar tot een officiële ${source.displayName}-tabel`;
+  return source.key === CBS_SOURCE_KEY ? CBS_SHARE_TAGLINE : `Elk getal herleidbaar tot een officiële ${source.displayName}-tabel`;
 }
 /** The typeface the route loads for the image tool; the card names it so the
  * two can never drift apart. */

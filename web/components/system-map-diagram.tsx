@@ -9,7 +9,7 @@
 const TEXT = {
   en: {
     ariaLabel:
-      "Diagram: a visitor asks the Website (Next.js on Vercel) a question. The Website reads and writes to the Database (Supabase/Postgres: CBS figures, users, credits, audit records), calls the Claude API to recognize the question, phrase the answer, and run the final check, and talks to Stripe (payments) and Resend (email). CBS StatLine feeds the Database through a separate, scheduled fetch process — never through the answer path itself.",
+      "Diagram: a visitor asks the Website (Next.js on Vercel) a question. The Website reads and writes to the Database (Supabase/Postgres: CBS and Eurostat figures, users, credits, audit records), calls the Claude API to recognize the question, phrase the answer, and run the final check, and talks to Stripe (payments) and Resend (email). CBS StatLine and Eurostat feed the Database through a separate fetch process — never through the answer path itself.",
     visitor: 'Visitor',
     visitorSub: 'mostly on the phone',
     askLine1: 'asks a question,',
@@ -22,7 +22,7 @@ const TEXT = {
     payMail: 'pay & email',
     database: 'Database',
     databaseSub: 'Supabase — Postgres',
-    databaseLine1: 'CBS figures · users',
+    databaseLine1: 'CBS & Eurostat figures · users',
     databaseLine2: 'credits · audit records',
     databaseNote: 'never reachable directly from outside',
     claude: 'Claude',
@@ -37,14 +37,19 @@ const TEXT = {
     stripeTestOnly: 'Stripe: test mode only',
     feeds: 'feeds, separate process',
     cbs: 'CBS StatLine',
-    cbsSub: 'the official source',
+    cbsSub: 'official source, Netherlands',
     cbsLine1: 'tables are fetched and',
     cbsLine2: 'checked in advance — never live',
     cbsLine3: 'while answering a question',
+    eurostat: 'Eurostat',
+    eurostatSub: 'official source, Europe',
+    eurostatLine1: 'tables are fetched and stored',
+    eurostatLine2: 'by a separate process — answers',
+    eurostatLine3: 'only come from our database',
   },
   nl: {
     ariaLabel:
-      'Diagram: een bezoeker stelt een vraag aan de Website (Next.js op Vercel). De Website leest en schrijft in de Database (Supabase/Postgres: CBS-cijfers, gebruikers, credits, audit-opnamen), roept de Claude API aan voor het herkennen van de vraag, het verwoorden van het antwoord en de eindcontrole, en praat met Stripe (betalingen) en Resend (e-mail). CBS StatLine voedt de Database via een los, geplande ophaalproces — niet via het antwoordpad zelf.',
+      'Diagram: een bezoeker stelt een vraag aan de Website (Next.js op Vercel). De Website leest en schrijft in de Database (Supabase/Postgres: cijfers van CBS en Eurostat, gebruikers, credits, audit-opnamen), roept de Claude API aan voor het herkennen van de vraag, het verwoorden van het antwoord en de eindcontrole, en praat met Stripe (betalingen) en Resend (e-mail). CBS StatLine en Eurostat voeden de Database via een los ophaalproces — niet via het antwoordpad zelf.',
     visitor: 'Bezoeker',
     visitorSub: 'meestal op de telefoon',
     askLine1: 'stelt een vraag,',
@@ -57,7 +62,7 @@ const TEXT = {
     payMail: 'betalen & mailen',
     database: 'Database',
     databaseSub: 'Supabase — Postgres',
-    databaseLine1: 'CBS-cijfers · gebruikers',
+    databaseLine1: 'CBS- & Eurostat-cijfers · gebruikers',
     databaseLine2: 'credits · audit-opnamen',
     databaseNote: 'nooit rechtstreeks bereikbaar van buitenaf',
     claude: 'Claude',
@@ -72,10 +77,15 @@ const TEXT = {
     stripeTestOnly: 'Stripe: alleen testmodus',
     feeds: 'voedt, los proces',
     cbs: 'CBS StatLine',
-    cbsSub: 'de officiële bron',
+    cbsSub: 'officiële bron, Nederland',
     cbsLine1: 'tabellen worden vooraf opgehaald',
     cbsLine2: 'en gecontroleerd — nooit live',
     cbsLine3: 'tijdens het beantwoorden zelf',
+    eurostat: 'Eurostat',
+    eurostatSub: 'officiële bron, Europa',
+    eurostatLine1: 'tabellen worden door een los proces',
+    eurostatLine2: 'opgehaald en opgeslagen — antwoorden',
+    eurostatLine3: 'komen alleen uit onze database',
   },
 } as const;
 
@@ -204,6 +214,18 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
         {t.stripeTestOnly}
       </text>
 
+      {/* Eurostat -> Database (dashed, out of band) */}
+      <line
+        x1="300"
+        y1="350"
+        x2="235"
+        y2="316"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray="5 4"
+        markerEnd="url(#system-map-arrowhead)"
+      />
+
       {/* CBS StatLine -> Database (dashed, out of band) */}
       <line
         x1="135"
@@ -235,6 +257,24 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
       <text x="135" y="436" textAnchor="middle" fontSize="10.5" fill="currentColor">
         {t.cbsLine3}
+      </text>
+
+      {/* Eurostat */}
+      <rect x="270" y="352" width="230" height="98" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
+      <text x="385" y="375" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">
+        {t.eurostat}
+      </text>
+      <text x="385" y="392" textAnchor="middle" fontSize="11" fill="currentColor">
+        {t.eurostatSub}
+      </text>
+      <text x="385" y="408" textAnchor="middle" fontSize="10.5" fill="currentColor">
+        {t.eurostatLine1}
+      </text>
+      <text x="385" y="422" textAnchor="middle" fontSize="10.5" fill="currentColor">
+        {t.eurostatLine2}
+      </text>
+      <text x="385" y="436" textAnchor="middle" fontSize="10.5" fill="currentColor">
+        {t.eurostatLine3}
       </text>
     </svg>
   );

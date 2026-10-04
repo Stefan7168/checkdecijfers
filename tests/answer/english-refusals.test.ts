@@ -165,7 +165,7 @@ describe('English refusal siblings — exact text for the reasons the brief name
     const built = await buildParseRefusal(db, parseRefusal('forecast', { nearestCanonicalKeys: [] }));
     expect(built.en.offer).toBeNull();
     expect(built.en.text).toBe(
-      "CBS publishes realized figures, not forecasts — I can't give a future figure.",
+      "CBS and Eurostat publish realized figures, not forecasts — I can't give a future figure.",
     );
     assertEnglishSibling(built, 'forecast (no offer)');
   });
@@ -175,7 +175,7 @@ describe('English refusal siblings — exact text for the reasons the brief name
     const expectedOffer = `I don't have figures loaded on this — my sources currently cover: ${loadedTopicsCompactEn()}.`;
     expect(built.en.offer).toBe(expectedOffer);
     expect(built.en.text).toBe(
-      "I can't assess a causal relationship — CBS figures describe what was measured, not why it happened. " +
+      "I can't assess a causal relationship — the figures from CBS and Eurostat describe what was measured, not why it happened. " +
         expectedOffer,
     );
     assertEnglishSibling(built, 'causal (no offer)');
@@ -352,9 +352,9 @@ describe('English refusal siblings — exact text for the reasons the brief name
     const periodPhrase = freshest ? ` in ${periodCodeToEn(freshest.periodCode)}` : '';
     const expectedOffer = `For example, ask: "What was inflation${periodPhrase}?"`;
     const expectedBody =
-      "All my figures come directly from official CBS StatLine tables — I don't use any other sources. " +
-      'We load those tables into our own database in advance, and every answer states which CBS table the figure ' +
-      'comes from and when we last synchronized that table with CBS.';
+      'My figures come from the official tables of CBS (the Netherlands) and Eurostat (Europe). ' +
+      'We load those tables into our own database in advance, and every answer states which table the figure ' +
+      'comes from and when we last synchronized that table with the source.';
     expect(built.en.offer).toBe(expectedOffer);
     expect(built.en.text).toBe(`${expectedBody} ${expectedOffer}`);
     assertEnglishSibling(built, 'meta (sources)');
@@ -382,7 +382,8 @@ describe('English refusal siblings — structural belt over every remaining buil
 
   it('out_of_scope', async () => {
     const built = await buildParseRefusal(db, parseRefusal('out_of_scope'));
-    expect(built.en.text).toMatch(/^I don't have any CBS figures loaded on that/);
+    expect(built.en.text).toMatch(/^I don't have any official figures loaded on that/);
+    expect(built.en.text).toContain('official figures (CBS and Eurostat)');
     expect(built.en.offer).toMatch(/^For example, ask: "What was /);
     assertEnglishSibling(built, 'out_of_scope');
   });

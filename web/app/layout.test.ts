@@ -45,7 +45,7 @@ describe('generateMetadata()', () => {
     getLang.mockResolvedValue('nl');
     const metadata = await generateMetadata();
     expect(metadata.title).toBe('graphmaker.studio');
-    expect(metadata.description).toBe('Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.');
+    expect(metadata.description).toBe('Chat met officiële cijfers van CBS en Eurostat — elk getal herleidbaar tot een officiële tabel.');
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
@@ -53,7 +53,7 @@ describe('generateMetadata()', () => {
     getLang.mockResolvedValue('en');
     const metadata = await generateMetadata();
     expect(metadata.title).toBe('graphmaker.studio');
-    expect(metadata.description).toBe('Chat with official CBS statistics — every figure traceable to a CBS table.');
+    expect(metadata.description).toBe('Chat with official figures from CBS and Eurostat — every figure traceable to an official table.');
   });
 });
 
