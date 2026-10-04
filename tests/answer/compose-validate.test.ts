@@ -763,6 +763,34 @@ describe('#140: metadata numbers are exempt only beside their source anchor (fab
     expect(scanBody('op 1 januari', populationSingle).find((t) => t.value === 1)?.kind).toBe('metadata');
   });
 
+  describe('session 154: a range copied verbatim from a title ("aged 15-24")', () => {
+    const youth = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'eurostat:tipslm80', measure: 'tipslm80|PC_ACT',
+          measureTitle: 'Youth unemployment rate - % of active population aged 15-24',
+          region: null, periodCode: '2023JJ00', periodLabel: '2023',
+          value: 28.7, unit: '%', decimals: 1,
+        }),
+      ],
+    });
+
+    it('both bounds of the echoed range ground as metadata', () => {
+      const tokens = scanBody('Youth unemployment rate - % of active population aged 15-24 was in 2023 28,7%.', youth);
+      expect(tokens.find((t) => t.value === 15)?.kind).toBe('metadata');
+      expect(tokens.find((t) => t.value === 24)?.kind).toBe('metadata');
+    });
+
+    it('the upper bound is NOT exempt without its own lower bound before it', () => {
+      expect(scanBody('ongeveer 24 jongeren', youth).find((t) => t.value === 24)?.kind).toBe('unbacked');
+    });
+
+    it('a different upper bound after the same lower bound is NOT exempt', () => {
+      expect(scanBody('aged 15-29', youth).find((t) => t.value === 29)?.kind).toBe('unbacked');
+    });
+  });
+
   it('the anchor is context-specific: the same number beside a DIFFERENT word is not exempted', () => {
     const ageShareResult = makeResult({
       shape: 'single',

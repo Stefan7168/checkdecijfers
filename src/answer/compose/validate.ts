@@ -246,6 +246,7 @@ function metadataEcho(
   value: number,
   ctx: { before: string; after: string },
   anchors: MetadataNumberAnchor[],
+  rangeLowerInBody: number | null = null,
 ): MetadataNumberAnchor | null {
   return (
     anchors.find((a) => {
@@ -255,7 +256,18 @@ function metadataEcho(
       if (a.strict) return beforeMatch && afterMatch && (isBindingAnchor(a.before) || isBindingAnchor(a.after));
       if (beforeMatch && isBindingAnchor(a.before)) return true;
       if (afterMatch && isBindingAnchor(a.after)) return true;
-      return beforeMatch && afterMatch;
+      if (beforeMatch && afterMatch) return true;
+      // Session 154 (live probe, Eurostat tipslm80 "… aged 15-24"): the UPPER bound of a range copied verbatim
+      // from metadata has only the lower bound as its neighbour — no word to bind to. It echoes only when the
+      // source wrote it as a hyphenated range (lower-upper, no spaces), the body does the same right after the
+      // same lower bound, and that lower bound is anchored to a distinctive word in the source (the lower bound
+      // itself is checked on its own). "2015=100" is no range, so it never qualifies.
+      return (
+        a.rangeLower !== undefined &&
+        rangeLowerInBody !== null &&
+        eq(a.rangeLower, rangeLowerInBody) &&
+        anchors.some((b) => !b.strict && eq(b.value, a.rangeLower!) && isBindingAnchor(b.before))
+      );
     }) ?? null
   );
 }
@@ -511,6 +523,13 @@ function gluedPeriodEcho(masked: string, token: { index: number; token: string }
   );
 }
 
+/** Session 154: the integer written immediately before `index` as "<lower>-" / "<lower>–" (no spaces) — the lower
+ * bound of a body-side range — or null. */
+function rangeLowerBefore(text: string, index: number): number | null {
+  const m = text.slice(Math.max(0, index - 12), index).match(/(?:^|[^\p{N}.,])(\d+)[-–]$/u);
+  return m ? Number(m[1]) : null;
+}
+
 /** Classify every numeric token in a body against the validated result — the
  * R1 answer-half scan. Unit strings containing digits are masked first so
  * 'x 1 000' never reads as a data claim. */
@@ -586,7 +605,7 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
         return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false, soft: leg === 'before_prone' };
       }
     }
-    const anchor = metadataEcho(token.value, ctx, allowed.metadataAnchors);
+    const anchor = metadataEcho(token.value, ctx, allowed.metadataAnchors, rangeLowerBefore(masked, token.index));
     if (anchor !== null) {
       // A metadata echo sits at the #140 ceiling (legit descriptor echo and
       // fabrication-beside-the-same-word are textually identical) — EXCEPT

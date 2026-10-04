@@ -130,6 +130,8 @@ class SpySource implements CbsSource {
   codeListCalls = 0;
   failCodeListCall: (n: number) => boolean = () => false;
   failSchemaCall: (n: number) => boolean = () => false;
+  /** Session 154: the error a failing schema call throws (default: a transient outage). */
+  schemaError: Error | null = null;
   observationCalls = 0;
   observedSlices: (CbsSlice | undefined)[] = [];
   failObservationCall: (n: number) => boolean = () => false;
@@ -147,7 +149,7 @@ class SpySource implements CbsSource {
     this.schemaCalls += 1;
     const n = this.schemaCalls;
     events.log.push({ type: 'source', call: 'fetchTableSchema', tableId });
-    if (this.failSchemaCall(n)) throw new Error('CBS is down (test)');
+    if (this.failSchemaCall(n)) throw this.schemaError ?? new Error('CBS is down (test)');
     return this.mutateSchema(await this.src(tableId).fetchTableSchema(tableId, slice), n);
   }
   async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
@@ -687,6 +689,27 @@ describe('runTableLaneJob — CBS unreachable (settled choices 1 + 2)', () => {
     const [a] = await audits(userId);
     expect(a!.refusalReason).toBe('cbs_unreachable');
     expect(done.threadId).toBe(a!.threadId);
+    expect(await getBalance(rawDb, userId)).toBe(100);
+  });
+
+  it('session 154: a PERMANENT schema refusal (retryable === false) → table_lane_ineligible at once, no retry, never "unreachable"', async () => {
+    const userId = await seedUser();
+    const queued = await queue(userId);
+    const source = await makeSource();
+    source.failSchemaCall = () => true;
+    source.schemaError = Object.assign(new Error('no licensed code in geography dimension citizen (test)'), { retryable: false as const });
+    const parse = new ScriptedParseClient([amsterdam()]);
+
+    const summary = await runTableLaneJob(deps(source, parse));
+
+    expect(summary).toEqual({ processed: 1, answered: 0, asked: 0, refused: 1, failed: 0 });
+    expect(sleeps).toEqual([]);
+    expect(source.schemaCalls).toBe(1);
+    expect(parse.calls).toHaveLength(0);
+    const done = await row(queued.id, userId);
+    expect(done.outcomeKind).toBe('refusal');
+    const [a] = await audits(userId);
+    expect(a!.refusalReason).toBe('table_lane_ineligible');
     expect(await getBalance(rawDb, userId)).toBe(100);
   });
 

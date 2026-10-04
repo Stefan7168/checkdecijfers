@@ -134,12 +134,28 @@ class CbsUnreachableError extends Error {
   override name = 'CbsUnreachableError';
 }
 
+/** Session 154 (live probe, Eurostat `tps00191`): the source says the table itself cannot be served — e.g. a
+ * Eurostat layout refusal (no licensed code in a geography dimension) or a permanent 4xx. That is a fact about the
+ * table, not an outage: never retried, and refused as table_lane_ineligible ("ik kan deze tabel niet gebruiken"),
+ * never as "the source is unreachable, try later". Recognised by the adapters' own `retryable === false` marker. */
+class TableUnusableError extends Error {
+  override name = 'TableUnusableError';
+}
+
+function isPermanentSourceError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { retryable?: unknown }).retryable === false;
+}
+
 /** Runs one CBS metadata load; on a throw, waits 2 s and tries once more;
- * a second throw becomes CbsUnreachableError (Ruling R9). */
+ * a second throw becomes CbsUnreachableError (Ruling R9). A permanent source
+ * error skips the retry and becomes TableUnusableError (session 154). */
 async function cbsLoad<T>(ctx: Ctx, what: string, load: () => Promise<T>): Promise<T> {
   try {
     return await load();
-  } catch {
+  } catch (first) {
+    if (isPermanentSourceError(first)) {
+      throw new TableUnusableError(`the source cannot serve the ${what}: ${errorSummary(first)}`);
+    }
     await ctx.sleep(TABLE_LANE_CBS_RETRY_MS);
     try {
       return await load();
@@ -269,6 +285,10 @@ async function produce(
     }
     table = { schema, codeLists: await loadCodeLists() };
   } catch (error) {
+    if (error instanceof TableUnusableError) {
+      logFailure(row, 'table unusable (refused table_lane_ineligible)', error);
+      return respond({ plan: refusePlan('table_lane_ineligible', error.message), fetch: null });
+    }
     if (!(error instanceof CbsUnreachableError)) throw error;
     logFailure(row, 'CBS unreachable (refused cbs_unreachable)', error);
     return respond({

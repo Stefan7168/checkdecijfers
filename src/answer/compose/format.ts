@@ -160,6 +160,9 @@ export interface MetadataNumberAnchor {
   before: string;
   after: string;
   strict: boolean;
+  /** Session 154: set when this number is the UPPER bound of a range written lower-hyphen-upper with no spaces
+   * ("aged 15-24") — the lower bound's value. Absent otherwise. */
+  rangeLower?: number;
 }
 
 /** Metadata numbers WITH their source-side context anchors. The validator
@@ -175,12 +178,22 @@ export function metadataNumberAnchors(
   strict = false,
 ): MetadataNumberAnchor[] {
   if (!text) return [];
-  return findNumericTokens(text).map((t) => ({
-    value: t.value,
-    before: adjacentAlnum(text.slice(0, t.index), 'before'),
-    after: adjacentAlnum(text.slice(t.index + t.token.length), 'after'),
-    strict,
-  }));
+  const tokens = findNumericTokens(text);
+  return tokens.map((t, i) => {
+    const prev = i > 0 ? tokens[i - 1]! : null;
+    const isRangeUpper =
+      prev !== null &&
+      Number.isInteger(prev.value) &&
+      Number.isInteger(t.value) &&
+      /^[-–]$/.test(text.slice(prev.index + prev.token.length, t.index));
+    return {
+      value: t.value,
+      before: adjacentAlnum(text.slice(0, t.index), 'before'),
+      after: adjacentAlnum(text.slice(t.index + t.token.length), 'after'),
+      strict,
+      ...(isRangeUpper ? { rangeLower: prev.value } : {}),
+    };
+  });
 }
 
 /** The body-side context of a numeric token — the alnum runs immediately

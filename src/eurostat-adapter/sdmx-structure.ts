@@ -782,6 +782,9 @@ export function decimalsProbeSlice(
 }
 
 export class EurostatLayoutRefusalError extends Error {
+  /** Session 154: a layout refusal is a fact about the dataset, not an outage — retrying cannot fix it (the table
+   * lane's metadata load reads this marker, like EurostatPermanentError's). */
+  readonly retryable = false as const;
   readonly reason: EurostatLayoutRefusalReason;
   constructor(refused: EurostatLayoutRefusal) {
     super(refused.summary);
